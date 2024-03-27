@@ -1,0 +1,926 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <locale.h>
+#include <assert.h>
+#define JSON_DEBUG_MEMORY
+#include "json.h"
+#include "calc.h"
+
+
+/* BIG NOTE ABOUT MEMORY MANAGEMENT
+ *
+ * My goals for memory management in json_calc() are that it should be simple
+ * and efficient.  "Efficient" here means that it usually won't allocate new
+ * json_t's if it doesn't have to.
+ *
+ * To keep it simple though, json_calc() always returns a freshly allocated
+ * json_t tree.  If you call json_calc(), then you must eventually call
+ * json_free() on the returned value.
+ *
+ * json_calc() is recursive, so it will sometimes allocate and free temporary
+ * json_t's.  Some instances where it DOESN'T need to free a json_t that it
+ * uses are:
+ *
+ *   Literals.  These are in the jsoncalc_t expression as JSONOP_LITERAL
+ *		nodes.  They contain a json_t tree that's allocated by
+ *		json_calc_parse() and freed by json_calc_free().
+ *
+ *   Names.	The values associated with names come from the context,
+ *		usually retrieved via json_context_by_key().  They are
+ *		allocated by the code that sets up the context, and freed
+ *		when the context is freed.  Expressions sometimes create
+ *		local contexts and free them, but that's a separate thing.
+ *
+ * That's all! So when json_calc() needs to access a left or right operand,
+ * if it can fetch a literal or name then it doesn't need to free it;
+ * otherwise (when it must recursively call json_calc()) it must free
+ * the temporary values.
+ */
+
+
+/* Implement @= natural join, @< left join, and @> right join */
+json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
+{
+	json_t  *scan, *result, *merge, *lmem, *rmem;
+	int	leftmatch;
+	char	*rightmatch, *r;
+	int	rightlen;
+
+	/* Move to the first element of each array.  If not an array, then it
+	 * effectively *is* the first and only element.
+	 */
+	if (jl->type == JSON_ARRAY)
+		jl = jl->first;
+	if (jr->type == JSON_ARRAY) {
+		rightlen = json_length(jr);
+		jr = jr->first;
+	} else
+		rightlen = 1;
+
+	/* If we're doing right join, then we need a list of flags to
+	 * keep track of which right elements never matched any left
+	 */
+	rightmatch = right ? (char *)calloc(rightlen, sizeof(char)) : NULL;
+
+	/* Start with an empty result array */
+	result = json_array();
+
+	/* For each row from the left table... */
+	for (; jl; jl = jl-> next) {
+		/* Skip if not an object */
+		if (jl->type != JSON_OBJECT)
+			continue;
+
+		/* For each row from the right table... */
+		leftmatch = 0;
+		for (scan = jr, r = rightmatch; scan; scan = scan->next, r++) {
+			/* Skip if not an object */
+			if (scan->type != JSON_OBJECT)
+				continue;
+
+			/* If any members clash, skip this pairing */
+			for (lmem = jl->first; lmem; lmem = lmem->next) {
+				rmem = json_by_key(scan, lmem->text);
+				if (rmem && !json_equal(lmem->first, rmem))
+					break;
+			}
+			if (lmem)
+				continue;
+
+			/* Merge the objects */
+			merge = json_copy(jl);
+			for (rmem = scan->first; rmem; rmem = rmem->next) {
+				lmem = json_by_key(merge, rmem->text);
+				if (!lmem)
+					json_append(merge, json_copy(rmem));
+			}
+
+			/* Add the merged object to the result */
+			json_append(result, merge);
+
+			/* Remember that there was a match */
+			if (right)
+				*r = 1;
+			leftmatch = 1;
+		}
+
+		/* If doing a left join and left didn't match anything, add it
+		 * by itself.
+		 */
+		if (left && !leftmatch)
+			json_append(result, json_copy(jl));
+	}
+
+	/* If doing a right join, add any right elements that didn't match
+	 * anything from the left.
+	 */
+	if (right) {
+		for (scan = jr, r = rightmatch; scan; scan = scan->next, r++) {
+			if (!*r)
+				json_append(result, json_copy(scan));
+		}
+	}
+
+	/* Return the result */
+	return result;
+}
+
+
+/* Invoke all aggregates for the current item ("this" in context) */
+static void jcag(jsonag_t *ag, jsoncontext_t *context, void *agdata)
+{
+	int     i;
+	void    *fnag = agdata;
+	json_t  *args;
+
+	/* For each aggregate function... */
+	for (i = 0; i < ag->nags; i++) {
+		/* Evaluate its parameters */
+		args = json_calc(ag->ag[i]->u.func.args, context, agdata);
+
+		/* Call the aggregator function */
+		ag->ag[i]->u.func.jf->agfn(args, fnag);
+
+		/* Free its parameters */
+		json_free(args);
+
+		/* Find the location of the next function's storage */
+		fnag = (void *)((char *)fnag + ag->ag[i]->u.func.jf->agsize);
+	}
+}
+
+/* If calc uses aggregates, then allocate storage space for them and return
+ * a pointer to that... or if existingag is non-NULL then reset it and return
+ * it.  Otherwise return NULL to indicate that no aggregates are used.
+ * Later, you can free the memory by calling json_calc_ag(NULL, ag) even if
+ * ag is NULL.
+ */
+void *json_calc_ag(jsoncalc_t *calc, void *existingag)
+{
+	/* Passing NULL for calc just means we should free existingag, if any */
+	if (!calc) {
+		if (existingag)
+			free(existingag);
+		return NULL;
+	}
+
+	/* If no aggregates are used, then return NULL */
+	if (calc->op != JSONOP_AG)
+		return NULL;
+
+	/* If no existingag, then allocate it now */
+	if (!existingag)
+		existingag = malloc(calc->u.ag->agsize);
+
+	/* Reset it */
+	memset(existingag, 0, calc->u.ag->agsize);
+	return existingag;
+}
+
+/* If a jsoncalc_t uses aggregate functions, then incorporate this row's
+ * data into the aggregates.  If it doesn't use aggregates then do nothing.
+ */
+void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, json_t *row)
+{
+	jsoncontext_t *local;
+
+	/* If no aggregates, then do nothing. */
+	if (calc->op != JSONOP_AG)
+		return;
+
+	/* We must have agdata if we're using aggregates. */
+	assert(agdata != NULL);
+
+	/* Create a context with this row's data in it, and evaluate all
+	 * aggretators with that.
+	 */
+	local = json_context(context, row, NULL);
+	jcag(calc->u.ag, local, agdata);
+	json_context_free(local, 0);
+}
+
+/* These two macros fetch the left and right operands.  They always set the
+ * "left" and "right" variables.  If the the value is freshly allocated
+ * (meaning json_calc() is responsible for freeing it) then they also set
+ * the "freeleft" and "freeright" variables.
+ */
+#define LEFT  u.param.left
+#define RIGHT u.param.right
+#define USE_LEFT_OPERAND(calc)	if ((left = jcsimple(calc->LEFT, context)) == NULL)\
+		left = freeleft = json_calc(calc->LEFT, context, agdata)
+#define USE_RIGHT_OPERAND(calc)	if ((right = jcsimple(calc->RIGHT, context)) == NULL)\
+		right = freeright = json_calc(calc->RIGHT, context, agdata)
+
+
+/* If calc is a literal or name, then we can retrieve the value without
+ * allocating anything.  Do that, and return it.  Otherwise return NULL.
+ */
+static json_t *jcsimple(jsoncalc_t *calc, jsoncontext_t *context)
+{
+	json_t *tmp;
+
+	/* If literal then return its value */
+	if (calc->op == JSONOP_LITERAL)
+		return calc->u.literal;
+
+	/* If simple name then look it up */
+	if (calc->op == JSONOP_NAME)
+		return json_context_by_key(context, calc->u.text);
+
+	/* We can do name.name too */
+	if (calc->op == JSONOP_DOT
+	 && calc->RIGHT->op == JSONOP_NAME
+	 && (tmp = jcsimple(calc->LEFT, context)) != NULL
+	 && tmp->type == JSON_OBJECT)
+		return json_by_key(tmp, calc->RIGHT->u.text);
+
+	/* We can choose a default table when SELECT is used without FROM */
+	if (calc->op == JSONOP_FROM)
+		return json_context_default_table(context);
+
+	/* No joy */
+	return NULL;
+}
+
+/* This implements the @ and @@ operators.  "first" is the first element of
+ * the array to apply it to, "expr" is an expression to apply to each member
+ * of the array (which may include aggregate functions), and op is either
+ * JSONOP_EACH or JSONOP_GROUP.
+ */
+json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t op)
+{
+	json_t	*scan, *gscan;
+	json_t	*result, *tmp;
+	jsoncontext_t *local;
+	void *ag, **groupag;
+	int	ngroups, nongroup, g;
+
+	/* The array may include subarrays to indicate grouping. If grouping
+	 * is used, there may or may not be ungrouped items.  We'll need
+	 * separate aggregate data for each group, and one for the ungrouped
+	 * aggregates.  STEP ONE: Allocate overall ag data, as a way to detect
+	 * whether aggregates are indeed used.
+	 */
+	ngroups = 0;
+	groupag = NULL;
+	ag = json_calc_ag(calc, NULL);
+	if (ag) {
+		/* STEP 2: Count groups, and watch for any ungrouped elements */
+		for (ngroups = nongroup = 0, scan = first; scan; scan = scan->next) {
+			if (scan->type == JSON_ARRAY)
+				ngroups++;
+			else
+				nongroup++;
+		}
+
+		/* STEP 3: Allocate an array to hold groups' aggregate data */
+		if (ngroups > 0) {
+			groupag = calloc(ngroups, sizeof(void *));
+			for (g = 0; g < ngroups; g++)
+				groupag[g] = json_calc_ag(calc, NULL);
+		}
+
+		/* STEP 4: Loop over the array to generate aggregate data. */
+		for (g = 0, scan = first; scan; scan = scan->next) {
+			/* Is this element a nested array? */
+			if (scan->type == JSON_ARRAY) {
+				/* Loop over the array elements */
+				for (gscan = scan->first; gscan; gscan = gscan->next) {
+					/* Invoke the aggregators on "this" */
+					local = json_context(context, gscan, NULL);
+					jcag(calc->u.ag, local, groupag[g]);
+					if (nongroup)
+						jcag(calc->u.ag, local, ag);
+					json_context_free(local, 0);
+				}
+
+				/* Prepare for next group */
+				g++;
+			} else {
+				/* Invoke the aggregators on "this" */
+				local = json_context(context, scan, NULL);
+				jcag(calc->u.ag, local, ag);
+				json_context_free(local, 0);
+			}
+		}
+	}
+
+	/* Loop over the array.  For each element, make it "this" and
+	 * evaluate the right operand.  Collect the results in a new
+	 * array.
+	 */
+	result = json_array();
+	for (g = 0, scan = first; scan; scan = scan->next) {
+		/* Is it a group (nested array) ? */
+		if (scan->type == JSON_ARRAY) {
+			/* Process the group using the group's own aggregate
+			 * data.  For EACH process all of them, for GROUP only
+			 * process the first.
+			 */
+			for (gscan = scan->first; gscan; gscan = (op == JSONOP_EACH ? gscan->next : NULL)) {
+				/* Evaluate with element as "this" */
+				local = json_context(context, gscan, NULL);
+				tmp = json_calc(calc, local, ag ? groupag[g] : NULL);
+				json_context_free(local, 0);
+
+				/* If null/false, skip it, if true add element*/
+				if (tmp->type == JSON_SYMBOL) {
+					/* Skip for null or false, add for true */
+					if (json_is_true(tmp))
+						json_append(result, json_copy(gscan));
+					json_free(tmp);
+				} else {
+					/* Not a symbol, append whatever it is */
+					json_append(result, tmp);
+				}
+			}
+
+			/* Prepare for the next group */
+			g++;
+		} else {
+			local = json_context(context, scan, NULL);
+			tmp = json_calc(calc, local, ag ? ag : NULL);
+			json_context_free(local, 0);
+			if (tmp->type == JSON_SYMBOL) {
+				/* Skip for null or false, add for true */
+				if (json_is_true(tmp))
+					json_append(result, json_copy(scan));
+				json_free(tmp);
+			} else {
+				/* Not a symbol, append whatever it is */
+				json_append(result, tmp);
+			}
+		}
+	}
+
+	/* Clean up */
+	json_calc_ag(NULL, ag);
+	if (ngroups > 0) {
+		for (g = 0; g < ngroups; g++)
+			json_calc_ag(NULL, groupag[g]);
+		free(groupag);
+	}
+
+	/* Done! */
+	return result;
+}
+
+/* Evaluate an expression and return the result.
+ *   calc       The expression to evaluate.  This should be obtained from a 
+ *              previous call to json_calc_parse().
+ *   context    A list of objects providing context for the expression.
+ *              The first element is "this".  Any element that's an object
+ *              can be scanned to obtain variable names.  May be NULL.
+ *   agdata     Storage space for aggregate functions, allocated by
+ *              json_calc_ag_begin(), freed by json_calc_ag_end();
+ */
+json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
+{
+	json_t *left, *right, *freeleft, *freeright;
+	json_t *result;
+	jsoncalc_t *tmp;
+	json_t  *scan, *found;
+	double  nl, nr;
+	int     il,ir;
+	char    *str;
+	void    *localag;
+
+	/* Start with freeleft and freeleft set to NULL.  The USE_LEFT_OPERAND
+	 * and USE_RIGHT_OPERAND macros will set them if appropriate.
+	 */
+	freeleft = freeright = result = NULL;
+
+	/* Process the expression */
+	switch (calc->op)
+	{
+	  case JSONOP_LITERAL:
+		result = json_copy(calc->u.literal);
+		break;
+
+	  case JSONOP_NAME:
+		result = json_copy(json_context_by_key(context, calc->u.text));
+		break;
+
+	  case JSONOP_ARRAY:
+		/* Append the value of each element into an array. */
+		result = json_array();
+		if (calc->LEFT)
+			json_append(result, json_calc(calc->LEFT, context, agdata));
+		for (tmp = calc->RIGHT; tmp; tmp = tmp->RIGHT)
+			json_append(result, json_calc(tmp->LEFT, context, agdata));
+		break;
+
+	  case JSONOP_OBJECT:
+		/* Append name:value pairs into an object */
+		result = json_object();
+		if (calc->LEFT) {
+			/* calc->LEFT is the first name:value.
+			 * tmp is the name, with op=JSONOP_NAME.
+			 * right is the value, to evaluate via json_calc()
+			 */
+			tmp = calc->LEFT->LEFT;
+			json_append(result, json_key(tmp->u.text, json_calc(calc->LEFT->RIGHT, context, agdata)));
+		}
+		for (calc = calc->RIGHT; calc; calc = calc->RIGHT) {
+			/* calc->LEFT is the next name:value.
+			 * tmp is the name, with op=JSONOP_NAME.
+			 * right is the value, to evaluate via json_calc()
+			 */
+			tmp = calc->LEFT->LEFT;
+			json_append(result, json_key(tmp->u.text, json_calc(calc->LEFT->RIGHT, context, agdata)));
+		}
+		return result;
+
+	  case JSONOP_SUBSCRIPT:
+		USE_LEFT_OPERAND(calc);
+		if (calc->RIGHT->op == JSONOP_COLON) {
+			/* Subscript by name:value, scans an array of objects
+			 * for a given member and value.
+			 */
+			if (left->type != JSON_ARRAY)
+				break;
+
+			/* Evaluate the value of name:value.  Also fetch name */
+			USE_RIGHT_OPERAND(calc->RIGHT);
+			str = calc->RIGHT->LEFT->u.text;
+
+			/* Scan array for element with that member name:value */
+			for (scan = left->first; scan; scan = scan->next) {
+				if (scan->type != JSON_OBJECT)
+					continue;
+				found = json_by_key(scan, str);
+				if (found && json_equal(found, right)) {
+					result = json_copy(scan);
+					break;
+				}
+			}
+			break;
+		} else {
+			/* Evaluate the subscript.  Strings only work for
+			 * objects, numbers only work for arrays.
+			 */
+			USE_RIGHT_OPERAND(calc);
+			if (left->type == JSON_OBJECT && right->type == JSON_STRING)
+				result = json_by_key(left, right->text);
+			else if (left->type == JSON_ARRAY && right->type == JSON_NUMBER)
+				result = json_by_index(left, json_int(right));
+		}
+		result = json_copy(result);
+		break;
+
+	  case JSONOP_FUNCTION:
+		/* Collect parameter values into an array */
+		freeleft = left = json_calc(calc->u.func.args, context, agdata);
+
+		/* Aggregate functions are special, if the first parameter is
+		 * an array.  (The parser can't always tell whether the first
+		 * parameter is going to be an array, so it'll create a
+		 * JSONOP_AG node above this which may result it data being
+		 * accumulated that way.  But if passed an array, it'll ignore
+		 * that aggregated data and create new aggregated data from
+		 * the array.)
+		 */
+		if (left->first->type == JSON_ARRAY && calc->u.func.jf->agfn) {
+			/* Allocate storage for the function */
+			localag = malloc(calc->u.func.jf->agsize);
+			memset(localag, 0, calc->u.func.jf->agsize);
+
+			/* For each element of the array, create a new parameter
+			 * list and call the aggregator.  Note that we don't
+			 * need to create a new context, because all parameters
+			 * have already been calculated.
+			 */
+			found = json_array();
+			for (scan = left->first->first; scan; scan = scan->next) {
+				/* Create a new argument list.  The first is an
+				 * element from the array, and any other args
+				 * are used unchanged.
+				 */
+				json_t first = *scan;
+				first.next = left->first->next;
+				found->first = &first;
+
+				/* Invoke the aggregator */
+				(*calc->u.func.jf->agfn)(found, localag);
+			}
+			found->first = NULL;
+			json_free(found);
+
+			/* Invoke the function */
+			result = (*calc->u.func.jf->fn)(left, localag);
+
+			/* Clean up */
+			free(localag);
+		} else {
+			/* Invoke the function */
+			result = (*calc->u.func.jf->fn)(left, agdata + calc->u.func.agoffset);
+		}
+		break;
+
+	  case JSONOP_AG:
+		/* We always expect agdata when we're using aggregates, but
+		 * if we aren't given agdata then use blank agdata.  We won't
+		 * get useful results that way, but at least we won't dump core.
+		 */
+		if (!agdata) {
+			/* Evaluate using blank agdata */
+			localag = json_calc_ag(calc, NULL);
+			result = json_calc(calc->u.ag->expr, context, localag);
+			localag = json_calc_ag(NULL, localag);
+		} else {
+			/* Evaluate expr, but use *this* agdata to do it */
+			result = json_calc(calc->u.ag->expr, context, agdata);
+		}
+		break;
+
+	  case JSONOP_EACH:
+	  case JSONOP_GROUP:
+		/* Evaluate the left operand.  If null then return an empty
+		 * array.  If it is an array then set scan to its first
+		 * element; if not an array then set scan to it directly,
+		 * so it'll effectively be treated like a single-element array.
+		 */
+		USE_LEFT_OPERAND(calc);
+		if (json_is_null(left)) {
+			result = json_array();
+			break;
+		}
+		scan = (left->type == JSON_ARRAY ? left->first : left);
+
+		/* Do the thing */
+		result = jceach(scan, calc->RIGHT, context, calc->op);
+		break;
+
+	  case JSONOP_NJOIN:
+	  case JSONOP_LJOIN:
+	  case JSONOP_RJOIN:
+		/* Natural join of left and right arrays.  The pairing-up
+		 * logic is implemented in jcnjoin(), but we still have a bit
+		 * of operand evaluation and cleanup to worry about here.
+		 */
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		result = jcnjoin(left, right, calc->op == JSONOP_LJOIN, calc->op == JSONOP_RJOIN);
+		/* NOTE: jcnjoin() always copies any data it uses.  Nothing
+		 * in it could still be used by jl or jr.
+		 */
+		break;
+
+	  case JSONOP_DOT:
+		/* NOTE: Function calls of the form data.func(args...) are
+		 * transformed to func(data, args...) during parsing, so we
+		 * only see the . operator while looking for a member of an
+		 * object.
+		 */
+		assert(calc->RIGHT->op == JSONOP_NAME);
+		USE_LEFT_OPERAND(calc);
+		if (left->type == JSON_OBJECT)
+			result = json_copy(json_by_key(left, calc->RIGHT->u.text));
+		else if (!strcmp(calc->RIGHT->u.text, "length")) {
+			/* The "length" attribute is computed, for strings and
+			 * arrays.
+			 */
+			if (left->type == JSON_ARRAY)
+				result = json_from_int(json_length(left));
+			else if (left->type == JSON_STRING)
+				result = json_from_int(json_mbs_len(left->text));
+		}
+		break;
+
+	  case JSONOP_ELIPSIS:
+		/* The elipsis is used two ways: 0..5 returns an array of
+		 * integers from 0 to 5, [0,1,2,3,4,5].  object..name does
+		 * a "deep search" for name within object.
+		 */
+		USE_LEFT_OPERAND(calc);
+		if (left->type == JSON_OBJECT && calc->RIGHT->op == JSONOP_NAME) {
+			result = json_copy(json_by_deep_key(left, calc->RIGHT->u.text));
+		} else {
+			USE_RIGHT_OPERAND(calc);
+			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+				result = json_array();
+				il = json_int(left);
+				ir = json_int(right);
+				for (; il <= ir; il++) {
+					json_append(result, json_from_int(il));
+				}
+			}
+		}
+		break;
+
+	  case JSONOP_COALESCE:
+		/* If left arg is non-null, return it */
+		USE_LEFT_OPERAND(calc);
+		if (!json_is_null(left)) {
+			if (freeleft) {
+				result = left;
+				freeleft = NULL;
+			} else
+				result = json_copy(left);
+			break;
+		}
+
+		/* Else return right arg */
+		USE_RIGHT_OPERAND(calc);
+		if (freeright) {
+			result = right;
+			freeright = NULL;
+		} else
+			result = json_copy(right);
+		break;
+
+	  case JSONOP_QUESTION:
+		USE_LEFT_OPERAND(calc);
+		/* Can be test?then or test?them:else */
+		if (calc->RIGHT->op == JSONOP_COLON) {
+			if (json_is_true(left))
+				result = json_calc(calc->RIGHT->LEFT, context, agdata);
+			else
+				result = json_calc(calc->RIGHT->RIGHT, context, agdata);
+		} else {
+			if (json_is_true(left)) {
+				USE_RIGHT_OPERAND(calc);
+				if (freeright) {
+					result = freeright;
+					freeright = NULL;
+				} else {
+					result = json_copy(right);
+				}
+			}
+		}
+		break;
+
+	  case JSONOP_COLON:
+		/* Shouldn't happen. */
+		abort();
+
+	  case JSONOP_ISNULL:
+		USE_RIGHT_OPERAND(calc);
+		result = json_symbol(json_is_null(right) ? "true" : "false", -1);
+		break;
+
+	  case JSONOP_ISNOTNULL:
+		USE_RIGHT_OPERAND(calc);
+		result = json_symbol(json_is_null(right) ? "false" : "true", -1);
+		break;
+
+	  case JSONOP_NEGATE:
+		USE_RIGHT_OPERAND(calc);
+		if (right->type == JSON_NUMBER || right->type == JSON_STRING)
+			result = json_from_double(-json_double(right));
+		break;
+
+	  case JSONOP_ADD:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JSON_STRING || right->type == JSON_STRING) {
+			/* String version */
+			result = json_string(left->text, strlen(left->text) + strlen(right->text));
+			strcat(result->text, right->text);
+		}
+		else if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			result = json_from_double(json_double(left) + json_double(right));
+		}
+		break;
+
+	  case JSONOP_MULTIPLY:
+	  case JSONOP_DIVIDE:
+	  case JSONOP_MODULO:
+	  case JSONOP_SUBTRACT:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			/* Convert to binary */
+			nl = json_double(left);
+			nr = json_double(right);
+
+			/* Do the math */
+			if (calc->op == JSONOP_SUBTRACT)
+				result = json_from_double(nl - nr);
+			else if (calc->op == JSONOP_MULTIPLY)
+				result = json_from_double(nl * nr);
+			else if (nr == 0.0)
+				result = json_symbol("null", -1);
+			else if (calc->op == JSONOP_DIVIDE)
+				result = json_from_double(nl / nr);
+			else if ((int)nr == 0)
+				result = json_symbol("null", -1);
+			else /* JSONOP_DIVIDE */
+				result = json_from_double((int)nl % (int)nr);
+		}
+		break;
+
+	  case JSONOP_BITNOT:
+		USE_RIGHT_OPERAND(calc);
+		if (right->type == JSON_NUMBER)
+			result = json_from_int(~json_int(right));
+		break;
+
+	  case JSONOP_BITAND:
+	  case JSONOP_BITOR:
+	  case JSONOP_BITXOR:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			/* Convert to binary */
+			il = json_int(left);
+			ir = json_int(right);
+
+			/* Do the bitwise math */
+			if (calc->op == JSONOP_BITAND)
+				result = json_from_int(il & ir);
+			else if (calc->op == JSONOP_BITOR)
+				result = json_from_int(il | ir);
+			else /* JSONOP_BITOR */
+				result = json_from_int(il ^ ir);
+		}
+		break;
+
+	  case JSONOP_NOT:
+		USE_RIGHT_OPERAND(calc);
+		result = json_symbol(json_is_true(right) ? "false" : "true", -1);
+		break;
+
+	  case JSONOP_AND:
+	  case JSONOP_OR:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		il = json_is_true(left);
+		ir = json_is_true(right);
+		if (calc->op == JSONOP_AND)
+			result = json_symbol((il && ir) ? "true" : "false", -1);
+		else
+			result = json_symbol((il || ir) ? "true" : "false", -1);
+		break;
+
+	  case JSONOP_EQSTRICT:
+	  case JSONOP_NESTRICT:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+
+		/* Compare them using json_equal(), which checks data types.
+		 * It also does a "deep" comparison, allowing you to compare
+		 * the contents of arrays, or of objects.
+		 */
+		il = json_equal(left, right);
+		if (calc->op == JSONOP_NESTRICT)
+			il = !il;
+		result = json_symbol(il ? "true" : "false", -1);
+		break;
+
+	  case JSONOP_LT:
+	  case JSONOP_LE:
+	  case JSONOP_EQ:
+	  case JSONOP_NE:
+	  case JSONOP_GE:
+	  case JSONOP_GT:
+	  case JSONOP_ICEQ:
+	  case JSONOP_ICNE:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+
+		/* Compare them in an appropriate way */
+		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			nl = json_double(left);
+			nr = json_double(right);
+			if (nl < nr)
+				il = -1;
+			else if (nl > nr)
+				il = 1;
+			else
+				il = 0;
+		} else if ((left->type == JSON_SYMBOL || right->type == JSON_SYMBOL)
+		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
+			/* Compare as booleans, but only for equality */
+			il = json_is_true(left) != json_is_true(right);
+		} else {/* hopefully string, but other types work too */
+			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE)
+				il = json_mbs_casecmp(left->text, right->text);
+			else
+				il = strcmp(left->text, right->text);
+		}
+
+		/* Choose a comparison */
+		switch (calc->op) {
+		  case JSONOP_EQ:
+		  case JSONOP_ICEQ: ir = (il == 0); break;
+		  case JSONOP_NE:
+		  case JSONOP_ICNE: ir = (il != 0); break;
+		  case JSONOP_LT:   ir = (il < 0);  break;
+		  case JSONOP_LE:   ir = (il <= 0); break;
+		  case JSONOP_GE:   ir = (il >= 0); break;
+		  default: /* GT */ ir = (il > 0);  break;
+		}
+
+		/* Set the result */
+		result = json_symbol(ir ? "true" : "false", -1);
+		break;
+
+	  case JSONOP_BETWEEN:
+		assert(calc->RIGHT->op == JSONOP_AND);
+		USE_LEFT_OPERAND(calc);
+
+		/* Test lower bound */
+		USE_RIGHT_OPERAND(calc->RIGHT->LEFT);
+		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			if (json_double(left) < json_double(right))
+				result = json_symbol("false", -1);
+		} else if ((left->type == JSON_STRING || left->type == JSON_NUMBER)
+		     && (right->type == JSON_STRING || right->type == JSON_NUMBER)) {
+			if (json_mbs_casecmp(left->text, right->text) < 0)
+				result = json_symbol("false", -1);
+		}
+		if (freeright) {
+			json_free(freeright);
+			freeright = NULL;
+		}
+
+		/* Test upper bound */
+		if (!result) {
+			USE_RIGHT_OPERAND(calc->RIGHT->RIGHT);
+			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+				if (json_double(left) > json_double(right))
+					result = json_symbol("false", -1);
+			} else if ((left->type == JSON_STRING || left->type == JSON_NUMBER)
+			     && (right->type == JSON_STRING || right->type == JSON_NUMBER)) {
+				if (json_mbs_casecmp(left->text, right->text) > 0)
+					result = json_symbol("false", -1);
+			}
+		}
+
+		/* If no result, I guess we're okay */
+		if (!result)
+			result = json_symbol("true", 1);
+
+		break;
+
+	  case JSONOP_LIKE:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if ((left->type != JSON_STRING && left->type != JSON_NUMBER)
+		 || (right->type != JSON_STRING && right->type != JSON_NUMBER)){
+			result = json_symbol("false", -1);
+		} else {
+			il = json_mbs_like(left->text, right->text);
+			result = json_symbol(il ? "true" : "false", -1);
+		}
+		break;
+
+	  case JSONOP_IN:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+
+		/* Scan the right-hand list, looking for an exact match */
+		if (right->type == JSON_ARRAY) {
+
+			for (scan = right->first; scan; scan = scan->next) {
+				if (json_equal(left, scan))
+					break;
+			}
+			result = json_symbol(scan ? "true" : "false", -1);
+		}
+		break;
+
+	  case JSONOP_FROM:
+		/* This is used to fetch the default table for a SELECT
+		 * statement that has no explicit FROM clause.  It is handled
+		 * by jcsimple(), not here.
+		 */
+		abort();
+
+	  case JSONOP_STRING:
+	  case JSONOP_NUMBER:
+	  case JSONOP_BOOLEAN:
+	  case JSONOP_NULL:
+	  case JSONOP_STARTPAREN:
+	  case JSONOP_ENDPAREN:
+	  case JSONOP_STARTARRAY:
+	  case JSONOP_ENDARRAY:
+	  case JSONOP_STARTOBJECT:
+	  case JSONOP_ENDOBJECT:
+	  case JSONOP_COMMA:
+	  case JSONOP_INVALID:
+	  case JSONOP_SELECT:
+	  case JSONOP_AS:
+	  case JSONOP_DISTINCT:
+	  case JSONOP_WHERE:
+	  case JSONOP_GROUPBY:
+	  case JSONOP_ORDERBY:
+	  case JSONOP_DESCENDING:
+		/* These are only used during parsing, not evaluation */
+		abort();
+	}
+
+	/* If no result, then use null */
+	if (!result)
+		result = json_symbol("null", -1);
+
+	/* Free operands, if appropriate */
+	json_free(freeleft);
+	json_free(freeright);
+
+	/* Return the result */
+	return result;
+}

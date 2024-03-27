@@ -1,0 +1,945 @@
+.TH json 3
+.SH NAME
+json_catch, json_debug, json_free, json_simple, json_simple_from_token, json_string, json_number, json_symbol, json_int, json_float, json_key, json_object, json_array, json_append, json_copy, json_select, json_equal, json_compare, json_sort, json_token, json_parse_begin, json_parse_divert, json_parse_newbuf, json_parse_token, json_parse_complete, json_parse_end, json_parse_string, json_parse_file, json_serialize, json_print,  json_by_key, json_by_deep_key, json_by_index, json_by_expr, json_default_text, json_text, json_length, json_is_null, json_compare, json_text_by_key, json_text_by_index, json_text_by_expr \- A library for accessing JSON data
+.SH SYNTAX
+\fB#include <json.h>\fR
+.br
+\fBvoid\fR json_catch(\fBvoid\fR (*\fIf\fR)(\fBjson_parse_t\fR *\fIparse\fR, \fBchar\fR *\fIfmt\fR, ...));
+.br
+\fBchar\fR *json_debug(\fBchar\fR *\fIflags\fR);
+.br
+\fBvoid\fR json_free(\fBjson_t\fR *\fIjson\fR);
+.br
+\fBjson_t\fR *json_simple(\fBchar\fR *\fIstr\fR, \fBsize_t\fR \fIlen\fR, \fBjson_type_t\fR \fItype\fR);
+.br
+\fBjson_t\fR *json_simple_from_token(\fBjson_token_t\fR *\fItoken\fR);
+.br
+\fBjson_t\fR *json_string(\fBchar\fR *\fIstr\fR, \fBsize_t\fR \fIlen\fR);
+.br
+\fBjson_t\fR *json_number(\fBchar\fR *\fIstr\fR, \fBsize_t\fR \fIlen\fR);
+.br
+\fBjson_t\fR *json_symbol(\fBchar\fR *\fIstr\fR, \fBsize_t\fR \fIlen\fR);
+.br
+\fBjson_t\fR *json_int(\fBint\fR \fIi\fR);
+.br
+\fBjson_t\fR *json_float(\fBdouble\fR \fIf\fR);
+.br
+\fBjson_t\fR *json_key(\fBchar\fR *\fIkey\fR, \fBjson_t\fR *\fIvalue\fR);
+.br
+\fBjson_t\fR *json_object();
+.br
+\fBjson_t\fR *json_array();
+.br
+\fBint\fR json_append(\fBjson_t\fR *\fIcontainer\fR, \fBjson_t\fR *\fImore\fR);
+.br
+\fBjson_t\fR json_copy(\fBjson_t\fR *\fIjson\fR);
+.br
+\fBjson_t\fR json_select(\fBjson_t\fR *\fIobj\fR, \fBjson_t\fR *\fIcolumns\fR, \fBjson_t\fR *\fIas\fR);
+.br
+\fBint\fR json_fixemptyobject;
+.br
+\fBchar\fR *json_token(\fBchar\fR *\fIstr\fR, \fBjson_token_t\fR *\fItoken\fR);
+.br
+\fBvoid\fR json_parse_begin(\fBjson_parse_t\fR *\fIstate\fR, \fBint\fR \fImaxnest\fR);
+.br
+\fBjson_parse_divert_t\fR *json_parse_divert(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIexpr\fR,
+.br
+\ \ \ \fBjson_t\fR *(*\fIf\fR)(\fBjson_parse_t\fR *\fIparse\fR, \fBjson_t\fR *\fIelement\fR));
+.br
+\fBvoid\fR json_parse_newbuf(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIbuf\fR, \fBlong\fR \fIoffset\fR);
+.br
+\fBvoid\fR json_parse_token(\fBjson_parse_t\fR *\fIstate\fR, \fBjson_token_t\fR *\fItoken\fR);
+.br
+int json_parse_complete(\fBjson_parse_t\fR *\fIstate\fR);
+.br
+\fBjson_t\fR *json_parse_end(\fBjson_parse_t\fR *\fIstate\fR);
+.br
+\fBjson_t\fR *json_parse_string(\fBchar\fR *\fIstr\fR);
+.br
+\fBjson_t\fR *json_parse_file(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIfilename\fR);
+.br
+\fBchar\fR *json_serialize(\fBjson_t\fR *\fIjson\fR);
+.br
+\fBvoid\fR json_print(\fBjson_t\fR *\fIjson\fR, \fBFILE\fR *\fIfp\fR, \fBint\fR \fIindent\fR);
+.br
+\fBint\fR json_same(\fBjson_t\fR *\fIleft\fR, \fBjson_t\fR *\fIright\fR);
+.br
+\fBint\fR json_ignorecase;
+.br
+\fBjson_t\fR *json_by_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIkey\fR);
+.br
+\fBjson_t\fR *json_by_deep_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIkey\fR);
+.br
+\fBjson_t\fR *json_by_index(\fBjson_t\fR *\fIcontainer\fR, \fBint\fR \fIidx\fR);
+.br
+\fBjson_t\fR *json_by_expr(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIexpr\fR, \fBchar\fR **\fInext\fR);
+.br
+\fBchar\fR *json_default_text(\fBchar\fR *\fInewdefault\fR);
+.br
+\fBchar\fR *json_text(\fBjson_t\fR *\fIjson\fR);
+.br
+\fBint\fR *json_length(\fBjson_t\fR *\fIcontainer\fR);
+.br
+\fBchar\fR *json_text_by_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIkey\fR);
+.br
+\fBchar\fR *json_text_by_index(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIindex\fR);
+.br
+\fBchar\fR *json_text_by_expr(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIexpr\fR, \fBchar\fR **\fInext\fR);
+
+.SH DESCRIPTION
+The \fBjson\fR library contains functions for reading, manipulating, and writing
+JSON data.
+.P
+JSON is a way to represent complex data structures in text.
+It is, essentially, a subset of the JavaScript language that is limited
+to literals.
+JavaScript is more comfortable with with JSON than with XML,
+and JSON data is much more compact than XML,
+and it requires fewer overlapping standards than XML (SOAP/WSDL/XSchema/DTD/...).
+.P
+This library can parse a JSON string to generate a C/C++ data tree,
+extract data from the tree, create or manipulate a tree, and output it
+as JSON again.
+.P
+Don't be put off by the number of functions;
+they're there for the sake of versatility and convenience.
+Simple JSON manipulation is simple \-
+simple enough that this manual page contains the complete source code
+for 9 programs using the library.
+.P
+Often, JSON data contains an array of objects.
+These arrays can be very large \- potentially larger than you want to
+suck into memory before you even begin processing the data.
+This library has an efficient way out of that: You can tell the library
+to divert elements of a given array to a function that you supply.
+This gives you a way to process each element one at a time, as the
+data is being parsed.
+See the \fBjson_parse_divert\fR() function below.
+
+.SH "DATA TYPES"
+
+.SS "json_t"
+.nf
+\fBtypedef struct\fR {
+    \fBjson_t\fR *\fInext;\fR
+    \fBjson_t\fR *\fIfirst;\fR
+    \fBjson_type_t\fR \fItype;\fR
+    \fBchar\fR \fItext\fR[];
+} \fBjson_t\fR;
+.fi
+.P
+The \fBjson_t\fR data type is used to store the JSON data.
+Most of the functions in this library either return a pointer to a
+\fIjson_t\fR or take a pointer to one as a parameter.
+.P
+The \fItype\fR identfies the type of data stored in this \fBjson_t\fR,
+as is described in the following subsection.
+The \fItext\fR text field contains the text form of the data, if the
+type is one of \fBJSON_KEY\fR, \fBJSON_STRING\fR, \fBJSON_NUMBER\fR, or
+\fBJSON_SYMBOL\fR.
+The \fIfirst\fR field points to the
+first array element if \fItype\fR is \fBJSON_ARRAY\fR,
+first object member if \fItype\fR is \fBJSON_OBJECT\fR,
+or the value associated with a key if \fItype\fR is \fBJSON_KEY\fR.
+The \fInext\fR field points to each successive element/member.
+.P
+To iterate over the elements of an array, use the array's \fBjson_t\fR's
+\fIfirst\fR field to find the first element, and each element's \fInext\fR
+field to find each successive element.
+The same technique also works for iterating over the members of an object;
+each member will be a \fBJSON_KEY\fR with the member name in the \fItext\fR
+field and the value referenced by the \fIfirst\fR field.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char **argv)
+    {
+        json_t *array, *elem;
+        array = json_parse_string("[1,2,4,8,16,32]");
+        for (elem = array->first; elem; elem = elem->next) {
+            puts(json_text(elem));
+        }
+        json_free(array);
+    }
+.fi
+.P
+Here's a tricky one.
+In data that is converted from XML to JSON, an XML repeated tag may be
+represented sometimes as a single object, and sometimes as an array of objects.
+It really depends on your XML-to-JSON converter.
+If this happens in your world, then your JSON code needs to be adaptable.
+My method: first check the type, and if it's an array
+then skip to the first member of the array.
+Otherwise just process the item directly, as though it was an array element;
+this is safe because in this context the "next" field is guaranteed to be NULL
+so it'll look like the only item in an array's linked list.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char **argv)
+    {
+        json_t *fromXML, *item;
+        fromXML = json_parse_file(NULL, "fromXML.json");
+	item = json_by_key(fromXML, "PossiblyRepeatedElement");
+        if (item) {
+            if (item->type == JSON_ARRAY)
+                item = item->first;
+            for (; item; item = item->next)
+                puts(json_text(item));
+        }
+        json_free(fromXML);
+    }
+
+.SS "json_type_t"
+.nf
+\fBtypedef\fR \fBenum\fR {
+    \fBJSON_BADTOKEN\fR, \fBJSON_NEWLINE\fR,
+    \fBJSON_OBJECT\fR, \fBJSON_ENDOBJECT\fR,
+    \fBJSON_ARRAY\fR, \fBJSON_ENDARRAY\fR,
+    \fBJSON_KEY\fR, \fBJSON_STRING\fR, \fBJSON_NUMBER\fR, \fBJSON_SYMBOL\fR
+} \fBjson_type_t\fR;
+.fi
+.P
+This represents the types of tokens that may be parsed.
+.P
+The \fBJSON_OBJECT\fR, \fBJSON_ARRAY\fR, \fBJSON_KEY\fR, \fBJSON_STRING\fR,
+\fBJSON_NUMBER\fR, and \fBJSON_SYMBOL\fR values are also used in the
+\fBjson_t\fR \fItype\fR field to identify the type of data stored there.
+The other values are used internally by the parser, and will not appear in any
+parsed \fBjson_t\fR data.
+
+
+.SS "json_parse_t"
+This is an opaque data type, used to store the parsing context.
+You don't always need a parsing context, but if you want to add a
+diversion then you'll want to create one so you can attach the diverter
+to it before you start parsing.
+
+.SS "json_divert_t"
+.nf
+\fBtypedef struct\fR json_divert_s {
+	\fBstruct\fR json_divert_s *next;
+	json_t *(*handler)(json_parse_t *parse, json_t *element);
+	json_t	*found;
+	\fBvoid\fR	*data;
+	\fBlong\fR	diverted;
+	\fBlong\fR	deleted;
+	\fBlong\fR	changed;
+	\fBchar\fR	expr[1];
+} json_divert_t;
+.fi
+.P
+This is mostly an internal data type, used to store the list of
+diversions for a given
+.B json_parse_t
+parse state.
+The only members you're likely to access directly are
+.RI \" data \"
+which can store a pointer to data supplied by your application,
+and
+.RI \" diverted \",
+.RI \" deleted \",
+or
+.RI \" changed \"
+which are counters for how many parsed members were diverted (parsed),
+how many of those were deleted (because the handler returned NULL),
+and how many were changed (because the handler returned a different
+.B json_t
+pointer).
+
+.SH "ERROR HANDLING"
+The following functions are useful when debugging programs or their data.
+
+.IP "\fBvoid\fR json_catch(\fBvoid\fR (*\fIf\fR)(\fBjson_parse_t\fR *\fIparse\fR, \fBchar\fR *\fIfmt\fR, ...));"
+During parsing or manipulation, if a function in the json library detects an
+error then it normally outputs an error message and exits.
+This function gives you a way to install your own error handler.
+Passing NULL reverts to the default one.
+.IP
+json_catch() takes a single parameter, which is a pointer to a function that
+will handle errors.
+.IP
+That handler function takes at least 2  parameters:
+The json_parse_t indicating the parse state (or NULL if nor parsing)
+including the filename and line number if available, and 
+a printf-style formatting string possibly followed by other parameters as
+indicated by the formatting string.
+The formatting string does \fInot\fR include the filename and line number;
+if you want to output those, you'll need to explicitly do so before outputting
+the formatted error message.
+If the handler function returns (doesn't exit) then processing will continue.
+
+.IP "\fBvoid\fR json_throw(\fBjson_parse_t\fI state\fR, \fBchar *\fRfmt\fR, ...);"
+This invokes the error catcher that you set via \fBjson_catch()\fR.
+The \fIstate\fR parameter is a parse state, or NULL for errors that occur
+outside of parsing such as trying to insert an element into a non-array.
+The \fIfmt\fR parameter is a printf()-style formatting string, generally
+without a \\n at the end.
+Depending on \fIfmt\fR, there may be other parameters.
+.IP
+See the source code's \fBjson_throw_default()\fR function for an example.
+.IP
+NOTE: json_throw() is really just a variable that stores the function pointer
+you passed via json_catch().
+
+.IP "\fBchar\fR *json_debug(\fBchar\fR *\fIflags\fR);"
+This gives you a way to specify that some debugging output should be written
+to stderr.
+The \fIflags\fR parameter is a string containing
+"+" to add any following debugging letters,
+"-" to remove any following debugging letters,
+"=" to use only the following debugging letters,
+or a letter to control a particular type of debugging output.
+The letters are
+"b" to show the input buffer contents while reading from a file,
+"f" for file input reads or buffer shifts while reading from a file, or
+"t" to output tokens as they're parsed.
+Initially, no debugging output is shown.
+If the string doesn't start with "+", "-", or "=" then "+" is assumed.
+If the function succeeds, then it returns NULL.
+Otherwise it returns a pointer to the bad character in \fIflags\fR.
+
+.SH MANIPULATING
+The following functions are used to create or alter \fBjson_t\fR trees.
+The data they add to the tree does not necessarily come from a JSON source;
+you can use these to create a \fBjson_t\fR tree from any data within your
+program, and then use \fBjson_serialize()\fR or \fBjson_print()\fR to
+convert it to JSON text.
+
+.IP "\fBvoid\fR json_free(\fBjson_t\fR *\fIjson\fR);"
+This frees a \fBjson_t\fR tree that was created via the other manipulation
+functions.
+
+.IP "\fBjson_t\fR *json_simple(\fBchar\fR *\fIstr\fR, size_t \fIlen\fR, \fBjson_type_t\fR \fItype\fR);"
+.IP "\fBjson_t\fR *json_simple_from_token(\fBjson_token_t\fR *\fItoken\fR);"
+.IP "\fBjson_t\fR *json_string(\fBchar\fR *\fIstr\fR, size_t \fIlen\fR);"
+.IP "\fBjson_t\fR *json_number(\fBchar\fR *\fIstr\fR, size_t \fIlen\fR);"
+.IP "\fBjson_t\fR *json_symbol(\fBchar\fR *\fIstr\fR, size_t \fIlen\fR);"
+.IP "\fBjson_t\fR *json_int(int \fIi\fR);"
+.IP "\fBjson_t\fR *json_float(double \fIf\fR);"
+.IP "\fBjson_t\fR *json_key(\fBchar\fR *\fIkey\fR, \fBjson_t\fR *\fIvalue\fR);"
+.IP "\fBjson_t\fR *json_object();"
+.IP "\fBjson_t\fR *json_array();"
+These all create a single \fBjson_t\fR node.
+.IP
+\fBjson_simple\fR(\fIstr\fR, \fIlen\fR, \fItype\fR) is the lowest-level
+function which merely allocates a node with given text and type;
+the other \fBjson_t\fR fields will be initialized as NULL pointers.
+You can pass NULL for the \fIstr\fR, in which case no text is stored.
+Otherwise, \fIlen\fR must indicate the length of \fIstr\fR.
+.IP
+All of the other functions in the above list are merely wrappers around
+that function.
+
+.IP "\fBvoid\fR json_append(\fBjson_t\fR *\fIcontainer\fR, \fBjson_t\fR *\fImore\fR);"
+This combines two \fBjson_t\fR trees.
+The \fIcontainer\fR must be a \fBJSON_ARRAY\fR, \fBJSON_OBJECT\fR, or \fBJSON_KEY\fR.
+.IP
+For \fBJSON_KEY\fR containers, this assigns a value to the key.
+If the key already had a value, the new value replaces it and the old
+value is freed.
+.IP
+For \fBJSON_OBJECT\fR containers, the \fImore\fR parameter should be a
+\fBJSON_KEY\fR with the new member's name and value.
+If the container already contains a member with the same name, the new
+member will replace the old one, and the old one will be freed.
+This also applies if the container is a \fBJSON_ARRAY\fR and the \fImore\fR
+parameter is a \fBJSON_KEY\fR.
+For example, the following code snippet would add or replace a member with the
+name "x" to \fIobj\fR, and give it the value 6:
+.nf
+
+    json_append(obj, json_key("x", json_int(6)) );
+.IP
+For \fBJSON_ARRAY\fR containers where \fImore\fR is not a \fBJSON_KEY\fR,
+the new value is simply appended to the array's list of elements.
+.IP "\fBjson_t\fR json_copy(\fBjson_t\fR *\fIjson\fR);"
+Create a "deep" copy of JSON data.
+If
+.I json
+is an array, object, or key then each member within it is also copied.
+The end result is another
+.B json_t
+data object which is identical to
+.I json
+but independent of it;
+you can alter or free one without affecting the other.
+.IP "\fBjson_t\fR json_select(\fBjson_t\fR *\fIobj\fR, \fBjson_t\fR *\fIcolumns\fR, \fBjson_t\fR *\fIas\fR);"
+Create a new JSON object containing selected members of the 
+.I obj
+object.
+The
+.I columns
+parameter is an array of member names
+or JavaScript-like expressions (as strings)
+for finding the members.
+The
+.I as
+parameter, if not NULL, is a parallel array of names to use for the fields
+in the resulting object.
+The original object is unchanged.
+.IP
+The following example will print {"width":10,"height":12}
+.nf
+
+    #include <stdio.h>
+    #include <json.h>
+    int main()
+    {
+    	json_t *xyz, *columns, *as, *result;
+
+        xyz = json_parse_string("{\e"x\e":10,\e"y\e":12,\e"z\e":22}");
+        columns = json_parse_string("[\e"x\e",\e"y\e"]");
+        as = json_parse_string("[\e"width\e",\e"height\e"]");
+
+        result = json_select(xyz, columns, as);
+        json_print(result, stdout, 0);
+
+        json_free(xyz);
+        json_free(columns);
+        json_free(as);
+        json_free(result):
+
+        return 0;
+    }
+.IP "\fBvoid\fR json_sort(\fBjson_t\fR *\fIarray\fR, \fBjson_t\fR *\fIorderby\fR);"
+Sort an array of objects in-place (meaning the same
+.I array
+that you pass in gets rearranged, instead of creating a whole new array).
+The
+.I orderby
+list is an array of member names/expressions to compare, where each one may
+be preceded by the symbol
+.B true
+to make it be sorted in descending order.
+See the json_compare() function for more information.
+
+.SH PARSING
+The following functions convert JSON text to a \fBjson_t\fR tree.
+
+.IP "\fBjson_t\fR *json_parse_string(\fBchar\fR *\fIstr\fR);"
+Parse a string containing JSON text, and return a corresponding
+\fBjson_t\fR tree.
+The following example parses a literal string, and then pretty-prints it.
+.nf
+
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char **argv)
+    {
+        json_t *xy;
+
+        xy = json_parse_string("{\e"x\e":10,\e"y\e":12}");
+        json_print(xy, stdout, 0);
+        json_free(xy);
+        return 0;
+    }
+.fi
+.IP "\fBjson_t\fR *json_parse_file(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIfilename\fR);"
+Parse the contents of a file as JSON text, and return the corresponding
+\fBjson_t\fR tree.
+.IP
+The \fIstate\fR parameter may be NULL, in which case \fBjson_parse_file\fR()
+will use a temporary parse state.
+The most common reasons for passing your own parse state (and calling the
+\fBjson_parse_begin\fR() and \fBjson_parse_end()\fR functions to manage it)
+are to handle JSON data that's split across multiple files, or
+to use \fBjson_parse_divert\fR() for handling array elements individually
+as they're parsed, instead of building the whole \fBjson_t\fR tree in
+memory and then scanning the tree.
+.IP
+The following example pretty-prints any JSON files named on the command line.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        int    i;
+        json_t *j;
+
+        for (i = 1; i < argc, i++) {
+            j = json_parse_file(NULL, argv[i]);
+            if (j) {
+                json_print(j, stdout, 0);
+                json_free(j);
+            }
+        }
+        return 0;
+    }
+.fi
+
+.IP "\fBvoid\fR json_parse_begin(\fBjson_parse_t\fR *\fIstate\fR, \fBint\fR \fImaxnest\fR);"
+.IP "\fBjson_t\fR *json_parse_end(\fBjson_parse_t\fR *\fIstate\fR);"
+These functions initialize and terminate a parse state.
+The state itself will typically be stored in a local variable within your
+function.
+.IP
+The following example concatenates JSON fragments in all files named on the
+command line, and then pretty-prints the combined data.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        int    i;
+        json_t *j;
+        json_parse_t state;
+
+        json_parse_begin(&state, 30);
+        for (i = 1; i < argc, i++)
+            (void)json_parse_file(&state, argv[i]);
+        j = json_parse_end(&state);
+        if (j) {
+            json_print(j, stdout, 0);
+            json_free(j);
+        }
+        return 0;
+    }
+.fi
+
+.IP "int json_parse_complete(\fBjson_parse_t\fR *\fIstate\fR);"
+This returns a flag indicating whether the current parse state represents
+a complete object; i.e., whether the final "}" has been read.
+The following example uses
+.BR json_parse_complete ()
+to pretty-print JSON data from files, whether
+the files are each complete by themselves, or fragments that need to be
+combined.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        int    i;
+        json_t *j;
+        json_parse_t state;
+
+        json_parse_begin(&state, 30);
+        for (i = 1; i < argc, i++) {
+            (void)json_parse_file(&state, argv[i]);
+            if (json_parse_complete(&state)) {
+                j = json_parse_end(&state);
+                if (j) {
+                    json_print(j, stdout, 0);
+                    json_free(j);
+                }
+                json_parse_begin(&state, 30);
+            }
+        }
+        j = json_parse_end(&state);
+        json_free(j);
+        return 0;
+    }
+.fi
+
+.IP "\fBjson_parse_divert_t\fR *json_parse_divert(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIexpr\fR,"
+.IP "\ \ \ \fBjson_t\fR *(*\fIf\fR)(\fBjson_parse_t\fR *\fIparse\fR, \fBjson_t\fR *\fIelement\fR));"
+JSON data often contains an array of many objects -- possibly millions.
+Parsing all of them and building an in-memory parse tree is not always the
+best way to process that data.
+The \fBjson_parse_divert\fR() function offers a way to process each element
+as it is parsed, without necessarily adding them to the parse tree.
+.IP
+You need to add the diversion to the parse state before you begin parsing
+the data.
+\fBjson_parse_divert\fR() takes three parameters:
+\fIstate\fR is the parse state to add the diversion to,
+\fIexpr\fR is a JavaScript-like expression for selecting the array within the
+JSON data, and
+\fIf\fR is a pointer to a function that will be called for each element of
+the array.
+.IP
+The \fIf\fR function itself takes two parameters:
+\fIstate\fR is the parse state, and
+\fIelement\fR is the \fBjson_t\fR tree of the current element of the array.
+The function should return the \fBjson_t\fR tree of the element to actually add,
+or NULL if no element should be added to the array.
+If the returned value isn't the \fIelement\fR parameter, then the function
+should also call \fBjson_free\fR(\fIelement\fR) to free the element.
+.IP
+The \fBjson_parse_divert\fR() function returns a pointer to the structure
+that it just added to the parse state.
+You can store a pointer to your application's related data in the
+.RI \" data \"
+element before parsing begins,
+and you can examine the
+.RI \" diverted ",
+.RI \"deleted \",
+and
+.RI \" changed \"
+counters after parsing is complete.
+Often, though, you can just discard the returned value.
+.IP
+The following example assumes "cust.json" contains an object with an array
+of customer objects, e.g. {"cust":[{"custno":"1","name:"Bob Jones",...},...]}.
+It processes the customers one by one, without adding any of them to the
+parse tree.
+The final parse tree will contain an empty "cust" array.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+
+    /* Process a single customer record */
+    json_t *docust(json_parse_t *state, json_t *element)
+    {
+        /* Print the custno and name fields */
+        printf("%s\\t%s\\n",
+            json_text_by_key(element, "custno"),
+            json_text_by_key(element, "name"));
+
+        /* Don't add this to the parse tree */
+        json_free(element);
+        return NULL;
+    }
+
+    int main(int argc, char *argv)
+    {
+        int    i;
+        json_t *j;
+        json_parse_t state;
+
+        json_parse_begin(&state, 30);
+        (void)json_parse_divert(&state, "cust", docust);
+        (void)json_parse_file(&state, "cust.json");
+        j = json_parse_end(&state);
+        json_free(j);
+        return 0;
+    }
+.fi
+
+.IP "\fBchar\fR *json_token(\fBchar\fR *\fIstr\fR, \fBjson_token_t\fR *\fItoken\fR);"
+This is a low-level parsing function.
+It parses a single token from a string, and returns a pointer to the next token.
+The \fIstr\fR parameter is the start of the token to parse, and the
+\fItoken\fR parameter is a pointer to a \fBjson_token_t\fR buffer that you
+supply.
+(Typically it would simply be declared as a local variable in a low-level
+parsing function.)
+.IP
+Note that you probably will never have to use this function directly, because
+the \fBjson_parse_string\fR() and \fBjson_parse_file\fR() deal with this for
+you.
+
+.IP "\fBint\fR json_fix_empty_object;"
+This is a boolean variable which affects the way JSON is parsed.
+If true (non-zero), then any empty objects are converted into empty strings.
+This is handy when dealing with JSON that was derived from an XML data source,
+because XML is less expressive than JSON.
+In JSON,
+"foo":"" is clearly an empty string,
+"foo":[] is clearly an empty array, and
+"foo":{} is clearly an empty object, but in XML
+<foo></foo> could be any empty thing.
+Some libraries parse it as an empty object which is almost never correct.
+In my experience, it should always be an empty string.
+\fBjson_fix_empty_object\fR is false (0) by default so empty objects
+continue to be parsed as empty objects.
+Also, regardless of the value of \fRjson_fix_empty_object\fR, you can still
+created and manipulate empty objects; this only affects parsing.
+.IP "\fBvoid\fR json_parse_token(\fBjson_parse_t\fR *\fIstate\fR, \fBjson_token_t\fR *\fItoken\fR);"
+This is a low-level parsing function.
+It incorporates a \fBjson_token_t\fR (e.g., from \fBjson_token\fR())
+into a parse state.
+You will probably never need to call this directly.
+.IP
+As an example,
+here's the source code for the \fBjson_parse_string\fR() function:
+.nf
+    json_t *json_parse_string(char *str)
+    {
+            json_parse_t state;
+            json_token_t token;
+
+            /* Start parsing */
+            json_parse_begin(&state, 30);
+            json_parse_newbuf(&state, str, 0L);
+
+            /* Parse each token and add it to data */
+            while (*str)
+            {
+                    str = json_token(str, &token);
+                    json_parse_token(&state, &token);
+            }
+
+            /* end parsing */
+            return json_parse_end(&state);
+    }
+.fi
+
+.IP "\fBvoid\fR json_parse_newbuf(\fBjson_parse_t\fR *\fIstate\fR, \fBchar\fR *\fIbuf\fR, long \fIoffset\fR);"
+This is another low-level parsing function.
+Its main purpose is to let the parser know where your parse buffer is located,
+in the hope that this will allow better error messages to be given when the
+JSON data contains errors.
+The \fBjson_parse_file\fR() function does some complex buffer manipulation,
+but usually you'd just pass the state, buffer, and 0L as the offset, for
+each line of the data.
+
+.SH "SERIALIZATING / OUTPUTTING"
+The following functions convert a \fBjson_t\fR tree back into text.
+
+.IP "\fBchar\fR *json_serialize(\fBjson_t\fR *\fIjson\fR);"
+This converts a \fBjson_t\fR tree into a compact string, following the
+JSON conventions.
+No newlines or spaces are added in an effort to make it pretty;
+the serialized data is intended to be read by another computer program.
+The returned string should be freed via the
+.BR free (3)
+standard library function after you're done with it.
+.IP
+The following example simply reads JSON data from "cust.json" and writes it
+to stdout.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        json_t *j;
+        char   *str
+
+        j = json_parse_file(NULL, "cust.json");
+        if (j) {
+            str = json_serialize(j);
+            puts(str);
+            free(str);
+            json_free(j);
+        }
+        return 0;
+    }
+.fi
+.IP
+Here's a more complex version which explicitly loops over the "cust" records
+and serializes each element individually, instead of generating one big
+string with all of them.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        json_t *j, *cust, *elem;
+        char   *str
+
+        j = json_parse_file(NULL, "cust.json");
+        if (j) {
+            printf("{\e"cust\e":[");
+            cust = json_by_key(j, "cust");
+            for (elem = cust->first; elem; elem = elem->next) {
+                str = json_serialize(elem);
+                puts(str);
+                free(str);
+                if (elem->next)
+                    putchar(',');
+            }
+            printf("]}\en");
+            json_free(j);
+        }
+        return 0;
+    }
+.fi
+
+.IP "\fBvoid\fR json_print(\fBjson_t\fR *\fIjson\fR, FILE *\fIfp\fR, int \fIindent\fR);"
+This writes JSON data to a \fIFILE\fR stream.
+Unlike \fBjson_serialize\fR(), it does not convert it to a big string first
+so it can be more efficient than \fBjson_serialize\fR().
+Also, it can optionally "pretty-print" the JSON by adding newlines and spaces
+to reveal the structure of the data.
+.IP
+The \fIjson\fR parameter is the data to output,
+\fIfp\fR is the \fBFILE\fR stream to output it to, and
+\fIindent\fR controls pretty-printing.
+If \fIindent\fR is non-negative then the data will be pretty-printed, and the
+\fIindent\fR value indicates how much indentation to add for the outermost
+element, i.e. the "{" of the container object.
+Passing -1 as the \fIindent\fR will inhibit pretty-printing, effectively
+making it output the same text as \fBjson_serialize\fR().
+Passing -2 as the \fIindent\fR adds newlines but no indentation, and also
+inhibits some punctuation with the goal of making the text easier to parse
+by a non-JSON-aware program.
+.IP
+This document already contains many pretty-printing examples, so here's one
+that uses \fIindent\fR=-2 to output in the simplified multi-line format.
+.nf
+    #include <stdio.h>
+    #include <json.h>
+    int main(int argc, char *argv)
+    {
+        json_t *j;
+        char   *str
+
+        j = json_parse_file(NULL, "cust.json");
+        if (j) {
+            json_print(j, stdout, -2);
+            json_free(j);
+        }
+        return 0;
+    }
+.fi
+
+.SH ACCESSING
+The following functions allow you to locate and extract data from a
+\fBjson_t\fR tree.
+
+.IP "\fBjson_t\fR *json_same(\fBjson_t\fR *\fIleft\fR, \fBjson_t\fR *\fIright\fR);"
+Compare two \fBjson_t\fR trees and return 1 if they're the same, or 0 if
+they're different.
+This can be more complex than it sounds, because members of an object can be
+listed in any order.
+Also, if a member is present but its value is the symbol "null" then that's
+equivalent to not being present.
+
+.IP "\fBint\fR *json_length(\fBjson_t\fR *\fIcontainer\fR);"
+Return the number of elements in an array, or the number of members in an
+object.
+If passed NULL it will return 0.
+
+.IP "\fBint\fR json_is_null(\fBjson_t\fR *\fIjson\fR);"
+Return 1 if
+.I
+json
+is null, or 0 otherwise.
+Note that "null" in this context may be either a NULL json_t pointer,
+or a JSON_SYMBOL node with the value
+.B null.
+
+.IP "\fBint\fR json_compare(\fBjson_t\fR *\fIobj1\fR, \fBjson_t\fR *\fIobj2\fR, \fBjson_t\fR *\fIorderby\fR);"
+Compare two objects by looking at a listed set of fields.
+Return 1 if
+.I obj1
+comes after
+.IR obj2 ,
+-1 if
+.I obj1
+comes before
+.IR obj2 ,
+or 0 if they compare as equal.
+The
+.I orderby
+list is an array of strings giving member names or JavaScript-like expressesions
+for finding values to compare.
+Each name/expression may also be preceded by the symbol
+.B true
+to indicate that the values should be sorted in descending order instead of
+the default ascending order.
+For example, ["name", true, "age"] would compare records by ascending name,
+but if names are equal then it will compare by descending age.
+JSON_NUMBER values are compared as numbers, and all else (strings and symbols,
+mostly) are compared as case-insensitive strings.
+
+
+.IP "\fBjson_t\fR *json_by_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIkey\fR);"
+.IP "\fBjson_t\fR *json_by_deep_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIkey\fR);"
+Locate a \fRjson_t\fR via its key.
+The \fIcontainer\fR should be a \fBjson_t\fR tree of type \fBJSON_OBJECT\fR
+or \fBJSON_ARRAY\fR.
+The \fIcontainer\fR is scanned for a \fBJSON_KEY\fR with the given name.
+If found, the value (not the \fBJSON_KEY\fR node itself) is returned.
+If not found, NULL is returned.
+.IP
+.IP
+The difference between \fBjson_by_key\fR() and \fBjson_by_deep_key\fR()
+is that \fBjson_by_key\fR() only looks one layer deep in \fIcontainer\fR
+while \fBjson_by_deep_key\fR() will look inside any objects within
+\fIcontainer\fR for the requested key.
+
+.IP "\fBjson_t\fR *json_by_index(\fBjson_t\fR *\fIcontainer\fR, \fBint\fR \fIidx\fR);"
+Locate a \fBjson_t\fR via its subscript.
+The \fIcontainer\fR must be a \fIJSON_ARRAY\fR.
+The first element has \fIidx\fR=0.
+keyed elements (as in an associative array) are not counted.
+If the \fIidx\fR'th element doesn't exist, then NULL is returned instead.
+
+.IP "\fBint\fR json_ignorecase;"
+This is a boolean variable.
+If true (non-zero) then JavaScript-like expressions
+as used by \fBjson_by_expr()\fR and \fBjson_parse_divert()\fR
+will be case-insensitive.
+\fBjson_ignorecase\fR is false (0) by default.
+(You can also make any single expression be case-insensitive by adding a "~"
+character to it.)
+
+.IP "\fBjson_t\fR *json_by_expr(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIexpr\fR, \fBchar\fR **\fInext\fR);"
+Locate a \fBjson_t\fR via a JavaScript-like expression.
+The \fIcontainer\fR should be a \fBJSON_OBJECT\fR or \fBJSON_ARRAY\fR,
+\fIexpr\fR should be the expression in the form of a string, and
+\fInext\fR, if not NULL, should be a reference to a character pointer that
+will be set the end of the parsed expression.
+The \fInext\fR parameter is intended to support
+a comma-delimited list of expressions to look for.
+.IP
+The expression parser is pretty simple.
+It divides each expression into a series of alphanumeric strings delimited by
+any characters from the list ".[]".
+You can also use quoted strings, as a way to access elements with names that
+don't look like JavaScript identifiers.
+Each string delves one layer deeper into the \fIcontainer\fR.
+If the string looks like a number, then it uses \fBjson_find_by_index\fR(),
+else it uses \fBjson_find_by_key\fR() except that if a double ".." appeared
+in the delimiter then the \fBjson_find_by_deep_key()\fR function is used
+instead.
+Parsing stops when any other character (e.g., a space or comma) is encountered.
+Here's a variation of the customer-processing function from the
+\fBjson_parse_divert\fR() example.
+Where the original example was hardcoded to output the custno and name fields,
+this one use a global string to indicate what should be output.
+This example is a code fragment, not a complete program.
+.nf
+    char *fields = "custno,name,address.zip,account[0].number";
+
+    json_t *docust(json_parse_t *state, json_t *element)
+    {
+	char *expr;
+	json_t *j;
+
+        /* Print the requested fields */
+        for (expr = fields; *expr; ) {
+        	j = json_by_expr(element, expr, &expr);
+        	fputs(json_text(j), stdout);
+        	if (*expr) {
+        		expr++; /* move past comma */
+        		putchar('\et');
+        	}
+	}
+	putchar('\en');
+
+        /* Don't add this to the parse tree */
+        json_free(element);
+        return NULL;
+    }
+.fi
+
+.IP "\fBchar\fR *json_text(\fBjson_t\fR *\fIjson\fR);"
+Returns the text associated with a given \fBjson_t\fR node.
+.IP
+If passed NULL, it returns the default text.
+The \fBJSON_OBJECT\fR and \fBJSON_ARRAY\fR types have no text and will return "".
+For \fBJSON_KEY\fR it returns the name of the keyed item;
+use
+.BI json_text( json ->first)
+to get the text of a keyed item.
+For all others, it returns the value as a string; e.g. for if the \fBjson_t\fR's
+\fItype\fR is JSON_NUMBER and the value is 6, it'll return the string "6".
+.IP
+No effort is made to convert backslash sequences such as \en or \eu1234 to the
+corresponding control characters or UTF-8 characters.
+
+.IP "\fBchar\fR *json_text_by_key(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIley\fR);"
+.IP "\fBchar\fR *json_text_by_index(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIindex\fR);"
+.IP "\fBchar\fR *json_text_by_expr(\fBjson_t\fR *\fIcontainer\fR, \fBchar\fR *\fIexpr\fR, \fBchar\fR **\fInext\fR);"
+These are all convenience macros that combine \fBjson_text\fR() with one of the
+\fBjson_by_\fIXXXXX\fR() functions.
+
+.IP "\fBchar\fR *json_default_text(\fBchar\fR *\fInewdefault\fR);"
+This sets the default text returned by \fBjson_text\fR() when you pass
+\fBjson_text\fR() a NULL \fBjson_t\fR value.
+It returns the previous default.
+Initially the default return value is a NULL character pointer,
+though for some applications "" or the string "NULL" may be more useful.
+
+.SH "SEE ALSO"
+.BR jsontool (1),
+.BR jsonsql (1)
+.P
+The JSON standard is defined in RFC-8259 (which replaced RFC-7159 in 2017)
+and in ECMA-404.
+.SH AUTHOR
+Steve Kirkendall, kirkenda@gmail.com

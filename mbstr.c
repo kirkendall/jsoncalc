@@ -1,0 +1,596 @@
+#include <stdio.h>
+#include <stdlib.h>
+#define _XOPEN_SOURCE
+#define __USE_XOPEN
+#include <wchar.h>
+#include <wctype.h>
+#include <string.h>
+#include "json.h"
+
+
+/* This is a collection of functions for dealing with strings of multi-byte
+ * characters.  Specifically UTF-8, though it should be locale-dependent.
+ */
+
+/* Count the characters (not bytes) in a mbs. */
+size_t json_mbs_len(const char *s)
+{
+        wchar_t wc;
+        int     in;
+        size_t  len;
+
+        for (len = 0; *s; len++)
+        {
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                s += in;
+        }
+        return len;
+}
+
+/* Count the width of a UTF-8 string.  This is different from the character
+ * count json_mbs_len() or the byte count strlen(), partly because some
+ * Unicode characters are doublewide, and diacritics are zerowide.  Also,
+ * this function knows about newlines.
+ */
+int json_mbs_width(const char *s)
+{
+        wchar_t wc;
+        int     in;
+        int     charwidth, linewidth, width;
+
+        for (width = linewidth = 0; *s; )
+        {
+		if (*s == '\n') {
+			if (linewidth > width)
+				width = linewidth;
+			linewidth = 0;
+			s++;
+			continue;
+		}
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                s += in;
+                charwidth = wcwidth(wc);
+                if (charwidth > 0)
+			linewidth += charwidth;
+        }
+        if (linewidth > width)
+		width = linewidth;
+        return width;
+}
+
+/* Find the endpoints of a substring within s.  start is the character count
+ * to the start of the substring, and if reflimit is non-NULL then it is a
+ * character count coming in, and a byte count going out for the end of the
+ * substring.  Returns a pointer to the start of the substring.  The string s
+ * is not actually modified.
+ */
+const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
+{
+        wchar_t wc;
+        int     in;
+        const char    *sptr;
+
+        /* Find the start */
+        for (; start > 0 && *s; start--) {
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                s += in;
+        }
+        sptr = s;
+
+        /* If there's a reflimit, count characters for it too */
+        if (reflimit) {
+                for (start = *reflimit; start > 0 && *s; start--) {
+                        in = mbtowc(&wc, s, MB_CUR_MAX);
+                        s += in;
+                }
+                *reflimit = (size_t)(s - sptr);
+        }
+
+        /* return the start pointer */
+        return sptr;
+}
+
+
+/* Case-sensitive comparison.  Here we don't try to do anything fancy with
+ * case or even locale().
+ */
+int json_mbs_cmp(const char *s1, const char *s2)
+{
+        return strcmp(s1, s2);
+}
+
+/* Case-sensitive comparison up to a given number length.  "len" is a character
+ * count, not a byte count.
+ */
+int json_mbs_ncmp(const char *s1, const char *s2, size_t len)
+{
+        /* Convert len from character count to byte count */
+        const char *end = json_mbs_substr(s1, len, NULL);
+        len = (end - s1);
+        return strncmp(s1, s2, len);
+}
+
+
+/* Return a lowercase version of a string.  We expect the converted string to
+ * still fit in the same buffer; if it won't, then the tail of the string is
+ * *NOT* converted.
+ */
+void json_mbs_tolower(char *s)
+{
+        wchar_t wc;
+        int     in;
+        char    dummy[MB_CUR_MAX];
+
+        while (*s)
+        {
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                wc = towlower(wc); 
+                if (in == wctomb(dummy, wc))
+                        wctomb(s, wc);
+                s += in;
+        }
+}
+
+/* Return an uppercase version of a string.  We expect the converted string to
+ * still fit in the same buffer; if it won't, then the tail of the string is
+ * *NOT* converted.
+ */
+void json_mbs_toupper(char *s)
+{
+        wchar_t wc;
+        int     in;
+        char    dummy[MB_CUR_MAX];
+
+        while (*s)
+        {
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                wc = towupper(wc); 
+                if (in == wctomb(dummy, wc))
+                        wctomb(s, wc);
+                s += in;
+        }
+}
+
+/* Return an uppercase version of a string.  We expect the converted string to
+ * still fit in the same buffer; if it won't, then the tail of the string is
+ * *NOT* converted.  The "exceptions" argument should be an array of strings
+ * in their preferred capitalization; if they end with "*" then only the start
+ * of the string is compared.
+ */
+void json_mbs_tomixed(char *s, json_t *exceptions)
+{
+	json_t	arraybuf;
+
+	/* Make sure the list of exceptions is an array */
+	if (!exceptions || exceptions->type != JSON_ARRAY) {
+		arraybuf.type = JSON_ARRAY;
+		arraybuf.first = exceptions;
+		exceptions = &arraybuf;
+	}
+
+	/* Find the start of the first word */
+	/*!!!*/
+
+	/* While we have words... */
+		/* Check the exception list */
+		/* Else make first letter uppercase, others lowercase */
+}
+
+/* Compare two strings in a case-insensitive way */
+int json_mbs_casecmp(const char *s1, const char *s2)
+{
+        wchar_t wc1, wc2;
+        int     in1, in2;
+
+        while (*s1 && *s2)
+        {
+                in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
+                in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
+                wc1 = towupper(wc1); 
+                wc2 = towupper(wc2); 
+                if (wc1 < wc2)
+                        return -1;
+                else if (wc1 > wc2)
+                        return 1;
+                s1 += in1;
+                s2 += in2;
+        }
+
+        /* If we get here, then either they are equal, or one is longer than
+         * the other and the shorter one should come first.
+         */
+        if (!*s1 && !*s2)
+                return 0;
+        if (!s1)
+                return -1;
+        return 1;
+}
+
+/* Compare two strings in a case-insensitive way, up to a given length.
+ * "len" is a character count, not a byte count.
+ */
+int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
+{
+        wchar_t wc1, wc2;
+        int     in1, in2;
+
+        while (*s1 && *s2 && len > 0)
+        {
+                in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
+                in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
+                wc1 = towupper(wc1); 
+                wc2 = towupper(wc2); 
+                if (wc1 < wc2)
+                        return -1;
+                else if (wc1 > wc2)
+                        return 1;
+                s1 += in1;
+                s2 += in2;
+                len--;
+        }
+
+        /* If we get here, then either they are equal, or one is longer than
+         * the other and the shorter one should come first.
+         */
+        if (!*s1 && !*s2)
+                return 0;
+        if (len == 0)
+                return 0;
+        if (!*s1)
+                return -1;
+        return 1;
+}
+
+/* Compare an abbreviated name to the (possible) full name */
+int json_mbs_abbrcmp(const char *abbr, const char *full)
+{
+        wchar_t wc1, wc2;
+        int     in1, in2;
+
+	/* First character must match */
+	in1 = mbtowc(&wc1, abbr, MB_CUR_MAX);
+	in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+	wc1 = towupper(wc1); 
+	wc2 = towupper(wc2); 
+	if (wc1 != wc2)
+		return 1;
+	abbr += in1;
+	full += in2;
+
+	/* after that, each letter of abbr must match uppercase full, but
+	 * lowercase in full can be skipped over.
+	 */
+	while (*abbr && *full) {
+		/* Skip lowercase from full, get char after that */
+		do {
+			in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+			full += in2;
+		} while (iswlower(wc2));
+
+		/* Get next abbr char */
+		in1 = mbtowc(&wc1, abbr, MB_CUR_MAX);
+		abbr += in1;
+		wc1 = towupper(wc1);
+
+		/* If different then no match */
+		if (wc1 != wc2)
+			return 1;
+	}
+
+	/* Skip any trailing lowercase letters */
+	if (*full) {
+		do {
+			in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+			full += in2;
+		} while (iswlower(wc2));
+	}
+
+	/* If any leftover unmatched chars, then no match */
+	if (*abbr || *full)
+		return 1;
+
+	/* Match! */
+	return 0;
+}
+
+/* Convert a string's control characters and optionally non-ASCII characters
+ * to backslash sequences, and return the new length.  This does *not* add a
+ * NUL character to the end of the string, or include room for a terminating
+ * NUL character in the returned length.  If "dst" is NULL then just compute
+ * the length.  If nbytes is -1 then use strlen() to the source string's length.
+ * "quote" is another character to insert a backslash in front of, usually '"'.
+ * "nonascii" can be 1 to convert non-ASCII to \uxxxx sequences.
+ */
+size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int ascii)
+{
+        const char *end;
+        size_t size;
+        int mbsize;
+        wchar_t wc;
+
+        /* If nbytes is -1 then use strlen to find the true length */
+        if (nbytes == (size_t)-1)
+                nbytes = strlen(src);
+
+        /* For each character... */
+        for (size = 0, end = src + nbytes; *src && src < end; src++) {
+                /* non-ascii? */
+                if (*src & 0x80) {
+                        /* Non-ASCII either copy verbatim, or convert the whole
+                         * multibyte character to a single \u sequence.
+                         */
+                        if (ascii) {
+                                mbsize = mbtowc(&wc, src, MB_CUR_MAX);
+                                src += mbsize - 1; /* since for-loop does +1 */
+                                if (wc < 256) {
+                                        if (dst)
+                                                sprintf(dst + size, "\\x%02x", wc);
+                                        size += 4;
+                                } else if (wc < 65536) {
+                                        if (dst)
+                                                sprintf(dst + size, "\\u%04x", wc);
+                                        size += 6;
+                                } else if (wc < 1114112) {
+					/* Output as a UTF-16 surrogate pair */
+					if (dst) {
+						int high, low;
+						wc -= 65536;
+						high = (wc >> 10) | 0xd800;
+						low = (wc & 0x3ff) | 0xdc00;
+						sprintf(dst + size, "\\u%04x\\u%04x", high, low);
+					}
+					size += 12;
+                                } else {
+                                        if (dst)
+                                                sprintf(dst + size, "\\U%08x", wc);
+                                        size += 10;
+                                }
+                        } else {
+                                /* Copy each byte verbatim */
+                                if (dst)
+                                        dst[size] = *src;
+                                size++;
+                        }
+                } else if (*src < ' ' || *src == 127) {
+                        /* Control characters become '\t' or '\x7f' */
+                        int ch = 0;
+                        switch (*src) {
+                          case '\b':    ch = 'b';       break;
+                          case '\f':    ch = 'f';       break;
+                          case '\n':    ch = 'n';       break;
+                          case '\r':    ch = 'r';       break;
+                          case '\t':    ch = 't';       break;
+                        }
+                        if (ch) {
+                                if (dst) {
+                                        dst[size] = '\\';
+                                        dst[size + 1] = ch;
+                                }
+                                size += 2;
+                        } else {
+                                if (dst)
+                                        sprintf(dst + size, "\\x%02x", *src);
+                                size += 4;
+                        }
+                } else if (*src == '\\' || *src == quote) {
+                        /* backslash and quote need a backslash */
+                        if (dst) {
+                                dst[size] = '\\';
+                                dst[size] = *src;
+                        }
+                        size += 2;
+                } else {
+                        /* ASCII, just copy it */
+                        if (dst)
+                                dst[size] = *src;
+                        size++;
+                }
+        }
+
+        /* Return the length */
+        return size;
+}
+
+/* Convert a string's backslash sequences to characters, and return the new
+ * length in bytes.  This does *not* add a NUL character to the end of the
+ * string, or include room for a terminating NUL character in the returned
+ * length.  If "dst" is NULL then just compute the length.  If nbytes is -1
+ * then use strlen() to the source string's length in bytes.
+ */
+size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
+{
+        const char *end;
+        size_t size;
+        int mbsize;
+        wchar_t wc;
+        int limit;
+        char dummy[MB_CUR_MAX];
+
+        /* If nbytes is -1 then use strlen to find the true length */
+        if (nbytes == (size_t)-1)
+                nbytes = strlen(src);
+        end = src + nbytes;
+
+        /* For each character up to the end... */
+        for (size = 0; src < end; src++) {
+                /* We can copy characters verbatim except for backslashes.
+                 * Even the bytes of multibyte characters.
+                 */
+                if (*src != '\\') {
+                        if (dst)
+                                *dst++ = *src;
+                        size++;
+                        continue;
+                }
+
+                /* Backslash! */
+                src++;
+                limit = 0;
+                switch (*src) {
+                  case '\0':
+                        /* premature end of string, omit it */
+                        break;
+                  case 'b':
+                        if (dst)
+                                *dst++ = '\b';
+                        size++;
+                        break;
+                  case 'e':
+			if (dst)
+				*dst++ = '\033'; /* ESC */
+			size++;
+			break;
+                  case 'f':
+                        if (dst)
+                                *dst++ = '\f';
+                        size++;
+                        break;
+                  case 'n':
+                        if (dst)
+                                *dst++ = '\n';
+                        size++;
+                        break;
+                  case 'r':
+                        if (dst)
+                                *dst++ = '\r';
+                        size++;
+                        break;
+                  case 't':
+                        if (dst)
+                                *dst++ = '\t';
+                        size++;
+                        break;
+                  case 'u':
+                        limit = 4;
+                        break;
+                  case 'U':
+                        limit = 8;
+                        break;
+                  case 'x':
+                        limit = 2;
+                        break;
+                  default:
+                        if (dst)
+                                *dst++ = *src;
+                        size++;
+                        break;
+                }
+
+                /* hex digits needed? */
+                if (limit > 0) {
+                        /* if \u{ then parse through the } */
+                        if (src[1] == '\{') {
+				limit = 8;
+				src++;
+                        }
+
+                        /* Convert hex digits to a wide character */
+                        wc = 0;
+                        while (limit > 0) {
+                                limit--;
+                                src++;
+                                if (*src >= '0' && *src <= '9')
+                                        wc = (wc << 4) + *src - '0';
+                                else if (*src >= 'a' && *src <= 'f')
+                                        wc = (wc << 4) + *src - 'a' + 10;
+                                else if (*src >= 'A' && *src <= 'F')
+                                        wc = (wc << 4) + *src - 'A' + 10;
+                                else
+                                        break;
+                        }
+
+                        /* If it is a UTF-16 surrogate pair high codepoint,
+                         * then look for a low codepoint to combine with it.
+                         */
+			if (wc >= 0xd800
+		 	 && wc < 0xdc00
+			 && src[1] == '\\'
+			 && src[2] == 'u'
+			 && (src[3] == 'd' || src[3] == 'D')
+			 && strchr("cdefCDEF", src[4])) {
+				/* Decode the second surrogate pair */
+				wchar_t	wc2 = 0;
+				src += 2;
+				limit = 4;
+				while (limit > 0) {
+					limit--;
+					src++;
+					if (*src >= '0' && *src <= '9')
+						wc2 = (wc2 << 4) + *src - '0';
+					else if (*src >= 'a' && *src <= 'f')
+						wc2 = (wc2 << 4) + *src - 'a' + 10;
+					else if (*src >= 'A' && *src <= 'F')
+						wc2 = (wc2 << 4) + *src - 'A' + 10;
+					else
+						break;
+				}
+
+				/* Combine them */
+				wc -= 0xd800;
+				wc2 -= 0xdc00;
+				wc = (wc << 10) + wc2 + 65536;
+			}
+
+                        /* Add the wide character to the string */
+                        if (dst) {
+                                mbsize = wctomb(dst, wc);
+                                if (mbsize > 0)
+                                        dst += mbsize;
+                                else {
+                                        *dst++ = '?';
+                                        mbsize = 1;
+                                }
+                        } else {
+                                mbsize = wctomb(dummy, wc);
+                                if (mbsize <= 0)
+                                        mbsize = 1;
+                        }
+                        size += mbsize;
+                }
+        }
+        return size;
+}
+
+/* Compare a string to an SQL "LIKE" pattern.  In the pattern, % matches any
+ * sequence of characters, _ matches any single character, and everything else
+ * is compared for equality in a case-insensitive way.  Return 1 for a match,
+ * 0 for mismatch.
+ */
+int json_mbs_like(const char *text, const char *pattern)
+{
+        wchar_t wc1, wc2;
+        int     in1, in2;
+
+        /* Compare as much literal text as possible.  Also handle '%' */
+        while (*text && *pattern && *pattern != '%')
+        {
+                in1 = mbtowc(&wc1, text, MB_CUR_MAX);
+                in2 = mbtowc(&wc2, pattern, MB_CUR_MAX);
+                if (wc2 != '_' && towupper(wc1) != towupper(wc2))
+                        return 0;
+                text += in1;
+                pattern += in2;
+        }
+
+        /* If both ended, or pattern just has '%', then it matches */
+        if (!*text && (!*pattern || (pattern[0] == '%' && !pattern[1])))
+                return 1;
+
+        /* If text ended before pattern, or pattern before text, NO MATCH */
+        if ((*text && !*pattern) || (*pattern && !*text))
+                return 0;
+
+        /* If we get here then we have more text, and a pattern that starts
+         * with % and has more text after that.  Test it.
+         */
+        pattern++;
+        while (*text) {
+                if (json_mbs_like(text, pattern))
+                        return 1;
+                text += mbtowc(&wc1, text, MB_CUR_MAX);
+        }
+
+        /* Nope, never found a match */
+        return 0;
+}
+

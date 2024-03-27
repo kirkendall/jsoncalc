@@ -1,0 +1,327 @@
+.TH json_calc 3
+.SH NAME
+json_calc, json_calc_parse, json_calc_function, json_calc_free \- More extensive expression evaluator for the JSON library.
+.SH SYNTAX
+\fB#include <json.h>\fR
+.br
+\fBjsoncalc_t\fR *json_calc_parse(\fBchar\fR *\fIfmt\fR, \fBchar\fR *\fIrefend\fR, \fBchar\fR *\fIreferr\fR);
+.br
+\fBvoid\fR json_calc_free(\fBjsoncalc_t\fR *\fIcalc\fR);
+.br
+\fBvoid\fR *json_calc_function(\fBchar\fR *\fIname\fR, json_calc_function_t *func);
+.br
+\fBjsoncalc_t\fR *json_calc_calls(\fBjsoncalc_t\fR *\fIcalc\fR, \fBchar\fR *\fIname\fR, \fBjsoncalc_t\fR *\fIafter\fR);
+.br
+\fBjson_t\fR *json_calc(\fBjsoncalc_t\fR *\fIcalc\fR, \fBjson_t\fR *\fIthis\fR, \fBjson_t\fR *\fIcontext\fR);
+
+.SH DESCRIPTION
+Although the
+.B json
+library contains a 
+.I json_by_expr()
+function for diving into a JSON object using a series of names and subscripts,
+sometimes we want more.
+The functions described here provide full-featured expression parser and evaluator that acts on the
+.B JSON
+library's
+.I json_t
+data.
+
+.SH "EXPRESSION SYNTAX"
+The syntax is a mixture of JavaScript and SQL.
+It only evaluates expression; it doesn't fully implement either of those languages.
+The idea is that you can use this with a bit of extra code to handle what you need.
+.SS LITERALS
+String literals can be enclosed in either single- or double-quotes.
+They support the usual backslash symbols such as
+"\en" for newline and "\eu\fIxxxx\fR" for Unicode characters.
+.P
+Numbers and the symbols
+.BR true ,
+.BR false ,
+and
+.B null
+round out the literals.
+Note that other JavaScript symbols such as
+.B NaN
+and
+.B undefined
+are not supported, because they aren't part of the JSON standard.
+
+.SS "FIELD NAMES"
+Expressions can also use field names.
+The names may refer to objects generated within the expression
+(see "ARRAYS AND OBJECTS", below)
+or to parsed JSON data \- the
+.I json_calc()
+function lets you pass in a "this" object and "context" array of objects;
+all will be searched for a given name, making the found value available in
+the expression.
+.P
+Names generally start with an underscore (_) or a letter, and the remainder
+of the name can be any mix of letters, digits, or underscores \- the usual.
+Additionally, you can use backticks (`) to quote names.
+In the context of a "name:value" clause, the name can also be a quoted string.
+
+.SS ARITHMETIC
+The usual arithmetic operators are present, with the usual precedence:
++, -, *, /, %.
+It also supports bitwise operators &, |, ^, and ~.
+Parentheses can be used as expexted.
+Also, as per JavaScript convention,
+the + operator can be used to concatenate strings.
+
+.SS COMPARISON
+The usual string comparison functions are available: <, <=, ==, !=, >=, and >.
+These work on strings and numbers.
+When comparing strings, these are all case-sensitive and use the "C" locale.
+.P
+Additionally, there are case-insensitive = and <> operators.
+(If you need case-insensitive versions of the other comparison operators,
+you can convert the strings to uppercase and compare that.)
+There are also SQL-like "BETWEEN...AND" and "LIKE" operators.
+These are case-insensitive.
+.P
+It also supports SQL's "IN" operator.
+The right-hand-side is a list of values to check against; it may be either
+an array or an SQL-like "(...)" list.
+
+.SS "ARRAYS AND OBJECTS"
+Array generators and object generators look like JSON or JavaScript arrays
+and objects:
+arrays are square brackets containing comma-delimited items, and
+objects are curly braces containing "name:value" pairs.
+Quotes around field names are optional.
+The values are expressions instead of literals, though, and can incorporate
+values extracted from JSON data.
+.P
+Square brackets are also used for subscripts.
+On an object, you can use "myObject["name']" to access a field of an object
+just like "myObject.name", except that the square bracket notation allows
+the name to be computed.
+.P
+But mostly subscripts are used to access elements of an array.
+This library supports three types of array subscripts:
+a number, empty brackets, or "name:value".
+.P
+A number behaves exactly as expected.
+The first item in the array is at subscript 0, the next at subscript 1, and
+so on.
+.P
+Empty brackets scan the array, and if all values are identical then it returns
+that value; otherwise it returns NULL.
+This can be handy when transscribing data \- if you have a list of possible
+values coming in, and want a single value going out, then this gives you an
+easy way to keep unambiguous values.
+.P
+Lastly, if you have an array of objects then using "name:value" in the subscript
+will cause the evaluator to scan the array for an element (object) containing
+the given name and value, and then it returns the whole element.
+For example, if you have an array of contact methods that include "type" and
+other information, you could use "contact[type:'cell'].number" to extract the
+cell phone number.
+
+.SS "FUNCTIONS"
+Functions are supported.
+Some are built-in, but you can also add custom functions (written in C).
+See the "ADDING FUNCTIONS" section, below.
+.P
+Syntaxically, functions can be written as member functions "expr.name(args)",
+or global functions "name(expr, args)".
+Internally all functions are handled the same way, so you can use either
+notation.
+.P Supported functions are:
+.TS
+allbox; c l.
+length()	The number of characters in a string.
+toString()	Convert a value to a string.
+width()	The width of a value. (Aware of newlines and wide chars.)  
+height()	The height of the value. (Count newlines and 1.)
+trim()	Remove leading/trailing whitespace.
+toUpperCase()	Convert to uppercase.
+toLowerCase()	Convert to lowercase.
+toFixed(n)	Convert a number to a string with a given precision.
+.TE
+Function names are always case-insensitive.
+Additionally, they may be abbreviated to just the first letter and
+any uppercase letters in the canonical form;
+for example, "toUpperCase" can be written as "tuc()".
+
+.SH PARSING
+Expressions must be parsed before they can be used.
+The idea is that you'll parse an expression once,
+and then evaluate it repeatedly on different data.
+.P
+Parsing is simple.
+The
+.BI "json_calc_parse(char *" source )
+function parses it and returns the parsed expression as a
+.B (jsoncalc_t *)
+pointer.
+.nf
+    jsoncalc_t *calc = json_calc_parse("{name:first+' '+last, job:title}");
+.fi
+.P
+When you're no longer need the parsed expression, you can call
+.BI "json_calc_free(jsoncalc_t *" calc )
+to free it.
+.nf
+    json_calc_free(calc);
+.fi
+ 
+.SH EVALUATING
+Once parsed, you can evaluate the expression against JSON data using the
+.BI "json_calc(jsoncalc_t *" calc ", json_t *" this ", json_t *\fIcontext\fR)"
+function.
+The
+.I calc
+parameter is the parsed expression returned by 
+.BI "jsoncalc(" str ).
+The
+.I this
+parameter is a
+.B json_t*
+that the expression should be applied to; it provides values where the expression uses a name.
+The
+.I context
+parameter is a
+.B json_t*
+that uses an array of JSON objects to provide more context; if a name can't be
+resolved in
+.I this
+then it will be checked against each element of
+.I context.
+.P
+The
+.I this
+and
+.I context
+parameters can be NULL.
+.P
+Any names that can't be resolved via
+.I this
+and
+.I context
+will be treated as the JSON
+.B null
+symbol.
+(There is no
+.B undefined
+symbol in JSON.)
+
+.SH "ADDING FUNCTIONS"
+Built-in functions were described above, but you can add your own too.
+They'll be written in C (or another language callable from C) and should
+have definitions that look like this:
+.nf
+    json_t *myFunction(json_t *this, json_t *more, jsoncalc_t *call)
+    {
+        /* fun stuff here */
+        return json_symbol("true", -1);;
+    }
+.fi
+For function calls written as a member function ("expr.myFunction()"),
+"this" is the object that it's a member of,
+i.e. the result of "expr" in the example.
+If there are other parameters in the parentheses,
+then they'll be provided as a
+.B json_t
+array in the "more" parameter.
+.P
+For function calls written as a global function ("myFunction(expr)"),
+"this is the first parameter.
+Every global function call must have at least one parameter.
+If there are more parameters, they are collected in a separate array and
+passed to your function as the "more" parameter.
+.P
+The "call" parameter is a pointer to the function call node in the jsoncalc_t
+tree of the parsed expression.
+This is intended to serve as a unique identifier for the function call.
+
+.SS "AGGREGATE FUNCTIONS"
+Expressions handled by
+.B json_calc()
+don't have any side-effects, but since added functions are implemented in C
+it is possible to write functions that have side-effects.
+This could be as simple as counting records, or as complex as a database query.
+.P
+Aggregate functions can be implemented this way.
+There's a lot of external logic that you need to add,
+for example to group relate records together \- like SQL's "GROUP BY".
+Because of this, concise examples aren't possible.
+Sorry.
+.P
+The "call" parameter to your functions are very handy here.
+For example, if you implement a "count()" function and then use that
+function in multiple places within an expression,
+the "call" parameter gives you a way to keep the counts separate.
+.P
+There is a
+.B json_calc_calls()
+function that allows you to test whether a given expression uses a given
+function, and if it does then return the subexpression that represents it.
+For example, you could use
+.B json_calc_calls()
+to evaluate just the aggregate functions within the expression for each
+record in a group,
+and then finish up by evaluating the entire expression for one representative
+record in the group.
+
+.SH EXAMPLE
+Here's an example of a  program using json_calc() and related functions.
+This is a complete program, which takes three parameters:
+the name of a file containing JSON data,
+the name of an array within that data,
+and an expression to be applied to each element of that data.
+The results are collected and output at the end.
+.nf
+
+    #include <stdio.h>
+    #include <json.h>
+
+    jsoncalc_t *calc;
+
+    /* Process a single record */
+    json_t *process(json_parse_t *state, json_t *element)
+    {
+        return json_calc(calc, element, NULL);
+    }
+
+    int main(int argc, char **argv)
+    {
+        json_t  *data;
+        json_parse_t state;
+
+        if (argc != 4) {
+            printf("Usage: %s filename arrayname calc\n");
+            exit(2);
+        }
+
+        calc = json_calc_parse(argv[3]);
+        json_parse_begin(&state, 30);
+        (void)json_parse_divert(&state, argv[2], process);
+        (void)json_parse_file(&state, argv[1]);
+        data = json_parse_end(&state);
+        json_print(json_by_key(data, argv[2]), stdout, 0);
+        json_free(data);
+        json_calc_free(calc);
+        return 0;
+    }
+
+.fi
+For example, if you have a JSON file named "cust.json", containing an array
+named "customers" with separate first and last names, and you wanted a list
+of combined names, you could run the example as...
+.nf
+
+    ./example cust.json customers 'firstname + " " + lastname'
+.fi
+.SH "SEE ALSO"
+.BR json_parse_file(3),
+.BR jsontool (1),
+.BR jsonsql (1)
+.P
+The JSON standard is defined in RFC-8259 (which replaced RFC-7159 in 2017)
+and in ECMA-404.
+.SH AUTHOR
+Steve Kirkendall, kirkenda@gmail.com

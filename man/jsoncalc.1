@@ -1,0 +1,411 @@
+.TH jsoncalc 1
+.SH NAME
+jsoncalc \- JSON calculator and reformatter
+
+.SH SYNOPSIS
+.B jsoncalc
+.RB [ -c
+.I expression
+|
+.B -f
+.I file
+|
+.BR -i ]
+.RB [ -d
+.IR dir ]
+.RB [ -J
+.IR flags ]
+.RB [ -O
+.IR format ]
+.RB [ -C
+.IR name=color ...]
+.RB [ -J
+.IR flags ]
+.RB [ -U ]
+.RB [ -u ]
+.RB [ -v
+.I env
+|
+.IR file.json " ...]"
+
+.SH DESCRIPTION
+.B jsoncalc
+is a tool for examining or modifying JSON data.
+It can be run interactively or in batch mode.
+It integrates well with shell scripts.
+.P
+The expression syntax resembles that of JavaScript expressions,
+but with database-like extensions.
+For a full description of the syntax, see the
+.BR json_calc (3)
+man page.
+In short, though, the extensions are:
+.IP \ \(bu 3n
+.IB array @ filter
+and
+.IB array @@ filter
+operators to transform arrays.
+.IP \ \(bu 3n
+A
+.IB table @= table,
+.IB table @< table
+and
+.IB table @> table
+
+database join operators.
+.B @=
+is natural join,
+.B @<
+is left join, and
+.B @>
+is right join.
+A table is simply an array of objects.
+.IP \ \(bu 3n
+.IB table .orderBy( columns )
+and
+.IB table .groupBy( columns )
+functions to organize arrays of objects.
+.IP \ \(bu 3n
+Aggregate functions including
+.IB min( expr ),
+.IB max( expr ),
+.IB avg( expr )
+and
+.IB count( expr ).
+.IP \ \(bu 3n
+A full-featured SQL "SELECT" statement.
+.P
+When used interactively, it uses the GNU readline library to allow
+powerful command line editing, history, and name completion.
+
+.SH OPTIONS
+You may use one of
+.BI -c expression
+or
+.BI -f file
+to invoke it in batch mode.
+Additionally, if you use a
+.BI -O format
+parameter without a
+.B -i
+to force interactive mode, then it will run in batch mode with an implied
+expression of "this", which causes the data to be output without change
+(except for the format).
+If you don't any of those,
+.B jsoncalc
+will start in interactive mode.
+
+.TP
+.BI -c expression
+Apply 
+.I expression
+to the JSON data.
+The JSON data will typically come from *.json files also given in the command line.
+The results will be written to stdout.
+
+.TP
+.BI -f file
+Read an expression from a file, and apply it to the JSON data.
+Again, the JSON data will typically come from *.json files named on the command line.
+
+.TP
+.B -i
+Force interactive mode.
+Usually interactive mode is implied by the lack of
+.BI -cexpression
+or
+.BI -ffile
+but if you use
+.BI -Oformat
+then it can become unclear.
+The
+.B -i
+option makes it clear.
+
+.TP
+.BI -v env
+Apply the expression to the JSON data from environment variable
+.RI "$" env
+and write the result to stdout as a shell command to set the
+.RI "$" env
+to a new value.
+Basically this means
+.BI "eval $(jsoncalc -v" env " -c" expr ")"
+transforms the JSON data in
+.RI "$" env.
+Here's an example:
+.nf
+export invoice='{invoiceno:0, custno:0, parts:[]}'
+eval $(jsoncalc -vinvoice='invoiceno=29330'
+eval $(jsoncalc -vinvoice='custno=180'
+eval $(jsoncalc -vinvoice='parts.append({partno:"18650",qty:3,price:4.99})'
+eval $(jsoncalc -vinvoice='parts.append({partno:"cr2032",qty:10,price:.99})'
+.fi
+
+
+.TP
+.BI -d dir
+Causes any unresolved names in an expression to be interpretted as
+a request to load
+.IR dir / name .json
+as variable
+.IR name .
+
+.TP
+.BI -J flags
+Sets debugging flags.
+.I flags
+is a string of letters representing the debugging features to enable.
+The letters are
+.B t
+to output tokens as they're parsed,
+.B f
+for files as each chunk is read,
+.B b
+to output the remaining buffer,
+.B a
+to call abort() on a JSON error,
+.B e
+to output info for json_by_expr(), or
+.B c
+to output info for json_calc().
+.TP
+.BI -O format
+This controls the output format.
+See the "OUTPUT FORMATS" section, below.
+.TP
+.BI -C name = colors
+This controls the colors used for
+.BR -O color.
+.TP
+.B -U
+This causes the output format and debugging settings to be stored in
+a configuration file.
+.TP
+.B -u
+This causes any modified JSON files to be overwritten.
+.P
+When running interactively, you can also enter
+.BI -O format,
+.BI -C name = colors,
+and
+.BI -J debug
+on lines by themselves, instead of an expression to evaluate.
+
+.SH "OUTPUT FORMATS"
+The
+.BI -O format
+option controls the output format.
+The
+.I format
+is a series of names or
+.IR name = value
+pairs.
+.P
+Most settings are boolean.
+Their value can be set to Y/Yes/y/yes/T/True/t/true/1 to turn the option on,
+or N/No/n/no/F/False/f/false/0 to turn the option off.
+Also, giving just the name without a value will turn it on, and prepending
+"no" to the name will turn it off.
+For example, "-Opretty" will enable pretty-printing, and "-Onocolor" will
+disable colors in the output.
+.P
+Arrays of objects are called "tables", and can support more database-oriented
+output formats such as "grid" and "csv".
+
+.TS
+c c l.
+NAME	TYPE	MEANING
+tab	number	Indentation to add for each layer while pretty-printing.
+oneline	number	If >0, JSON data shorter than this won't pretty-print.
+digits	number	Precision when converting floating point to text.
+elem	boolean	For top-level arrays, output elements one-per-line.
+csv	boolean	Output tables in CSV format.
+sh	boolean	Output tables as shell variable assignments.
+grid	boolean Output tables as columns and rows.
+string	boolean	If the output is a string, just output its text.
+pretty	boolean	Add whitespace to show the structure of the data.
+color	boolean	Enable the use of color on ANSI terminals.
+ascii	boolean	Don't output non-ASCII characters; use \euXXXX instead.
+prefix	string	For "sh" output, prepend this to variable names.
+null	string	How to display null in "grid" format.
+.TE
+.P
+The "sh" output format deserves a bit more discussion.
+Each row of the table will be output as a line of
+.IR name = value
+pairs.
+Since a "table" is an array of objects, each row of the array is an object.
+The names and values represent the members of each row object.
+In a shell script, you can read the lines and evaluate them one-by-one like this:
+.nf
+    jsoncalc -Osh -c scores test.json | while read row
+    do
+        eval $row
+        echo name=$name, score=$score
+    done
+.fi
+.P
+If you expect the output to be a single object then you can use
+.BR bash (1)'s
+"$(...)" notation, like this:
+.nf
+    eval $(jsoncalc -Osh -c 'scores[name:"peter"]' test.json)
+    echo score=$score
+.fi
+
+.SH "INVOCATION EXAMPLES"
+.TP
+jsoncalc
+Start
+.B jsoncalc
+interactively, without any JSON data initially.
+It makes a decent calculator.
+
+.TP
+jsoncalc file.json
+Start
+.B jsoncalc
+interactively using the contents of file.json as "this".
+If it's an object, you can access members simply by giving their names.
+
+.TP
+jsoncalc -d.
+Start
+.B jsoncalc
+interactively.
+Any *.json files in the directory "." can be accessed simply by using their
+basename as a variable name, e.g. using the name
+.I parts
+in an expression would load the file
+.I parts.json
+into the
+.I parts
+variable.
+.TP
+jsoncalc -Opretty file.json
+Pretty-print file.json.
+This is non-interactive because
+.BI -O format
+was used without
+.BR -i .
+
+.SH "EXPRESSION EXAMPLES"
+The following examples assume you invoked
+.B jsoncalc
+as "jsoncalc -dsampledata".
+
+.TP
+1+2
+This outputs 3.
+.B jsoncalc
+makes a pretty decent calculator.
+
+.TP
+1..10
+Output an array of integers from 1 to 10.
+
+.TP
+1..10@{n:this, \"n^2\":this*this}
+For each element of the array, construct an object.
+The @ operator loops over the elements from the left operand (an array)
+and applies the right operand (an expression) to them with "this" set to
+the array element's value.  The {...} notation is an object generator.
+The result is an array of objects, which
+.B jsoncalc
+classifies as a table,
+so it is output as a table.
+
+.TP
+test
+Output the contents of sampledata/test.json.
+
+.TP
+test.scores
+Output the "scores" member of the object loaded from sampledata/test.json.
+This is a table (array of objects) and the default interactive format is
+to output tables in a human-readable grid, so it should look pretty.
+
+.TP
+test.scores.orderBy(["name","run"])
+Output the same table, but sorted by name and run.
+
+.TP
+test.scores@run==1
+Only output rows for run 1.
+The @ and @@ operators take an array as the left operand and an expression
+on the right to filter the array.
+If the expression returns a boolean value, then the element is deleted or
+deleted.
+
+.TP
+test.scores@{run,score}
+Only output the "run" and "score" columns.
+If the right-hand operand of @ or @@ returns a value other than
+.B null, true
+or
+.B false
+then it is used instead of the array's element.
+
+.TP
+test.scores.groupBy("run")@{run,avgScore:avg(score)}
+This groups the records by score, and then computes the average score
+within each group.
+.BR avg (x)
+is an aggregate function, meaning it first accumulates data across all rows
+of the data (or all in the group, in this case) and goes back and makes the
+cumulative result available when evaluating each row.
+
+.TP
+test.scores.groupBy("run","total")@{run,avgScore:avg(score)}
+The difference here is, groupBy() is passed an extra parameter that causes
+an extra row to be added for showing the overall average.
+
+.TP
+"select run, avg(score) from test.scores group by run"
+This uses an SQL "SELECT" command to extract basically the same information.
+Note that SQL will choose a default name for a computed column, while
+.BR jsoncalc "'s"
+{...} object generator does not.
+Internally, the SQL "SELECT" is translated to
+.B jsoncalc "'s"
+native expression syntax so it's about as efficient either way.
+
+.TP
+test.scores.groupBy("run")@@{run,avgScore:avg(score)}
+The difference between @@ and @ is with groups are used, @ only outputs one
+value per group while @@ outputs one item per row.
+In this example, we get a separate copy of each row for each name, even though
+the name isn't included in the resulting rows.
+
+.TP
+test.scores.orderBy("name").groupBy("name")@{name,avgScore:avg(score)}
+Compute the average score for each name.
+Note that groupBy() only compares adjacent items when grouping, so we
+need to explicitly sort by name before we can group by name.
+This wasn't an issue when grouping by run because the data was already
+sorted by run.
+
+.TP
+test..deepest
+This outputs the value of test.deep.deeper.deepest.
+The ".." operator digs down through multiple layers of objects, if necessary,
+to find the requested name.
+
+.TP
+emoji
+Output the contents of sampledata/emoji.json.
+If your terminal doesn't display emoji, try one that does.
+The
+.BR xfce4-terminal (1)
+program handles emoji well.
+
+
+.SH FILES
+.SH ENVIRONMENT
+.SH "SEE ALSO"
+.BR json_calc (3),
+.BR bash (1),
+.BR xfce4-terminal (1)
+.SH AUTHOR
+Steve Kirkendall, kirkenda@gmail.com

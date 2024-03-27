@@ -1,1 +1,7 @@
 # jsoncalc
+
+JsonCalc is a library for accessing JSON data, and a program that uses that library.
+
+The library is written in C. It has functions for parsing JSON into an internal "json_t" format.  Other functions can then extract data from the json_t, or manipulate it (adding or changing values), convert it back into JSON or other formats, and ultimately free the data.  Most of the functions are very simple, and are each intended to do one thing well.  They can handle large data files efficiently; you are *NOT* required to load the whole file into memory before processing any of it.  It supports UTF-8 text.
+
+The "jsoncalc" program uses an expression syntax that combines aspects of JavaScript and SQL. If you're familiar with those two languages then jsoncalc should be pretty intuitive for you. It also adds some array operators and subscript tricks, but really the intent is to capitalize on users' familiarity with JavaScript and SQL.  It can be used interactively, or in batch mode for automated shell scripts.  For interactive use, the GNU readline library provides line editing, history, and name completion; this all intended to allow you to explore the data in a JSON file. When used in batch mode, you can output arrays of objects in a manner that's easy to use in a shell script, or in CSV (in addition to JSON of course).

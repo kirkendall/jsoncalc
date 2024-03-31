@@ -148,7 +148,7 @@ char *json_format_str(jsonformat_t *fmt)
 		sprintf(buf + strlen(buf), "digits=%d,", fmt->digits);
 
 	/* String format */
-	if (fmt->sh)
+	if (fmt->string)
 		strcat(buf, "string,");
 
 	/* Table formats */

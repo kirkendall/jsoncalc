@@ -576,16 +576,23 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		 */
 		assert(calc->RIGHT->op == JSONOP_NAME);
 		USE_LEFT_OPERAND(calc);
-		if (left->type == JSON_OBJECT)
-			result = json_copy(json_by_key(left, calc->RIGHT->u.text));
-		else if (!strcmp(calc->RIGHT->u.text, "length")) {
+		if (left->type == JSON_OBJECT && (result = json_by_key(left, calc->RIGHT->u.text)) != NULL)
+			result = json_copy(result);
+		else if (!strcasecmp(calc->RIGHT->u.text, "length")) {
 			/* The "length" attribute is computed, for strings and
-			 * arrays.
+			 * arrays.  To simplify processing of data that was
+			 * converted from XML, we also return 0 for null.length
+			 * and 1 for anythingelse.length -- XML doesn't do
+			 * arrays very well.
 			 */
 			if (left->type == JSON_ARRAY)
 				result = json_from_int(json_length(left));
 			else if (left->type == JSON_STRING)
 				result = json_from_int(json_mbs_len(left->text));
+			else if (json_is_null(left))
+				result = json_from_int(0);
+			else
+				result = json_from_int(1);
 		}
 		break;
 

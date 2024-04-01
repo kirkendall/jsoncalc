@@ -1,6 +1,8 @@
-# Compiled programs
+# Compiled programs, and other temporary stuff
 jsoncalc
 testcalc
+core
+.jsoncalc_history
 
 # Prerequisites
 *.d

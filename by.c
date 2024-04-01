@@ -105,16 +105,17 @@ json_t *json_by_index(json_t *container, int idx)
 }
 
 /* Return an item inside nested objects or arrays, selected via a
- * JavaScript-like expression.  The expr is a series of contstants, which
- * may be either symbols or non-negative numbers.  Each of these values may
- * be delimited by one or more characters from the list ".[]", with the idea
- * being that you would use something like "ROList.ro[0].job[0].opcode" to
- * fetch the first opcode of the first RO.
+ * JavaScript-like expression.  The expr is a string containing a series of
+ * symbols or non-negative numbers.  Each of these values may be delimited
+ * by one or more characters from the list ".[]", with the idea being that
+ * you would use something like "ROList.ro[0].job[0].opcode" to fetch the
+ * first opcode of the first RO.
  * 
  * The expression ends at the first character that isn't a letter, digit,
- * or one of "_[].~".* If next isn't null, the pointer that it refers to
- * will be set to the first character after the expression; this allows your
- * code to handle things like comma-delimited lists of expressions.
+ * or one of "_[].".  If the "next" argument isn't null, the pointer that
+ * it refers to will be set to the first character after the expression;
+ * this way you can write wrappers to handle things such as comma-delimited
+ * lists of expressions.
  */
 json_t *json_by_expr(json_t *container, char *expr, char **next)
 {

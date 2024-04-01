@@ -1,0 +1,109 @@
+###########################################################################
+# Literals
+1
+=1
+true
+=true
+"Steve"
+="Steve"
+"foo\nbar\u22c8zot"
+="foo\nbar\u22c8zot"
+["Steve",3]
+=["Steve",3]
+{"name":"Steve","bikes":3}
+={"name":"Steve","bikes":3}
+
+# Variables (well constants actually)
+n=3
+n
+=3
+s="Steve"
+s
+="Steve"
+b=true
+b
+=true
+a=[2,3,5,7,11,13,17,19]
+a
+=[2,3,5,7,11,13,17,19]
+o={"name":"Steve","bikes":3}
+o
+={"name":"Steve","bikes":3}
+
+# Basic arithmetic
+1+2
+=3
+n*7
+=21
+(n+1)*5
+=20
+1+n*5
+=16
+12/n
+=4
+17%n
+=2
+-n
+=-3
+
+# Strings
+s.length
+=5
+s + " Jobs"
+="Steve Jobs"
+
+# Comparison
+1<2
+=true
+1>2
+=false
+n==3
+=true
+s=="Steve"
+=true
+s=="steve"
+=false
+s<>"Steve"
+=false
+s<>"steve"
+=false
+null==false
+=true
+null===false
+=false
+a===a
+=true
+o===o
+=true
+
+# Global function calls
+toUpperCase(s)
+="STEVE"
+toLowerCase(s)
+="steve"
+substr(s, 2)
+="eve"
+substr(s,1,2)
+="te"
+
+# Object function calls
+s.toUpperCase()
+="STEVE"
+s.toLowerCase()
+="steve"
+s.substr(2)
+="eve"
+s.substr(1,3)
+="tev"
+
+# bigger stuff
+users=[{"id":1,"name":"steve"},{"id":2,"name":"rebecca"}]
+actions=[{"id":1,"action":"add"},{"id":1,"action":"change"},{"id":2,"action":"delete"},{"id":3,"action":"add"}]
+users.length
+=2
+actions.length
+=4
+count(actions@id=1)
+=2
+users @= actions
+=[{"id":1,"name":"steve","action":"add"},{"id":1,"name":"steve","action":"change"},{"id":2,"name":"rebecca","action":"delete"}]

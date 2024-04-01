@@ -857,13 +857,15 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		break;
 
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
-		if ((left->type != JSON_STRING && left->type != JSON_NUMBER)
-		 || (right->type != JSON_STRING && right->type != JSON_NUMBER)){
+		if (left->type != JSON_STRING || right->type != JSON_STRING) {
 			result = json_symbol("false", -1);
 		} else {
 			il = json_mbs_like(left->text, right->text);
+			if (calc->op == JSONOP_NOTLIKE)
+				il = !il;
 			result = json_symbol(il ? "true" : "false", -1);
 		}
 		break;

@@ -72,6 +72,7 @@ static struct {
 	{JSONOP_GT,		">",	190,	JCOP_INFIX},
 	{JSONOP_ICEQ,		"=",	180,	JCOP_INFIX},
 	{JSONOP_LIKE,           "LIK",  180,	JCOP_INFIX},
+	{JSONOP_NOTLIKE,        "NLK",  180,	JCOP_INFIX},
 
 	{JSONOP_AND,		"&&",	140,	JCOP_INFIX},
 	{JSONOP_OR,		"||",	130,	JCOP_INFIX},
@@ -205,6 +206,7 @@ char *json_calc_op_name(jsonop_t jsonop)
 	  case JSONOP_ICNE: return "ICNE";
 	  case JSONOP_BETWEEN: return "BETWEEN";
 	  case JSONOP_LIKE: return "LIKE";
+	  case JSONOP_NOTLIKE: return "NOTLIKE";
 	  case JSONOP_IN: return "IN";
 	  case JSONOP_EQSTRICT: return "EQSTRICT";
 	  case JSONOP_NESTRICT: return "NESTRICT";
@@ -323,6 +325,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
 	  case JSONOP_NESTRICT:
@@ -532,7 +535,10 @@ char *lex(char *str, token_t *token)
 			token->op = JSONOP_NULL;
 		else if (token->len == 4 && !strncasecmp(token->full, "like", 4))
 			token->op = JSONOP_LIKE;
-		else if (token->len == 2 && !strncasecmp(token->full, "in", 2))
+		else if (token->len == 3 && !strncasecmp(token->full, "not like", 8)) {
+			token->len = 8;
+			token->op = JSONOP_NOTLIKE;
+		} else if (token->len == 2 && !strncasecmp(token->full, "in", 2))
 			token->op = JSONOP_IN;
 		else if (token->len == 3 && !strncasecmp(token->full, "and", 3))
 			token->op = JSONOP_AND;
@@ -777,6 +783,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
 	  case JSONOP_NESTRICT:
@@ -1761,6 +1768,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
 	  case JSONOP_NESTRICT:

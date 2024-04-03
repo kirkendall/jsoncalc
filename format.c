@@ -94,6 +94,8 @@ char *json_format(jsonformat_t *format, char *str)
 				format->sh = v, format->csv = format->grid = 0;
 			else if (namelen == 4 && !strncmp("grid", str, namelen))
 				format->grid = v, format->csv = format->sh = 0;
+			else if (namelen == 4 && !strncmp("json", str, namelen))
+				format->grid = format->csv = format->sh = 0;
 			else if (namelen == 6 && !strncmp("string", str, namelen))
 				format->string = v;
 			else if (namelen == 6 && !strncmp("pretty", str, namelen))

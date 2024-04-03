@@ -503,11 +503,14 @@ int main(int argc, char **argv)
 	/* Start with default formatting */
 	json_format(NULL, "");
 
+	/* Try to load the config */
+	load_config();
+
 	/* Parse command-line flags */
 	if (argc >= 2 && !strcmp(argv[1], "--help"))
 		usage(NULL, NULL);
 	expr = NULL;
-	while ((opt = getopt(argc, argv, "c:f:v:l:ud:O:J:DR")) >= 0) {
+	while ((opt = getopt(argc, argv, "c:f:v:l:ud:O:C:J:DR")) >= 0) {
 		switch (opt) {
 		case 'c':
 			expr = optarg;
@@ -608,9 +611,9 @@ int main(int argc, char **argv)
 		/* Compile */
 		jc = json_calc_parse(expr, &tail, &err);
 		if (*tail)
-			printf("\033[31mTail:     %s\033[m\n", tail);
+			printf("%sTail:     %s%s\n", json_format_color_error, tail, json_format_color_end);
 		if (err)
-			printf("\033[31mError:    %s\033[m\n", err);
+			printf("%sError:    %s%s\n", json_format_color_error, err, json_format_color_end);
 		if (jc) {
 			/* Evaluate */
 			result = json_calc(jc, context, NULL);
@@ -624,9 +627,6 @@ int main(int argc, char **argv)
 			json_free(result);
 		}
 	} else {
-		/* Try to load the config */
-		load_config();
-
 		/* Enable the use of history and name completion while
 		 * inputting expressions.
 		 */
@@ -690,10 +690,18 @@ int main(int argc, char **argv)
 
 			/* Compile */
 			jc = json_calc_parse(expr, &tail, &err);
-			if (*tail)
-				printf("\033[31mTail:     %s\033[m\n", tail);
-			if (err)
-				printf("\033[31mError:    %s\033[m\n", err);
+			if (*tail) {
+				if (json_format_default.color)
+					printf("%sTail:     %s%s\n", json_format_color_error, tail, json_format_color_end);
+				else
+					printf("Tail:     %s\n", tail);
+			}
+			if (err) {
+				if (json_format_default.color)
+					printf("%sError:    %s%s\n", json_format_color_error, err, json_format_color_end);
+				else
+					printf("Error:    %s\n", err);
+			}
 			free(expr);
 			if (!jc)
 				continue;

@@ -234,6 +234,8 @@ json_t *json_array()
 static void memory_check_leaks(void)
 {
         int     i;
+        if (!memory_tracker)
+		return;
         for (i = 0; i < 4096; i++)
                 if (memory_tracker[i].count > 0)
                         fprintf(stderr, "%s:%d: Leaked %d json_t's\n", memory_tracker[i].file, memory_tracker[i].line, memory_tracker[i].count);
@@ -318,7 +320,7 @@ void json_debug_free(const char *file, int line, json_t *json)
                 fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line);
                 abort();
         }
-        else
+        else if (memory_tracker)
                 memory_tracker[slot].count--;
         json_debug_free(file, line, json->first);
         json_debug_free(file, line, json->next);

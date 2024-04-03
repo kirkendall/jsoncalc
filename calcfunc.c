@@ -45,6 +45,7 @@ static json_t *jfn_flat(json_t *args, void *agdata);
 static json_t *jfn_slice(json_t *args, void *agdata);
 static json_t *jfn_repeat(json_t *args, void *agdata);
 static json_t *jfn_toFixed(json_t *args, void *agdata);
+static json_t *jfn_distinct(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -91,7 +92,8 @@ static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        jfn_flat};
 static jsonfunc_t slice_jf       = {&flat_jf,        "slice",       jfn_slice};
 static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
 static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
-static jsonfunc_t count_jf       = {&toFixed_jf,     "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",     jfn_distinct};
+static jsonfunc_t count_jf       = {&distinct_jf,    "count",       jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t min_jf         = {&count_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
@@ -613,6 +615,90 @@ static json_t *jfn_toFixed(json_t *args, void *agdata)
 	digits = json_int(args->first->next);
 	sprintf(buf, "%.*f", digits, num);
 	return json_string(buf, -1);
+}
+
+/* Eliminate duplicates from an array */
+static json_t *jfn_distinct(json_t *args, void *agdata)
+{
+	int	bestrict = 0;
+	json_t	*fieldlist = NULL;
+	json_t	pretendArray;
+	json_t	*result, *scan, *prev;
+
+	/* If not an array, or empty, return it unchanged */
+	if (args->first->type != JSON_ARRAY || !args->first->first)
+		return json_copy(args->first);
+
+	/* Check for a "strict" flag or field list as the second parameter */
+	fieldlist = args->first->next;
+	if (fieldlist) {
+		if (fieldlist->type == JSON_SYMBOL && json_is_true(fieldlist)) {
+			bestrict = 1;
+			fieldlist = fieldlist->next;
+		}
+		if (fieldlist && fieldlist->type == JSON_STRING) {
+			/* Fieldlist is supposed to be an array of strings.
+			 * If we're given a single string instead of an array,
+			 * then treat it like an array.
+			 */
+			pretendArray.type = JSON_ARRAY;
+			pretendArray.first = fieldlist;
+			fieldlist = &pretendArray;
+		}
+	}
+
+	/* Start building a new array with unique items.  The first item is
+	 * always included.
+	 */
+	result = json_array();
+	prev = args->first->first;
+	json_append(result, json_copy(prev));
+
+	/* Separate methods for strict vs. non-strict */
+	if (bestrict) {
+		/* Strict!  We want to compare each prospectiveelement against
+		 * all elemends currently in the result, and add only if new.
+		 */
+
+		/* For each element after the first... */
+		for (scan = prev->next; scan; prev = scan, scan = scan->next) {
+			/* Check for a match anywhere in the result so far */
+			for (prev = result->first; prev; prev = prev->next) {
+				if (fieldlist && prev->type == JSON_OBJECT && scan->type == JSON_OBJECT) {
+					if (json_compare(prev, scan, fieldlist) == 0)
+						break;
+				} else {
+					if (json_equal(prev, scan))
+						break;
+				}
+			}
+
+			/* If nothing already in the list matched, add it */
+			if (!prev)
+				json_append(result, json_copy(scan));
+		}
+	} else {
+		/* Non-strict!  We just compare each prospective element
+		 * against the one that preceded it.
+		 */
+		/* for each element after the first... */
+		for (scan = prev->next; scan; prev = scan, scan = scan->next) {
+			/* If it matches the previous item, skip */
+			if (fieldlist && prev->type == JSON_OBJECT && scan->type == JSON_OBJECT) {
+				if (json_compare(prev, scan, fieldlist) == 0)
+					continue;
+			} else {
+				if (json_equal(prev, scan))
+					continue;
+			}
+
+			/* New, so add it */
+			json_append(result, json_copy(scan));
+		}
+	}
+
+	/* Return the resulting array */
+	return result;
 }
 
 

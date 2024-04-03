@@ -427,10 +427,20 @@ static int dumpstack(stack_t *stack, char *format, char *data)
 	return 1;
 }
 
+/* Test whether the parsing stack contains an unresolved SELECT keyword */
+static int jcselecting(stack_t *stack)
+{
+	int	i;
+	for (i = 0; i < stack->sp; i++)
+		if (stack->stack[i]->op == JSONOP_SELECT)
+			return 1;
+	return 0;
+}
+
 /* Given a starting point within a text buffer, parse the next token (storing
  * its details in *token) and return a pointer to the character after the token.
  */
-char *lex(char *str, token_t *token)
+char *lex(char *str, token_t *token, stack_t *stack)
 {
 	jsonop_t op, best;
 
@@ -557,30 +567,40 @@ char *lex(char *str, token_t *token)
 		} else if (token->len == 6 && !strncasecmp(token->full, "select", 6)) {
 			token->len = 6;
 			token->op = JSONOP_SELECT;
-		} else if (token->len == 8 && !strncasecmp(token->full, "distinct", 8)) {
-			token->len = 8;
-			token->op = JSONOP_DISTINCT;
-		} else if (token->len == 2 && !strncasecmp(token->full, "as", 2)) {
-			token->len = 2;
-			token->op = JSONOP_AS;
-		} else if (token->len == 4 && !strncasecmp(token->full, "from", 4)) {
-			token->len = 4;
-			token->op = JSONOP_FROM;
-		} else if (token->len == 5 && !strncasecmp(token->full, "where", 5)) {
-			token->len = 5;
-			token->op = JSONOP_WHERE;
-		} else if (token->len == 5 && !strncasecmp(token->full, "group by", 8)) {
-			token->len = 8;
-			token->op = JSONOP_GROUPBY;
-		} else if (token->len == 5 && !strncasecmp(token->full, "order by", 8)) {
-			token->len = 8;
-			token->op = JSONOP_ORDERBY;
-		} else if (token->len == 10 && !strncasecmp(token->full, "descending", 10)) {
-			token->len = 10;
-			token->op = JSONOP_DESCENDING;
-		} else if (token->len == 4 && !strncasecmp(token->full, "desc", 4)) {
-			token->len = 4;
-			token->op = JSONOP_DESCENDING;
+		} else if (jcselecting(stack)) {
+			/* The following SQL keywords are only recongized as
+			 * part of a "select" clause.  This is because some of
+			 * them such as "from" and "desc" are often used as
+			 * member names, and "distinct" is a jsoncalc function
+			 * name.  You could wrap them in backticks to prevent
+			 * them from being taked as keywords, but that'd be
+			 * inconvenient.
+			 */
+			if (token->len == 8 && !strncasecmp(token->full, "distinct", 8)) {
+				token->len = 8;
+				token->op = JSONOP_DISTINCT;
+			} else if (token->len == 2 && !strncasecmp(token->full, "as", 2)) {
+				token->len = 2;
+				token->op = JSONOP_AS;
+			} else if (token->len == 4 && !strncasecmp(token->full, "from", 4)) {
+				token->len = 4;
+				token->op = JSONOP_FROM;
+			} else if (token->len == 5 && !strncasecmp(token->full, "where", 5)) {
+				token->len = 5;
+				token->op = JSONOP_WHERE;
+			} else if (token->len == 5 && !strncasecmp(token->full, "group by", 8)) {
+				token->len = 8;
+				token->op = JSONOP_GROUPBY;
+			} else if (token->len == 5 && !strncasecmp(token->full, "order by", 8)) {
+				token->len = 8;
+				token->op = JSONOP_ORDERBY;
+			} else if (token->len == 10 && !strncasecmp(token->full, "descending", 10)) {
+				token->len = 10;
+				token->op = JSONOP_DESCENDING;
+			} else if (token->len == 4 && !strncasecmp(token->full, "desc", 4)) {
+				token->len = 4;
+				token->op = JSONOP_DESCENDING;
+			}
 		}
 		str += token->len;
 		if (json_debug_flags.calc)
@@ -1321,16 +1341,16 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		}
 
 		/* SQL SELECT */
-		if (PATTERN("SD") && PREC(JSONOP_SELECT)) {
+		if (PATTERN("SD")) {
 			/* Fold the "DISTINCT" into "SELECT */
 			top[-2]->u.select->distinct = 1;
 			stack->sp--;
 			continue;
-		} else if (PATTERN("S*") && PREC(JSONOP_DISTINCT)) {
+		} else if (PATTERN("S*")) {
 			/* Drop the "*" */
 			stack->sp--;
 			continue;
-		} else if ((PATTERN("SxAn") || PATTERN("S,xAn")) && PREC(JSONOP_SELECT)) {
+		} else if ((PATTERN("SxAn") || PATTERN("S,xAn")) && PREC(JSONOP_FROM)) {
 			/* Skip comma */
 			jsel = top[-4];
 			if (jsel->op == JSONOP_COMMA)
@@ -1359,7 +1379,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 				stack->sp--;
 			stack->sp -= 3;
 			continue;
-		} else if ((PATTERN("Sx") || PATTERN("S,x")) && PREC(JSONOP_SELECT)) {
+		} else if ((PATTERN("Sx") || PATTERN("S,x")) && PREC(JSONOP_FROM)) {
 			/* Skip comma */
 			jsel = top[-2];
 			if (top[-2]->op == JSONOP_COMMA)
@@ -1847,7 +1867,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 	stack_t stack;
 
 	stack.sp = 0;
-	while ((c = lex(c, &token)) != NULL && token.op != JSONOP_INVALID) {
+	while ((c = lex(c, &token, &stack)) != NULL && token.op != JSONOP_INVALID) {
 		/* SUBTRACT could be NEGATE -- depends on context */
 		if (token.op == JSONOP_SUBTRACT && (pattern(&stack, "^") || pattern(&stack, "+")))
 			token.op = JSONOP_NEGATE;

@@ -333,12 +333,13 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 	char    *tmpstr;
 	json_t  *tmp;
 
-	/* If already a string, return it as-is */
+	/* If already a string, return a copy of it as-is */
 	if (args->first->type == JSON_STRING)
-		return args->first;
+		return json_copy(args->first);
 
-	/* If number or symbol, convert its text to a string */
-	if (args->first->type == JSON_NUMBER || args->first->type == JSON_SYMBOL)
+	/* If symbol or non-binary number, convert its text to a string. */
+	if (args->first->type == JSON_NUMBER
+	 || (args->first->type == JSON_SYMBOL && args->first->text[0] != '\0'))
 		return json_string(args->first->text, -1);
 
 	/* For anything else, use json_serialize() */

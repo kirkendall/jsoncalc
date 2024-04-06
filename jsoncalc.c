@@ -43,9 +43,10 @@ static void format_usage()
 	printf("  -O%-11sForces each array element onto a single line.\n", json_format_default.elem ? "elem" : "noelem");
 	printf("  -Otab=%-7dIndentation to use when pretty printing.\n", json_format_default.tab);
 	printf("  -Ooneline=%-3dIf >0, JSON strings shorter than this are not pretty-printed.\n", json_format_default.oneline);
-	printf("  -O%-11sOutput tables in CSV format. (Tables are arrays of objects)\n", json_format_default.csv ? "csv" : "nocsv");
+	printf("  -O%-11sOutput tables in CSV format. (Tables are arrays of objects.)\n", json_format_default.csv ? "csv" : "nocsv");
 	printf("  -O%-11sOutput tables as a series of shell variable assignments.\n", json_format_default.sh ? "sh" : "nosh");
-	printf("  -O%-11sOutput tables as nice human-readable grid\n", json_format_default.grid ? "grid" : "nogrid");
+	printf("  -O%-11sOutput tables as a nice human-readable grid.\n", json_format_default.grid ? "grid" : "nogrid");
+	printf("  -O%-11sOutput tables as JSON like everything else.\n", json_format_default.csv||json_format_default.sh||json_format_default.grid ? "nojson" : "json");
 	printf("  -Oprefix=%-4sFor \"sh\", this is prepended to variable names.\n", json_format_default.null);
 	printf("  -Onull=%-6sWhat \"grid\" should show for null values.\n", json_format_default.null);
 	printf("  -O%-11sConvert any non-ASCII characters to \\uXXXX sequences.\n", json_format_default.ascii ? "ascii" : "noascii");
@@ -65,6 +66,32 @@ static void color_usage()
 	colors = json_format_color_str();
 	printf("-C%s\n", colors);
 	free(colors);
+}
+
+/* Output a debugging flag usage message */
+static void debug_usage()
+{
+	puts("The -Jflags option controls debugging flags.  The flags are single letters");
+	puts("indicating what should be debugged.  The flag letters are:");
+	puts("  t  Output tokens as the JSON data is parsed.");
+	puts("  f  Output information about accessing data files.");
+	puts("  b  Output buffer information when JSON data is read in chunks.");
+	puts("  a  Call abort() when an error is detected.");
+	puts("  e  Output info about json_by_expr() calls.");
+	puts("  c  Output info about json_calc() calls.");
+	puts("");
+	puts("You may also put a + or - or = between -J and the flags to alter the way the new");
+	puts("flags are combined with existing flags.  The means are:");
+	puts("  +  Add the new flags to existing flags. (This is the default.)");
+	puts("  =  Turn off all flags except the new flags.");
+	puts("  -  Turn off existing flags that are also in new flags.");
+	printf("\nCurrent flags are: -J%s%s%s%s%s%s\n",
+		json_debug_flags.token ? "t" : "",
+		json_debug_flags.file ? "f" : "",
+		json_debug_flags.buffer ? "b" : "",
+		json_debug_flags.abort ? "a" : "",
+		json_debug_flags.expr ? "e" : "",
+		json_debug_flags.calc ? "c" : "");
 }
 
 /* Output a usage message and then exit. */
@@ -536,7 +563,10 @@ int main(int argc, char **argv)
 				usage("%s\n", err);
 			break;
 		case 'J':
-			json_debug(optarg);
+			if (!*optarg || json_debug(optarg)) {
+				debug_usage();
+				return 1;
+			}
 			break;
 		case 'D':
 			saveconfig = 1;
@@ -633,7 +663,7 @@ int main(int argc, char **argv)
 		using_history();
 		read_history(HISTORY_FILE);
 		rl_attempted_completion_function = jsoncalc_completion;
-		rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{([]#%^*+-:,/?~@";
+		rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
 
 		/* Read an expression */
 		while ((expr = jcreadline("JsonCalc: ")) != NULL) {
@@ -681,9 +711,9 @@ int main(int argc, char **argv)
 			if (!strncmp(expr, "-J", 2)) {
 				for (val = expr + 2; *val == ' '; val++) {
 				}
-				err = json_debug(val);
+				err = *val ? json_debug(val) : "";
 				if (err)
-					puts(err);
+					debug_usage();
 				free(expr);
 				continue;
 			}

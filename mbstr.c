@@ -151,7 +151,7 @@ void json_mbs_toupper(char *s)
         }
 }
 
-/* Return an uppercase version of a string.  We expect the converted string to
+/* Return a mixed-case version of a string.  We expect the converted string to
  * still fit in the same buffer; if it won't, then the tail of the string is
  * *NOT* converted.  The "exceptions" argument should be an array of strings
  * in their preferred capitalization; if they end with "*" then only the start
@@ -376,7 +376,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
                         /* backslash and quote need a backslash */
                         if (dst) {
                                 dst[size] = '\\';
-                                dst[size] = *src;
+                                dst[size + 1] = *src;
                         }
                         size += 2;
                 } else {

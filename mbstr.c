@@ -160,6 +160,12 @@ void json_mbs_toupper(char *s)
 void json_mbs_tomixed(char *s, json_t *exceptions)
 {
 	json_t	arraybuf;
+	json_t	*ex;
+	int	firstword, capfirst;
+	wctype_t alnum;
+	wchar_t	wc;
+	int	in, more, wlen;
+	char	dummy[MB_CUR_MAX];
 
 	/* Make sure the list of exceptions is an array */
 	if (!exceptions || exceptions->type != JSON_ARRAY) {
@@ -168,12 +174,67 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		exceptions = &arraybuf;
 	}
 
-	/* Find the start of the first word */
-	/*!!!*/
+	/* Detect whether the first word should be capitalized despite
+	 * exceptions by scanning the exceptions list for the symbol "true".
+	 */
+	capfirst = 0;
+	for (ex = exceptions->first; ex && !capfirst; ex = ex->next)
+		if (ex->type == JSON_SYMBOL && *ex->text == 't')
+			capfirst = 1;
+
+	/* Get the "alnum" classifier */
+	alnum = wctype("alnum");
 
 	/* While we have words... */
-		/* Check the exception list */
+	for (firstword = 1; *s; firstword = 0) {
+		/* If the next char isn't wordy, leave it */
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                if (!iswctype(wc, alnum)) {
+			s += in;
+			continue;
+		}
+
+		/* We've found a word!  Count its length */
+		for (wlen = in; s[wlen] && (more = mbtowc(&wc, s + wlen, MB_CUR_MAX)) && iswctype(wc, alnum); wlen += more) {
+		}
+
+		/* Check the exception list.  If we're supposed to capitalize
+		 * the first word regardless of the list, and this is indeed
+		 * the first word, then skip this check.
+		 */
+		if (capfirst && firstword)
+			ex = NULL;
+		else {
+			for (ex = exceptions->first; ex; ex = ex->next){
+				if (ex->type == JSON_STRING && !json_mbs_ncasecmp(ex->text, s, wlen))
+					break;
+
+			}
+		}
+
+		/* If we have an exception, use it */
+		if (ex) {
+			strncpy(s, ex->text, wlen);
+			s += wlen;
+			continue;
+		}
+
 		/* Else make first letter uppercase, others lowercase */
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                wc = towupper(wc); 
+                if (in == wctomb(dummy, wc))
+                        wctomb(s, wc);
+                s += in;
+
+                in = mbtowc(&wc, s, MB_CUR_MAX);
+                while (iswctype(wc, alnum)) {
+			wc = towlower(wc); 
+			if (in == wctomb(dummy, wc))
+				wctomb(s, wc);
+			s += in;
+			in = mbtowc(&wc, s, MB_CUR_MAX);
+		}
+	}
 }
 
 /* Compare two strings in a case-insensitive way */

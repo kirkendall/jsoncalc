@@ -15,10 +15,7 @@
  * The parser is a simple shift-reduce parser.  This type of parser works
  * great for operators, so I made nearly all syntax tokens be operators.
  * Things that AREN'T operators: Literals, object generators, array generators,
- * or subscripts. 
- *
- * Surprisingly, even the SQL "SELECT" statement is parsed as a series of
- * unary operators.
+ * subscripts, and a few oddball things like elements of a SELECT statement. 
  */
 
 /* These macros make jsoncalc_t trees easier to navigate */
@@ -38,6 +35,7 @@ typedef struct {
 	jsoncalc_t *stack[100];
 	char *str[100];
 	int sp;
+	char	errbuf[100];
 } stack_t;
 
 /* These are broad classifications of jsonop_t tokens */
@@ -55,81 +53,86 @@ typedef enum {
  * them by op so you can use operators[jc->op] to find information about jc.
  */
 static struct {
-	jsonop_t op;    /* internal code for the operator */
-	char text[4];   /* text form of the operator */
+	char symbol[11];/* Derived form the JSONOP_xxxx enumerated value */
+	char text[5];   /* text form of the operator */
 	short prec;     /* precedence of the operator, or negative for non-operatos */
 	jcoptype_t optype;/* token type */
 	size_t len;     /* text length (computed at runtime) */
-} opswap, operators[JSONOP_INVALID + 1] = {
-	{JSONOP_EQSTRICT,	"===",	180,	JCOP_INFIX},
-	{JSONOP_NESTRICT,	"!==",	180,	JCOP_INFIX},
-	{JSONOP_LE,		"<=",	190,	JCOP_INFIX},
-	{JSONOP_EQ,		"==",	180,	JCOP_INFIX},
-	{JSONOP_NE,		"!=",	180,	JCOP_INFIX},
-	{JSONOP_GE,		">=",	190,	JCOP_INFIX},
-	{JSONOP_ICNE,		"<>",	180,	JCOP_INFIX},
-	{JSONOP_LT,		"<",	190,	JCOP_INFIX},
-	{JSONOP_GT,		">",	190,	JCOP_INFIX},
-	{JSONOP_ICEQ,		"=",	180,	JCOP_INFIX},
-	{JSONOP_LIKE,           "LIK",  180,	JCOP_INFIX},
-	{JSONOP_NOTLIKE,        "NLK",  180,	JCOP_INFIX},
-
-	{JSONOP_AND,		"&&",	140,	JCOP_INFIX},
-	{JSONOP_OR,		"||",	130,	JCOP_INFIX},
-	{JSONOP_NOT,		"!",	240,	JCOP_PREFIX},
-
-	{JSONOP_NJOIN,          "@=",   10,	JCOP_INFIX}, /*!!!*/
-	{JSONOP_LJOIN,          "@<",   10,	JCOP_INFIX}, /*!!!*/
-	{JSONOP_RJOIN,          "@>",   10,	JCOP_INFIX}, /*!!!*/
-	{JSONOP_EACH,           "@@",   5,	JCOP_INFIX}, /*!!!*/
-
-	{JSONOP_DOT,		".",	270,	JCOP_INFIX},
-	{JSONOP_ELIPSIS,	"..",	100,	JCOP_INFIX}, /*!!!*/
-	{JSONOP_COALESCE,	"??",	130,	JCOP_INFIX},
-
-	{JSONOP_QUESTION,       "?",    121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
-	{JSONOP_COLON,		":",	121,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
-	{JSONOP_MULTIPLY,       "*",	220,	JCOP_INFIX},
-	{JSONOP_DIVIDE,		"/",	220,	JCOP_INFIX},
-	{JSONOP_MODULO,		"%",	220,	JCOP_INFIX},
-	{JSONOP_ADD,		"+",	210,	JCOP_INFIX},
-	{JSONOP_SUBTRACT,       "-",	210,	JCOP_INFIX}, /* or JSONOP_NEGATE */
-	{JSONOP_BITNOT,		"~",	240,	JCOP_INFIX},
-	{JSONOP_BITAND,		"&",	170,	JCOP_INFIX},
-	{JSONOP_BITOR,		"|",	150,	JCOP_INFIX},
-	{JSONOP_BITXOR,		"^",	160,	JCOP_INFIX},
-	{JSONOP_GROUP,          "@",    5,	JCOP_INFIX},	/*!!!*/
-	{JSONOP_COMMA,          ",",    110,	JCOP_INFIX},
-	{JSONOP_STARTPAREN,     "(",    260,	JCOP_OTHER},
-	{JSONOP_ENDPAREN,       ")",    0,	JCOP_OTHER},
-	{JSONOP_STARTARRAY,     "[",    260,	JCOP_OTHER},
-	{JSONOP_ENDARRAY,       "]",    0,	JCOP_OTHER},
-	{JSONOP_STARTOBJECT,    "{",    260,	JCOP_OTHER},
-	{JSONOP_ENDOBJECT,      "}",    0,	JCOP_OTHER},
-	{JSONOP_NEGATE,         "U-",   240,	JCOP_PREFIX},
-	{JSONOP_SUBSCRIPT,      "S[",   170,	JCOP_OTHER},
-	{JSONOP_LITERAL,        "LIT",  -1,	JCOP_OTHER},
-	{JSONOP_STRING,         "STR",  -1,	JCOP_OTHER},
-	{JSONOP_NUMBER,         "NUM",  -1,	JCOP_OTHER},
-	{JSONOP_BOOLEAN,        "BOO",  -1,	JCOP_OTHER},
-	{JSONOP_NULL,           "NUL",  -1,	JCOP_OTHER},
-	{JSONOP_ARRAY,          "ARR",  -1,	JCOP_OTHER},
-	{JSONOP_OBJECT,         "OBJ",  -1,	JCOP_OTHER},
-
-	{JSONOP_SELECT,         "SEL",  -1,	JCOP_OTHER},
-	{JSONOP_DISTINCT,       "DIS",  1,	JCOP_OTHER},
-	{JSONOP_AS,             "AS",   2,	JCOP_OTHER},
-	{JSONOP_FROM,           "FRO",  1,	JCOP_OTHER},
-	{JSONOP_WHERE,          "WHE",  1,	JCOP_OTHER},
-	{JSONOP_GROUPBY,        "GRO",  1,	JCOP_OTHER},
-	{JSONOP_ORDERBY,        "ORD",  1,	JCOP_OTHER},
-	{JSONOP_DESCENDING,     "DES",  2,	JCOP_POSTFIX},
-
-	{JSONOP_ISNULL,         "N=",   250,	JCOP_POSTFIX}, /* postfix operator */
-	{JSONOP_ISNOTNULL,      "N!",   250,	JCOP_POSTFIX}, /* postfix operator */
-	{JSONOP_FUNCTION,       "FN",   170,	JCOP_OTHER},
-	{JSONOP_INVALID,	"XXX",	666,	JCOP_OTHER}
+} operators[] = {
+	{"ADD",		"+",	210,	JCOP_INFIX},
+	{"AG",		"AG",	-1,	JCOP_OTHER},
+	{"AND",		"&&",	140,	JCOP_INFIX},
+	{"ARRAY",	"ARR",	-1,	JCOP_OTHER},
+	{"AS",		"AS",	121,	JCOP_INFIX},
+	{"ASSIGN",	"ASGN",	121,	JCOP_INFIX},
+	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
+	{"BITAND",	"&",	170,	JCOP_INFIX},
+	{"BITNOT",	"~",	240,	JCOP_INFIX},
+	{"BITOR",	"|",	150,	JCOP_INFIX},
+	{"BITXOR",	"^",	160,	JCOP_INFIX},
+	{"BOOLEAN",	"BOO",	-1,	JCOP_OTHER},
+	{"COALESCE",	"??",	130,	JCOP_INFIX},
+	{"COLON",	":",	121,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
+	{"COMMA",	",",	110,	JCOP_INFIX},
+	{"CONST",	"CONS",	110,	JCOP_OTHER},
+	{"DESCENDING",	"DES",	3,	JCOP_POSTFIX},
+	{"DISTINCT",	"DIS",	2,	JCOP_OTHER},
+	{"DIVIDE",	"/",	220,	JCOP_INFIX},
+	{"DOT",		".",	270,	JCOP_INFIX},
+	{"EACH",	"@@",	5,	JCOP_INFIX}, /*!!!*/
+	{"ELIPSIS",	"..",	100,	JCOP_INFIX}, /*!!!*/
+	{"ENDARRAY",	"]",	0,	JCOP_OTHER},
+	{"ENDOBJECT",	"}",	0,	JCOP_OTHER},
+	{"ENDPAREN",	")",	0,	JCOP_OTHER},
+	{"EQ",		"==",	180,	JCOP_INFIX},
+	{"EQSTRICT",	"===",	180,	JCOP_INFIX},
+	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
+	{"FROM",	"FRO",	2,	JCOP_OTHER},
+	{"FUNCTION",	"FN",	-1,	JCOP_OTHER}, /* function definition */
+	{"GE",		">=",	190,	JCOP_INFIX},
+	{"GROUP",	"@",	5,	JCOP_INFIX},	/*!!!*/
+	{"GROUPBY",	"GRO",	2,	JCOP_OTHER},
+	{"GT",		">",	190,	JCOP_INFIX},
+	{"ICEQ",	"=",	180,	JCOP_INFIX},
+	{"ICNE",	"<>",	180,	JCOP_INFIX},
+	{"IN",		"IN",	175,	JCOP_INFIX},
+	{"ISNOTNULL",	"N!",	250,	JCOP_POSTFIX}, /* postfix operator */
+	{"ISNULL",	"N=",	250,	JCOP_POSTFIX}, /* postfix operator */
+	{"LE",		"<=",	190,	JCOP_INFIX},
+	{"LIKE",	"LIK",	180,	JCOP_INFIX},
+	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
+	{"LJOIN",	"@<",	10,	JCOP_INFIX}, /*!!!*/
+	{"LT",		"<",	190,	JCOP_INFIX},
+	{"MODULO",	"%",	220,	JCOP_INFIX},
+	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
+	{"NAME",	"NAM",	-1,	JCOP_OTHER},
+	{"NE",		"!=",	180,	JCOP_INFIX},
+	{"NEGATE",	"U-",	240,	JCOP_PREFIX},
+	{"NESTRICT",	"!==",	180,	JCOP_INFIX},
+	{"NJOIN",	"@=",	10,	JCOP_INFIX}, /*!!!*/
+	{"NOT",		"!",	240,	JCOP_PREFIX},
+	{"NOTLIKE",	"NLK",	180,	JCOP_INFIX},
+	{"NULL",	"NUL",	-1,	JCOP_OTHER},
+	{"NUMBER",	"NUM",	-1,	JCOP_OTHER},
+	{"OBJECT",	"OBJ",	-1,	JCOP_OTHER},
+	{"OR",		"||",	130,	JCOP_INFIX},
+	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
+	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
+	{"RETURN",	"RET",	-1,	JCOP_OTHER},
+	{"RJOIN",	"@>",	10,	JCOP_INFIX}, /*!!!*/
+	{"SELECT",	"SEL",	1,	JCOP_OTHER},
+	{"SEMICOLON",	";",	-1,	JCOP_OTHER},
+	{"STARTARRAY",	"[",	260,	JCOP_OTHER},
+	{"STARTOBJECT",	"{",	260,	JCOP_OTHER},
+	{"STARTPAREN",	"(",	260,	JCOP_OTHER},
+	{"STRING",	"STR",	-1,	JCOP_OTHER},
+	{"SUBSCRIPT",	"S[",	170,	JCOP_OTHER},
+	{"SUBTRACT",	"-",	210,	JCOP_INFIX}, /* or JSONOP_NEGATE */
+	{"VAR",		"VAR",	-1,	JCOP_OTHER},
+	{"WHERE",	"WHE",	2,	JCOP_OTHER},
+	{"INVALID",	"XXX",	666,	JCOP_OTHER}
 };
+
 
 /* We can use static copies of some jsoncalc_t's */
 static jsoncalc_t startparen = {JSONOP_STARTPAREN};
@@ -139,7 +142,6 @@ static jsoncalc_t endarray = {JSONOP_ENDARRAY};
 static jsoncalc_t startobject = {JSONOP_STARTOBJECT};
 static jsoncalc_t endobject = {JSONOP_ENDOBJECT};
 static jsoncalc_t selectdistinct = {JSONOP_DISTINCT};
-static jsoncalc_t selectas = {JSONOP_AS};
 static jsoncalc_t selectfrom = {JSONOP_FROM};
 static jsoncalc_t selectwhere = {JSONOP_WHERE};
 static jsoncalc_t selectgroupby = {JSONOP_GROUPBY};
@@ -150,76 +152,7 @@ static jsoncalc_t selectdesc = {JSONOP_DESCENDING};
 /* Return the name of an operation, mostly for debugging. */
 char *json_calc_op_name(jsonop_t jsonop)
 {
-	switch (jsonop)
-	{
-	  case JSONOP_INVALID: return "INVALID";
-	  case JSONOP_LITERAL: return "LITERAL";
-	  case JSONOP_STRING: return "STRING";
-	  case JSONOP_NUMBER: return "NUMBER";
-	  case JSONOP_BOOLEAN: return "BOOLEAN";
-	  case JSONOP_NULL: return "NULL";
-	  case JSONOP_STARTPAREN: return "STARTPAREN";
-	  case JSONOP_ENDPAREN: return "ENDPAREN";
-	  case JSONOP_SUBSCRIPT: return "SUBSCRIPT";
-	  case JSONOP_STARTARRAY: return "STARTARRAY";
-	  case JSONOP_ARRAY: return "ARRAY";
-	  case JSONOP_ENDARRAY: return "ENDARRAY";
-	  case JSONOP_STARTOBJECT: return "STARTOBJECT";
-	  case JSONOP_OBJECT: return "OBJECT";
-	  case JSONOP_ENDOBJECT: return "ENDOBJECT";
-	  case JSONOP_NAME: return "NAME";
-	  case JSONOP_FUNCTION: return "FUNCTION";
-	  case JSONOP_AG: return "AG";
-	  case JSONOP_COMMA: return "COMMA";
-	  case JSONOP_DOT: return "DOT";
-	  case JSONOP_ELIPSIS: return "ELIPSIS";
-	  case JSONOP_COALESCE: return "COALESCE";
-	  case JSONOP_QUESTION: return "QUESTION";
-	  case JSONOP_COLON: return "COLON";
-	  case JSONOP_EACH: return "EACH";
-	  case JSONOP_GROUP: return "GROUP";
-	  case JSONOP_NJOIN: return "NJOIN";
-	  case JSONOP_LJOIN: return "LJOIN";
-	  case JSONOP_RJOIN: return "RJOIN";
-	  case JSONOP_NEGATE: return "NEGATE";
-	  case JSONOP_ISNULL: return "ISNULL";
-	  case JSONOP_ISNOTNULL: return "ISNOTNULL";
-	  case JSONOP_MULTIPLY: return "MULTIPLY";
-	  case JSONOP_DIVIDE: return "DIVIDE";
-	  case JSONOP_MODULO: return "MODULO";
-	  case JSONOP_ADD: return "ADD";
-	  case JSONOP_SUBTRACT: return "SUBTRACT";
-	  case JSONOP_BITNOT: return "BITNOT";
-	  case JSONOP_BITAND: return "BITAND";
-	  case JSONOP_BITOR: return "BITOR";
-	  case JSONOP_BITXOR: return "BITXOR";
-	  case JSONOP_NOT: return "NOT";
-	  case JSONOP_AND: return "AND";
-	  case JSONOP_OR: return "OR";
-	  case JSONOP_LT: return "LT";
-	  case JSONOP_LE: return "LE";
-	  case JSONOP_EQ: return "EQ";
-	  case JSONOP_NE: return "NE";
-	  case JSONOP_GE: return "GE";
-	  case JSONOP_GT: return "GT";
-	  case JSONOP_ICEQ: return "ICEQ";
-	  case JSONOP_ICNE: return "ICNE";
-	  case JSONOP_BETWEEN: return "BETWEEN";
-	  case JSONOP_LIKE: return "LIKE";
-	  case JSONOP_NOTLIKE: return "NOTLIKE";
-	  case JSONOP_IN: return "IN";
-	  case JSONOP_EQSTRICT: return "EQSTRICT";
-	  case JSONOP_NESTRICT: return "NESTRICT";
-	  case JSONOP_SELECT: return "SELECT";
-	  case JSONOP_DISTINCT: return "DISTINCT";
-	  case JSONOP_AS: return "AS";
-	  case JSONOP_FROM: return "FROM";
-	  case JSONOP_WHERE: return "WHERE";
-	  case JSONOP_GROUPBY: return "GROUPBY";
-	  case JSONOP_ORDERBY: return "ORDERBY";
-	  case JSONOP_DESCENDING: return "DESCENDING";
-	}
-	return "(invalid jsonop)";
+	return operators[jsonop].symbol;
 }
 
 /* Return the name of an operator, mostly for debugging.  This differs from
@@ -228,12 +161,9 @@ char *json_calc_op_name(jsonop_t jsonop)
  */
 static char *operatorname(jsonop_t op)
 {
-	int i;
-	for (i = 0; *operators[i].text; i++)
-		if (operators[i].op == op)
-			return operators[i].text;
-	return json_calc_op_name(op);
+	return operators[op].text;
 }
+
 
 /* Dump an expression.  This is recursive and doesn't add a newline.  The
  * result isn't pretty, and it couldn't be reparsed to generate the same
@@ -301,6 +231,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_AS:
 	  case JSONOP_NEGATE:
 	  case JSONOP_ISNULL:
 	  case JSONOP_ISNOTNULL:
@@ -345,7 +276,7 @@ void json_calc_dump(jsoncalc_t *calc)
 		}
 		break;
 
-	  case JSONOP_FUNCTION:
+	  case JSONOP_FNCALL:
 		printf("%s( ", calc->u.func.jf ? calc->u.func.jf->name : "?");
 		json_calc_dump(calc->u.func.args);
 		printf(" ) ");
@@ -365,16 +296,12 @@ void json_calc_dump(jsoncalc_t *calc)
 		printf(" DISTINCT");
 		break;
 
-	  case JSONOP_AS:
-		printf(" AS");
-		break;
-
 	  case JSONOP_FROM:
 		printf(" FROM");
 		break;
 
 	  case JSONOP_WHERE:
-		printf(" FROM");
+		printf(" WHERE");
 		break;
 
 	  case JSONOP_GROUPBY:
@@ -398,6 +325,15 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_INVALID:
 		printf(" %s ", json_calc_op_name(calc->op));
 		break;
+
+	  case JSONOP_ASSIGN:
+	  case JSONOP_CONST:
+	  case JSONOP_FUNCTION:
+	  case JSONOP_RETURN:
+	  case JSONOP_SEMICOLON:
+	  case JSONOP_VAR:
+		/* Not used yet */
+		abort();
 	}
 }
 
@@ -444,20 +380,19 @@ char *lex(char *str, token_t *token, stack_t *stack)
 {
 	jsonop_t op, best;
 
-	/* Fix the operators[] array, if we haven't already done so. */
+	/* Fix the operators[] array, if we haven't already done so.
+	 * This just means counting the lengths of the operators
+	 */
 	if (!operators[0].len) {
+		/* Verify that the JSONOP_INVALID symbol is in the right
+		 * place.  That strongly suggests that the rest of them are
+		 * all correct too.
+		 */
+		assert(operators[JSONOP_INVALID].prec == 666);
+
 		/* Compute lengths of names */
 		for (op = 0; op <= JSONOP_INVALID; op++)
 			operators[op].len = strlen(operators[op].text);
-
-		/* Move each one so operators[] is indexed by jsonop_t */
-		for (op = 0; op <= JSONOP_INVALID; op++) {
-			if (op != operators[op].op) {
-				opswap = operators[operators[op].op];
-				operators[operators[op].op] = operators[op];
-				operators[op] = opswap;
-			}
-		}
 	}
 
 	/* Skip whitespace */
@@ -564,6 +499,8 @@ char *lex(char *str, token_t *token, stack_t *stack)
 		} else if (token->len == 2 && !strncasecmp(token->full, "is not null", 7)) {
 			token->len = 11;
 			token->op = JSONOP_ISNOTNULL;
+		} else if (token->len == 2 && !strncasecmp(token->full, "as", 2)) {
+			token->op = JSONOP_AS;
 		} else if (token->len == 6 && !strncasecmp(token->full, "select", 6)) {
 			token->len = 6;
 			token->op = JSONOP_SELECT;
@@ -577,16 +514,10 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			 * inconvenient.
 			 */
 			if (token->len == 8 && !strncasecmp(token->full, "distinct", 8)) {
-				token->len = 8;
 				token->op = JSONOP_DISTINCT;
-			} else if (token->len == 2 && !strncasecmp(token->full, "as", 2)) {
-				token->len = 2;
-				token->op = JSONOP_AS;
 			} else if (token->len == 4 && !strncasecmp(token->full, "from", 4)) {
-				token->len = 4;
 				token->op = JSONOP_FROM;
 			} else if (token->len == 5 && !strncasecmp(token->full, "where", 5)) {
-				token->len = 5;
 				token->op = JSONOP_WHERE;
 			} else if (token->len == 5 && !strncasecmp(token->full, "group by", 8)) {
 				token->len = 8;
@@ -616,7 +547,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			best = op;
 	}
 	if (best != JSONOP_INVALID) {
-		token->op = operators[best].op;
+		token->op = best;
 		token->full = str;
 		token->len = operators[best].len;
 		str += token->len;
@@ -650,7 +581,6 @@ static jsoncalc_t *jcalloc(token_t *token)
 	  case JSONOP_STARTOBJECT: return &startobject;
 	  case JSONOP_ENDOBJECT: return &endobject;
 	  case JSONOP_DISTINCT:	return &selectdistinct;
-	  case JSONOP_AS: return &selectas;
 	  case JSONOP_FROM: return &selectfrom;
 	  case JSONOP_WHERE: return &selectwhere;
 	  case JSONOP_GROUPBY: return &selectgroupby;
@@ -718,7 +648,7 @@ static jsoncalc_t *jcfunc(char *name, jsoncalc_t *p1, jsoncalc_t *p2, jsoncalc_t
 	jsoncalc_t *jc;
 
 	/* Allocate the jsoncalc_t for the function call */
-	t.op = JSONOP_FUNCTION;
+	t.op = JSONOP_FNCALL;
 	jc = jcalloc(&t);
 
 	/* Link it to the named function */
@@ -774,6 +704,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_AS:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
 	  case JSONOP_NJOIN:
@@ -822,7 +753,7 @@ void json_calc_free(jsoncalc_t *jc)
 		free(jc->u.select);
 		break;
 
-	  case JSONOP_FUNCTION:
+	  case JSONOP_FNCALL:
 		json_calc_free(jc->u.func.args);
 		break;
 
@@ -831,8 +762,16 @@ void json_calc_free(jsoncalc_t *jc)
 		free(jc->u.ag);
 		break;
 
+	  case JSONOP_ASSIGN:
+	  case JSONOP_CONST:
+	  case JSONOP_FUNCTION:
+	  case JSONOP_RETURN:
+	  case JSONOP_SEMICOLON:
+	  case JSONOP_VAR:
+		/* These aren't used yet. */
+		abort();
+
 	  case JSONOP_DISTINCT:
-	  case JSONOP_AS:
 	  case JSONOP_FROM:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
@@ -862,6 +801,10 @@ void json_calc_free(jsoncalc_t *jc)
  * array, fixcomma(...)->left is the first element of the array, and
  * fixcomma(...)->right is the remainder of the array, or NULL at the end
  * of the array.  For an empty array, both left & right are NULL.
+ *
+ * (If we parsed commas as right-associative then the size of the parsing stack
+ * would limit the length of comma lists we could support.  That isn't an issue
+ * for left-associative operators.)
  */
 static jsoncalc_t *fixcomma(jsoncalc_t *jc, jsonop_t op)
 {
@@ -894,6 +837,37 @@ static jsoncalc_t *fixcomma(jsoncalc_t *jc, jsonop_t op)
 	jc->RIGHT = NULL;
 	jc->op = op;
 	return top;
+}
+
+/* The top item on the stack should be a "name:expr" operator.  If it isn't
+ * then convert it to one.  The two other possibilities are that it could be
+ * a "expr AS name" operator, or a nameless expression in which case we want
+ * to use the expression's source text as the name.
+ */
+static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
+{
+	jsoncalc_t *jc = stack->stack[stack->sp - 1];
+	if (jc->op == JSONOP_AS) {
+		/* Convert "expr AS name" to "name:expr" */
+		jsoncalc_t *swapper = jc->LEFT;
+		jc->LEFT = jc->RIGHT;
+		jc->RIGHT = swapper;
+		jc->op = JSONOP_COLON;
+	} else if (jc->op != JSONOP_COLON) {
+		/* Use the source text as the name */
+		token_t t;
+		t.op = JSONOP_NAME;
+		t.full = stack->str[stack->sp - 1];
+		while (srcend - 1 > t.full && srcend[-1] == ' ')
+			srcend--;
+		t.len = (int)(srcend - t.full);
+printf("name=\"%.*s\"\n", t.len, t.full);
+
+		/* Make it a COLON expression */
+		jc = jcleftright(JSONOP_COLON, jcalloc(&t), jc);
+	} /* Else it is already "name:expr" */
+
+	return jc;
 }
 
 /* Convert a select statement to a jsoncalc_t */
@@ -1218,7 +1192,7 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 		 && jc->op != JSONOP_ARRAY
 		 && jc->op != JSONOP_OBJECT
 		 && jc->op != JSONOP_SUBSCRIPT
-		 && jc->op != JSONOP_FUNCTION
+		 && jc->op != JSONOP_FNCALL
 		 && ((jc->op != JSONOP_NEGATE
 		   && jc->op != JSONOP_NOT)
 		  || jc->RIGHT == NULL)
@@ -1276,16 +1250,20 @@ static int pattern(stack_t *stack, char *want)
 }
 
 
-static int pattern_verbose(stack_t *stack, char *want)
+static int pattern_verbose(stack_t *stack, char *want, jsoncalc_t *next)
 {
 	int result = pattern(stack, want);
 	dumpstack(stack, "pattern %s", want);
-	if (json_debug_flags.calc)
-		printf(" -> %s\n", (result ? "TRUE" : "FALSE"));
+	if (json_debug_flags.calc && result) {
+		if (next)
+			printf(" -> TRUE, if prec>=%d (%s next.prec)\n", operators[next->op].prec, json_calc_op_name(next->op));
+		else
+			puts(" -> TRUE, unconditionally");
+	}
 	return result;
 }
 
-#define PATTERN(x)	(pattern_verbose(stack, match = (x)))
+#define PATTERN(x)	(pattern_verbose(stack, match = (x), next))
 #define PREC(o)		(!next || operators[o].prec >= operators[next->op].prec)
 
 
@@ -1296,7 +1274,7 @@ static int pattern_verbose(stack_t *stack, char *want)
 static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 {
 	token_t t;
-	jsoncalc_t *jc, *jn, *jsel;
+	jsoncalc_t *jc, *jn;
 	jsonfunc_t *jf;
 	int     startsp = stack->sp;
 	jsoncalc_t **top;
@@ -1340,6 +1318,27 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		}
 
+		/* In an array generator or SELECT clause, commas are treated
+		 * specially because we want to conver "expr AS name" to
+		 * "name:expr", and for any other expr we want to use the
+		 * expression's source code as its name.  (So"SELECT count(*)"
+		 * uses "count(*)" as the column label.)
+		 */
+		if ((PATTERN("Sx") && PREC(JSONOP_COMMA))
+		 || (PATTERN("{x") && PREC(JSONOP_COMMA))) {
+			/* First element.  Convert it */
+			top[-1] = fixcolon(stack, srcend);
+		}
+		else if ((PATTERN("Sx,x") || PATTERN("{x,x")) && PREC(JSONOP_COMMA)) {
+			/* Convert the next element, and reduce the comma */
+			top[-1] = fixcolon(stack, srcend);
+			top[-2]->LEFT = top[-3];
+			top[-2]->RIGHT = top[-1];
+			top[-3] = top[-2];
+			stack->sp -= 2;
+			top -= 2;
+		}
+
 		/* SQL SELECT */
 		if (PATTERN("SD")) {
 			/* Fold the "DISTINCT" into "SELECT */
@@ -1350,66 +1349,12 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			/* Drop the "*" */
 			stack->sp--;
 			continue;
-		} else if ((PATTERN("SxAn") || PATTERN("S,xAn")) && PREC(JSONOP_FROM)) {
-			/* Skip comma */
-			jsel = top[-4];
-			if (jsel->op == JSONOP_COMMA)
-				jsel = top[-5];
-
-			/* Save as a COLON */
-			t.op = JSONOP_COLON;
-			jc = jcalloc(&t);
-			top[-1]->op = JSONOP_NAME; /* string to name */
-			jc->LEFT = top[-1];
-			jc->RIGHT = top[-3];
-			if (jsel->u.select->select) {
-				/* Use a comma between items */
-				t.op = JSONOP_COMMA;
-				jn = jcalloc(&t);
-
-				/* Existing on the left, new on the right */
-				jn->LEFT = jsel->u.select->select;
-				jn->RIGHT = jc;
-			} else {
-				jsel->u.select->select = jc;
-			}
-
-			/* Remove everything except "S"/SELECT */
-			if (top[-4]->op == JSONOP_COMMA)
-				stack->sp--;
-			stack->sp -= 3;
-			continue;
-		} else if ((PATTERN("Sx") || PATTERN("S,x")) && PREC(JSONOP_FROM)) {
-			/* Skip comma */
-			jsel = top[-2];
-			if (top[-2]->op == JSONOP_COMMA)
-				jsel = top[-3];
-
-			/* Trim trailing whitepspace from srcend */
-			while (srcend != stack->str[stack->sp - 1] && isspace(srcend[-1]))
-				srcend--;
-
-			/* Use the source as the name */
-			t.op = JSONOP_NAME;
-			t.full = stack->str[stack->sp - 1];
-			t.len = (int)(srcend - t.full);
-printf("name=\"%.*s\"\n", t.len, t.full);
-			jn = jcalloc(&t);
-
-			/* Make it a COLON expression */
-			jc = jcleftright(JSONOP_COLON, jn, top[-1]);
-
-			if (jsel->u.select->select) {
-				/* Use a comma between items */
-				t.op = JSONOP_COMMA;
-				jsel->u.select->select = jcleftright(JSONOP_COMMA, jsel->u.select->select, jc);
-			} else {
-				jsel->u.select->select = jc;
-			}
-			/* Save as a COLON, using source as name */
+		} else if (PATTERN("Sx") && PREC(JSONOP_FROM)) {
+			/* Save the whole expression (a comma list) as the
+			 * column list.
+			 */
+			top[-2]->u.select->select = top[-1];
 			stack->sp--;
-			if (top[-2]->op == JSONOP_COMMA)
-				stack->sp--;
 			continue;
 		} else if (PATTERN("SFx") && PREC(JSONOP_FROM)) {
 			/* Save the table in select.from */
@@ -1456,6 +1401,7 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 			stack->sp--; /* keep "S" */
 			continue;
 		} else if (PATTERN("S") && PREC(JSONOP_SELECT)) {
+if (next) printf("SELECT=%d >= %s=%d\n", operators[JSONOP_SELECT].prec, json_calc_op_name(next->op), operators[next->op].prec); else printf("!next\n");
 			/* All parts of the SELECT have now been parsed.  All
 			 * we need to do now is convert it to a "normal"
 			 * jsoncalc expression.
@@ -1509,7 +1455,7 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 		}
 
 		/* Function calls */
-		if ((PATTERN("x()") || PATTERN("x(*)")) && PREC(JSONOP_FUNCTION)) {
+		if ((PATTERN("x()") || PATTERN("x(*)")) && PREC(JSONOP_FNCALL)) {
 			/* Function call with no extra parameters.  If x is
 			 * a dotted expression then the left-hand-side object
 			 * is a parameter, otherwise we use "this".
@@ -1528,21 +1474,23 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 			if (jn->op != JSONOP_NAME)
 				return "Syntax error";
 			jf = json_calc_function_by_name(jn->u.text);
-			if (jf == NULL)
-				return "Unknown function";
+			if (jf == NULL) {
+				snprintf(stack->errbuf, sizeof stack->errbuf, "Unknown function %s", jn->u.text);
+				return stack->errbuf;
+			}
 			if (jc == NULL) {
 				t.op = JSONOP_BOOLEAN;
 				t.full = "true";
 				t.len = 4;
 				jc = jcalloc(&t);
 			}
-			stack->stack[startsp]->op = JSONOP_FUNCTION;
+			stack->stack[startsp]->op = JSONOP_FNCALL;
 			stack->stack[startsp]->u.func.jf = jf;
 			stack->stack[startsp]->u.func.args = fixcomma(jc, JSONOP_ARRAY);
 			stack->stack[startsp]->u.func.agoffset = 0;
 			stack->sp = startsp + 1;
 			continue;
-		} else if (PATTERN("x(x)") && PREC(JSONOP_FUNCTION)) {
+		} else if (PATTERN("x(x)") && PREC(JSONOP_FNCALL)) {
 			/* Function call with extra parameters */
 
 			/* May be name(args) or arg1.name(args) */
@@ -1552,8 +1500,10 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 			if (jn->op != JSONOP_NAME)
 				return "Syntax error";
 			jf = json_calc_function_by_name(jn->u.text);
-			if (!jf)
-				return "Unknown function";
+			if (!jf) {
+				snprintf(stack->errbuf, sizeof stack->errbuf, "Unknown function %s", jn->u.text);
+				return stack->errbuf;
+			}
 
 			/* Convert parameters to an array generator.  If the
 			 * arg1.name(args...) notation was used, convert to
@@ -1568,7 +1518,7 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 			}
 
 			/* Store it - convert name to function call */
-			jn->op = JSONOP_FUNCTION;
+			jn->op = JSONOP_FNCALL;
 			jn->u.func.jf = jf;
 			jn->u.func.args = jc;
 			jn->u.func.agoffset = 0;
@@ -1623,7 +1573,7 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 		}
 
 		/* Array generators (must be checked after subscript pattern) */
-		if ((PATTERN("^[]") || PATTERN("xi[)")) && PREC(JSONOP_ENDARRAY)) {
+		if (PATTERN("^[]") || PATTERN("xi[)")) {
 			/* Empty array generator, convert from STARTARRAY and
 			 * ENDARRAY to just ARRAY
 			 */
@@ -1631,7 +1581,7 @@ printf("name=\"%.*s\"\n", t.len, t.full);
 			top[-2] = jcalloc(&t);
 			stack->sp--;
 			continue;
-		} else if ((PATTERN("[x]") || PATTERN("xi[x)")) && PREC(JSONOP_ENDARRAY)) {
+		} else if (PATTERN("[x]") || PATTERN("xi[x)")) {
 			/* Non-empty array generator.  All elements are in
 			 * a comma expression in top[-2].  Convert comma to
 			 * array.
@@ -1804,7 +1754,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 		jc->RIGHT = parseag(jc->RIGHT, NULL); /* gets its own list */
 		break;
 
-	  case JSONOP_FUNCTION:
+	  case JSONOP_FNCALL:
 		/* If this is an aggregate function, add it */
 		if (jc->u.func.jf->agfn) {
 			ag->ag[ag->nags++] = jc;
@@ -1815,6 +1765,15 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 		/* Check arguments */
 		jc->u.func.args = parseag(jc->u.func.args, ag);
 		break;
+
+	  case JSONOP_ASSIGN:
+	  case JSONOP_CONST:
+	  case JSONOP_FUNCTION:
+	  case JSONOP_RETURN:
+	  case JSONOP_SEMICOLON:
+	  case JSONOP_VAR:
+		/* These aren't used yet. */
+		abort();
 
 	  case JSONOP_AG:
 	  case JSONOP_STARTPAREN:
@@ -1872,80 +1831,12 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 		if (token.op == JSONOP_SUBTRACT && (pattern(&stack, "^") || pattern(&stack, "+")))
 			token.op = JSONOP_NEGATE;
 
-		/* COMMA is only allowed inside [] or {} */
-		if (token.op == JSONOP_COMMA || token.op == JSONOP_ENDOBJECT)
-		{
-			err = reduce(&stack, NULL, token.full);
-			if (err)
-				break;
-
-			/* We want to allow just names in our object generators,
-			 * in addition to the normal name:expr.  This gets a
-			 * bit tricky though -- When we get a comma after just
-			 * a name in an object generator, we need to convert
-			 * it to name:name.
-			 */
-			jc = stack.stack[stack.sp - 1];
-			if ((pattern(&stack, "{m") || pattern(&stack, "{m,m"))
-			 && (jc->op == JSONOP_NAME
-			  || (jc->op == JSONOP_LITERAL
-			   && jc->u.literal->type == JSON_STRING))) {
-				token_t t;
-				jsoncalc_t *name, *colon;
-
-				/* If string literal, then convert to name */
-				if (jc->op == JSONOP_LITERAL) {
-					t.op = JSONOP_NAME;
-					t.full = jc->u.literal->text;
-					t.len = strlen(t.full);
-					name = jcalloc(&t);
-					json_calc_free(jc);
-					stack.stack[stack.sp - 1] = jc = name;
-				}
-
-				/* Convert name to name:name */
-				t.op = JSONOP_NAME;
-				t.full = jc->u.text;
-				t.len = strlen(t.full);
-				name = jcalloc(&t);
-
-				t.op = JSONOP_COLON;
-				colon = jcalloc(&t);
-
-				colon->u.param.left = name;
-				colon->u.param.right = jc;
-
-				stack.stack[stack.sp - 1] = colon;
-
-				dumpstack(&stack, "Fix %s", "name:name");
-			}
-
-#if 0
-			/* Okay, now let's see if commas are legal here */
-			if (!pattern(&stack, "[x")
-			 && !pattern(&stack, "{m")
-			 && !pattern(&stack, "{m,m")
-			 && !pattern(&stack, "n(x")
-			 && !pattern(&stack, "Sx")
-			 && !pattern(&stack, "SxAn")
-			 && !pattern(&stack, "SFx")
-			 && !pattern(&stack, "SGn")
-			 && !pattern(&stack, "SOn")
-			 && !pattern(&stack, "SOnD")) {
-
-				dumpstack(&stack, "Unexpected comma at \"%s\"", c);
-				/* Unexpected comma */
-				break;
-			}
-#endif
-		}
-
 		/* Convert token to a jsoncalc_t */
 		jc = jcalloc(&token);
 
-		/* try to reduce */
-		if (stack.sp == 0) /* || (stack.stack[stack.sp - 1]->op == JSONOP_NAME && jc->op == JSONOP_STARTPAREN))*/
-			err = NULL; /* can't reduce */
+		/* Try to reduce */
+		if (stack.sp == 0)
+			err = NULL; /* can't reduce an empty stack */
 		else if (stack.stack[stack.sp - 1]->op == JSONOP_NAME && jc->op == JSONOP_STARTPAREN)
 			err = reduce(&stack, jc, token.full);
 		else if (jc->op == JSONOP_STARTARRAY && !pattern(&stack, "^") && !pattern(&stack, "+"))
@@ -1969,7 +1860,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 
 	/* Store the error message (or lack thereof) */
 	if (referr)
-		*referr = err;
+		*referr = err ? strdup(err) : NULL;
 
 	/* Store the end of the parse.  If there are surplus items on the
 	 * stack, then that's where parsing really ended, otherwise use

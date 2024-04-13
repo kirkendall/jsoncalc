@@ -470,7 +470,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		result = json_copy(result);
 		break;
 
-	  case JSONOP_FUNCTION:
+	  case JSONOP_FNCALL:
 		/* Collect parameter values into an array */
 		freeleft = left = json_calc(calc->u.func.args, context, agdata);
 
@@ -897,6 +897,15 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		 * statement that has no explicit FROM clause.  It is handled
 		 * by jcsimple(), not here.
 		 */
+		abort();
+
+	  case JSONOP_ASSIGN:
+	  case JSONOP_CONST:
+	  case JSONOP_FUNCTION:
+	  case JSONOP_RETURN:
+	  case JSONOP_SEMICOLON:
+	  case JSONOP_VAR:
+		/* These aren't used yet. */
 		abort();
 
 	  case JSONOP_STRING:

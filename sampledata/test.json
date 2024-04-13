@@ -1,21 +1,21 @@
 {
     "scores":[
-	{"name":"peter","run":1,"score":10},
-	{"name":"paul","run":1,"score":20},
-	{"name":"mary","run":1,"score":30},
-	{"name":"peter","run":2,"score":25},
-	{"name":"paul","run":2,"score":30},
-	{"name":"mary","run":2,"score":35},
-	{"name":"peter","run":3,"score":30},
-	{"name":"paul","run":3,"score":25},
-	{"name":"mary","run":3,"score":40}
+	{"name":"Peter","run":1,"score":10},
+	{"name":"Paul","run":1,"score":20},
+	{"name":"Mary","run":1,"score":30},
+	{"name":"Peter","run":2,"score":25},
+	{"name":"Paul","run":2,"score":30},
+	{"name":"Mary","run":2,"score":35},
+	{"name":"Peter","run":3,"score":30},
+	{"name":"Paul","run":3,"score":25},
+	{"name":"Mary","run":3,"score":40}
     ],
     "string":"This is a fairly long string, intended to test the behavior of oversized tokens.",
     "addr":[
-        {"name":"Larry Bach","address":{"street":"123 Elm St","city":"Portand","state":"OR","zip":97266},"joined":"2024-01-02"},
-        {"name":"Wally Mozart","address":{"street":"123 Elm St","city":"Tigard","state":"OR","zip":97223},"joined":"2023-10-15"},
-        {"name":"Betty Vivaldi","address":{"street":"1034 Duke St","city":"Beaverton","state":"OR","zip":97401},"joined":"2022-08-09"},
-        {"name":"Ziggy Debussey","address":{"street":"101 Broadway","appt":204,"city":"Portand","state":"OR","zip":97266},"joined":"2023-04-17"}
+        {"name":"Peter","address":{"street":"123 Elm St","city":"Portand","state":"OR","zip":97266},"joined":"2024-01-02"},
+        {"name":"Paul","address":{"street":"123 Elm St","city":"Tigard","state":"OR","zip":97223},"joined":"2023-10-15"},
+        {"name":"Mary","address":{"street":"1034 Duke St","city":"Beaverton","state":"OR","zip":97401},"joined":"2022-08-09"},
+        {"name":"Ziggy","address":{"street":"101 Broadway","appt":204,"city":"Portand","state":"OR","zip":97266},"joined":"2023-04-17"}
      ],
      "deep":{"deeper":{"deepest":3,"deeply":"madly"},"dept":"transportation"}
 }

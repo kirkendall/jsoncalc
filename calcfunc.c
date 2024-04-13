@@ -236,7 +236,7 @@ static json_t *jfn_toMixedCase(json_t *args, void *agdata)
 	else
 		tmp = jfn_toString(args, agdata);
 
-	/* Convert to uppercase */
+	/* Convert to mixedcase */
 	json_mbs_tomixed(tmp->text, args->first->next);
 
 	/* Return it */

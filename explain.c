@@ -222,7 +222,16 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 			stats = json_object();
 			json_append(stats, json_key("key", json_string(col->text, -1)));
 			json_append(stats, json_key("type", json_string(newtype, -1)));
-			json_append(stats, json_key("width", json_from_int(json_mbs_width(col->first->text))));
+			if (col->first->type == JSON_NUMBER && !col->first->text[0]) {
+				if (col->first->text[1] == 'i')
+					sprintf(number, "%d", JSON_INT(col->first));
+				else
+					sprintf(number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
+				newwidth = strlen(number);
+			} else {
+				newwidth = json_mbs_width(col->first->text);
+			}
+			json_append(stats, json_key("width", json_from_int(newwidth)));
 			json_append(stats, json_key("nullable", json_symbol(!strcmp(newtype, "null") || !firstrow ? "true" : "false", -1)));
 			json_append(columns, stats);
 			oldtype = newtype;

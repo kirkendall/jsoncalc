@@ -186,8 +186,12 @@ jsonfunc_t *json_calc_function_by_name(char *name)
 	return NULL;
 }
 
-/******************************************************************************/
-/* Everything below this is C functions that implement JsonCalc functions.    */
+/***************************************************************************
+ * Everything below this is C functions that implement JsonCalc functions. *
+ * We'll start with the non-aggregate functions.  These are jfn_xxxx() C   *
+ * functions.  They're passed an agdata parameter but they ignore it.      *
+ * The aggregate functions are defined later in this file.                 *
+ ***************************************************************************/
 
 /* toUpperCase(str) returns an uppercase version of str */
 static json_t *jfn_toUpperCase(json_t *args, void *agdata)
@@ -702,6 +706,11 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 	return result;
 }
 
+/**************************************************************************
+ * The following are aggregate functions.  These are implemented as pairs *
+ * of C functions -- jag_xxxx() to accumulate data from each row, and     *
+ * jfn_xxx() to return the final result.                                  *
+ **************************************************************************/
 
 /* count(arg) count non-null and non-false values */
 static json_t *jfn_count(json_t *args, void *agdata)

@@ -679,6 +679,16 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			result = json_from_double(-json_double(right));
 		break;
 
+	  case JSONOP_EXPLAIN:
+		USE_RIGHT_OPERAND(calc);
+		if (json_is_table(right)) {
+			/* Accumulate statistics about the rows of the table */
+			result = NULL;
+			for (scan = right->first; scan; scan = scan->next)
+				result = json_explain(result, scan, 0);
+		}
+		break;
+
 	  case JSONOP_ADD:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);

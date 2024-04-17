@@ -50,6 +50,8 @@ static json_t *jfn_distinct(json_t *args, void *agdata);
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
 static void    jag_count(json_t *args, void *agdata);
+static json_t *jfn_index(json_t *args, void *agdata);
+static void    jag_index(json_t *args, void *agdata);
 static json_t *jfn_min(json_t *args, void *agdata);
 static void    jag_min(json_t *args, void *agdata);
 static json_t *jfn_max(json_t *args, void *agdata);
@@ -94,7 +96,8 @@ static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
 static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
 static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",     jfn_distinct};
 static jsonfunc_t count_jf       = {&distinct_jf,    "count",       jfn_count, jag_count, sizeof(long)};
-static jsonfunc_t min_jf         = {&count_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
+static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, 2 * sizeof(long)};
+static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
 static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         jfn_sum,   jag_sum, sizeof(agdata_t)};
@@ -721,6 +724,51 @@ static void jag_count(json_t *args, void *agdata)
 {
 	if (json_is_true(args->first))
 		(*(int *)agdata)++;
+}
+
+/* index(arg) returns a different value for each element in the group */
+static json_t *jfn_index(json_t *args, void *agdata)
+{
+	int *counter = (int *)agdata;
+	int tmp;
+	char	buf[20], *p, base;
+
+	/* First arg defines the counting style.  If it is null or false then
+	 * no item is returned and the count isn't incremented.
+	 */
+	if (args->first->type == JSON_SYMBOL && args->first->text[0] != 't')
+		return NULL;
+
+	/* If it is a number, then add that to the counter */
+	if (args->first->type == JSON_NUMBER)
+		return json_from_int(json_int(args->first) + (*counter)++);
+
+	/* If it is 'a' or "A" then use upper or lowercase ASCII letters */
+	if (args->first->type == JSON_STRING) {
+		base = args->first->text[0];
+		switch (base) {
+		case 'a':
+		case 'A':
+			p = &buf[sizeof buf];
+			*--p = '\0';
+			tmp = (*counter)++;
+			do {
+				*--p = base + tmp % 26;
+				tmp /= 26;
+			} while (tmp > 0);
+			return json_string(p, -1);
+
+		/* Maybe put roman numerals here some day? case 'i'/'I'
+		 * ivxlcdm: i,ii,iii,iv,v,vi,vii,viii,ix
+		 */
+		}
+	}
+
+	/* As a last resort, just return it as a 1-based number. */
+	return json_from_int(1 + (*counter)++);
+}
+static void jag_index(json_t *args, void *agdata)
+{
 }
 
 /* min(arg) returns the minimum value */

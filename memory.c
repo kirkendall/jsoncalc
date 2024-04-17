@@ -165,21 +165,26 @@ json_t *json_simple(const char *str, size_t len, json_type_t type)
 
 /* Allocate a json_t for a given string.  Note that any escape sequences
  * such as \n or \u22c8 are handled by the parser via json_mbs_unescape()
- * so we just get the actual data here.
+ * so we just get the actual data here.  Passing -1 for len causes it to
+ * compute the length via strlen().
  */
 json_t *json_string(const char *str, size_t len)
 {
 	return json_simple(str, len, JSON_STRING);
 }
 
-/* Allocate a json_t for a given number, expressed as a string */
+/* Allocate a json_t for a given number, expressed as a string.  If you pass
+ * -1 for len, it'll compute the length via strlen().
+ */
 json_t *json_number(const char *str, size_t len)
 {
 	return json_simple(str, len, JSON_NUMBER);
 }
 
 /* Allocate a json_t for a given symbol (usually "true" or "false") expressed
- * as a string */
+ * as a string.  If you pass * -1 for len, it'll compute the length via
+ * strlen().
+ */
 json_t *json_symbol(const char *str, size_t len)
 {
 	return json_simple(str, len, JSON_SYMBOL);

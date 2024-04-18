@@ -46,6 +46,7 @@ static json_t *jfn_slice(json_t *args, void *agdata);
 static json_t *jfn_repeat(json_t *args, void *agdata);
 static json_t *jfn_toFixed(json_t *args, void *agdata);
 static json_t *jfn_distinct(json_t *args, void *agdata);
+static json_t *jfn_unroll(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -94,9 +95,10 @@ static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        jfn_flat};
 static jsonfunc_t slice_jf       = {&flat_jf,        "slice",       jfn_slice};
 static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
 static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
-static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",     jfn_distinct};
-static jsonfunc_t count_jf       = {&distinct_jf,    "count",       jfn_count, jag_count, sizeof(long)};
-static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, 2 * sizeof(long)};
+static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct};
+static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
+static jsonfunc_t count_jf       = {&unroll_jf,      "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
 static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
@@ -707,6 +709,12 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 
 	/* Return the resulting array */
 	return result;
+}
+
+/* Unroll nested tables */
+json_t *jfn_unroll(json_t *args, void *afdata)
+{
+	return json_unroll(args->first, args->first->next);
 }
 
 /**************************************************************************

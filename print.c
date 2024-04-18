@@ -133,6 +133,15 @@ static void jcsh(json_t *json, FILE *fp, jsonformat_t *format){
 				else if (*s == '\'' || *s == '\\') {
 					putc('\\', fp);
 					putc(*s, fp);
+				} else if ((*s & 0x80) != 0 && format->ascii) {
+					char buf[13], *c;
+					s = (char *)json_mbs_ascii(s, buf);
+					s--; /* because for-loop does s++ */
+					for (c = buf; *c; c++) {
+						if (*c == '\\')
+							putc('\\', fp);
+						putc(*c, fp);
+					}
 				} else
 					putc(*s, fp);
 			}
@@ -188,6 +197,15 @@ static void jccsvsingle(json_t *elem, FILE *fp, jsonformat_t *format)
 			} else if (*s == '"' || *s == '\\') {
 				putc('\\', fp);
 				putc(*s, fp);
+			} else if ((*s & 0x80) != 0 && format->ascii) {
+				char buf[13], *c;
+				s = (char *)json_mbs_ascii(s, buf);
+				s--; /* because for-loop does s++ */
+				for (c = buf; *c; c++) {
+					if (*c == '\\')
+						putc('\\', fp);
+					putc(*c, fp);
+				}
 			} else {
 				putc(*s, fp);
 			}

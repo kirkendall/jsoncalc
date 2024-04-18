@@ -181,6 +181,7 @@ extern char *json_typeof(json_t *json);
 extern void json_sort(json_t *array, json_t *orderby);
 extern json_t *json_copy(json_t *json);
 extern json_t *json_array_flat(json_t *array, int depth);
+extern json_t *json_unroll(json_t *table, json_t *nestlist);
 extern json_t *json_array_group_by(json_t *array, json_t *orderby);
 #define json_append(container, more) json_parse_append(NULL, container, more)
 
@@ -275,6 +276,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions);
 int json_mbs_casecmp(const char *s1, const char *s2);
 int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len);
 int json_mbs_abbrcmp(const char *abbr, const char *full);
+const char *json_mbs_ascii(const char *str, char *buf);
 size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, int nonascii);
 size_t json_mbs_unescape(char *dst, const char *src, size_t len);
 int json_mbs_like(const char *text, const char *pattern);

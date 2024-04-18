@@ -302,7 +302,10 @@ int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
         return 1;
 }
 
-/* Compare an abbreviated name to the (possible) full name */
+/* Compare an abbreviated name to the (possible) full name.  In json_calc(),
+ * function names may be abbreviated to the first letter and any subsequent
+ * uppercase letters.  For example, toUpperCase() can be written as tuc().
+ */
 int json_mbs_abbrcmp(const char *abbr, const char *full)
 {
         wchar_t wc1, wc2;
@@ -354,6 +357,45 @@ int json_mbs_abbrcmp(const char *abbr, const char *full)
 	return 0;
 }
 
+/* Convert a single non-ASCII character to a \uXXXX sequence, or pair of \uXXXX
+ * sequences as needed.  "str" is the first byte of the non-ASCII character to
+ * convert.  The sequences are stored in "buf" which must be at least 13 chars
+ * long to hold the two \uXXXX sequences.  Returns a pointer to the character
+ * after the converted character.
+ */
+const char *json_mbs_ascii(const char *str, char *buf)
+{
+	wchar_t	wc;
+	int	mbsize;
+
+	/* Convert the multibyte character to a wchar_t */
+	mbsize = mbtowc(&wc, str, MB_CUR_MAX);
+
+	/* Error? */
+	if (mbsize <= 0) {
+		*buf = '\0';
+		return str + 1;
+	}
+
+	/* Can it fit in a single \uXXXX sequence? */
+	if (wc <= 0xff) {
+		sprintf(buf, "\\x%02x", (int)wc);
+	} else if (wc <= 0xffff) {
+		sprintf(buf, "\\u%04x", (int)wc);
+	} else if (wc <= 0x10ffff) {
+		int	high, low;
+		wc -= 0x10000;
+		high = (wc >> 10) | 0xd800;
+		low = (wc & 0x3ff) | 0xdc00;
+		sprintf(buf, "\\u%04x\\u%04x", high, low);
+	} else {
+		sprintf(buf, "\\U%08x", (int)wc);
+	}
+
+	/* Return a pointer to the next character */
+	return str + mbsize;
+}
+
 /* Convert a string's control characters and optionally non-ASCII characters
  * to backslash sequences, and return the new length.  This does *not* add a
  * NUL character to the end of the string, or include room for a terminating
@@ -366,8 +408,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
 {
         const char *end;
         size_t size;
-        int mbsize;
-        wchar_t wc;
+        char	escape[13];
 
         /* If nbytes is -1 then use strlen to find the true length */
         if (nbytes == (size_t)-1)
@@ -381,31 +422,10 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
                          * multibyte character to a single \u sequence.
                          */
                         if (ascii) {
-                                mbsize = mbtowc(&wc, src, MB_CUR_MAX);
-                                src += mbsize - 1; /* since for-loop does +1 */
-                                if (wc < 256) {
-                                        if (dst)
-                                                sprintf(dst + size, "\\x%02x", wc);
-                                        size += 4;
-                                } else if (wc < 65536) {
-                                        if (dst)
-                                                sprintf(dst + size, "\\u%04x", wc);
-                                        size += 6;
-                                } else if (wc < 1114112) {
-					/* Output as a UTF-16 surrogate pair */
-					if (dst) {
-						int high, low;
-						wc -= 65536;
-						high = (wc >> 10) | 0xd800;
-						low = (wc & 0x3ff) | 0xdc00;
-						sprintf(dst + size, "\\u%04x\\u%04x", high, low);
-					}
-					size += 12;
-                                } else {
-                                        if (dst)
-                                                sprintf(dst + size, "\\U%08x", wc);
-                                        size += 10;
-                                }
+                                src = json_mbs_ascii(src, escape);
+                                if (dst)
+					strcpy(dst + size, escape);
+                                size += strlen(escape);
                         } else {
                                 /* Copy each byte verbatim */
                                 if (dst)

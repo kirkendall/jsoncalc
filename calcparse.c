@@ -134,6 +134,7 @@ static struct {
 	{"INVALID",	"XXX",	666,	JCOP_OTHER}
 };
 
+static int pattern(stack_t *stack, char *want);
 
 /* We can use static copies of some jsoncalc_t's */
 static jsoncalc_t startparen = {JSONOP_STARTPAREN};
@@ -445,9 +446,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 	/* Quoted strings */
 	if (strchr("\"'`", *str))
 	{
-	
- 	token->op = JSONOP_STRING;
-
+		token->op = JSONOP_STRING;
 		token->full = str;
 		token->len = 1;
 		while (token->full[token->len] && token->full[token->len] != *token->full)
@@ -557,10 +556,16 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			best = op;
 	}
 	if (best != JSONOP_INVALID) {
+		/* Use this operator for this token */
 		token->op = best;
 		token->full = str;
 		token->len = operators[best].len;
 		str += token->len;
+
+		/* SUBTRACT could be NEGATE -- depends on context */
+		if (token->op == JSONOP_SUBTRACT && (pattern(stack, "^") || pattern(stack, "+")))
+			token->op = JSONOP_NEGATE;
+
 		if (json_debug_flags.calc)
 			printf("lex(): operator JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
 		return str;
@@ -869,7 +874,9 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 		token_t t;
 		t.op = JSONOP_NAME;
 		t.full = stack->str[stack->sp - 1];
-		while (srcend - 1 > t.full && srcend[-1] == ' ')
+		if (strchr("\"'`", *t.full))
+			t.full++;
+		while (srcend - 1 > t.full && strchr("\"'` ", srcend[-1]))
 			srcend--;
 		t.len = (int)(srcend - t.full);
 printf("name=\"%.*s\"\n", t.len, t.full);
@@ -1211,6 +1218,8 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 		 && (operators[jc->op].prec < 0
 		  || jc->LEFT == NULL
 		  || jc->RIGHT == NULL))
+			return FALSE;
+		if (jc->op == JSONOP_FNCALL && !jc->u.func.args)
 			return FALSE;
 		break;
 
@@ -1840,10 +1849,6 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 
 	stack.sp = 0;
 	while ((c = lex(c, &token, &stack)) != NULL && token.op != JSONOP_INVALID) {
-		/* SUBTRACT could be NEGATE -- depends on context */
-		if (token.op == JSONOP_SUBTRACT && (pattern(&stack, "^") || pattern(&stack, "+")))
-			token.op = JSONOP_NEGATE;
-
 		/* Convert token to a jsoncalc_t */
 		jc = jcalloc(&token);
 
@@ -1883,8 +1888,20 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 	{
 		if (stack.sp >= 2)
 			*refend = stack.str[1];
-		else
+		else {
 			*refend = token.full + token.len;
+
+			/* If the last token was a quoted string or name,
+			 * then the closing quote should *NOT* be included
+			 * in the tail.
+			 */
+			if ((token.op == JSONOP_STRING || token.op == JSONOP_NAME) && strchr("\"'`", **refend))
+				(*refend)++;
+		}
+
+		/* Skip past any trailing whitespace */
+		while (isspace(**refend))
+			(*refend)++;
 	}
 
 	/* Clean up any extra stack items */

@@ -57,10 +57,19 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 	 * Also, output the column headings while we're at it.
 	 */
 	for (c = 0, col = explain->first; col; c++, col = col->next) {
+		/* For columns that can contain arrays or objects, make sure
+		 * it's wide enough to show "[array]" or "{object}".
+		 */
+		text = json_text_by_key(col, "type");
+		width = widths[c] = json_int(json_by_key(col, "width"));
+		if ((!strcmp(text, "array") || !strcmp(text, "table")) && width < 7)
+			width = widths[c] = 7;
+		else if ((!strcmp(text, "object") || !strcmp(text, "mixed")) && width < 8)
+			width = widths[c] = 8;
+
 		/* Expand the column if key is wide */
 		text = json_text_by_key(col, "key");
 		wdata = json_mbs_width(text);
-		width = widths[c] = json_int(json_by_key(col, "width"));
 		if (wdata > width) {
 			pad[c] = wdata - width;
 			width = wdata;
@@ -88,7 +97,7 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 			if (!cell || (cell->type == JSON_SYMBOL && *cell->text == 'n'))
 				text = format->null;
 			else if (cell->type == JSON_ARRAY)
-				text = "[array]";
+				text = json_is_table(cell) ? "[table]" : "[array]";
 			else if (cell->type == JSON_OBJECT)
 				text = "{object}";
 			else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'i')

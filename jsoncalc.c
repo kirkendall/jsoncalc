@@ -21,8 +21,14 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-/* -R -- inhibit the readline library? */
+/* -i -- Force interactive mode */
+int interactive = 0;
+
+/* -r -- inhibit the readline library? */
 int inhibit_readline = 0;
+
+/* -v -- The name of an environment variable to read/set */
+char *envname = NULL;
 
 /* -D -- This is a directory to check for autoload */
 char *autoload_dir = NULL;
@@ -100,20 +106,22 @@ static void usage(char *fmt, char *data)
 	puts("Usage: jsoncalc [flags] [name=value]... [file.json]...");
 	puts("Flags: -c calc    Evaluate calc, output any results, and quit.");
 	puts("       -f file    Read calc expression from file, output the result, and quit.");
-	puts("       -l plugin  Load libjcplugin.so from $LIBPATH.");
 	puts("       -v env     Read environment variable $env var, output cmd to set it.");
-	puts("       -d dir     Autoload files from directory \"dir\" (default current dir).");
-	puts("       -u         Update any modified *.json files from the command line.");
-	puts("       -O format  Adjusts the output format.");
-	puts("       -C colors  Adjusts the colors for ANSI terminals.");
+	puts("       -i         Interactive.");
+	puts("       -r         Inhibit the use of readline for interactive input.");
+	puts("       -u         Update any modified *.json files named on the command line.");
+	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
+	puts("       -D dir     Autoload files from directory \"dir\".");
+	puts("       -O format  Adjusts the output format. Use -O? for more info.");
+	puts("       -C colors  Adjusts colors for ANSI terminals. Use -C? for more info.");
 	puts("       -J flags   Debug: t=token, f=file, b=buffer, a=abort, e=expr, c=calc");
-	puts("       -D         Save -O, -C, -d, -J flags as default config");
-	puts("       -R         Inhibit the use of readline for interactive input.");
-	puts("This program manipulates JSON data.  Without -ccalc or -ffile or");
-	puts("-venv, it will run interactively.  Any name=value parameters on the shell");
-	puts("command line will be added to the context, so you can use them like variables.");
-	puts("Any *.json files named on the command line will be loaded into memory and");
-	puts("will be accessible by using their basename as a variable name.");
+	puts("       -U         Save -O, -C, -D, -J flags as default config");
+	puts("This program manipulates JSON data. Without one of -ccalc, -ffile, -venv or -u,");
+	puts("it will assume -c\"this\" if -Oformat is given, or -i if no -Oformat.  Any");
+	puts("name=value parameters on the shell command line will be added to the context,");
+	puts("so you can use them like variables. Any *.json files named on the command line");
+	puts("will be processed one at a time for -ccalc or -ffile.  For -i, the first *.json");
+	puts("is loaded as \"this\" and you can switch to others manually.");
 	if (fmt)
 		printf(fmt, data);
 	exit(1);
@@ -517,6 +525,43 @@ static char *jcreadline(const char *prompt)
 }
 
 /******************************************************************************/
+
+/* Load the contents of a file into a dynamically-allocated string buffer */
+char *jcreadscript(const char *filename)
+{
+	FILE	*fp;
+	long	size;
+	char	*buf;
+
+	/* Open the file, or give an error message */
+	fp = fopen(filename, "r");
+	if (!fp) {
+		perror(filename);
+		return NULL;
+	}
+
+	/* Find the length of the file */
+	fseek(fp, 0, SEEK_END);
+	size = ftell(fp);
+	rewind(fp);
+
+	/* Allocate space for the script, plus a terminating NULL */
+	buf = (char *)malloc((size_t)(size + 1));
+
+	/* Read it */
+	fread(buf, 1, (size_t)size, fp);
+
+	/* Add a terminating '\0' */
+	buf[size] = '\0';
+
+	/* Close the file */
+	fclose(fp);
+
+	/* Return it */
+	return buf;
+}
+
+/******************************************************************************/
 int main(int argc, char **argv)
 {
 	int i, len;
@@ -526,6 +571,11 @@ int main(int argc, char **argv)
 	int	saveconfig = 0;
 	char    *tail, *err;
 	int	opt;
+
+	/* set the locale */
+	val = setlocale(LC_ALL, "");
+	if (json_debug_flags.calc)
+		printf("Locale:  %s\n", val);
 
 	/* Start with default formatting */
 	json_format(NULL, "");
@@ -537,42 +587,66 @@ int main(int argc, char **argv)
 	if (argc >= 2 && !strcmp(argv[1], "--help"))
 		usage(NULL, NULL);
 	expr = NULL;
-	while ((opt = getopt(argc, argv, "c:f:v:l:ud:O:C:J:DR")) >= 0) {
+	interactive = 0;
+	while ((opt = getopt(argc, argv, "c:f:v:irl:uD:O:C:J:U")) >= 0) {
 		switch (opt) {
 		case 'c':
+			if (expr)
+				usage("You can only use one -ccalc or -fflag option\n", NULL);
 			expr = optarg;
 			break;
 		case 'f':
+			if (expr)
+				usage("You can only use one -ccalc or -fflag option\n", NULL);
+			expr = jcreadscript(optarg);
+			if (!expr)
+				exit(1);
+			break;
+		case 'i':
+			interactive = 1;
+			break;
+		case 'r':
+			inhibit_readline = 1;
+			break;
 		case 'v':
+			envname = optarg;
+			break;
 		case 'l':
 		case 'u':
 			fprintf(stderr, "Not implemented yet\n");
 			abort();
 			break;
-		case 'd':
+		case 'D':
 			autoload_dir = optarg;
 			break;
 		case 'O':
-			err = json_format(NULL, optarg);
-			if (err)
-				usage("%s\n", err);
+			if (*optarg == '?' || (err = json_format(NULL, optarg)) != NULL) {
+				format_usage();
+				if (*optarg != '?') {
+					puts(err);
+					return 1;
+				}
+				return 0;
+			}
 			break;
 		case 'C':
-			err = json_format_color(optarg);
-			if (err)
-				usage("%s\n", err);
+			if (*optarg == '?' || (err = json_format_color(optarg)) != NULL) {
+				color_usage();
+				if (*optarg != '?') {
+					puts(err);
+					return 1;
+				}
+				return 0;
+			}
 			break;
 		case 'J':
-			if (!*optarg || json_debug(optarg)) {
+			if (*optarg == '?' || json_debug(optarg)) {
 				debug_usage();
 				return 1;
 			}
 			break;
-		case 'D':
+		case 'U':
 			saveconfig = 1;
-			break;
-		case 'R':
-			inhibit_readline = 1;
 			break;
 		default:
 			{
@@ -584,10 +658,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* set the locale */
-	val = setlocale(LC_ALL, "");
-	if (json_debug_flags.calc)
-		printf("Locale:  %s\n", val);
+	/* Some sanity checks */
+	if (expr && interactive) {
+		usage("You can't mix -i with -ccalc or -ffile\n", NULL);
+		return 1;
+	}
+	if (envname && interactive) {
+		usage("You can-t mix -i with -venv\n", NULL);
+		return 1;
+	}
 
 	/* Build an object from any parameters after the first */
 	jcthis = json_object();

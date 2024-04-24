@@ -593,7 +593,7 @@ int main(int argc, char **argv)
 		case 'c':
 			if (expr)
 				usage("You can only use one -ccalc or -fflag option\n", NULL);
-			expr = optarg;
+			expr = strdup(optarg);
 			break;
 		case 'f':
 			if (expr)
@@ -735,6 +735,8 @@ int main(int argc, char **argv)
 			json_calc_free(jc);
 			json_free(result);
 		}
+
+		free(expr);
 	} else {
 		/* Enable the use of history and name completion while
 		 * inputting expressions.

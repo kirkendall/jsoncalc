@@ -1259,7 +1259,8 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_STARTPAREN
 			 && jc->op != JSONOP_STARTARRAY
 			 && jc->op != JSONOP_STARTOBJECT
-			 && jc->op != JSONOP_SUBSCRIPT)
+			 && jc->op != JSONOP_SUBSCRIPT
+			 && jc->op != JSONOP_COLON)
 				return FALSE;
 			continue;
 		} else if (!jc || !pattern_single(jc, *pat))
@@ -1895,7 +1896,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 			 * then the closing quote should *NOT* be included
 			 * in the tail.
 			 */
-			if ((token.op == JSONOP_STRING || token.op == JSONOP_NAME) && strchr("\"'`", **refend))
+			if ((token.op == JSONOP_STRING || token.op == JSONOP_NAME) && **refend && strchr("\"'`", **refend))
 				(*refend)++;
 		}
 

@@ -32,7 +32,7 @@ libjson.a: $(LIBOBJ)
 
 test: $(DATA)/test.in testcalc
 	@#./testcalc -e $(DATA)/test.in
-	./testcalc $(DATA)/test.in
+	./testcalc -m $(DATA)/test.in
 
 clean:
 	$(RM) $(OBJ)

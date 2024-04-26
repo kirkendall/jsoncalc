@@ -1378,6 +1378,14 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			top[-2]->u.select->select = top[-1];
 			stack->sp--;
 			continue;
+		} else if (PATTERN("SFx,x") && PREC(JSONOP_COMMA)) {
+			/* Comma in a FROM clause is natural join */
+			top[-2]->op = JSONOP_NJOIN;
+			top[-2]->LEFT = top[-3];
+			top[-2]->RIGHT = top[-1];
+			top[-3] = top[-2];
+			stack->sp -= 2;
+			continue;
 		} else if (PATTERN("SFx") && PREC(JSONOP_FROM)) {
 			/* Save the table in select.from */
 			top[-3]->u.select->from = top[-1];
@@ -1387,6 +1395,20 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			/* Save the condition in select.where */
 			top[-3]->u.select->where = top[-1];
 			stack->sp -= 2;
+			continue;
+		} else if (PATTERN("SGn,n") && PREC(JSONOP_COMMA)) {
+			/* Add the first name to an array of names */
+			jc = top[-5];
+			if (!jc->u.select->groupby)
+				jc->u.select->groupby = json_array();
+			json_append(jc->u.select->groupby, json_string(top[-3]->u.text, -1));
+
+			/* Remove the first name and comma, keep "SG" and "n" */
+			json_calc_free(top[-3]);
+			json_calc_free(top[-2]);
+
+			top[-3] = top[-1];
+			stack->sp -= 2; /* keep "SGn" */
 			continue;
 		} else if (PATTERN("SGn") && PREC(JSONOP_GROUPBY)) {
 			/* Add the name to an array of names */
@@ -1400,7 +1422,34 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		} else if (PATTERN("SG") && PREC(JSONOP_GROUPBY)) {
 			stack->sp--; /* keep "S" */
 			continue;
-		} else if (PATTERN("SOnd") && PREC(top[-3]->op)) {
+		} else if (PATTERN("SOnd,n") && PREC(JSONOP_COMMA)) {
+			/* Add the name to an array of names */
+			jc = top[-6];
+			if (!jc->u.select->orderby)
+				jc->u.select->orderby = json_array();
+			json_append(jc->u.select->orderby, json_symbol("true",-1));
+			json_append(jc->u.select->orderby, json_string(top[-4]->u.text, -1));
+
+			/* Discard first name and comma, but keep "SO" and "n"*/
+			json_calc_free(top[-4]);
+			json_calc_free(top[-2]);
+			top[-4] = top[-1];
+			stack->sp -= 3; /* keep "SOn" */
+			continue;
+		} else if (PATTERN("SOn,n") && PREC(JSONOP_COMMA)) {
+			/* Add the name to an array of names */
+			jc = top[-5];
+			if (!jc->u.select->orderby)
+				jc->u.select->orderby = json_array();
+			json_append(jc->u.select->orderby, json_string(top[-3]->u.text, -1));
+
+			/* Discard first name and comma, but keep "SO" and "n"*/
+			json_calc_free(top[-3]);
+			json_calc_free(top[-2]);
+			top[-3] = top[-1];
+			stack->sp -= 2;
+			continue;
+		} else if (PATTERN("SOnd") && PREC(JSONOP_ORDERBY)) {
 			/* Add the name to an array of names */
 			jc = top[-4];
 			if (!jc->u.select->orderby)
@@ -1417,7 +1466,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 				jc->u.select->orderby = json_array();
 			json_append(jc->u.select->orderby, json_string(top[-1]->u.text, -1));
 			json_calc_free(top[-1]);
-			stack->sp -= 2;
+			stack->sp--;
 			continue;
 		} else if (PATTERN("SO") && PREC(JSONOP_ORDERBY)) {
 			stack->sp--; /* keep "S" */

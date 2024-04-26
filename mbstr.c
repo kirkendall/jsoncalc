@@ -423,6 +423,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
                          */
                         if (ascii) {
                                 src = json_mbs_ascii(src, escape);
+                                src--; /* because of src++ in the for-loop */
                                 if (dst)
 					strcpy(dst + size, escape);
                                 size += strlen(escape);

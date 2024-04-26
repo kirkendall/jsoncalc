@@ -55,7 +55,7 @@ typedef enum {
 static struct {
 	char symbol[11];/* Derived form the JSONOP_xxxx enumerated value */
 	char text[5];   /* text form of the operator */
-	short prec;     /* precedence of the operator, or negative for non-operatos */
+	short prec;     /* precedence of the operator (higher is done first) */
 	jcoptype_t optype;/* token type */
 	size_t len;     /* text length (computed at runtime) */
 } operators[] = {
@@ -157,16 +157,6 @@ char *json_calc_op_name(jsonop_t jsonop)
 	return operators[jsonop].symbol;
 }
 
-/* Return the name of an operator, mostly for debugging.  This differs from
- * json_op_calc_name() in that here we try to use the punctuation symbols for
- * operators instead of their name.
- */
-static char *operatorname(jsonop_t op)
-{
-	return operators[op].text;
-}
-
-
 /* Dump an expression.  This is recursive and doesn't add a newline.  The
  * result isn't pretty, and it couldn't be reparsed to generate the same
  * tree.  It is merely for debugging.
@@ -267,12 +257,12 @@ void json_calc_dump(jsoncalc_t *calc)
 		if (calc->LEFT) {
 			printf("(");
 			json_calc_dump(calc->LEFT);
-			printf("%s", operatorname(calc->op));
+			printf("%s", operators[calc->op].text);
 			if (calc->RIGHT)
 				json_calc_dump(calc->RIGHT);
 			printf(")");
 		} else {
-			printf("%s", operatorname(calc->op));
+			printf("%s", operators[calc->op].text);
 			if (calc->RIGHT)
 				json_calc_dump(calc->RIGHT);
 		}
@@ -879,7 +869,6 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 		while (srcend - 1 > t.full && strchr("\"'` ", srcend[-1]))
 			srcend--;
 		t.len = (int)(srcend - t.full);
-printf("name=\"%.*s\"\n", t.len, t.full);
 
 		/* Make it a COLON expression */
 		jc = jcleftright(JSONOP_COLON, jcalloc(&t), jc);
@@ -899,14 +888,21 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	 */
 	if (sel->select)
 		sel->select = fixcomma(sel->select, JSONOP_OBJECT);
-printf("jcselect(\n");
-printf("   distinct=%s\n", sel->distinct ? "true" : "false");
-printf("   select=");json_calc_dump(sel->select);putchar('\n');
-printf("   from=");json_calc_dump(sel->from);putchar('\n');
-{char *tmp = json_serialize(sel->groupby, 0);printf("   groupby=%s\n", tmp); free(tmp);}
-{char *tmp = json_serialize(sel->orderby, 0);printf("   orderby=%s\n", tmp); free(tmp);}
-printf("   limit=%d\n", sel->limit);
-printf(")\n");
+	if (json_debug_flags.calc) {
+		char *tmp; 
+		printf("jcselect(\n");
+		printf("   distinct=%s\n", sel->distinct ? "true" : "false");
+		printf("   select=");json_calc_dump(sel->select);putchar('\n');
+		printf("   from=");json_calc_dump(sel->from);putchar('\n');
+		tmp = json_serialize(sel->groupby, 0);
+		printf("   groupby=%s\n", tmp);
+		free(tmp);
+		tmp = json_serialize(sel->orderby, 0);
+		printf("   orderby=%s\n", tmp);
+		free(tmp);
+		printf("   limit=%d\n", sel->limit);
+		printf(")\n");
+	}
 
 	/* Was there a FROM clause? */
 	if (sel->from) {
@@ -1472,7 +1468,6 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			stack->sp--; /* keep "S" */
 			continue;
 		} else if (PATTERN("S") && PREC(JSONOP_SELECT)) {
-if (next) printf("SELECT=%d >= %s=%d\n", operators[JSONOP_SELECT].prec, json_calc_op_name(next->op), operators[next->op].prec); else printf("!next\n");
 			/* All parts of the SELECT have now been parsed.  All
 			 * we need to do now is convert it to a "normal"
 			 * jsoncalc expression.
@@ -1526,7 +1521,7 @@ if (next) printf("SELECT=%d >= %s=%d\n", operators[JSONOP_SELECT].prec, json_cal
 		}
 
 		/* Function calls */
-		if ((PATTERN("x()") || PATTERN("x(*)")) && PREC(JSONOP_FNCALL)) {
+		if (PATTERN("x()") || PATTERN("x(*)")) {
 			/* Function call with no extra parameters.  If x is
 			 * a dotted expression then the left-hand-side object
 			 * is a parameter, otherwise we use "this".
@@ -1561,7 +1556,7 @@ if (next) printf("SELECT=%d >= %s=%d\n", operators[JSONOP_SELECT].prec, json_cal
 			stack->stack[startsp]->u.func.agoffset = 0;
 			stack->sp = startsp + 1;
 			continue;
-		} else if (PATTERN("x(x)") && PREC(JSONOP_FNCALL)) {
+		} else if (PATTERN("x(x)")) {
 			/* Function call with extra parameters */
 
 			/* May be name(args) or arg1.name(args) */

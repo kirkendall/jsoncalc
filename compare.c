@@ -11,10 +11,10 @@
  */
 int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 {
-	json_t *field1, *field2, *expr;
+	json_t *field1, *field2, *key;
 	int	descending;
 	double	diff;
-	char	*exprtext;
+	char	*keyname;
 
 	// Check parameters.
 	if (obj1->type != JSON_OBJECT || obj2->type != JSON_OBJECT)
@@ -25,23 +25,28 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 	// For each field...
 	descending = 0;
 	if (orderby->type == JSON_ARRAY)
-		expr = orderby->first;
+		key = orderby->first;
 	else
-		expr = orderby;
-	for (; expr; expr = expr->next) {
+		key = orderby;
+	for (;key; key = key->next) {
 		// If this is a "descending" flag, then just do that
-		if (expr->type == JSON_SYMBOL) {
-			descending = 1;
+		if (key->type == JSON_SYMBOL) {
+			descending = json_is_true(key);
 			continue;
 		}
 
-		exprtext = expr->text;
-		if (*exprtext == '-') {
+		/* Silently ignore non-strings */
+		if (key->type != JSON_STRING)
+			continue;
+
+		/* Get the keyname.  If prefixed by "-" then inver descending */
+		keyname = key->text;
+		if (*keyname == '-') {
 			descending = !descending;
-			exprtext++;
+			keyname++;
 		}
-		field1 = json_by_expr(obj1, exprtext, NULL);
-		field2 = json_by_expr(obj2, exprtext, NULL);
+		field1 = json_by_key(obj1, keyname);
+		field2 = json_by_key(obj2, keyname);
 		if (json_is_null(field1) && json_is_null(field2))
 			continue; // if both are NULL, skip it
 		if (json_is_null(field1))

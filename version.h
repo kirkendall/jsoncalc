@@ -1,3 +1,4 @@
 #define JCMAJOR 0
 #define JCMINOR 1
-#define JCVERSION (#JCMAJOR "." #JCMINOR)
+#define JCVERSION "0.1"
+#define JCCOPYRIGHT "2024 by Steve Kirkendall"

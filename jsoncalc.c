@@ -577,6 +577,15 @@ int main(int argc, char **argv)
 	if (json_debug_flags.calc)
 		printf("Locale:  %s\n", val);
 
+	/* Detect "--version" */
+	if (argc >= 2 && !strcmp(argv[1], "--version")) {
+		printf("jsoncalc %s\n", JCVERSION);
+		printf("Copyright %s\n", JCCOPYRIGHT);
+		puts("Freely redistributable under the terms of the");
+		puts("GNU General Public License v3 or later.");
+		return 0;
+	}
+
 	/* Start with default formatting */
 	json_format(NULL, "");
 
@@ -653,7 +662,7 @@ int main(int argc, char **argv)
 				char optstr[2];
 				optstr[0] = (char)opt;
 				optstr[1] = '\0';
-				usage("Invalid flag -%s", optstr);
+				usage("Invalid flag -%s\n", optstr);
 			}
 		}
 	}

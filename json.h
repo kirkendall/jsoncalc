@@ -116,16 +116,15 @@ typedef struct jsoncontext_s {
 typedef struct {
 	short	tab;	/* indentation to add for pretty-printing nested data */
 	short	oneline;/* Force compact output if shorter than this */
-	short	digits;	/* precission for floating point output */
-	char	elem;	/* one element per line */
-	char	csv;	/* CSV output */
-	char	sh;	/* shell ouput */
-	char	grid;	/* grid output */
+	short	digits;	/* precision for floating point output */
+	char	table;	/* Table output: csv/shell/grid/json */
 	char	string;	/* unquoted string output */
 	char	pretty;	/* Pretty-print JSON */
+	char	elem;	/* one element per line */
+	char	sh;	/* Quote output for shell */
 	char	color;	/* Allow the use of ANSI escape sequences */
 	char	ascii;	/* Convert non-ASCII characters to \u sequences */
-	char	quick;	/* Output tables piecemeal.  Use first row to choose format */
+	char	quick;	/* Output tables piecemeal.  Use first row for names */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
 } jsonformat_t;
@@ -200,7 +199,7 @@ extern json_t *json_parse_file(json_parse_t *state, char *filename);
 
 /* Serialization / Output */
 extern json_t *json_explain(json_t *stats, json_t *row, int depth);
-extern char *json_serialize(json_t *json, int ascii);
+extern char *json_serialize(json_t *json, jsonformat_t *format);
 extern int json_print(json_t *json, FILE *fp, jsonformat_t *format);
 extern int json_grid(json_t *json, FILE *fp, jsonformat_t *format);
 extern char *json_format(jsonformat_t *format, char *str);
@@ -277,7 +276,7 @@ int json_mbs_casecmp(const char *s1, const char *s2);
 int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len);
 int json_mbs_abbrcmp(const char *abbr, const char *full);
 const char *json_mbs_ascii(const char *str, char *buf);
-size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, int nonascii);
+size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, jsonformat_t *format);
 size_t json_mbs_unescape(char *dst, const char *src, size_t len);
 int json_mbs_like(const char *text, const char *pattern);
 END_C

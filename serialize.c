@@ -8,7 +8,7 @@
  * character is *NOT* included, so you'll need to add 1 to the returned size
  * when allocating a buffer.
  */
-static size_t jcseriallen(json_t *json, char *buf, int ascii)
+static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 {
 	size_t	len, sublen;
 	json_t	*scan;
@@ -23,7 +23,7 @@ static size_t jcseriallen(json_t *json, char *buf, int ascii)
 		len = 2; /* for the opening and closing brackets/braces */
 		for (scan = json->first; scan; scan = scan->next)
 		{
-			sublen = jcseriallen(scan, buf, ascii);
+			sublen = jcseriallen(scan, buf, format);
 			if (buf) buf += sublen;
 			len += sublen;
 			if (scan->next)
@@ -46,14 +46,14 @@ static size_t jcseriallen(json_t *json, char *buf, int ascii)
 			*buf++ = '"';
 			*buf++ = ':';
 		}
-		len += jcseriallen(json->first, buf, ascii);
+		len += jcseriallen(json->first, buf, format);
 		break;
 
 	  case JSON_STRING:
 	  	if (buf)
 	  	        *buf++ = '"';
 	  	len = 2; /* Quotes around the string */
-                sublen = json_mbs_escape(buf, json->text, -1, '"', ascii);
+                sublen = json_mbs_escape(buf, json->text, -1, '"', format);
                 len += sublen;
 	  	if (buf) {
 	  	        buf += sublen;
@@ -92,7 +92,7 @@ static size_t jcseriallen(json_t *json, char *buf, int ascii)
 
 
 /* Return a dynamically-allocated JSON string for a given object.  */
-char *json_serialize(json_t *json, int ascii)
+char *json_serialize(json_t *json, jsonformat_t *format)
 {
 	size_t len;
 	char	*buf;
@@ -101,15 +101,19 @@ char *json_serialize(json_t *json, int ascii)
 	if (!json)
 		return strdup("null");
 
+	/* If no format specified, use the default */
+	if (!format)
+		format = &json_format_default;
+
 	/* Determine how much string we need */
-	len = jcseriallen(json, NULL, ascii);
+	len = jcseriallen(json, NULL, format);
 	len++; /* for the terminating NUL */
 
 	/* Allocate the buffer */
 	buf = (char *)malloc(len);
 
 	/* Fill the buffer */
-	len = jcseriallen(json, buf, ascii);
+	len = jcseriallen(json, buf, format);
 	buf[len] = '\0';
 
 	/* return it */

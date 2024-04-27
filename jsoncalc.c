@@ -49,15 +49,13 @@ static void format_usage()
 	printf("  -O%-11sForces each array element onto a single line.\n", json_format_default.elem ? "elem" : "noelem");
 	printf("  -Otab=%-7dIndentation to use when pretty printing.\n", json_format_default.tab);
 	printf("  -Ooneline=%-3dIf >0, JSON strings shorter than this are not pretty-printed.\n", json_format_default.oneline);
-	printf("  -O%-11sOutput tables in CSV format. (Tables are arrays of objects.)\n", json_format_default.csv ? "csv" : "nocsv");
-	printf("  -O%-11sOutput tables as a series of shell variable assignments.\n", json_format_default.sh ? "sh" : "nosh");
-	printf("  -O%-11sOutput tables as a nice human-readable grid.\n", json_format_default.grid ? "grid" : "nogrid");
-	printf("  -O%-11sOutput tables as JSON like everything else.\n", json_format_default.csv||json_format_default.sh||json_format_default.grid ? "nojson" : "json");
-	printf("  -Oprefix=%-4sFor \"sh\", this is prepended to variable names.\n", json_format_default.null);
-	printf("  -Onull=%-6sWhat \"grid\" should show for null values.\n", json_format_default.null);
+	printf("  -Otable=%-5sTable format: grid/csv/sh/json (Tables are arrays of objects.)\n", json_format_default.table=='s'?"sh": json_format_default.table=='c'?"csv": json_format_default.table=='g'?"grid": "json");
+	printf("  -O%-11sFor table=csv and table=grid, use the first row to find columns.\n", json_format_default.quick ? "quick" : "noquick");
+	printf("  -Oprefix=%-4sFor table=sh, this is prepended to variable names.\n", json_format_default.null);
+	printf("  -Onull=%-6sFor table=grid, this is how null will be shown.\n", json_format_default.null);
 	printf("  -O%-11sConvert any non-ASCII characters to \\uXXXX sequences.\n", json_format_default.ascii ? "ascii" : "noascii");
+	printf("  -O%-11sAdd shell quoting to JSON output.\n", json_format_default.sh ? "sh" : "nosh");
 	printf("  -O%-11sAdd color for ANSI terminals.\n", json_format_default.color ? "color" : "nocolor");
-	printf("  -O%-11sFor csv and grid, use only the first record to find the columns.\n", json_format_default.quick ? "quick" : "noquick");
 	printf("  -Odigits=%-4dPrecision when converting numbers to strings.\n", json_format_default.digits);
 }
 

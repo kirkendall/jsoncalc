@@ -172,7 +172,7 @@ void json_calc_dump(jsoncalc_t *calc)
 
 	switch (calc->op) {
 	  case JSONOP_LITERAL:
-		str = json_serialize(calc->u.literal, 1);
+		str = json_serialize(calc->u.literal, NULL);
 		printf("`%s'", str);
 		free(str);
 		break;

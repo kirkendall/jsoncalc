@@ -404,7 +404,7 @@ const char *json_mbs_ascii(const char *str, char *buf)
  * "quote" is another character to insert a backslash in front of, usually '"'.
  * "nonascii" can be 1 to convert non-ASCII to \uxxxx sequences.
  */
-size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int ascii)
+size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jsonformat_t *format)
 {
         const char *end;
         size_t size;
@@ -421,12 +421,12 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
                         /* Non-ASCII either copy verbatim, or convert the whole
                          * multibyte character to a single \u sequence.
                          */
-                        if (ascii) {
+                        if (format->ascii) {
                                 src = json_mbs_ascii(src, escape);
                                 src--; /* because of src++ in the for-loop */
-                                if (dst)
+				if (dst)
 					strcpy(dst + size, escape);
-                                size += strlen(escape);
+				size += strlen(escape);
                         } else {
                                 /* Copy each byte verbatim */
                                 if (dst)
@@ -445,22 +445,35 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, int
                         }
                         if (ch) {
                                 if (dst) {
-                                        dst[size] = '\\';
-                                        dst[size + 1] = ch;
-                                }
-                                size += 2;
+                                        dst[size++] = '\\';
+                                        dst[size++] = ch;
+                                } else
+					size += 2;
                         } else {
                                 if (dst)
                                         sprintf(dst + size, "\\x%02x", *src);
                                 size += 4;
                         }
-                } else if (*src == '\\' || *src == quote) {
-                        /* backslash and quote need a backslash */
+                } else if (format->sh && *src == '\'') {
+			/* For shell quoting, the entire output will be enclosed in
+			 * ' quotes which is great for everything except ' itself.
+			 * For ' we need to end the quote, add backslash-', and start
+			 * new quotes.
+			 */
+			if (dst) {
+				dst[size] = '\'';
+				dst[size + 1] = '\\';
+				dst[size + 2] = '\'';
+				dst[size + 3] = '\'';
+			}
+			size += 4;
+                } else if (*src == quote || *src == '\\') {
+                        /* quote and backslash need a backslash */
                         if (dst) {
-                                dst[size] = '\\';
-                                dst[size + 1] = *src;
-                        }
-                        size += 2;
+                                dst[size++] = '\\';
+                                dst[size++] = quote;
+                        } else
+				size += 2;
                 } else {
                         /* ASCII, just copy it */
                         if (dst)

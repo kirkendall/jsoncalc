@@ -11,12 +11,11 @@ jsonformat_t json_format_default = {
 	2,	/* tab - indentation to use when pretty-printing */
 	50,	/* oneline - JSON shorter than this will always be compact */
 	12,	/* digits - precission when converting from double to text */
-	0,	/* elem - force one array element per line */
-	0,	/* csv - output tables in CSV format */
-	0,	/* sh - output tables in SH format */
-	1,	/* grid - output tables in grid format */
+	'g',	/* table - output tables in grid format (csv/shell/grid/json) */
 	0,	/* string - output strings as plain text */
 	1,	/* pretty - pretty-print (add whitespace to show structure) */
+	0,	/* elem - force one array element per line */
+	0,	/* sh - quote output for shell */
 	1,	/* color - use colors on ANSI terminals */
 	0,	/* ascii - use \uXXXX for non-ASCII characters */
 	0,	/* quick - for csv/grid, use first record to find columns */
@@ -70,6 +69,8 @@ char *json_format(jsonformat_t *format, char *str)
 			format->oneline = value ? atoi(value) : 0;
 		else if (namelen == 5 && !strncmp("digits", str, namelen))
 			format->digits = value ? atoi(value) : 0;
+		else if (namelen == 5 && !strncmp("table", str, namelen))
+			format->table = tolower(*value);
 		else if (namelen == 6 && !strncmp("prefix", str, namelen))
 			strncpy(format->prefix, value ? value : "", sizeof format->prefix  - 1);
 		else if (namelen == 4 && !strncmp("null", str, namelen))
@@ -88,18 +89,12 @@ char *json_format(jsonformat_t *format, char *str)
 			/* Store it as appropriate for the name. */
 			if (namelen == 4 && !strncmp("elem", str, namelen))
 				format->elem = v;
-			else if (namelen == 3 && !strncmp("csv", str, namelen))
-				format->csv = v, format->sh = format->grid = 0;
-			else if (namelen == 2 && !strncmp("sh", str, namelen))
-				format->sh = v, format->csv = format->grid = 0;
-			else if (namelen == 4 && !strncmp("grid", str, namelen))
-				format->grid = v, format->csv = format->sh = 0;
-			else if (namelen == 4 && !strncmp("json", str, namelen))
-				format->grid = format->csv = format->sh = 0;
 			else if (namelen == 6 && !strncmp("string", str, namelen))
 				format->string = v;
 			else if (namelen == 6 && !strncmp("pretty", str, namelen))
 				format->pretty = v;
+			else if (namelen == 2 && !strncmp("sh", str, namelen))
+				format->sh = v;
 			else if (namelen == 5 && !strncmp("color", str, namelen))
 				format->color = v;
 			else if (namelen == 5 && !strncmp("ascii", str, namelen))
@@ -154,24 +149,24 @@ char *json_format_str(jsonformat_t *fmt)
 		strcat(buf, "string,");
 
 	/* Table formats */
-	if (fmt->sh)
-		strcat(buf, "sh,");
-	else if (fmt->csv)
-		strcat(buf, "csv,");
-	else if (fmt->grid)
-		strcat(buf, "grid,");
+	switch (fmt->table) {
+	case 's':	strcat(buf, "sh,");	break;
+	case 'c':	strcat(buf, "csv,");	break;
+	case 'g':	strcat(buf, "grid,");	break;
+	}
 
-	/* If "sh" then output prefix */
-	if (fmt->sh && *fmt->prefix)
+	/* If prefix for table=sh, then output prefix */
+	if (*fmt->prefix)
 		sprintf(buf + strlen(buf), "prefix=%s,", fmt->prefix);
 
-	/* If "table" then output the null string */
-	if (fmt->grid && *fmt->null)
+	/* If null for table=grid then output the null string */
+	if (*fmt->null)
 		sprintf(buf + strlen(buf), "null=%s,", fmt->null);
 
 	/* Always add the last few booleans, and the "digits" setting */
-	sprintf(buf + strlen(buf), "%s%s%s",
+	sprintf(buf + strlen(buf), "%s%s%s%s",
 		fmt->quick ? "quick," : "",
+		fmt->sh ? "sh," : "",
 		fmt->ascii ? "ascii," : "noascii,",
 		fmt->color ? "color" : "nocolor");
 

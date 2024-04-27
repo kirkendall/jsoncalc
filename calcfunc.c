@@ -1061,7 +1061,7 @@ static void jag_writeArray(json_t *args, void *agdata)
 	} else {
 		fputs(",\n  ", fp);
 	}
-	ser = json_serialize(args->first, 1);
+	ser = json_serialize(args->first, NULL);
 	fwrite(ser, strlen(ser), 1, fp);
 	free(ser);
 }

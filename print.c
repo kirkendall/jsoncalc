@@ -18,7 +18,26 @@ static void jcprint(json_t *json, FILE *fp, int indent, jsonformat_t *format)
 	scan = json;
 	if (json->type == JSON_KEY)
 	{
-                fprintf(fp, "\"%s\":", json->text);
+                putc('"', fp);
+                for (str = json->text; *str; str++) {
+			if (*str == '"' || *str == '\\') {
+				putc('\\', fp);
+			}
+			else if (*str == '\'' && format->sh) {
+				/* For "sh" format, the entire output is enclosed in
+				 * ' quotes which is great for everything except the
+				 * ' character itself.  For that, we need to end the
+				 * quote, add a backslash-', and start a new quote.
+				 */
+				putc('\'', fp);
+				putc('\\', fp);
+				putc('\'', fp);
+				putc('\'', fp);
+			}
+			putc(*str, fp);
+		}
+                putc('"', fp);
+                putc(':', fp);
 		scan = json->first;
 	}
 
@@ -70,7 +89,7 @@ static void jcprint(json_t *json, FILE *fp, int indent, jsonformat_t *format)
 		break;
 
 	  case JSON_STRING:
-		str = json_serialize(scan, format->ascii);
+		str = json_serialize(scan, format);
 		fputs(str, fp);
 		free(str);
 		break;
@@ -117,7 +136,7 @@ static void jcsh(json_t *json, FILE *fp, jsonformat_t *format){
 			else if (json_is_null(col->first))
 				s = format->null;
 			else
-				s = frees = json_serialize(col->first, format->ascii);
+				s = frees = json_serialize(col->first, format);
 
 			/* Does it need quotes? */
 			for (t = s; *t; t++)
@@ -292,26 +311,31 @@ int json_print(json_t *json, FILE *fp, jsonformat_t *format)
 	}
 
 	/* Maybe treat short like compact */
-	if (tweaked.oneline > 0 && json_is_short(json, tweaked.oneline)) {
-	        tweaked.oneline = 0;
-	        tweaked.pretty = 0;
-	}
+	if (tweaked.oneline > 0 && json_is_short(json, tweaked.oneline))
+	        tweaked.oneline = tweaked.pretty = 0;
+
+	/* If quoting for the shell, disable pretty */
+	if (tweaked.sh)
+	        tweaked.oneline = tweaked.pretty = 0;
 
 	/* Table output? */
-	if ((tweaked.sh || tweaked.csv || tweaked.grid) && json_is_table(json)){
-		if (tweaked.sh)
-			jcsh(json, fp, &tweaked);
-		else if (tweaked.csv)
-			jccsv(json, fp, &tweaked);
-		else
-			json_grid(json, fp, &tweaked);
+	if (strchr("scg", tweaked.table) && json_is_table(json)){
+		switch (tweaked.table) {
+		case 's': jcsh(json, fp, &tweaked);	break;
+		case 'c': jccsv(json, fp, &tweaked);	break;
+		case 'g': json_grid(json, fp, &tweaked);break;
+		}
 
 		/* Table output always ends with a newline */
 		return 0;
 	}
 
 	/* Output it as JSON, possibly "pretty" */
+	if (tweaked.sh)
+		putc('\'', fp);
 	jcprint(json, fp, 0, &tweaked);
+	if (tweaked.sh)
+		putc('\'', fp);
 
 	/* "Pretty" mode always ends with a newline, but for non-"pretty"
 	 * we want to add a newline now.

@@ -47,6 +47,7 @@ static json_t *jfn_repeat(json_t *args, void *agdata);
 static json_t *jfn_toFixed(json_t *args, void *agdata);
 static json_t *jfn_distinct(json_t *args, void *agdata);
 static json_t *jfn_unroll(json_t *args, void *agdata);
+static json_t *jfn_nameBits(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -97,7 +98,8 @@ static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
 static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
 static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct};
 static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
-static jsonfunc_t count_jf       = {&unroll_jf,      "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t nameBits_jf    = {&unroll_jf,       "nameBits",   jfn_nameBits};
+static jsonfunc_t count_jf       = {&nameBits_jf,    "count",       jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
 static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
@@ -712,9 +714,97 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 }
 
 /* Unroll nested tables */
-json_t *jfn_unroll(json_t *args, void *afdata)
+json_t *jfn_unroll(json_t *args, void *agdata)
 {
 	return json_unroll(args->first, args->first->next);
+}
+
+json_t *jfn_nameBits(json_t *args, void *agdata)
+{
+	int	inbits;
+	int	pos, nbits;
+	json_t	*result;
+	json_t	*names;
+	char	*delim;
+
+	/* Check the args */
+	if (args->first->type != JSON_NUMBER
+	 || !args->first->next
+	 || args->first->next->type != JSON_ARRAY)
+		return NULL;
+
+	/* Extract arguments */
+	inbits = json_int(args->first);
+	names = args->first->next;
+	delim = NULL;
+	if (args->first->next->next
+	 && args->first->next->next->type == JSON_STRING)
+		delim = args->first->next->next->text;
+
+	/* Start with an empty object */
+	result = json_object();
+
+	/* Scan the bits... */
+	for (pos = 0, names = names->first; names; pos += nbits, names = names->next) {
+		/* Single bit? */
+		if (names->type == JSON_STRING) {
+			nbits = 1;
+			if (inbits & (1 << pos))
+				json_append(result, json_key(names->text, json_from_int(1 << pos)));
+		} else if (names->type == JSON_ARRAY && names->first) {
+			/* Figure out which bits we need for this array */
+			int length = json_length(names);
+			int mask, i;
+			json_t *elem;
+			for (nbits = 1; length > (1 << nbits); nbits++) {
+			}
+			mask = (1 << nbits) - 1;
+
+			/* Choose an index.  We want to skip 0x00 by default
+			 * so the first name in the names subarray is 0x01.
+			 */
+			i = ((inbits >> pos) - 1) & mask;
+
+			/* Look it up.  If missing or not a string, then it
+			 * is just a placeholder.  But for strings, add a
+			 * member to the result.
+			 */
+			elem = json_by_index(names, i);
+			if (elem && elem->type == JSON_STRING)
+				json_append(result, json_key(elem->text, json_from_int(inbits & (mask << pos))));
+		} else /* basically a placeholder for a "do not care" bit */ {
+			nbits = 1;
+		}
+	}
+
+	/* If we were given a delimiter, we should extract the keys from the
+	 * member and join them to form a single string.
+	 */
+	if (delim) {
+		/* Count the lengths of the names and delimiters */
+		size_t	len = 0;
+		size_t	delimlen = strlen(delim);
+		json_t	*member, *str;
+		for (member = result->first; member; member = member->next) {
+			len += strlen(member->text);
+			if (member->next)
+				len += delimlen;
+		}
+
+		/* Collect the names in a string */
+		str = json_string("", len);
+		for (member = result->first; member; member = member->next) {
+			strcat(str->text, member->text);
+			if (member->next)
+				strcat(str->text, delim);
+		}
+
+		/* Use the string as the result, instead of the object */
+		json_free(result);
+		result = str;
+	}
+
+	return result;
 }
 
 /**************************************************************************

@@ -428,7 +428,7 @@ static json_t *jfn_join(json_t *args, void *agdata)
 
 	/* Compute the size of the combined string */
 	for (len = 0, scan = args->first->first; scan; scan = scan->next) {
-		if (scan->type == JSON_STRING || scan->type == JSON_NUMBER || scan->type == JSON_SYMBOL) {
+		if (scan->type == JSON_STRING) {
 			if (len != 0)
 				len += delimlen;
 			len += strlen(scan->text);
@@ -440,7 +440,7 @@ static json_t *jfn_join(json_t *args, void *agdata)
 
 	/* Loop over the array again, appending strings */
 	for (scan = args->first->first; scan; scan = scan->next) {
-		if (scan->type == JSON_STRING || scan->type == JSON_NUMBER || scan->type == JSON_SYMBOL) {
+		if (scan->type == JSON_STRING) {
 			if (result->text[0])
 				strcat(result->text, delim);
 			strcat(result->text, scan->text);
@@ -1085,7 +1085,7 @@ static void  jag_arrayAgg(json_t *args, void *agdata)
 }
 
 
-/* Collect non-null items in an object. */
+/* objectAgg(key,value) Collect key/value pairs into an object. */
 static json_t *jfn_objectAgg(json_t *args, void *agdata)
 {
 	json_t *result = *(json_t **)agdata;

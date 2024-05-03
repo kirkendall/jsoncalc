@@ -752,6 +752,28 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				result = json_from_int(il | ir);
 			else /* JSONOP_BITOR */
 				result = json_from_int(il ^ ir);
+		} else if (left->type == JSON_OBJECT && right->type == JSON_OBJECT) {
+			if (calc->op == JSONOP_BITAND) {
+				/* Keep left keys/values only if same key is in right */
+				result = json_object();
+				for (scan = left->first; scan; scan = scan->next) {
+					if (json_by_key(right, scan->text))
+						json_append(result, json_copy(scan));
+				}
+			} else if (calc->op == JSONOP_BITOR) {
+				/* Merge right keys/values into left */
+				result = json_copy(left);
+				for (scan = right->first; scan; scan = scan->next) {
+					json_append(result, json_copy(scan));
+				}
+			} else { /* JSONOP_BITOR */
+				/* Keep left keys/values only if key is NOT in right */
+				result = json_object();
+				for (scan = left->first; scan; scan = scan->next) {
+					if (!json_by_key(right, scan->text))
+						json_append(result, json_copy(scan));
+				}
+			}
 		}
 		break;
 

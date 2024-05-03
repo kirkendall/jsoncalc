@@ -84,11 +84,9 @@ char *json_typeof(json_t *json)
 		 */
 		if (!json->first)
 			return "array*";
-		for (json = json->first; json; json = json->next) {
-			if (json->type != JSON_OBJECT)
-				return "array";
-		}
-		return "table";
+		if (json_is_table(json))
+			return "table";
+		return "array";
 	  default:
 		/* Shouldn't happen */
 		return "null";

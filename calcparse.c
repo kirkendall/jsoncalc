@@ -1526,7 +1526,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			 * a dotted expression then the left-hand-side object
 			 * is a parameter, otherwise we use "this".
 			 */
-			if (top[-2]->op == JSONOP_MULTIPLY)
+			if (top[-2]->op == JSONOP_MULTIPLY) /* asterisk */
 				startsp = stack->sp - 4;
 			else
 				startsp = stack->sp - 3;
@@ -1545,10 +1545,19 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 				return stack->errbuf;
 			}
 			if (jc == NULL) {
-				t.op = JSONOP_BOOLEAN;
-				t.full = "true";
-				t.len = 4;
-				jc = jcalloc(&t);
+				if (top[-2]->op == JSONOP_MULTIPLY) {
+					/* For function(*) use true as the argument */
+					t.op = JSONOP_BOOLEAN;
+					t.full = "true";
+					t.len = 4;
+					jc = jcalloc(&t);
+				} else {
+					/* For function() use this as the argument */
+					t.op = JSONOP_NAME;
+					t.full = "this";
+					t.len = 4;
+					jc = jcalloc(&t);
+				}
 			}
 			stack->stack[startsp]->op = JSONOP_FNCALL;
 			stack->stack[startsp]->u.func.jf = jf;

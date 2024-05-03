@@ -10,13 +10,14 @@
  *
  * The json_calc_parse() function converts argument lists into array generators
  * so the built-in functions are always passed a JSON_ARRAY of the arguments.
- * For function calls of the form expr.func(args), expr is moved to becode
+ * For function calls of the form expr.func(args), expr is moved to become
  * the first argument, so it looks like func(expr, args).
  *
- * The json_calc() function handles automatically frees any parts of the
- * parameter list that you didn't reuse in the result.  If your function
- * allocated memory that json_calc() doesn't know about, then your function
- * will need to free it before returning, but that's pretty rare.
+ * The json_calc() function handles automatically frees the argument list.
+ * Your function should allocate new a new json_t tree and return that;
+ * it should not attempt to reuse parts of the argument list.  As a special
+ * case, if your function is going to return "null" then you can have it
+ * return C's NULL pointer instead of a json_t.
  *
  * Aggregate functions are divided into two parts: an aggregator function
  * and a final function.  Memory for storing aggregated results (e.g.,
@@ -48,6 +49,7 @@ static json_t *jfn_toFixed(json_t *args, void *agdata);
 static json_t *jfn_distinct(json_t *args, void *agdata);
 static json_t *jfn_unroll(json_t *args, void *agdata);
 static json_t *jfn_nameBits(json_t *args, void *agdata);
+static json_t *jfn_keysValues(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -98,8 +100,9 @@ static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
 static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
 static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct};
 static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
-static jsonfunc_t nameBits_jf    = {&unroll_jf,       "nameBits",   jfn_nameBits};
-static jsonfunc_t count_jf       = {&nameBits_jf,    "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    jfn_nameBits};
+static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  jfn_keysValues};
+static jsonfunc_t count_jf       = {&keysValues_jf,  "count",       jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
 static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
@@ -805,6 +808,50 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 	}
 
 	return result;
+}
+
+/* Return an array of {key,value} objects, from a given object */
+static json_t *keysValuesHelper(json_t *obj)
+{
+	json_t	*array, *scan, *pair;
+
+	/* Start with an empty array */
+	array = json_array();
+
+	/* Add a {name,value} pair for each member of obj */
+	for (scan = obj->first; scan; scan = scan->next) {
+		pair = json_object();
+		json_append(pair, json_key("key", json_string(scan->text, -1)));
+		json_append(pair, json_key("value", json_copy(scan->first)));
+		json_append(array, pair);
+	}
+
+	/* Return the array */
+	return array;
+}
+
+/* Convert an object into an array of {name,value} objects.  Or if passed a
+ * table instead of an object, then output a grouped array of {name,value}
+ * objects.
+ */
+static json_t *jfn_keysValues(json_t *args, void *agdata)
+{
+	json_t	*scan, *result;
+
+	if (args->first->type == JSON_OBJECT) {
+		/* Single object is easy */
+		return keysValuesHelper(args->first);
+	} else if (json_is_table(args->first)) {
+		/* For a table, we want to return a grouped array -- that is,
+		 * an array of arrays, where each embedded array represents a
+		 * single row from the argument table.
+		 */
+		result = json_array();
+		for (scan = args->first->first; scan; scan = scan->next)
+			json_append(result, keysValuesHelper(scan));
+		return result;
+	}
+	return NULL;
 }
 
 /**************************************************************************

@@ -150,6 +150,9 @@ int main(int argc, char **argv)
 	count_t counts = {0,0};
         setlocale(LC_ALL, "");
 
+        /* Use ASCII output, because it's trickier than UTF-8 */
+        json_format(NULL, "ascii");
+
         /* Parse command-line flags */
         while ((ch = getopt(argc, argv, "me")) >= 0)
         {

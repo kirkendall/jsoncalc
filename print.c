@@ -118,7 +118,7 @@ static void jcprint(json_t *json, FILE *fp, int indent, jsonformat_t *format)
 		fputc('\n', fp);
 }
 
-/* Output each row of a table as a series of name=value pairs */
+/* Output each row of a table as a line containing a series of name=value pairs */
 static void jcsh(json_t *json, FILE *fp, jsonformat_t *format){
 	json_t	*row;
 	json_t	*col;
@@ -149,18 +149,20 @@ static void jcsh(json_t *json, FILE *fp, jsonformat_t *format){
 			for (; *s; s++) {
 				if ((unsigned char)*s < ' ' || *s == '\177')
 					; /* omit all control characters */
-				else if (*s == '\'' || *s == '\\') {
+				else if (*s == '\'') {
+					/* To output a ', we need to end quoting,
+					 * output \', and then start new quoting.
+					 */
+					putc('\'', fp);
 					putc('\\', fp);
-					putc(*s, fp);
+					putc('\'', fp);
+					putc('\'', fp);
 				} else if ((*s & 0x80) != 0 && format->ascii) {
 					char buf[13], *c;
 					s = (char *)json_mbs_ascii(s, buf);
 					s--; /* because for-loop does s++ */
-					for (c = buf; *c; c++) {
-						if (*c == '\\')
-							putc('\\', fp);
+					for (c = buf; *c; c++)
 						putc(*c, fp);
-					}
 				} else
 					putc(*s, fp);
 			}

@@ -66,7 +66,7 @@ static struct {
 	{"AS",		"AS",	121,	JCOP_INFIX},
 	{"ASSIGN",	"ASGN",	121,	JCOP_INFIX},
 	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
-	{"BITAND",	"&",	170,	JCOP_INFIX},
+	{"BITAND",	"&",	160,	JCOP_INFIX},
 	{"BITNOT",	"~",	240,	JCOP_INFIX},
 	{"BITOR",	"|",	150,	JCOP_INFIX},
 	{"BITXOR",	"^",	160,	JCOP_INFIX},

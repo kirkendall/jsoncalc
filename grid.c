@@ -67,6 +67,15 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 		else if ((!strcmp(text, "object") || !strcmp(text, "mixed")) && width < 8)
 			width = widths[c] = 8;
 
+		/* For nullable columns, if null isn't displayed as "" then make sure
+		 * the column is wide enough for it.
+		 */
+		if (*format->null && json_is_true(json_by_key(col, "nullable"))) {
+			int w = json_mbs_width(format->null);
+			if (width < w)
+				width = widths[c] = w;
+		}
+
 		/* Expand the column if key is wide */
 		text = json_text_by_key(col, "key");
 		wdata = json_mbs_width(text);

@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#define _XOPEN_SOURCE
+#define __USE_XOPEN
+#include <wchar.h>
 #include "json.h"
 #include "calc.h"
 
@@ -50,6 +53,8 @@ static json_t *jfn_distinct(json_t *args, void *agdata);
 static json_t *jfn_unroll(json_t *args, void *agdata);
 static json_t *jfn_nameBits(json_t *args, void *agdata);
 static json_t *jfn_keysValues(json_t *args, void *agdata);
+static json_t *jfn_charCodeAt(json_t *args, void *agdata);
+static json_t *jfn_fromCharCode(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -102,7 +107,9 @@ static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct
 static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
 static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    jfn_nameBits};
 static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  jfn_keysValues};
-static jsonfunc_t count_jf       = {&keysValues_jf,  "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t charCodeAt_jf  = {&keysValues_jf,  "charCodeAt",  jfn_charCodeAt};
+static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode",jfn_fromCharCode};
+static jsonfunc_t count_jf       = {&fromCharCode_jf,"count",       jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
 static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
@@ -119,16 +126,16 @@ static jsonfunc_t *funclist      = &objectAgg_jf;
 
 
 /* Register a function that can be called via json_calc().  The function
- * should look like
+ * should look like...
  *
  *    json_t *myFunction(json_t *args, void *agdata).
  *
- * "args" is a JSON_ARRAY of the actual parameter values; if invoked as a
- * member function then "this" is the first parameter.  Your function may
- * return any portion of any of its parameters, or newly allocated json_t
- * data, or some mixture.  Upon return, json_calc() will free the parameters
- * unless they're used in the result; your function doesn't need to free
- * any of its parameters.
+ * ... where "args" is a JSON_ARRAY of the actual parameter values; if invoked as
+ * a member function then "this" is the first parameter.  Your function should
+ * return newly allocated json_t data, or NULL to represent the JSON "null" symbol.
+ * In particular, it should *NOT* attempt to reuse the argument data in the response.
+ * The json_copy() function is your friend!  Upon return, json_calc() will free the
+ * parameters immediately and the returned value eventually.
  *
  * The agfn and agsize parameters are only for aggregate functions.  They
  * should be NULL and 0 for non-aggregate functions.  For aggregate functions,
@@ -854,6 +861,114 @@ static json_t *jfn_keysValues(json_t *args, void *agdata)
 	return NULL;
 }
 
+/* Return the character at a given index, as a number. */
+static json_t *jfn_charCodeAt(json_t *args, void *agdata)
+{
+	const char	*pos;
+	wchar_t	wc;
+	json_t	*scan, *result;
+
+	/* The first argument must be a string */
+	if (args->first->type != JSON_STRING)
+		return NULL;
+
+	/* Single number?  No subscript given? */
+	if (!args->first->next || args->first->next->type == JSON_NUMBER) {
+		/* Get the position of the character */
+		if (args->first->next)
+			pos = json_mbs_substr(args->first->text, json_int(args->first->next), NULL);
+		else /* no character offset given, so use first character */
+			pos = args->first->text;
+
+		/* Convert the character from UTF-8 to wchar_t */
+		(void)mbtowc(&wc, pos, MB_CUR_MAX);
+
+		/* Return it as an integer */
+		return json_from_int((int)wc);
+	}
+
+	/* Array? */
+	if (args->first->next->type == JSON_ARRAY) {
+		/* Start with an empty array */
+		result = json_array();
+
+		/* Scan the arg2 array for numbers. */
+		for (scan = args->first->next->first; scan; scan = scan->next) {
+			if (scan->type == JSON_NUMBER) {
+				/* Find the position of the character */
+				pos = json_mbs_substr(args->first->text, json_int(scan), NULL);
+
+				/* Convert the character from UTF-8 to wchar_t */
+				(void)mbtowc(&wc, pos, MB_CUR_MAX);
+
+				/* Add it to the array */
+				json_append(result, json_from_int((int)wc));
+			}
+		}
+
+		/* Return the result */
+		return result;
+	}
+
+	/* Nope.  Fail due to bad arguments */
+	return NULL;
+}
+
+/* Return a string generated from character codepoints. */
+static json_t *jfn_fromCharCode(json_t *args, void *agdata)
+{
+	size_t len;
+	json_t	*scan, *elem;
+	char	dummy[MB_CUR_MAX];
+	int	in;
+	json_t	*result;
+	char	*s;
+
+	/* Count the length.  Note that some codepoints require multiple bytes */
+	for (len = 0, scan = args->first; scan; scan = scan->next) {
+		if (scan->type == JSON_NUMBER) {
+			in = wctomb(dummy, json_int(scan));
+			if (in > 0)
+				len += in;
+		} else if (scan->type == JSON_ARRAY) {
+			for (elem = scan->first; elem; elem = elem->next) {
+				in = wctomb(dummy, json_int(elem));
+				if (in > 0)
+					len += in;
+			}
+		} else if (scan->type == JSON_STRING) {
+			len += strlen(scan->text);
+		}
+	}
+
+	/* Allocate a big enough JSON_STRING.  Note that "len" does not need to allow
+	 * for the '\0' that json_string() adds after the string.
+	 */
+	result = json_string("", len);
+
+	/* Loop through the args again, building the result */
+	for (s = result->text, scan = args->first; scan; scan = scan->next) {
+		if (scan->type == JSON_NUMBER) {
+			in = wctomb(s, json_int(scan));
+			if (in > 0)
+				s += in;
+		} else if (scan->type == JSON_ARRAY) {
+			for (elem = scan->first; elem; elem = elem->next) {
+				in = wctomb(s, json_int(elem));
+				if (in > 0)
+					s += in;
+			}
+		} else if (scan->type == JSON_STRING) {
+			strcpy(s, scan->text);
+			s += strlen(scan->text);
+		}
+	}
+
+	/* Done! */
+	return result;
+}
+
+
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *
  * of C functions -- jag_xxxx() to accumulate data from each row, and     *
@@ -900,7 +1015,7 @@ static json_t *jfn_index(json_t *args, void *agdata)
 			do {
 				*--p = base + tmp % 26;
 				tmp /= 26;
-			} while (tmp > 0);
+			} while (tmp-- > 0);
 			return json_string(p, -1);
 
 		/* Maybe put roman numerals here some day? case 'i'/'I'
@@ -1097,7 +1212,17 @@ static json_t *jfn_writeArray(json_t *args, void *agdata)
 static void jag_writeArray(json_t *args, void *agdata)
 {
 	FILE *fp = *(FILE **)agdata;
+	json_t	*item;
 	char    *ser;
+
+	/* For "null" or "false", do nothing.  For "true" we'd *like* to substitute
+	 * "this" but unfortunately we don't have access to the context.
+	 */
+	item = args->first;
+	if (item->type == JSON_SYMBOL) {
+		if (!json_is_true(item))
+			return;
+	}
 	if (!fp) {
 		if (args->first->next && args->first->next->type == JSON_STRING)
 			fp = fopen(args->first->next->text, "w");
@@ -1108,7 +1233,9 @@ static void jag_writeArray(json_t *args, void *agdata)
 	} else {
 		fputs(",\n  ", fp);
 	}
-	ser = json_serialize(args->first, NULL);
+
+	/* Write this item */
+	ser = json_serialize(item, NULL);
 	fwrite(ser, strlen(ser), 1, fp);
 	free(ser);
 }

@@ -67,7 +67,7 @@ static struct {
 	{"ASSIGN",	"ASGN",	121,	JCOP_INFIX},
 	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
 	{"BITAND",	"&",	160,	JCOP_INFIX},
-	{"BITNOT",	"~",	240,	JCOP_INFIX},
+	{"BITNOT",	"~",	240,	JCOP_PREFIX},
 	{"BITOR",	"|",	150,	JCOP_INFIX},
 	{"BITXOR",	"^",	160,	JCOP_INFIX},
 	{"BOOLEAN",	"BOO",	-1,	JCOP_OTHER},
@@ -102,7 +102,7 @@ static struct {
 	{"LE",		"<=",	190,	JCOP_INFIX},
 	{"LIKE",	"LIK",	180,	JCOP_INFIX},
 	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
-	{"LJOIN",	"@<",	10,	JCOP_INFIX}, /*!!!*/
+	{"LJOIN",	"@<",	115,	JCOP_INFIX}, /*!!!*/
 	{"LT",		"<",	190,	JCOP_INFIX},
 	{"MODULO",	"%",	220,	JCOP_INFIX},
 	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
@@ -110,7 +110,7 @@ static struct {
 	{"NE",		"!=",	180,	JCOP_INFIX},
 	{"NEGATE",	"U-",	240,	JCOP_PREFIX},
 	{"NESTRICT",	"!==",	180,	JCOP_INFIX},
-	{"NJOIN",	"@=",	10,	JCOP_INFIX}, /*!!!*/
+	{"NJOIN",	"@=",	115,	JCOP_INFIX}, /*!!!*/
 	{"NOT",		"!",	240,	JCOP_PREFIX},
 	{"NOTLIKE",	"NLK",	180,	JCOP_INFIX},
 	{"NULL",	"NUL",	-1,	JCOP_OTHER},
@@ -120,7 +120,7 @@ static struct {
 	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
 	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
 	{"RETURN",	"RET",	-1,	JCOP_OTHER},
-	{"RJOIN",	"@>",	10,	JCOP_INFIX}, /*!!!*/
+	{"RJOIN",	"@>",	115,	JCOP_INFIX}, /*!!!*/
 	{"SELECT",	"SEL",	1,	JCOP_OTHER},
 	{"SEMICOLON",	";",	-1,	JCOP_OTHER},
 	{"STARTARRAY",	"[",	260,	JCOP_OTHER},

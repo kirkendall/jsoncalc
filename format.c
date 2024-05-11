@@ -37,7 +37,7 @@ char json_format_color_end[20] = "\033[m";
 char *json_format(jsonformat_t *format, char *str)
 {
 	char	*end, *value, v;
-	size_t	namelen;
+	size_t	namelen, valuelen;
 
 	/* If no format buffer is specified, use the default */
 	if (!format)
@@ -57,9 +57,10 @@ char *json_format(jsonformat_t *format, char *str)
 		}
 
 		/* Does it have a value? */
-		if (str[namelen] == '=')
+		if (str[namelen] == '=') {
 			value = str + namelen + 1;
-		else
+			valuelen = (int)(end - value);
+		} else
 			value = NULL;
 
 		/* process the name */
@@ -71,11 +72,23 @@ char *json_format(jsonformat_t *format, char *str)
 			format->digits = value ? atoi(value) : 0;
 		else if (namelen == 5 && !strncmp("table", str, namelen))
 			format->table = tolower(*value);
-		else if (namelen == 6 && !strncmp("prefix", str, namelen))
-			strncpy(format->prefix, value ? value : "", sizeof format->prefix  - 1);
-		else if (namelen == 4 && !strncmp("null", str, namelen))
-			strncpy(format->null, value ? value : "", sizeof format->null  - 1);
-		else {
+		else if (namelen == 6 && !strncmp("prefix", str, namelen)) {
+			memset(format->prefix, 0, sizeof format->prefix);
+			if (value) {
+				if (valuelen < sizeof format->prefix - 1)
+					strncpy(format->prefix, value, valuelen);
+				else
+					strncpy(format->prefix, value, sizeof format->prefix  - 1);
+			}
+		} else if (namelen == 4 && !strncmp("null", str, namelen)) {
+			memset(format->null, 0, sizeof format->null);
+			if (value) {
+				if (valuelen < sizeof format->null - 1)
+					strncpy(format->null, value, valuelen);
+				else
+					strncpy(format->null, value, sizeof format->null  - 1);
+			}
+		} else {
 			/* Convert value to a true/false indicator */
 			if (value)
 				v = strchr("NnFf0", *value) ? 0 : 1;

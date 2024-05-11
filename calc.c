@@ -785,13 +785,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_AND:
 	  case JSONOP_OR:
 		USE_LEFT_OPERAND(calc);
-		USE_RIGHT_OPERAND(calc);
 		il = json_is_true(left);
-		ir = json_is_true(right);
-		if (calc->op == JSONOP_AND)
-			result = json_symbol((il && ir) ? "true" : "false", -1);
-		else
-			result = json_symbol((il || ir) ? "true" : "false", -1);
+		if (calc->op == (il ? JSONOP_AND : JSONOP_OR)) {
+			USE_RIGHT_OPERAND(calc);
+			il = json_is_true(right);
+		}
+		result = json_symbol(il ? "true" : "false", -1);
 		break;
 
 	  case JSONOP_EQSTRICT:
@@ -861,37 +860,50 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		assert(calc->RIGHT->op == JSONOP_AND);
 		USE_LEFT_OPERAND(calc);
 
-		/* Test lower bound */
-		USE_RIGHT_OPERAND(calc->RIGHT->LEFT);
+		/* Test lower bound.  Note that we have to use USE_LEFT_OPERAND()
+		 * again since calc->RIGHT is the whole "AND" clause and we want the
+		 * left branch of that.  So first we juggle variables a bit...
+		 */
+		scan = left;
+		found = freeleft;
+		USE_LEFT_OPERAND(calc->RIGHT);
+		right = left;
+		freeright = freeleft;
+		left = scan;
+		freeleft = found;
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 			if (json_double(left) < json_double(right))
 				result = json_symbol("false", -1);
-		} else if ((left->type == JSON_STRING || left->type == JSON_NUMBER)
-		     && (right->type == JSON_STRING || right->type == JSON_NUMBER)) {
+		} else if (left->type == JSON_STRING && right->type == JSON_STRING) {
 			if (json_mbs_casecmp(left->text, right->text) < 0)
 				result = json_symbol("false", -1);
-		}
+		} else
+			result = json_symbol("null", -1);
+
 		if (freeright) {
 			json_free(freeright);
 			freeright = NULL;
 		}
 
-		/* Test upper bound */
+		/* Test upper bound.  If we already know the tested value is below
+		 * the lower bound, we can skip this.
+		 */
 		if (!result) {
-			USE_RIGHT_OPERAND(calc->RIGHT->RIGHT);
+			USE_RIGHT_OPERAND(calc->RIGHT);
 			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 				if (json_double(left) > json_double(right))
 					result = json_symbol("false", -1);
-			} else if ((left->type == JSON_STRING || left->type == JSON_NUMBER)
-			     && (right->type == JSON_STRING || right->type == JSON_NUMBER)) {
+			} else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
 				if (json_mbs_casecmp(left->text, right->text) > 0)
 					result = json_symbol("false", -1);
 			}
+			else
+				result = json_symbol("null", -1);
 		}
 
 		/* If no result, I guess we're okay */
 		if (!result)
-			result = json_symbol("true", 1);
+			result = json_symbol("true", -1);
 
 		break;
 

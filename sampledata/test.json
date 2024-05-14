@@ -18,5 +18,6 @@
         {"name":"Ziggy","contact":[{"type":"address","street":"101 Broadway","appt":204,"city":"Portand","state":"OR","zip":97266},{"type":"cell","number":"503-666-4377"}],"joined":"2023-04-17"}
      ],
      "deep":{"deeper":{"deepest":3,"deeply":"madly"},"dept":"transportation"},
-     "contact":{"home":"5035551212","email":"mycontact@sample.com"}
+     "contact":{"home":"5035551212","email":"mycontact@sample.com"},
+     "rps":{"rock":"ロック","paper":"紙","scissors":"はさみ"}
 }

@@ -7,11 +7,11 @@ void json_sort(json_t *array, json_t *orderby)
 {
 	json_t *sorted;
 
-	// Check parameters.
+	/* Check parameters. */
 	if (array->type != JSON_ARRAY)
 		json_throw(NULL, "json_sort() should be passed an array");
-	if (orderby->type != JSON_ARRAY)
-		json_throw(NULL, "The field list passed to json_sort() must be an array");
+	if (orderby->type != JSON_ARRAY && orderby->type != JSON_STRING)
+		json_throw(NULL, "The field list passed to json_sort() must be an array or string");
 	if (!array->first)
 		return; /* An empty array is always sorted.  No change needed. */
 	if (!json_is_table(array))

@@ -114,7 +114,10 @@ typedef struct jsonfunc_s {
         json_t *(*fn)(json_t *args, void *agdata);
         void   (*agfn)(json_t *args, void *agdata);
         size_t  agsize;
+        int	jfoptions;
 } jsonfunc_t;
+#define JSONFUNC_JSONFREE 1	/* Call json_free() on the agdata afterward */
+#define JSONFUNC_FREE 2		/* Call free() on the agdata afterward */
 
 
 /* This stores a list of aggregate functions used in a given context.  Each

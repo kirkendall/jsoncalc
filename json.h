@@ -182,6 +182,7 @@ extern json_t *json_copy(json_t *json);
 extern json_t *json_array_flat(json_t *array, int depth);
 extern json_t *json_unroll(json_t *table, json_t *nestlist);
 extern json_t *json_array_group_by(json_t *array, json_t *orderby);
+extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
 #define json_append(container, more) json_parse_append(NULL, container, more)
 
 /* Parsing */
@@ -249,6 +250,7 @@ extern json_t *json_debug_key(const char *file, int line, const char *key, json_
 extern json_t *json_debug_object(const char *file, int line);
 extern json_t *json_debug_array(const char *file, int line);
 extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
+extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 #ifdef JSON_DEBUG_MEMORY
 #define json_free(json)			json_debug_free(__FILE__, __LINE__, json)
 #define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
@@ -261,7 +263,7 @@ extern json_t *json_debug_parse_string(const char *file, int line, const char *s
 #define json_object()			json_debug_object(__FILE__, __LINE__)
 #define json_array()			json_debug_array(__FILE__, __LINE__)
 #define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
-#define json_free_unused(used, data)    json_debug_free_unused(__FILE__, __LINE__, used, data)
+#define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
 #endif
 
 size_t json_mbs_len(const char *s);

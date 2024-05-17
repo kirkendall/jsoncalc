@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include "json.h"
 
+/* Even if memory debugging is enabled, here we're defining the non-debugging verion
+ * of the json_copy() function.
+ */
+#ifdef JSON_DEBUG_MEMORY
+# undef json_copy
+#endif
 
 /* Return a deep copy of a json object... meaning that if "json" is a container
  * then its contents are deep-copied too.  The returned object will be identical

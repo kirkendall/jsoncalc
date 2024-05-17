@@ -5,6 +5,11 @@
 #include <assert.h>
 #include "json.h"
 
+/* Here we need to access the "real" parse functions */
+#ifdef JSON_DEBUG_MEMORY
+# undef json_parse_string
+#endif
+
 /* allocate a json_t for a given token. */
 json_t *json_simple_from_token(json_token_t *token)
 {

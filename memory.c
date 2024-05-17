@@ -22,6 +22,8 @@
 # undef json_array
 # undef json_key
 # undef json_object
+# undef json_parse_string
+# undef json_copy
 #endif
 
 /* For debugging, this is used to store places that allocate memory, and
@@ -257,7 +259,7 @@ static int memory_slot(const char *file, int line)
 
         /* If memory tracking hasn't been initialized, then do so now */
         if (!memory_tracker) {
-                /* Allocate memory for the tracker.  Each json_t has an 12-bit
+                /* Allocate memory for the tracker.  Each json_t has a 12-bit
                  * field for tracking its allocation source, so we want 4096
                  * tracker slots.  We also want one more slot in case there
                  * are more than 4096 source lines that allocate json_t's.
@@ -277,21 +279,25 @@ static int memory_slot(const char *file, int line)
                 if (!memory_tracker[slot].file) {
                         memory_tracker[slot].file = file;
                         memory_tracker[slot].line = line;
+/*printf("%s:%d: allocating slot %d\n", file, line, slot);*/
                         return slot;
                 }
 
                 /* Found an existing slot for this file/line */
-                if (memory_tracker[slot].file == file && memory_tracker[slot].line == line)
+                if (memory_tracker[slot].file == file && memory_tracker[slot].line == line) {
+/*printf("%s:%d: reusing slot %d\n", file, line, slot);*/
                         return slot;
+		}
 
                 /* Bumped to next slot */
-                slot = (slot + 1) & 0x7ff;
+                slot = (slot & 0xfff) + 1;
         } while (slot != start);
 
         /* If we get here then we looped without ever finding the slot or an
          * empty slot.  All we can do is count it in the overflow area.
          */
-        return 4096;
+/*printf("%s:%d: forced to use slot 0\n", file, line);*/
+        return 0;
 }
 
 
@@ -316,13 +322,12 @@ void json_debug_free(const char *file, int line, json_t *json)
                         fprintf(stderr, "%s:%d: This is where it was first freed\n", memory_tracker[json->memslot].file, -memory_tracker[json->memslot].line);
         }
 
-
         /* We track by where the json_t is allocated not by where it is freed.
          * Decrement the allocation count for that line.
          */
         int slot = json->memslot;
         if (slot != 0 && memory_tracker[slot].count == 0 ) {
-                fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line);
+                fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line, slot);
                 abort();
         }
         else if (memory_tracker)
@@ -406,13 +411,43 @@ json_t *json_debug_array(const char *file, int line)
 	return json_debug_simple(file, line, NULL, 0, JSON_ARRAY);
 }
 
+
+/* This is called via json_walk() to tweak the source line for tracking memory leaks */
+static int fixslot(json_t *json, void *data)
+{
+	int	slot = *(int *)data;
+
+	/* If already fixed, leave it */
+	if (json->memslot == slot)
+		return 0;
+
+	/* Change it, adjusting counts too */
+	if (json->memslot != 0)
+		memory_tracker[json->memslot].count--;
+	if (slot != 0)
+		memory_tracker[slot].count++;
+	json->memslot = slot;
+	return 0;
+}
+
 /* Parse a string and return it */
 json_t *json_debug_parse_string(const char *file, int line, const char *str)
 {
+#if 1
         json_t *json;
         int slot = memory_slot(file, line);
-        memory_tracker[slot].count++;
         json = json_parse_string(str);
-        json->memslot = slot;
+        json_walk(json, fixslot, &slot);
+        return json;
+#else
+	return json_parse_string(str);
+#endif
+}
+
+json_t *json_debug_copy(const char *file, int line, json_t *json)
+{
+        int slot = memory_slot(file, line);
+        json = json_copy(json);
+        json_walk(json, fixslot, &slot);
         return json;
 }

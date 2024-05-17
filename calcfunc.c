@@ -28,8 +28,9 @@
  * to the functions as "agdata".
  */
 
-/* Several aggregate functions use this to store results */
+/* Several aggregate functions use these to store results */
 typedef struct { int count; double val; } agdata_t;
+typedef struct { json_t *json; char *sval; int count; double dval; } agmaxdata_t;
 
 /* Forward declarations of the built-in non-aggregate functions */
 static json_t *jfn_toUpperCase(json_t *args, void *agdata);
@@ -111,17 +112,17 @@ static jsonfunc_t charCodeAt_jf  = {&keysValues_jf,  "charCodeAt",  jfn_charCode
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode",jfn_fromCharCode};
 static jsonfunc_t count_jf       = {&fromCharCode_jf,"count",       jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
-static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agdata_t)};
-static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agdata_t)};
+static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
 static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         jfn_sum,   jag_sum, sizeof(agdata_t)};
 static jsonfunc_t product_jf     = {&sum_jf,         "product",     jfn_product,jag_product, sizeof(agdata_t)};
 static jsonfunc_t any_jf         = {&product_jf,     "any",         jfn_any,   jag_any, sizeof(int)};
 static jsonfunc_t all_jf         = {&any_jf,         "all",         jfn_all,   jag_all, sizeof(int)};
-static jsonfunc_t explain_jf     = {&all_jf,         "explain",     jfn_explain,jag_explain, sizeof(json_t *)};
+static jsonfunc_t explain_jf     = {&all_jf,         "explain",     jfn_explain,jag_explain, sizeof(json_t *), JSONFUNC_JSONFREE};
 static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  jfn_writeArray,jag_writeArray, sizeof(FILE *)};
-static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *)};
-static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   jfn_objectAgg,jag_objectAgg, sizeof(json_t *)};
+static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
 static jsonfunc_t *funclist      = &objectAgg_jf;
 
 
@@ -1034,21 +1035,48 @@ static void jag_index(json_t *args, void *agdata)
 /* min(arg) returns the minimum value */
 static json_t *jfn_min(json_t *args, void *agdata)
 {
-	agdata_t *data = (agdata_t *)agdata;
+	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
+	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
 		return json_symbol("null", -1);
-	return json_from_double(data->val);
+	if (data->json)
+		return json_copy(data->json);
+	if (data->sval)
+		return json_string(data->sval, -1);
+	return json_from_double(data->dval);
 
 }
 static void jag_min(json_t *args, void *agdata)
 {
-	agdata_t *data = (agdata_t *)agdata;
+	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
-	if (args->first->type == JSON_NUMBER) {
+	/* If this is a number and we're comparing numbers ... */
+	if (args->first->type == JSON_NUMBER && !data->sval) {
+		/* If this is first, or less than previous, use it */
 		double d = json_double(args->first);
-		if (data->count == 0 || d < data->val)
-			data->val = d;
+		if (data->count == 0 || d < data->dval) {
+			data->dval = d;
+			if (data->json) {
+				json_free(data->json);
+				data->json = NULL;
+			}
+			if (args->first->next)
+				data->json = json_copy(args->first->next);
+		}
+		data->count++;
+	} else if (args->first->type == JSON_STRING) {
+		if (!data->sval || json_mbs_casecmp(args->first->text, data->sval) < 0) {
+			if (data->sval)
+				free(data->sval);
+			data->sval = strdup(args->first->text);
+			if (data->json) {
+				json_free(data->json);
+				data->json = NULL;
+			}
+			if (args->first->next)
+				data->json = json_copy(args->first->next);
+		}
 		data->count++;
 	}
 }
@@ -1056,21 +1084,49 @@ static void jag_min(json_t *args, void *agdata)
 /* max(arg) returns the maximum value */
 static json_t *jfn_max(json_t *args, void *agdata)
 {
-	agdata_t *data = (agdata_t *)agdata;
+	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
+	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
 		return json_symbol("null", -1);
-	return json_from_double(data->val);
+	if (data->json)
+		return json_copy(data->json);
+	if (data->sval)
+		return json_string(data->sval, -1);
+	return json_from_double(data->dval);
 
 }
 static void jag_max(json_t *args, void *agdata)
 {
-	agdata_t *data = (agdata_t *)agdata;
+	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
-	if (args->first->type == JSON_NUMBER) {
+	/* If this is a number, and we're comparing numbers... */
+	if (args->first->type == JSON_NUMBER && !data->sval) {
 		double d = json_double(args->first);
-		if (data->count == 0 || d > data->val)
-			data->val = d;
+
+		/* If this is first, or more than previous max, use it*/
+		if (data->count == 0 || d > data->dval) {
+			data->dval = d;
+			if (data->json) {
+				json_free(data->json);
+				data->json = NULL;
+			}
+			if (args->first->next)
+				data->json = json_copy(args->first->next);
+		}
+		data->count++;
+	} else if (args->first->type == JSON_STRING) {
+		if (!data->sval || json_mbs_casecmp(args->first->text, data->sval) > 0) {
+			if (data->sval)
+				free(data->sval);
+			data->sval = strdup(args->first->text);
+			if (data->json) {
+				json_free(data->json);
+				data->json = NULL;
+			}
+			if (args->first->next)
+				data->json = json_copy(args->first->next);
+		}
 		data->count++;
 	}
 }
@@ -1245,8 +1301,8 @@ static json_t *jfn_arrayAgg(json_t *args, void *agdata)
 {
 	json_t *result = *(json_t **)agdata;
 	if (!result)
-		result = json_array();
-	return result;
+		return json_array();
+	return json_copy(result);
 }
 static void  jag_arrayAgg(json_t *args, void *agdata)
 {
@@ -1264,8 +1320,8 @@ static json_t *jfn_objectAgg(json_t *args, void *agdata)
 {
 	json_t *result = *(json_t **)agdata;
 	if (!result)
-		result = json_object();
-	return result;
+		return json_object();
+	return json_copy(result);
 }
 static void  jag_objectAgg(json_t *args, void *agdata)
 {

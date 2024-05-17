@@ -4,7 +4,6 @@
 #include <string.h>
 #include <locale.h>
 #include <assert.h>
-#define JSON_DEBUG_MEMORY
 #include "json.h"
 #include "calc.h"
 
@@ -159,10 +158,40 @@ static void jcag(jsonag_t *ag, jsoncontext_t *context, void *agdata)
  */
 void *json_calc_ag(jsoncalc_t *calc, void *existingag)
 {
+	/* If passed an existingag, then we're either about to free it or reset it.
+	 * Either way, maybe some functions want us to free up some of allocated data
+	 * for them.
+	 */
+	if (existingag) {
+		/* There's a list of ag function calls before the data.  Get it.
+		 *
+		 */
+		jsoncalc_t *ag = ((jsoncalc_t **)existingag)[-1];
+		int	i;
+		char	*data;
+		void	*toFree;
+
+		/* For each function call... */
+		for (i = 0, data = (char *)existingag; i < ag->u.ag->nags; data += ag->u.ag->ag[i++]->u.func.jf->agsize) {
+			jsonfunc_t *jf = ag->u.ag->ag[i]->u.func.jf;
+			/* Supposed to free anything? */
+			if (jf->jfoptions & JSONFUNC_JSONFREE) {
+				json_t *doomed = *(json_t **)data;
+				json_free(doomed);
+				toFree = *(void **)(data + sizeof(json_t *));
+
+			} else
+				toFree = *(void **)data;
+			if ((jf->jfoptions & JSONFUNC_FREE) && toFree) {
+				free(toFree);
+			}
+		}
+	}
+
 	/* Passing NULL for calc just means we should free existingag, if any */
 	if (!calc) {
 		if (existingag)
-			free(existingag);
+			free((char*)existingag - sizeof(jsoncalc_t**));
 		return NULL;
 	}
 
@@ -170,15 +199,17 @@ void *json_calc_ag(jsoncalc_t *calc, void *existingag)
 	if (calc->op != JSONOP_AG)
 		return NULL;
 
-	/* If no existingag, then allocate it now */
-	if (!existingag)
-		existingag = malloc(calc->u.ag->agsize);
+	/* If no existingag, then allocate it now.  Also add space for a pointer */
+	if (!existingag) {
+		existingag = malloc(sizeof(jsoncalc_t **) + calc->u.ag->agsize) + sizeof(jsoncalc_t ***);
+	}
 
 	/* Reset it */
 	memset(existingag, 0, calc->u.ag->agsize);
+	((jsoncalc_t **)existingag)[-1] = calc;
 	return existingag;
 }
-
+ 
 /* If a jsoncalc_t uses aggregate functions, then incorporate this row's
  * data into the aggregates.  If it doesn't use aggregates then do nothing.
  */
@@ -267,7 +298,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 	groupag = NULL;
 	ag = json_calc_ag(calc, NULL);
 	if (ag) {
-		/* STEP 2: Count groups, and watch for any ungrouped elements */
+		/* STEP 1: Count groups, and watch for any ungrouped elements */
 		for (ngroups = nongroup = 0, scan = first; scan; scan = scan->next) {
 			if (scan->type == JSON_ARRAY)
 				ngroups++;
@@ -275,14 +306,14 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				nongroup++;
 		}
 
-		/* STEP 3: Allocate an array to hold groups' aggregate data */
+		/* STEP 2: Allocate an array to hold groups' aggregate data */
 		if (ngroups > 0) {
 			groupag = calloc(ngroups, sizeof(void *));
 			for (g = 0; g < ngroups; g++)
 				groupag[g] = json_calc_ag(calc, NULL);
 		}
 
-		/* STEP 4: Loop over the array to generate aggregate data. */
+		/* STEP 3: Loop over the array to generate aggregate data. */
 		for (g = 0, scan = first; scan; scan = scan->next) {
 			/* Is this element a nested array? */
 			if (scan->type == JSON_ARRAY) {
@@ -374,7 +405,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
  *              The first element is "this".  Any element that's an object
  *              can be scanned to obtain variable names.  May be NULL.
  *   agdata     Storage space for aggregate functions, allocated by
- *              json_calc_ag_begin(), freed by json_calc_ag_end();
+ *              json_calc_ag(calc, NULL), freed by json_calc_ag(NULL, ag);
  */
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 {
@@ -483,9 +514,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		 * the array.)
 		 */
 		if (left->first->type == JSON_ARRAY && calc->u.func.jf->agfn) {
+			jsonfunc_t *jf = calc->u.func.jf;
+			void **toFree;
+
 			/* Allocate storage for the function */
-			localag = malloc(calc->u.func.jf->agsize);
-			memset(localag, 0, calc->u.func.jf->agsize);
+			localag = malloc(jf->agsize);
+			memset(localag, 0, jf->agsize);
 
 			/* For each element of the array, create a new parameter
 			 * list and call the aggregator.  Note that we don't
@@ -503,15 +537,22 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				found->first = &first;
 
 				/* Invoke the aggregator */
-				(*calc->u.func.jf->agfn)(found, localag);
+				(*jf->agfn)(found, localag);
 			}
 			found->first = NULL;
 			json_free(found);
 
 			/* Invoke the function */
-			result = (*calc->u.func.jf->fn)(left, localag);
+			result = (*jf->fn)(left, localag);
 
 			/* Clean up */
+			if (jf->jfoptions & JSONFUNC_JSONFREE) {
+				json_free(*(json_t **)localag);
+				toFree = (void **)((json_t *)localag + 1);
+			} else
+				toFree = (void **)localag;
+			if (jf->jfoptions & JSONFUNC_FREE && *toFree != NULL)
+				free(*toFree);
 			free(localag);
 		} else {
 			/* Invoke the function */

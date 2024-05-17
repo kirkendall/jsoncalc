@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <locale.h>
-#define JSON_DEBUG_MEMORY
 #include "json.h"
 #include "calc.h"
 

@@ -8,7 +8,6 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/stat.h>
-#define JSON_DEBUG_MEMORY
 #include "json.h"
 #include "calc.h"
 #include "version.h"

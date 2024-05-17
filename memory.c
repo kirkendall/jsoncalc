@@ -75,6 +75,7 @@ size_t json_sizeof(json_t *json)
                   case JSON_NEWLINE:
                   case JSON_ENDARRAY:
                   case JSON_ENDOBJECT:
+                  case JSON_DEFERRED:
                         ; /* Listed just to keep the compiler happy */
                 }
 

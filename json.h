@@ -13,11 +13,13 @@
 # endif
 #endif
 
-/* These are token types */
+/* These are token types.  Some are used only during parsing, some are for both
+ * parsing and the internal json_t tree, and some are internally for json_t only.
+ */
 typedef enum {
 	JSON_BADTOKEN, JSON_NEWLINE,
 	JSON_OBJECT, JSON_ENDOBJECT,
-	JSON_ARRAY, JSON_ENDARRAY,
+	JSON_ARRAY, JSON_ENDARRAY, JSON_DEFERRED,
 	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_SYMBOL
 } json_type_t;
 

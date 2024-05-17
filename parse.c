@@ -534,6 +534,10 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 				json_parse_append(state, state->stack[state->nest], json);
 		}
 		break;
+
+	  case JSON_DEFERRED:
+		/* Internal use only -- never parsed */
+		;
 	}
 
 	/* If we just appended something into a key, then we need to pop

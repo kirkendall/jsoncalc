@@ -96,6 +96,72 @@ s.substr(2)
 s.substr(1,3)
 ="tev"
 
+# Every function
+[true, true, true].all()
+=true
+[true, false, true].all()
+=false
+[false, false, false].any()
+=false
+[false, true, false].any()
+=true
+["a","b","c"].arrayAgg()
+=["a","b","c"]
+"Steve".charCodeAt()
+=83
+"Steve".charCodeAt(1..3)
+=[116,101,118]
+[null, false, true, 0, 1, "String"].count()
+=3
+[1,1,2,4,5,4,3].distinct()
+=[1,2,4,5,4,3]
+[1,1,2,4,5,4,3].distinct(true)
+=[1,2,4,5,3]
+[1,[2,3],4,[5]].flat()
+=[1,2,3,4,5]
+fromCharCode(116,[101,118])
+="tev"
+hex("Test")
+="54657374"
+hex(399425)
+="61841"
+["h","m","s"].join(":")
+="h:m:s"
+{a:1,b:2}.keys()
+=["a","b"]
+{a:1,b:2}.keysValues()
+=[{"key":"a","value":1},{"key":"b","value":2}]
+[5,3,7,9,4].max()
+=9
+["q","w","e","r","t","y"].max()
+="y"
+[5,3,7,9,4].min()
+=3
+["q","w","e","r","t","y"].min()
+="e"
+nameBits(6, ["one","two","four"], "+")
+="two+four"
+["a","b","c"].objectAgg(0)
+={"a":0,"b":0,"c":0}
+[{x:1},{x:5},{x:3},{x:4},{x:2}].orderBy("x")
+=[{"x":1},{"x":2},{"x":3},{"x":4},{"x":5}]
+product(2..7)
+=5040
+repeat("X",5)
+="XXXXX"
+[0,1,2,3,4,5].slice(2,4)
+=[2,3]
+"String".substr(2)
+="ring"
+sum(1..9)
+=45
+toFixed(50.2, 2)
+="50.20"
+[{foo:"bar"}].typeOf()
+="table"
+"String".width()
+=6
+
 # bigger stuff
 users=[{"id":1,"name":"steve"},{"id":2,"name":"rebecca"}]
 actions=[{"id":1,"action":"add"},{"id":1,"action":"change"},{"id":2,"action":"delete"},{"id":3,"action":"add"}]

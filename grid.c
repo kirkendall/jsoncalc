@@ -162,6 +162,9 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 		putc('\n', file);
 	}
 
+	/* Discard the "explain" data */
+	json_free(explain);
+
 	/* Done! */
 	return 1;
 }

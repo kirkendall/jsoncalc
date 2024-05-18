@@ -1,9 +1,11 @@
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <locale.h>
 #include <assert.h>
+#include <regex.h>
 #include "json.h"
 #include "calc.h"
 
@@ -555,8 +557,26 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				free(*toFree);
 			free(localag);
 		} else {
+			/* Non-aggregate functions may take a regular expression.
+			 * Since that isn't a JSON data type, the args list will just
+			 * contain NULL there; we need to scan the argument array
+			 * generator for a JSONOP_REGEX... but only for non-aggregates.
+			 */
+			localag = agdata + calc->u.func.agoffset;
+			if (!calc->u.func.jf->agfn) {
+				tmp = calc->u.func.args;
+				if (tmp->LEFT && tmp->LEFT->op == JSONOP_REGEX)
+					tmp = tmp->LEFT;
+				else for (tmp = tmp->RIGHT; tmp; tmp = tmp->RIGHT)
+					if (tmp->LEFT->op == JSONOP_REGEX) {
+						tmp = tmp->LEFT;
+						break;
+				}
+				localag = (void *)tmp;
+			}
+
 			/* Invoke the function */
-			result = (*calc->u.func.jf->fn)(left, agdata + calc->u.func.agoffset);
+			result = (*calc->u.func.jf->fn)(left, localag);
 		}
 		break;
 
@@ -951,14 +971,25 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_LIKE:
 	  case JSONOP_NOTLIKE:
 		USE_LEFT_OPERAND(calc);
-		USE_RIGHT_OPERAND(calc);
-		if (left->type != JSON_STRING || right->type != JSON_STRING) {
-			result = json_symbol("false", -1);
-		} else {
-			il = json_mbs_like(left->text, right->text);
-			if (calc->op == JSONOP_NOTLIKE)
-				il = !il;
-			result = json_symbol(il ? "true" : "false", -1);
+		if (calc->RIGHT->op == JSONOP_REGEX) {
+			regmatch_t matches[10];
+			if (left->type == JSON_STRING
+			 && regexec((regex_t *)calc->RIGHT->u.regex.preg, left->text, 10, matches, 0) == 0
+			 && matches[0].rm_so == 0
+			 && matches[0].rm_eo == strlen(left->text))
+				result = json_symbol("true", -1);
+			else
+				result = json_symbol("false", -1);
+		} else  {
+			USE_RIGHT_OPERAND(calc);
+			if (left->type != JSON_STRING || right->type != JSON_STRING) {
+				result = json_symbol("false", -1);
+			} else {
+				il = json_mbs_like(left->text, right->text);
+				if (calc->op == JSONOP_NOTLIKE)
+					il = !il;
+				result = json_symbol(il ? "true" : "false", -1);
+			}
 		}
 		break;
 
@@ -983,6 +1014,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		 * by jcsimple(), not here.
 		 */
 		abort();
+
+	  case JSONOP_REGEX:
+		/* Using a regular expression where it isn't expected is an error */
+		break;
 
 	  case JSONOP_ASSIGN:
 	  case JSONOP_CONST:

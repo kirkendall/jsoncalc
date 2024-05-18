@@ -68,6 +68,7 @@ typedef enum {
 	JSONOP_OR,
 	JSONOP_ORDERBY,
 	JSONOP_QUESTION,
+	JSONOP_REGEX,
 	JSONOP_RETURN,
 	JSONOP_RJOIN,
 	JSONOP_SELECT,
@@ -97,6 +98,10 @@ typedef struct jsoncalc_s{
                         struct jsoncalc_s *args;        /* args as array generator */
                         size_t agoffset;                /* If aggregate, this is the offset of its agdata */
                 } func;
+                struct {
+			void	*preg;
+			int	global;
+                } regex;
                 struct jsonag_s *ag;
                 struct jsonselect_s *select;
                 json_t *literal;

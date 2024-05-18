@@ -1,6 +1,8 @@
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <regex.h>
 #include <assert.h>
 #define _XOPEN_SOURCE
 #define __USE_XOPEN
@@ -56,12 +58,14 @@ static json_t *jfn_nameBits(json_t *args, void *agdata);
 static json_t *jfn_keysValues(json_t *args, void *agdata);
 static json_t *jfn_charCodeAt(json_t *args, void *agdata);
 static json_t *jfn_fromCharCode(json_t *args, void *agdata);
+static json_t *jfn_replace(json_t *args, void *agdata);
+static json_t *jfn_replaceAll(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
 static void    jag_count(json_t *args, void *agdata);
-static json_t *jfn_index(json_t *args, void *agdata);
-static void    jag_index(json_t *args, void *agdata);
+static json_t *jfn_rowNumber(json_t *args, void *agdata);
+static void    jag_rowNumber(json_t *args, void *agdata);
 static json_t *jfn_min(json_t *args, void *agdata);
 static void    jag_min(json_t *args, void *agdata);
 static json_t *jfn_max(json_t *args, void *agdata);
@@ -110,9 +114,11 @@ static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    jfn_nameBits
 static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  jfn_keysValues};
 static jsonfunc_t charCodeAt_jf  = {&keysValues_jf,  "charCodeAt",  jfn_charCodeAt};
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode",jfn_fromCharCode};
-static jsonfunc_t count_jf       = {&fromCharCode_jf,"count",       jfn_count, jag_count, sizeof(long)};
-static jsonfunc_t index_jf       = {&count_jf,       "index",       jfn_index, jag_index, sizeof(int)};
-static jsonfunc_t min_jf         = {&index_jf,       "min",         jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     jfn_replace};
+static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  jfn_replaceAll};
+static jsonfunc_t count_jf       = {&replaceAll_jf,  "count",       jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   jfn_rowNumber, jag_rowNumber, sizeof(int)};
+static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
 static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         jfn_sum,   jag_sum, sizeof(agdata_t)};
@@ -969,6 +975,187 @@ static json_t *jfn_fromCharCode(json_t *args, void *agdata)
 	return result;
 }
 
+/* Append str to buf, extending buf if necessary.  Return buf */
+static char *addstr(char *buf, size_t *refsize, size_t used, const char *str, size_t len)
+{
+	/* If size is -1 then use strlen() to find it */
+	if (len == (size_t)-1)
+		len = strlen(str);
+
+	/* If buf is too small, extend it */
+	if (used + len + 1 > *refsize) {
+		*refsize = ((*refsize + len) | 0xff) + 1;
+		buf = (char *)realloc(buf, *refsize);
+	}
+
+	/* Append the new string, and a trailing '\0' */
+	memcpy(buf + used, str, len);
+	buf[used + len] = '\0';
+
+	return buf;
+}
+
+static json_t *help_replace(json_t *args, regex_t *preg, int globally)
+{
+	const char	*subject, *search, *replace;
+	size_t		searchlen;
+	int		ignorecase;
+	const char	*found;
+	char		*buf;
+	size_t		bufsize, used;
+	regmatch_t	matches[10];
+	int		m, scan, chunk, in;
+	json_t		*result;
+
+	/* Check parameters */
+	if (args->first->type != JSON_STRING
+	 || args->first->next == NULL
+	 || (!preg && args->first->next->type != JSON_STRING)
+	 || args->first->next->next == NULL
+	 || args->first->next->next->type != JSON_STRING)
+		return NULL;
+
+	/* Copy parameter strings into variables */
+	subject = args->first->text;
+	search = (preg ? NULL : args->first->next->text);
+	replace = args->first->next->next->text;
+	ignorecase = json_is_true(args->first->next->next->next);
+
+	/* Start building a replacement string */
+	bufsize = 128;
+	buf = (char *)malloc(bufsize);
+	used = 0;
+	buf[0] = '\0';
+
+	/* Find the first/next match */
+	if (preg) {
+		/* REGULAR EXPRESSION VERSION */
+
+		/* For each match... */
+		while (0 == regexec(preg, subject, 10, matches, 0)) {
+			/* Include any text from before the match */
+			buf = addstr(buf, &bufsize, used, subject, matches[0].rm_so);
+			used += matches[0].rm_so;
+
+			/* Copy replacement text, handling $n notations */
+			for (scan = chunk = 0; replace[scan]; scan++) {
+				if (replace[scan] == '$') {
+					/* Copy plain text before $ */
+					if (scan > chunk) {
+						buf = addstr(buf, &bufsize, used, replace + chunk, scan - chunk);
+						used += scan - chunk;
+					}
+
+					/* Substitute for $n */
+					scan++;
+					chunk = scan;
+					if (replace[scan] == '&')
+						m = 0;
+					else if (replace[scan] >= '0' && replace[scan] <= '9')
+						m = replace[scan] - '0';
+					else
+						continue;
+					chunk++;
+					if (matches[m].rm_so >= 0 && matches[m].rm_so < matches[m].rm_eo) {
+						buf = addstr(buf, &bufsize, used, subject + matches[m].rm_so, matches[m].rm_eo - matches[m].rm_so);
+						used += matches[m].rm_eo - matches[m].rm_so;
+					}
+				}
+			}
+
+			/* Final segment of replacement, after the last $n */
+			if (replace[chunk] != '\0') {
+				buf = addstr(buf, &bufsize, used, &replace[chunk], -1);
+				used += strlen(&replace[chunk]);
+			}
+
+			/* Move past this match */
+			subject += matches[0].rm_eo;
+
+			/* If that last match was empty, then skip 1 character */
+			if (matches[0].rm_eo == matches[0].rm_so && *subject) {
+				/* Find the byte-length of the next character */
+				wchar_t wc;
+				int in = mbtowc(&wc, subject, MB_CUR_MAX);
+
+				/* Move it to the result string buffer */
+				buf = addstr(buf, &bufsize, used, subject, (size_t)in);
+				used += in;
+				subject += in;
+			}
+
+			/* If only supposed to do once, break out of the loop */
+			if (!globally)
+				break;
+		}
+
+		/* Append the tail of the subject to the buf */
+		buf = addstr(buf, &bufsize, used, subject, -1);
+
+	} else {
+		/* STRING VERSION */
+
+		/* For each match...  */
+		while ((found = json_mbs_str(subject, search, &searchlen, 0, ignorecase)) != NULL) {
+			/* Add any text from the subject string before the match */
+			if (found != subject) {
+				buf = addstr(buf, &bufsize, used, subject, (size_t)(found - subject));
+				used += (size_t)(found - subject);
+			}
+
+			/* Add the replacement text */
+			buf = addstr(buf, &bufsize, used, replace, -1);
+			used += strlen(replace);
+
+			/* Move past the match. */
+			subject = found + searchlen;
+			if (!globally)
+				break;
+
+			/* If the match was zero-length, then skip a character */
+			if (*subject && searchlen == 0) {
+				wchar_t wc;
+				in = mbtowc(&wc, subject, MB_CUR_MAX);
+				if (in > 0) {
+					buf = addstr(buf, &bufsize, used, subject, in);
+					subject += in;
+				}
+			}
+		}
+
+		/* Append the tail of the subject to the buf */
+		buf = addstr(buf, &bufsize, used, subject, -1);
+	}
+
+	/* Copy the string into a json_t, and return it */
+	result = json_string(buf, -1);
+
+	/* Clean up */
+	free(buf);
+
+	return result;
+}
+
+/* Replace the first instance of a substring or regular expression */
+static json_t *jfn_replace(json_t *args, void *agdata)
+{
+	jsoncalc_t *regex = (jsoncalc_t *)agdata;
+	if (regex)
+		return help_replace(args, regex->u.regex.preg, regex->u.regex.global);
+	else
+		return help_replace(args, NULL, 0);
+}
+
+/* Replace all instances of a substring or regular expression */
+static json_t *jfn_replaceAll(json_t *args, void *agdata)
+{
+	jsoncalc_t *regex = (jsoncalc_t *)agdata;
+	if (regex)
+		return help_replace(args, regex->u.regex.preg, 1);
+	else
+		return help_replace(args, NULL, 10);
+}
+
 
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *
@@ -987,8 +1174,8 @@ static void jag_count(json_t *args, void *agdata)
 		(*(int *)agdata)++;
 }
 
-/* index(arg) returns a different value for each element in the group */
-static json_t *jfn_index(json_t *args, void *agdata)
+/* rowNumber(arg) returns a different value for each element in the group */
+static json_t *jfn_rowNumber(json_t *args, void *agdata)
 {
 	int *counter = (int *)agdata;
 	int tmp;
@@ -1028,7 +1215,7 @@ static json_t *jfn_index(json_t *args, void *agdata)
 	/* As a last resort, just return it as a 1-based number. */
 	return json_from_int(1 + (*counter)++);
 }
-static void jag_index(json_t *args, void *agdata)
+static void jag_rowNumber(json_t *args, void *agdata)
 {
 }
 
@@ -1230,6 +1417,10 @@ static void jag_all(json_t *args, void *agdata)
 static json_t *jfn_explain(json_t *args, void *agdata)
 {
 	json_t *stats = *(json_t **)agdata;
+
+	/* Don't free the memory -- we're returning it */
+	*(json_t **)agdata = NULL;
+
 	if (!stats)
 		stats = json_symbol("null", -1);
 	return stats;

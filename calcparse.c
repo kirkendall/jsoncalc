@@ -1,8 +1,10 @@
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <locale.h>
+#include <regex.h>
 #include <assert.h>
 #include "json.h"
 #include "calc.h"
@@ -119,6 +121,7 @@ static struct {
 	{"OR",		"||",	130,	JCOP_INFIX},
 	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
 	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
+	{"REGEX",	"REG",	-1,	JCOP_OTHER},
 	{"RETURN",	"RET",	-1,	JCOP_OTHER},
 	{"RJOIN",	"@>",	115,	JCOP_INFIX}, /*!!!*/
 	{"SELECT",	"SEL",	1,	JCOP_OTHER},
@@ -321,6 +324,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_STARTOBJECT:
 	  case JSONOP_ENDOBJECT:
 	  case JSONOP_INVALID:
+	  case JSONOP_REGEX:
 		printf(" %s ", json_calc_op_name(calc->op));
 		break;
 
@@ -368,6 +372,20 @@ static int jcselecting(stack_t *stack)
 	for (i = 0; i < stack->sp; i++)
 		if (stack->stack[i]->op == JSONOP_SELECT)
 			return 1;
+	return 0;
+}
+
+/* Test whether the parsing stack is in a context where "/" is the start of a
+ * regular expression, not a division operator.
+ */
+static int jcregex(stack_t *stack)
+{
+	if (stack->sp == 0
+	 || stack->stack[stack->sp - 1]->op == JSONOP_LIKE
+	 || stack->stack[stack->sp - 1]->op == JSONOP_NOTLIKE
+	 || stack->stack[stack->sp - 1]->op == JSONOP_STARTPAREN
+	 || stack->stack[stack->sp - 1]->op == JSONOP_COMMA)
+		return 1;
 	return 0;
 }
 
@@ -538,6 +556,25 @@ char *lex(char *str, token_t *token, stack_t *stack)
 		return str;
 	}
 
+	/* Regular expression */
+	if (*str == '/' && jcregex(stack)) {
+		/* skip to the terminating '/' */
+		token->full = str;
+		while (*++str && *str != '/') {
+			if (*str == '\\' && str[1])
+				str++;
+		}
+
+		/* Also include any trailing flags */
+		while (*++str && isalnum(*str)) {
+		}
+
+		/* Finish filling in token */
+		token->op = JSONOP_REGEX;
+		token->len = (int)(str - token->full);
+		return str;
+	}
+
 	/* Operators - find the longest matching name */
 	best = JSONOP_INVALID;
 	for (op = 0; op < JSONOP_INVALID; op++) {
@@ -623,8 +660,46 @@ static jsoncalc_t *jcalloc(token_t *token)
 	} else if (token->op == JSONOP_BOOLEAN || token->op == JSONOP_NULL) {
 		jc->op = JSONOP_LITERAL;
 		jc->u.literal = json_symbol(token->full, token->len);
-	} else if (token->op == JSONOP_SELECT) {
+	}
+
+	/* SELECT needs some extra space allocated during parsing. */
+	if (token->op == JSONOP_SELECT) {
 		jc->u.select = (jsonselect_t *)calloc(1, sizeof(jsonselect_t));
+	}
+
+	/* REGEX needs a buffer allocated, and then the text and flags need to be
+	 * parsed.  Big stuff.
+	 */
+	if (token->op == JSONOP_REGEX) {
+		int	ignorecase = 0;
+		char	*tmp, *scan, *build;
+		int	err;
+
+		/* Allocate a regex_t buffer */
+		jc->u.regex.preg = malloc(sizeof(regex_t));
+
+		/* Extract the regex source from the token */
+		tmp = (char *)malloc(token->len);
+		for (scan = token->full + 1, build = tmp; *scan && *scan != '/'; ) {
+			if (*scan == '\\' && scan[1] == '/')
+				scan++;
+			*build++ = *scan++;
+		}
+		*build = '\0';
+
+		/* Scan flags for "i" and/or "g" */
+		while (++scan < &token->full[token->len]) {
+			ignorecase |= (*scan == 'i');
+			jc->u.regex.global |= (*scan == 'g');
+		}
+
+		/* Compile the regex */
+		err = regcomp((regex_t *)jc->u.regex.preg, tmp, ignorecase ? REG_ICASE : 0);
+		if (err) {
+			/* I guess treat it like null */
+			jc->op = JSONOP_LITERAL;
+			jc->u.literal = json_symbol("null", -1);
+		}
 	}
 
 	/* return it */
@@ -766,6 +841,16 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_AG:
 		json_calc_free(jc->u.ag->expr);
 		free(jc->u.ag);
+		break;
+
+	  case JSONOP_REGEX:
+		/* jc->u.regex.preg is a pointer to a regex_t buffer.  We need to
+		 * call regfree() on that buffer to release the data associated with
+		 * the buffer, and also free() to release the memory for the buffer
+		 * itself.
+		 */
+		regfree((regex_t *)jc->u.regex.preg);
+		free(jc->u.regex.preg);
 		break;
 
 	  case JSONOP_ASSIGN:
@@ -1207,6 +1292,7 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 		 && jc->op != JSONOP_OBJECT
 		 && jc->op != JSONOP_SUBSCRIPT
 		 && jc->op != JSONOP_FNCALL
+		 && jc->op != JSONOP_REGEX
 		 && ((jc->op != JSONOP_NEGATE
 		   && jc->op != JSONOP_NOT
 		   && jc->op != JSONOP_EXPLAIN)
@@ -1256,7 +1342,7 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_STARTARRAY
 			 && jc->op != JSONOP_STARTOBJECT
 			 && jc->op != JSONOP_SUBSCRIPT
-			 && jc->op != JSONOP_COLON)
+			 && jc->op != JSONOP_COLON) /* and comma? */
 				return FALSE;
 			continue;
 		} else if (!jc || !pattern_single(jc, *pat))
@@ -1776,6 +1862,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_NULL:
 	  case JSONOP_NAME:
 	  case JSONOP_FROM:
+	  case JSONOP_REGEX:
 		break;
 
 	  case JSONOP_DOT:

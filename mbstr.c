@@ -90,6 +90,65 @@ const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
         return sptr;
 }
 
+/* Find the position of "needle" within "haystack", and return a pointer to it.
+ * If reflen is non-NULL then return the number of bytes (not characters) of
+ * "haystack" that match.  If the needle isn't found, return NULL.
+ */
+const char *json_mbs_str(const char *haystack, const char *needle, size_t *reflen, int last, int ignorecase)
+{
+	wchar_t wc, nfirst;
+	size_t	nlen;
+	int	in;
+	const char *found;
+
+	/* Get the first character of the needle.  If ignorecase then convert to lower*/
+	in = mbtowc(&nfirst, needle, MB_CUR_MAX);
+	if (in < 1)
+		return NULL;
+	if (ignorecase)
+                nfirst = towlower(nfirst); 
+
+	/* Also get the needle's length */
+	nlen = json_mbs_len(needle);
+
+	/* Scan for matches */
+	found = NULL;
+	for (found = NULL; *haystack; haystack++) {
+		/* Check to see if the first character matches */
+		in = mbtowc(&wc, haystack, MB_CUR_MAX);
+		if (in < 1)
+			return NULL;
+		if (ignorecase)
+			wc = towlower(wc);
+		if (wc != nfirst)
+			continue;
+
+		/* Does the rest of the needle match too ? */
+		if (ignorecase) {
+			if (json_mbs_ncasecmp(haystack, needle, nlen) != 0)
+				continue;
+		} else {
+			if (json_mbs_ncmp(haystack, needle, nlen) != 0)
+				continue;
+		}
+
+		/* Found a match! */
+		found = haystack;
+
+		/* If we wanted first match, we're done. */
+		if (!last)
+			break;
+	}
+
+	/* Return what we found */
+	if (reflen && found) {
+		/* Convert character count to byte count */
+		json_mbs_substr(found, 0, &nlen);
+		*reflen = nlen;
+	}
+	return found;
+}
+
 
 /* Case-sensitive comparison.  Here we don't try to do anything fancy with
  * case or even locale().

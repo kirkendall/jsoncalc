@@ -273,6 +273,7 @@ int json_mbs_width(const char *s);
 int json_mbs_cmp(const char *s1, const char *s2);
 int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
 const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);
+const char *json_mbs_str(const char *haystack, const char *needle, size_t *reflen, int last, int ignorecase);
 void json_mbs_tolower(char *s);
 void json_mbs_toupper(char *s);
 void json_mbs_tomixed(char *s, json_t *exceptions);

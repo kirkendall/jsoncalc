@@ -297,6 +297,10 @@ int json_print(json_t *json, FILE *fp, jsonformat_t *format)
 {
 	jsonformat_t tweaked;
 
+	/* If NULL then don't print anything (not even "null") */
+	if (!json)
+		return 0;
+
 	/* Create a tweakable copy of the format */
 	if (!format)
 		format = &json_format_default;

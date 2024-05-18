@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>charAt</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc charAt - Return a 1-character substring">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, charAt">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>charAt - Return a 1-character substring</h1>
+    <dl>
+      <dt>charAt(<var>str</var>)
+      <br/>charAt(<var>str</var>, <var>num</var>)
+      <dd>
+      Return a 1-character substring from <var>str</var>.
+      If no position is passed, then return the first character.
+      If a character position <var>num</var> is passed, then skip that many characters
+      into <var>str</var> and return the next character.
+      If no such character exists, return <tt>null</tt>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Steve".charAt()</kbd>
+	<samp>"S"</samp>
+        With no position number, it returns the first character.
+      </div>
+
+      <div class="example">
+	<kbd>"Steve".charAt(3)</kbd>
+	<samp>"v"</samp>
+        With a position number, it counts characters to find the one to return.
+        The first character is at position 0.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=charCodeAt">charCodeAt()</a></td><td>Return one or more characters from a string as Unicode codepoint numbers.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=substr">substr()</a></td><td>Return a substring</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=startsWith">startsWith()</a></td><td>Test whether a string starts with a given substring</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

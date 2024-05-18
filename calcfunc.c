@@ -56,6 +56,7 @@ static json_t *jfn_distinct(json_t *args, void *agdata);
 static json_t *jfn_unroll(json_t *args, void *agdata);
 static json_t *jfn_nameBits(json_t *args, void *agdata);
 static json_t *jfn_keysValues(json_t *args, void *agdata);
+static json_t *jfn_charAt(json_t *args, void *agdata);
 static json_t *jfn_charCodeAt(json_t *args, void *agdata);
 static json_t *jfn_fromCharCode(json_t *args, void *agdata);
 static json_t *jfn_replace(json_t *args, void *agdata);
@@ -112,7 +113,8 @@ static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct
 static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
 static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    jfn_nameBits};
 static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  jfn_keysValues};
-static jsonfunc_t charCodeAt_jf  = {&keysValues_jf,  "charCodeAt",  jfn_charCodeAt};
+static jsonfunc_t charAt_jf      = {&keysValues_jf,  "charAt",      jfn_charAt};
+static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  jfn_charCodeAt};
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode",jfn_fromCharCode};
 static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     jfn_replace};
 static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  jfn_replaceAll};
@@ -865,6 +867,36 @@ static json_t *jfn_keysValues(json_t *args, void *agdata)
 			json_append(result, keysValuesHelper(scan));
 		return result;
 	}
+	return NULL;
+}
+
+/* Return a single-character substring */
+static json_t *jfn_charAt(json_t *args, void *agdata)
+{
+	const char	*pos;
+	size_t	size;
+
+	/* The first argument must be a non-empty string */
+	if (args->first->type != JSON_STRING || !args->first->text)
+		return NULL;
+
+	/* Single number?  No subscript given? */
+	if (!args->first->next || args->first->next->type == JSON_NUMBER) {
+		/* Get the position of the character */
+		size = 1;
+		if (args->first->next)
+			pos = json_mbs_substr(args->first->text, json_int(args->first->next), &size);
+		else /* no character offset given, so use first character */
+			pos = json_mbs_substr(args->first->text, 0, &size);
+
+		/* If end of string, return null */
+		if (!*pos)
+			return NULL;
+
+		/* Return it as a string */
+		return json_string(pos, size);
+	}
+
 	return NULL;
 }
 

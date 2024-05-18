@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>toString</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc toString - Convert any value to a string">
+    <meta name="keywords" content="misc, jsoncalc, function reference, toString">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>toString - Convert any value to a string</h1>
+    <dl>
+      <dt>toString(<var>arg</var>)
+      <dd>
+      Returns a string version of <var>arg</var>.
+      <p>
+      If <var>arg</var> is already a string, it is returned unchanged.
+      Conversion of a number, or the symbols <tt>true</tt>, <tt>false</tt> or <tt>null</tt> is also trivial.
+      For arrays and objects, it converts it to JSON text.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>toString("2024-10-31")</kbd>
+	<samp>"2024-10-31"</samp>
+	Dates are strings, so they're returned unchanged.
+      </div>
+
+      <div class="example">
+	<kbd>toString(null)</kbd>
+	<samp>"null"</samp>
+        Numbers and symbols are easy to convert.
+      </div>
+
+      <div class="example">
+	<kbd>toString({foo:2+2})</kbd>
+	<samp>"{\"foo\":4}"</samp>
+        Arrays and objects are converted to JSON.
+        The backslashes shown in the response are not part of the string,
+        that's just how <strong>jsoncalc</strong> displays strings.
+        The same is true for the outermost set of quotes.
+
+      </div>
+
+  </body>
+</body>

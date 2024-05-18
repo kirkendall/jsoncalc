@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>rowNumber</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc rowNumber - Generate a series of incrementing numbers">
+    <meta name="keywords" content="array, aggregate, jsoncalc, function reference, rowNumber">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>rowNumber - Generate a series of incrementing numbers</h1>
+    <dl>
+      <dt>rowNumber(<var>arg</var>)
+      <dd>
+      Each call returns the next number in a series.
+      <p>
+      The <var>arg</var> determines the formatting of the number.
+      If <var>arg</var> is <tt>false</tt> or <tt>null</tt>
+      then <tt>null</tt> is returned and the count is not incremented.
+      If it is a number, that number serves as the base of the counting;
+      e.g. <tt>rowNumber(0)</tt> starts counting at 0.
+      If it is "a" or "A" then counting is done via letters.
+      Otherwise it returns numbers starting at 1.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      Most aggregates also allow you to pass an array to accumulate results over the
+      array, but that isn't useful for <tt>rowNumber()</tt>; you need to use @ or @@.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>test.cust @ {"#":rowNumber(1)} | this</kbd>
+	<samp>
+	  <table>
+	    <tr><th>#</th><th>name</th><th>contact</th><th>joined</th></tr>
+	    <tr><td>1</td><td>Peter</td><td>[table]</td><td>2024-01-02</td></tr>
+	    <tr><td>2</td><td>Paul</td><td>[table]</td><td>2023-10-15</td></tr>
+	    <tr><td>3</td><td>Mary</td><td></td><td>2022-08-09</td></tr>
+	    <tr><td>4</td><td>Ziggy</td><td>[table]</td><td>2023-04-17</td></tr>
+	  </table>
+	</samp>
+        This dumps the <tt>test.cust</tt> table (part of the sample data) and
+        adds the "#" column with a row number.
+        The | operator merges two objects &mdash; in this example, the generated
+        object containing the "#" column, and <tt>this</tt> which is the current
+        row's data.
+      </div>
+
+      <div class="example">
+        <kbd>(1..100 @ rowNumber("A"))[37]</kbd>
+        <samp>"AL"</samp>
+        This generates the first 100 row numbers as uppercase letters,
+        and then returns the 38th one.
+        (Since row numbers start at 0, <tt>[37]</tt> is the 38th entry.)
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>When using groups (e.g. the <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function),
+            counting is done separately within each group.
+            If you're using groups with the @ operator (which only returns one row
+            per group), every row is likely to be row 1.
+            You'll probably experience more joy from the @@ operator, which returns
+            all rows.
+
+	<li>Most aggregate functions return the same value for every row in a group.
+	    This is the only one that returns a different value for every row.
+
+      </ul>
+    </details>
+  </body>
+</body>

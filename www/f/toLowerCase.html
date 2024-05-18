@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>toLowerCase</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc toLowerCase - Convert a string to lowercase">
+    <meta name="keywords" content="string, jsoncalc, function reference, toLowerCase">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>toLowerCase - Convert a string to lowercase</h1>
+    <dl>
+      <dt>toLowerCase(<var>str</var>)
+      <dd>
+      This returns an all-lowercase version of string <var>str</var>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>toLowerCase("Top10")</kbd>
+	<samp>"top10"</samp>
+        Notice that non-alphanumeric characters are unchanged.
+      </div>
+
+      <div class="example">
+	<kbd>"Top10".toLowerCase()</kbd>
+	<samp class="result">"top10"</samp>
+        The usual JavaScript notation works too.
+      </div>
+
+    </details>
+
+  </body>
+</body>

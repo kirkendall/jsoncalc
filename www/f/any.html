@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>any</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc any - Test whether any items are true">
+    <meta name="keywords" content="boolean, aggregate, jsoncalc, function reference, any">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>any - Test whether any items are true</h1>
+    <dl>
+      <dt>any(<var>bool</var>)
+      <dd>
+      This returns <tt>true</tt> if the <var>bool</var> argument is <tt>true</tt>
+      for any row in a group, when used with the @ or @@ operator.
+      If passed an array of booleans, it will return <tt>true</tt> if any element is
+      <tt>true</tt>.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>any([false,false,true,false])</kbd>
+	<samp>true</samp>
+        One of the values in the argument array is <tt>true</tt>,
+        so the result is <tt>true</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run") @ any(score &lt; 20) ? run</kbd>
+	<samp>[1]</samp>
+	This checks the <tt>test.scores</tt> table in the sample data, looking for
+	runs where at least one row has a score less than 20.
+	Only run 1 contains a score less than 20, so the return value is an array
+	containing the value 1.
+      </div>
+
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>slice</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc slice - Return part of an array">
+    <meta name="keywords" content="array, jsoncalc, function reference, slice">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>slice - Return part of an array</h1>
+    <dl>
+      <dt>slice(<var>arr</var>, <var>start</var>)
+      <br/>slice(<var>arr</var>, <var>start</var>, <var>end</var>)
+      <dd>
+      The <tt>slice()</tt> function returns a new array filled with a portion of
+      the given <var>arr</var> array.
+      <p>
+      If the <var>start</var> argument is 0 or more, then it indicates how many
+      elements to skip from the start of <var>arr</var>.
+      If <var>start</var> is negative, then it counts from the end of <var>arr</var>.
+      <p>
+      If <var>end</var> is omitted, then the slice extends to the end of <var>arr</var>.
+      Otherwise, if 0 or positive then it indicates where the slice ends in <var>arr</var>;
+      i.e., it is the index of the first element of <var>arr</var> to omit from the slice.
+      If it is negative, then it counts from the end of <var>arr</var> instead of the beginning.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>(0..10).slice(3,5)</kbd>
+	<samp>[3,4]</samp>
+        The <tt>(0..10)</tt> returns an array of integers from 0 to 10.
+        The <tt>.slice(3,5)</tt> skips the first 3 elements, and returns the text
+        elements up to but not including the 5th element.
+      </div>
+
+      <div class="example">
+	<kbd>(0..10).slice(-1)</kbd>
+	<samp>[10]</samp>
+        This time we start copying from 1 element from the end of <var>arr</var>.
+        There is no <var>end</var> parameter so the slice extends to the end of <var>arr</var>.
+      </div>
+
+    </details>
+
+  </body>
+</body>

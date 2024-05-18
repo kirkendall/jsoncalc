@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>objectAgg</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc objectAgg - Collect key/value pairs into a single new object">
+    <meta name="keywords" content="array, object, aggregate, jsoncalc, function reference, objectAgg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>objectAgg - Collect key/value pairs into a single new object</h1>
+    <dl>
+      <dt>objectAgg(<var>key</var>, <var>value</var>)
+      <dd>
+      This accumulates key/value pairs into a new object, which it then returns.
+      <p>
+      This is an aggregate function, meaning it accumulates data over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>objectAgg(["a","b","c"],null)</kbd>
+	<samp>{"a":null,"b":null,"c":null}</samp>
+        This is about the simplest possible use of <tt>objectAgg()</tt>.
+        While most aggregate functions take a single arguments and can do good things
+        when passed an array, <tt>objectAgg()</tt> uses two arguments and only the
+        first one can be an array to iterate over.
+        <p>
+        Surprisingly, this can be useful though.
+        If you have an array of member names that you want to keep in an object,
+        you could achieve that by using <tt>objectAgg()</tt> to convert the array
+        to an object, and then use the
+        <a target="_PARENT" href="../index.html?op=bitwise">&amp;</a>
+        set intersection operator to select the members.
+        Similarly, <a target="_PARENT" href="../index.html?op=bitwise">^</a> could
+        be used to selectively delete members.
+        <p>
+        But it's a lot more common to use use <tt>objectgAgg()</tt> with the
+        <a target="_PARENT" href="../index.html?op=each">@</a> operator.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run")@objectAgg(name,score)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>Peter</th><th>Paul</th><th>Mary</th></tr>
+	    <tr><td>10</td><td>20</td><td>30</td></tr>
+	    <tr><td>25</td><td>30</td><td>35</td></tr>
+	    <tr><td>30</td><td>25</td><td>40</td></tr>
+          </table>
+        </samp>
+        The test.scores table is an array of objects containing a "run" member
+        (which it happens to be sorted by), and "name" and "score" members.
+        The <a target="_PARENT" href="../index.html?f=groupby">groupBy()</a> function splits the table into
+        groups (segments) that share the same run number.
+        The @ operator invokes the objectAgg() function for each object in each
+        group, and then at the end of the group in retrieves the accumulated value.
+        objectAgg() uses the name and score from each object to add a member to
+        a new object which is accumulated across the group; I.e., it ends up
+        containing one member for each name, with the score as that member's value.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>In the second example, if you wanted to add an extra column to show
+        the run number, you could do it by using the | operator to combine the
+        object returned by <tt>objectAgg</tt> with an object containing only the
+        run number.
+        <div class="example">
+	  <kbd>test.scores.groupBy("run")@{run}|objectAgg(name,score)</kbd>
+	  <samp>
+	    <table>
+	      <tr><th>run</th><th>Peter</th><th>Paul</th><th>Mary</th></tr>
+	      <tr><td>1</td><td>10</td><td>20</td><td>30</td></tr>
+	      <tr><td>2</td><td>25</td><td>30</td><td>35</td></tr>
+	      <tr><td>3</td><td>30</td><td>25</td><td>40</td></tr>
+            </table>
+          </samp>
+	</div>
+        This is even surprisingly efficient.
+        The @ operator only invokes the objectAgg() function for each row from
+        the <tt>test.scores</tt> table, but not the whole right-hand-side operand
+        of the @ operator.  The entire right-hand-side expression is only evaluated
+        at the end of each group.  This means that <tt>{run}|</tt> is only evaluated
+        once per run, not once per score.
+      </ul>
+    </details>
+  </body>
+</body>

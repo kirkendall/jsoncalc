@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>substr</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc substr - Extract part of a string">
+    <meta name="keywords" content="string, jsoncalc, function reference, substr">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>substr - Extract part of a string</h1>
+    <dl>
+      <dt>substr(<var>str</var>, <var>start</var>, <var>length</var>)
+      <br/>substr(<var>str</var>, <var>start</var>)
+      <dd>
+      This returns part of string <var>str</var>.
+      <p>
+      The <var>start</var> argument should be an integer.
+      If it is 0 then the substring will start at the start of <var>str</var>
+      If it is positive, then it indicates how many characters to skip from the
+      start of <var>str</var>; if it is larger than the length of <var>str</var>
+      then an empty string is returned.
+      If <var>start</var> is negative, then it counts from the end of <var>str</var>;
+      if it is larger than the length of <var>str</var> then the substring will start
+      at the start of <var>str</var>.
+      <p>
+      The <var>length</var> is optional.
+      If omitted, the substring will extend to the end of <var>str</var>.
+      If zero or positive, it is the length of the substring; if that would extend
+      past the end of <var>str</var> then it is ignored and the substring extends
+      to the end of <var>str</var> again.
+      Negative lengths are not supported.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>substr("portion", 1, 3)</kbd>
+	<samp>"ort"</samp>
+      </div>
+
+      <div class="example">
+	<kbd>"portion".substr(-2)</kbd>
+	<samp class="result">"on"</samp>
+	This uses JavaScript's "arg.function()" notation.
+	The start position is -2, and no length is specified,
+	so it returns the last 2 characters of "portion".
+      </div>
+
+    </details>
+
+  </body>
+</body>

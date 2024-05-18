@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Colon/AS operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, :, as">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Colon/AS operators</h1>
+    <table class="opList">
+      <tr><td class="left">name</td><td class="op">:</td><td class="right">expr</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
+      <tr><td class="left">expr</td><td class="op">AS</td><td class="right">name</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
+    </table>
+      These are used mostly in object generators, to pair a name and a value.
+      They can also be used in a SELECT statement, which is where "AS" comes from.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>{foo: 2+2}</kbd>
+	<samp>{"foo":4}</samp>
+        Pretty basic.
+      </div>
+
+      <div class="example">
+	<kbd>{2+2 as foo}</kbd>
+	<samp>{"foo":4}</samp>
+        Same thing, using <tt>AS</tt> instead of <tt>:</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>SELECT score AS points, name FROM test.scores</kbd>
+	<samp>
+	  <table>
+	    <tr><th>points</th><th>name</th></tr>
+	    <tr><td>10</td><td>Peter</td></tr>
+	    <tr><td>20</td><td>Paul</td></tr>
+	    <tr><td>30</td><td>Mary</td></tr>
+	    <tr><td>25</td><td>Peter</td></tr>
+	    <tr><td>30</td><td>Paul</td></tr>
+	    <tr><td>35</td><td>Mary</td></tr>
+	    <tr><td>30</td><td>Peter</td></tr>
+	    <tr><td>25</td><td>Paul</td></tr>
+	    <tr><td>40</td><td>Mary</td></tr>
+	  </table>
+	</samp>
+	Here's <tt>AS</tt> in its native habitat.
+	We just used it to rename the "score" column as "points".
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=subscript">[ name : value ]</a> - Subscript by member
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Dot operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, ., ..">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Dot operators</h1>
+    <table class="opList">
+      <tr><td class="left">object</td><td class="op">.</td><td class="right">name</td><td class="opdesc">Access a member of an object by name</td></tr>
+      <tr><td class="left">object</td><td class="op">..</td><td class="right">name</td><td class="opdesc">Access a deeply nested member</td></tr>
+      <tr><td class="left">number</td><td class="op">..</td><td class="right">number</td><td class="opdesc">Return an array of integers</td></tr>
+    </table>
+    The <tt>.</tt> operator lets you access a member of an object by name.
+    <p>
+    The <tt>..</tt> operator does two entirely different things.
+    When used with an object and a name as its arguments, then it does "deep"
+    lookup, meaning if the object doesn't have a member with the given name but
+    does contain members whose values are objects, then it will search for the name
+    in those objects too.
+    <p>
+    But when the arguments are numbers, <tt>..</tt> returns an array of integers
+    between the two numbers.
+    The endpoints are included.
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>test.deep</kbd>
+	<samp>{"deeper":{"deepest":3,"deeply":"madly"},"dept":"transportation"}</samp>
+        <tt>test</tt> refers to the "test.json" table in the sample data.
+        Here we're accessing the <tt>deep</tt> member of the object in that file.
+      </div>
+
+      <div class="example">
+	<kbd>test.deep.deeper.deepest</kbd>
+	<samp>3</samp>
+	<kbd>test..deepest</kbd>
+	<samp>3</samp>
+        First we use a series of <tt>.</tt> operators to navigate down through a
+        series of nested objects.
+        Then we get the same result using the <tt>..</tt> operator once.
+      </div>
+
+      <div class="example">
+	<kbd>1..10</kbd>
+	<samp>[1,2,3,4,5,6,7,8,9,10]</samp>
+	Using <tt>..</tt> with numbers as arguments causes it to generate an array
+	of integers.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>The <var>object</var><tt>..</tt><var>name</var> operator is only smart
+            about descending into nested objects.
+            It is not smart enough to scan arrays for a match.
+	<li>For the <var>number</var><tt>..</tt><var>number</var> operator,
+	    if the left number is larger than the right number,
+	    then an empty array is returned.
+      </ul>
+    </details>
+
+  </body>
+</body>

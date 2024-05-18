@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>unroll</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc unroll - Convert nested tables into a single-layer table">
+    <meta name="keywords" content="array, object, jsoncalc, function reference, unroll">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>unroll - Convert nested tables into a single-layer table</h1>
+    <dl>
+      <dt>unroll(<var>table</var>, <var>nestList</var>)
+      <dd>
+      JSON data often uses nested data structures to more accurately model the
+      real-world phenomena that the data is mean to represent.
+      For example, customer records might contain a table of purchase orders,
+      and each purchase order might contain a table of items purchased.
+      The JSON data might have an array of "customer" objects, with each "customer"
+      containing an array of "order" objects, and each of those containing an array
+      of "item" objects.
+      <p>
+      But if you want to generate a table containing cust#, custname,
+      order#, order date, item part#, and quantity, then the nested structure
+      becomes a problem.  You need a way to combine those fields into a single row.
+      That's what <tt>unroll</tt> does.
+      <p>
+      You pass it an array, and a list of nested array names, and it returns a
+      larger array where layer info is removed, returning a simple
+      <strong>(but large!)</strong> table that you can generate your report from.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>customer.unroll(["order","item"])</kbd>
+        This example would unroll the customer table, down through <tt>order</tt>
+        to <tt>item</tt>.
+        This is likely to be very large &mdash; If there are 1000 customers, each
+        with 100 orders with 10 items each, that'd be a 1,000,000-row table and each
+        row of the table would contain all of the customer members, all of the order
+        members, and all of the item members so it'd be a very wide table too.
+      </div>
+
+      <div class="example">
+	<kbd>test.cust</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>contact</th><th>joined</th></tr>
+	    <tr><td>Peter</td><td>[table]</td><td>2024-01-02</td></tr>
+	    <tr><td>Paul</td><td>[table]</td><td>2023-10-15</td></tr>
+	    <tr><td>Mary</td><td></td><td>2022-08-09</td></tr>
+	    <tr><td>Ziggy</td><td>[table]</td><td>2023-04-17</td></tr>
+          </table>
+	</samp>
+	<kbd>test.cust.unroll("contact")</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>type</th><th>street</th><th>city</th><th>state</th><th>zip</th><th>joined</th><th>address</th><th>number</th><th>appt</th></tr>
+	    <tr><td>Peter</td><td>address</td><td>123 Elm St</td><td>Portand</td><td>OR</td><td>97266</td><td>2024-01-02</td><td></td><td></td><td></td></tr>
+	    <tr><td>Peter</td><td>email</td><td></td><td></td><td></td><td></td><td>2024-01-02</td><td>pboy@test.org</td><td></td><td></td></tr>
+	    <tr><td>Peter</td><td>cell</td><td></td><td></td><td></td><td></td><td>2024-01-02</td><td></td><td>503-555-1212</td><td></td></tr>
+	    <tr><td>Paul</td><td>address</td><td>456 Pine St</td><td>Tigard</td><td>OR</td><td>97223</td><td>2023-10-15</td><td></td><td></td><td></td></tr>
+	    <tr><td>Paul</td><td>email</td><td></td><td></td><td></td><td></td><td>2023-10-15</td><td>notringo@lp.uk</td><td></td><td></td></tr>
+	    <tr><td>Mary</td><td></td><td></td><td></td><td></td><td></td><td>2022-08-09</td><td></td><td></td><td></td></tr>
+	    <tr><td>Ziggy</td><td>address</td><td>101Broadway</td><td>Portand</td><td>OR</td><td>97266</td><td>2023-04-17</td><td></td><td></td><td>204</td></tr>
+	    <tr><td>Ziggy</td><td>cell</td><td></td><td></td><td></td><td></td><td>2023-04-17</td><td></td><td>503-666-4377</td><td></td></tr>
+	  </table>
+	</samp>
+	This example uses a "cust" table from sampledata/test.json.
+	It has a nested "contact" table, which we want to expand.
+	Even a tiny table like this got big in a hurry!
+	Also, note that "Mary" remains in the result table even though she has no "contact" member.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Because the resulting table could potentially be huge, you'd be wise to
+        reduce the argument <var>table</var> it before calling <tt>unroll()</tt>.
+
+      </ul>
+    </details>
+  </body>
+</body>

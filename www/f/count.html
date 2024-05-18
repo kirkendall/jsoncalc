@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>count</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc count - Count items">
+    <meta name="keywords" content="array, aggregate, jsoncalc, function reference, count">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>count - Count items</h1>
+    <dl>
+      <dt>count(<var>arg</var>)
+      <dd>
+      Return a count of instances where <var>arg</var> is not <tt>null</tt>,
+      <tt>false</tt>, <tt>0</tt>, or an empty string or object.
+      You may also use an asterisk in place of <var>arg</var> to count all instances
+      unconditionally.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>count([false, false, true, true, false])</kbd>
+	<samp>2</samp>
+        Here we're applying it to an array.
+        It's returning the number of <tt>true</tt> elements.
+      </div>
+
+      <div class="example">
+	<kbd>emojis.groupBy("group") @ {group, count(*)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>group</th><th>count(*)</th></tr>
+	    <tr><td>face</td><td>4</td></tr>
+	    <tr><td>misc</td><td>2</td></tr>
+	  </table>
+	</samp>
+        Divide the "emojis" table into groups via the "group" member, and return
+        the group and count for each.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>For the sake of being more SQL-like, <tt>count(*)</tt> (with an asterisk
+        where the argument should be) counts all instances.
+        This is effectively the same as <tt>count(true)</tt>.
+
+      </ul>
+    </details>
+  </body>
+</body>

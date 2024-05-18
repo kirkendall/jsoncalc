@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>typeOf</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc typeOf - Return a string describing the argument's data type">
+    <meta name="keywords" content="string, number, array, object, datetime, jsoncalc, function reference, typeOf">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>typeOf - Return a string describing the argument's data type</h1>
+    <dl>
+      <dt>typeOf(<var>arg</var>)
+      <dd>
+      This returns a string describing the data type of its argument.
+      <p>
+      In addition to the six basic data types supported by JSON,
+      (<tt>null</tt>, <tt>boolean</tt>, <tt>string</tt>, <tt>number</tt>, <tt>array</tt>, and <tt>object</tt>)
+      it also attempts to refine some of the types.
+      For example, if a string is formatted like an ISO-8601 date, then it returns
+      "date" instead of "string".
+      The complete list of values that it can return is:
+      <table>
+        <tr>
+          <th>Return Value</th>
+          <th>What arguments cause that value to be returned</th>
+	</tr>
+	<tr>
+	  <td>"boolean"</td>
+	  <td><tt>true</tt> or <tt>false</tt>.</td>
+	</tr>
+	<tr>
+	  <td>"null"</td>
+	  <td><tt>null</tt>.</td>
+	</tr>
+	<tr>
+	  <td>"object*"</td>
+	  <td>An empty object.  The "*" means "empty".</td>
+	</tr>
+	<tr>
+	  <td>"object"</td>
+	  <td>A non-empty object.
+	</tr>
+	<tr>
+	  <td>"number"</td>
+	  <td>Any number.  The <tt>typeOf()</tt> function doesn't distinguish
+	  between integers and floating point.</td>
+	</tr>
+	<tr>
+	  <td>"date"</td>
+	  <td>A string formatted like an ISO-8601 date ("YYYY-MM-DD").</td>
+	</tr>
+	<tr>
+	  <td>"time"</td>
+	  <td>A string formatted like an ISO-8601 time ("hh:mm", possibly with
+	  seconds, fractions of a second, and/or a timezone appended).</td>
+	</tr>
+	<tr>
+	  <td>"datetime"</td>
+	  <td>A string formatted like an ISO-8601 date/time ("YYYY-MM-DDThh:mm",
+	  possibly with seconds, fractions of a second, and/or a timezone appended).</td>
+	</tr>
+	<tr>
+	  <td>"string"</td>
+	  <td>Any string not formatted like an ISO date, time, or datetime.</td>
+	</tr>
+	<tr>
+	  <td>"table"</td>
+	  <td>A non-empty array of objects.
+	</tr>
+	<tr>
+	  <td>"array*"</td>
+	  <td>An empty array.  The "*" means "empty".</td>
+	</tr>
+	<tr>
+	  <td>"array"</td>
+	  <td>Any other array.
+	</tr>
+      </table>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>typeOf([])</kbd>
+	<samp>"array*"</samp>
+        An empty array.  Note the "*" appended to the response.
+      </div>
+
+      <div class="example">
+	<kbd>{x:1,y:2}.typeOf()</kbd>
+	<samp>"object"</samp>
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Internally, <tt>typeOf</tt> is used by
+        <a target="_PARENT" href="../index.html?f=explain">explain()</a> to collect column details,
+        which is then used by the "grid" table output method.
+        Most of the quirks of <tt>typeOf()</tt> are there to help tables print nicely.
+
+	<li>JavaScript's <tt>typeof()</tt> returns "object" for arrays.
+	<strong>JsonCalc</strong> politely disagrees with JavaScript on this point.
+
+      </ul>
+    </details>
+  </body>
+</body>

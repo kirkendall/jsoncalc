@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>repeat</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc repeat - Concatenate multiple copies of the same string">
+    <meta name="keywords" content="string, jsoncalc, function reference, repeat">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>repeat - Concatenate multiple copies of the same string</h1>
+    <dl>
+      <dt>repeat(<var>str</var>, <var>count</var>)
+      <dd>
+      The <tt>repeat()</tt> function returns a single string,
+      formed by joining <var>count</var> copies of <var>str</var>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>repeat("Bah", 3)</kbd>
+	<samp>"BahBahBah"</samp>
+	This example just repeats "Bah" 3 times.  Simple.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores@{run,name,histogram:repeat("%",score)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>run</th><th>name</th><th>histogram</th></tr>
+	    <tr><td>1</td><td>Peter</td><td>%%%%%%%%%%</td></tr>
+	    <tr><td>1</td><td>Paul</td><td>%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>1</td><td>Mary</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>2</td><td>Peter</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>2</td><td>Paul</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>2</td><td>Mary</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>3</td><td>Peter</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>3</td><td>Paul</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>3</td><td>Mary</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	  </table>
+
+	</samp>
+        This displays the <tt>test.scores</tt> table, except that the score is
+        shown as sort of a cheap histogram.
+      </div>
+
+    </details>
+
+  </body>
+</body>

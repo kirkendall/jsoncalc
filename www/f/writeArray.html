@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>writeArray</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc writeArray - Write data out to a file as a JSON array">
+    <meta name="keywords" content="array, aggregate, jsoncalc, function reference, writeArray">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>writeArray - Write data out to a file as a JSON array</h1>
+    <dl>
+      <dt>writeArray(<var>data</var>)
+      <br/>writeArray(<var>data</var>, <var>filename</var>)
+      <dd>
+      This writes <var>data</var> out to <var>filename</var>, or to stdout if you
+      don't pass a filename.
+      It always returns <tt>null</tt>.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run") @ writeArray(this, "run" + run + ".json")</kbd>
+	<samp>[]</samp>
+	This uses the <tt>test.scores</tt> table from the sample data,
+	splits it into groups via the value in the "run" column,
+	and then writes each run out to a separate file.
+	Each group's <tt>writeArray()</tt> call returns <tt>null</tt>,
+	so nothing gets added to the result of the @ operator.
+	<p>
+	One important note here is that if there were any rows that weren't in a
+	group (e.g., if <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+	had been called with a second argument to add an overall totals line),
+	that would cause trouble.
+	It would cause <strong>jsoncalc</strong> to create a fourth aggregating
+	sequence for <strong>all</strong> of the table, and hence create a file...
+	But that file would have seen <tt>1</tt> in the
+	"run" column for the first item, so the file name would have been "run1.json",
+	just like the file intended for run 1.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>To be honest, this function exists mostly to show that aggregate functions
+	    can be written that are useful for more than just their return value.
+            The file is created when the aggregate function starts accumulating data,
+            and then each <var>data</var> gets written out as data is accumulated.
+            This means it can write an essentially unlimited file size.
+
+      </ul>
+    </details>
+  </body>
+</body>

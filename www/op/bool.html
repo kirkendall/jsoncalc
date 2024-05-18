@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Boolean operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, !, &&, ||, NOT, AND, OR">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Boolean operators</h1>
+    <table class="opList">
+      <tr><td class="left"></td><td class="op">!<br/>NOT</td><td class="right">bool</td><td class="opdesc">Logical "not"</td></tr>
+      <tr><td class="left">bool</td><td class="op">&&<br/>AND</td><td class="right">bool</td><td class="opdesc">Logical AND</td></tr>
+      <tr><td class="left">bool</td><td class="op">||<br/>OR</td><td class="right">bool</td><td class="opdesc">Logical OR</td></tr>
+    </table>
+      These are the logical Boolean operators.
+      The punctuation names are borrowed from JavaScript,
+      and the spelled-out words are from SQL.
+      You can use them interchangeably.
+      <p>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>! false</kbd>
+	<samp>true</samp>
+	<kbd>true &amp;&amp; false</kbd>
+	<samp>false</samp>
+	<kbd>true || false</kbd>
+	<samp>true</samp>
+        The basics.
+      </div>
+
+      <div>
+        <kbd>SELECT * FROM test.scores WHERE name="Peter" AND run=3</kbd>
+        <samp>
+	  <table>
+	    <tr><th>name</th><th>run</th><th>score</th></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	  </table>
+        </samp>
+        You can use the <tt>AND</tt> and <tt>OR</tt> anywhere,
+        but this is where they come from.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>&amp;&amp;</tt>/<tt>AND</tt> and <tt>||</tt>/<tt>OR</tt> operators
+	    are "short circuit", meaning they skip evaluation of the right operand if
+	    the left is sufficient to determine the result.
+	    If the right expression could cause errors or side-effects,
+	    "short circuit" evaluation can avoid that.
+	    It's pretty rare that you need that though;
+	    mostly its just a minor optimization &mdash;
+	    maybe try to put your more complex conditions on the right.
+
+	<li>The <tt>AND</tt> keyword is also used as part of the
+	    <a target="_PARENT" href="../index.html?op=between">BETWEEN</a> operator.
+	    If there's any risk of confusion, use parentheses.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=bitwise">~, &amp;, |, ^</a> - Bitwise operators<br/>
+      <a target="_PARENT" href="../index.html?op=between">BETWEEN...AND</a>.
+    </details>
+
+  </body>
+</body>

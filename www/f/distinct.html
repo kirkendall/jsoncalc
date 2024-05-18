@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>distinct</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc distinct - Remove duplicates from an array">
+    <meta name="keywords" content="array, jsoncalc, function reference, distinct">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>distinct - Remove duplicates from an array</h1>
+    <dl>
+      <dt>distinct(<var>arr</var>)
+      <br/>distinct(<var>arr</var>, <var>strict</var>)
+      <br/>distinct(<var>arr</var>, <var>columns</var>)
+      <dd>
+      Return a copy of array <var>arr</var> with duplicates removed.
+      <p>
+      Normally it only compares adjacent elements when looking for duplicates.
+      If the optional <var>strict</var> argument is <tt>true</tt> then it looks
+      for duplicates anywhere in the array.
+      <p>
+      Two elements are normally considered to be duplicates if the === operator says
+      they're equal.
+      When dealing with objects, === compares all members, and it compares strings
+      case-sensitively. 
+      You can change that behavior by passing <var>columns</var> &mdash;
+      a member name as a string, or a list of member names as an array of strings.
+      If the values of the corresponding members are strings, then those strings will
+      be compared case-insensitively.
+      Members not listed in <var>columns</var> will not be tested.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>[1,2,3,3,1,2,4].distinct()</kbd>
+	<samp>[1,2,3,1,2,4]</samp>
+        The second 3 was deleted as a duplicate because it came immediately after
+        the first 3.
+        The second 1 and second 2 were not detected.
+      </div>
+
+      <div class="example">
+	<kbd>[1,2,3,3,1,2,4].distinct(true)</kbd>
+	<samp>[1,2,3,4]</samp>
+        All duplicates were detected, since the <var>strict</var> argument is <tt>true</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>In a SQL-like "SELECT" statement, the "DISTINCT" keyword is transformed
+        into a call of this function.
+
+        <li>This is not an aggregate function.
+
+      </ul>
+    </details>
+  </body>
+</body>

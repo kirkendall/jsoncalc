@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fromCharCode</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc fromCharCode - Convert character codepoints (numbers) to a string">
+    <meta name="keywords" content="string, number, array, jsoncalc, function reference, fromCharCode">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>fromCharCode - Convert character codepoints (numbers) to a string</h1>
+    <dl>
+      <dt>fromCharCode(<var>arg</var>...)
+      <dd>
+      Convert character codepoint numbers to a string.
+      <p>
+      This accepts a variable number of arguments.
+      All are converted and integrated into the returned string.
+      They may be:
+      <ul>
+        <li>Numbers.  Each number is converted to a single character.
+        <li>Strings.  Strings are just concatenated into the result string.
+        <li>Arrays.  Each element may be a number or string, processed as above.
+      </ul>
+      <p>
+      (JavaScript supports a variable number of numeric arguments, but not strings
+      or arrays.)
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>fromCharCode(89, 101, 115)</kbd>
+	<samp>"Yes"</samp>
+	Those are the ASCII/Unicode codepoints for the letters "Y", "e", and "s".
+      </div>
+
+      <div class="example">
+	<kbd>fromCharCode([89, 101, 115])</kbd>
+	<samp>"Yes"</samp>
+	Same thing, but passed as a single array.
+      </div>
+
+      <div class="example">
+	<kbd>fromCharCode([89, 101, 115], "terday")</kbd>
+	<samp>"Yesterday"</samp>
+        Mixing arrays, numbers, and strings.
+      </div>
+
+      <div class="example">
+	<kbd>"SPARKLE!".charCodeAt(1..4).fromCharCode()</kbd>
+	<samp>"PARK"</samp>
+	Here, <tt>charCodeAt()</tt> generates an array of character codepoints
+	from the middle of a string, and <tt>fromCharCode()</tt> reassembles them
+	to recreate the substring.
+      </div>
+
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>toMixedCase</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc toMixedCase - Capitalize words in a string">
+    <meta name="keywords" content="string, jsoncalc, function reference, toMixedCase">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>toMixedCase - Capitalize words in a string</h1>
+    <dl>
+      <dt>toMixedCase(<var>str</var>)
+      <br/>toMixedCase(<var>str</var>, <var>exceptions</var>)
+      <dd>
+      This returns a copy of string <var>str</var> in which the first letter
+      of each word is uppercase, and the remaining letters are lowercase.
+      <p>
+      You can also optionally pass an array of exceptions.
+      Each element of the array can be one of two things:
+      <ul>
+        <li>A string containing a single word, capitalized the preferred way.
+	<li>The symbol <tt>true</tt> to indicate that the first word is
+	    never an exception; this is handy for titles.
+      </ul>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>toMixedCase("bob DYLAN")</kbd>
+	<samp>"Bob Dylan"</samp>
+	This doesn't care whether the input is uppercase, lowercase, or a mixture.
+      </div>
+
+      <div class="example">
+	<kbd>"PAUL MCCARTNEY".toMixedCase()</kbd>
+	<samp>"Paul Mccartney"</samp>
+        <tt>toMixedCase()</tt> isn't great for "Mc" names.
+      </div>
+
+      <div class="example">
+	<kbd>"THE END OF THE WORLD".toMixedCase([true,"the","of"])</kbd>
+	<samp>"The End of the World"</samp>
+	Here's an example that uses an exception list.
+	It forces "the" and "of" to be lowercase, except (because of the <tt>true</tt>)
+	when they're the first word of <var>str</var>.
+      </div>
+
+    </details>
+
+  </body>
+</body>

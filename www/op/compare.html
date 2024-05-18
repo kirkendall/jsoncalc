@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Comparison operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, &lt;, &gt;, &lt;=, &gt;=">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Comparison operators</h1>
+    <table class="opList">
+      <tr><th>Left<br/>Operand</th><th>Operator</th><th>Right<br/>Operand</th><th>Description</th></tr>
+      <tr><td class="left">number<br/>string</td><td class="op">&gt;=<br/>&gt;<br/>&lt;<br/>&lt;=</td><td class="right">number</br>string</td><td class="opdesc">Comparison. Strings are case-sensitive.</td></tr>
+    </table>
+    These are comparison operators.
+    They work on numbers or strings.
+    <p>
+    For strings, the comparison is case-insensitive.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>1 &lt; 2</kbd>
+	<samp>true</samp>
+        Yes, 1 really is less than 2.
+      </div>
+
+      <div class="example">
+	<kbd>"Steven" &gt;= "stephen"</kbd>
+	<samp>false</samp>
+	<kbd>"Steven".toUpperCase() &gt;= "stephen".toUpperCase()</kbd>
+	<samp>true</samp>
+	The codepoint for uppercase "S" is less than the codepoint for lowercase "s",
+	so "Steven" comes before "stephen".
+	However, by converting both strings to be entirely uppercase,
+	the case difference goes away and "V" comes after "P".
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=equal">==. !=, =, &lt;&gt;, ===, !==</a> - Equality 0perators
+    </details>
+
+  </body>
+</body>

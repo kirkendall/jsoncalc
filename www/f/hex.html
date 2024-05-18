@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>hex</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc hex - Convert an integer or string to hexadecimal">
+    <meta name="keywords" content="string, number, jsoncalc, function reference, hex">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>hex - Convert an integer or string to hexadecimal</h1>
+    <dl>
+      <dt>hex(<var>int</var>)
+      <bt/>hex(<var>int</var>, <var>length</var>)
+      <bt/>hex(<var>str</var>)
+      <dd>
+      <tt>hex()</tt> returns a string of hexadecimal digits for an integer
+      or the bytes of a string.
+      <p>
+      When passed an integer <var>int</var> without a <var>length</var>, it returns the
+      hexadecimal number with a "0x" prefix, using the fewest possible hex digits.
+      <p>
+      When passed an integer <var>int</var> and <var>length</var>, it returns the
+      hexadecimal number without a "0x" prefix, using the given number of hex digits.
+      <p>
+      When passed a string <var>str</var>, it converts each byte of the string to
+      a pair of hex digits.
+      Since <strong>jsoncalc</strong> uses UTF-8 internally, some characters may
+      require more than one byte.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>hex(42)</kbd>
+	<samp>"0x2a"</samp>
+      </div>
+
+      <div class="example">
+	<kbd>hex(42, 4)</kbd>
+	<samp>"002a"</samp>
+      </div>
+
+      <div class="example">
+	<kbd>hex(".MP4")</kbd>
+	<samp>"2e4d5034"</samp>
+      </div>
+
+      <div class="example">
+	<kbd>hex("\U0001f4a3")</kbd>
+	<samp>"f09f92a3"</samp>
+	This is UTF-8 for you.
+	\U0001f4a3 is a Unicode codepoint for the "bomb" emoji
+	&mdash; a raw 32-bit character code.
+	Encoding this particular character in UTF-8 requires 4 bytes,
+	so that's what we're seeing here.
+      </div>
+
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>arrayAgg</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc arrayAgg - Build an array one element at a time">
+    <meta name="keywords" content="array, aggregate, jsoncalc, function reference, arrayAgg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>arrayAgg - Build an array one element at a time</h1>
+    <dl>
+      <dt>arrayAgg(<var>arg</var>)
+      <dd>
+      This accumulates <var>arg</var> values in an array, and returns the array.
+      If <var>arg</var> arg is <tt>null</tt> it will be skipped.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>arrayAgg(1..5)</kbd>
+	<samp>[1,2,3,4,5]</samp>
+	The <tt>1..5</tt> expression returns an array of integers from 1 to 5.
+	When you pass an array to <tt>arrayAgg()</tt>, it adds each element to a new
+	array so you get a copy of the argument array back.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Honestly, its hard to think of things that <tt>arrayAgg()</tt> can do
+            that the @ operator couldn't do better.
+            I implemented this mostly because MySQL has a similar function.
+
+      </ul>
+    </details>
+  </body>
+</body>

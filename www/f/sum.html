@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>sum</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc sum - Return the sum of a series of numbers">
+    <meta name="keywords" content="number, array, aggregate, jsoncalc, function reference, sum">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>sum - Return the sum of a series of numbers</h1>
+    <dl>
+      <dt>sum(<var>num</var>)
+      <dd>
+      This adds up all of the <var>num</var> argument values, and returns it.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>sum([])</kbd>
+	<samp>0</samp>
+        An empty list adds up to 0.
+      </div>
+
+      <div class="example">
+	<kbd>sum(1..10)</kbd>
+	<samp>55</samp>
+        This adds up all of the integers from 1 to 10.
+        The "<tt>1..10</tt>" notation returns an array of integers connecting the
+        two endpoints, so we're applying <tt>sum()</tt> to an array again.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run","overall") @ {run, sum(score)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>run</th><th>sum(score)</th></tr>
+	    <tr><td>1</td><td>60</td></tr>
+	    <tr><td>2</td><td>90</td></tr>
+	    <tr><td>3</td><td>95</td></tr>
+	    <tr><td>overall</td><td>245</td></tr>
+	  </table>
+	</samp>
+	This uses the <tt>test.scores</tt> table from the sample data,
+	divides it into groups by the "run" column,
+	and generates a row for each group with the run number and total scores
+	for that run.
+	The <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+	function also added an extra row where the overall total could be
+	computed.
+      </div>
+
+    </details>
+
+  </body>
+</body>

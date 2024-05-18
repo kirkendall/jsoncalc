@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Bitwise/Set operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, &, |, ^">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Bitwise/Set operators</h1>
+    <table class="opList">
+      <tr><td class="left"></td><td class="op">~</td><td class="right">number</td><td class="opdesc">Bitwise "not"</td></tr>
+      <tr><td class="left">number<br/>object</td><td class="op">&</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise AND or object member intersection</td></tr>
+      <tr><td class="left">number<br/>object</td><td class="op">^</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise XOR or object member subtraction</td></tr>
+      <tr><td class="left">number<br/>object</td><td class="op">|</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise OR or object member union</td></tr>
+    </table>
+    For integer operands, these perform bitwise logic operations.
+    That's pretty standard, so I won't go into it much.
+    <p>
+    You can also use these operators on objects.
+    They treat the objects' member keys like sets.
+    Specifically...
+    <dl>
+      <dt><var>object</var> &amp; <var>object</var>
+      <dd>The resulting object will contain members whose keys appear in both
+	  the left and right operands.
+	  The values of the left object's members are used in the new object;
+	  the values of the right object's members are irrelevant.
+
+      <dt><var>object</var> | <var>object</var>
+      <dd>The resulting object will contain members whose keys appear in either
+	  the left or right operands.
+	  If a key appears in both operands, then the value of the right operand
+	  is used in the resulting object.
+
+      <dt><var>object</var> ^ <var>object</var>
+      <dd>The resulting object will contain the keys and values from the left
+	  operand, except that if the right operand has a key with the same name
+	  then it is omitted from the result object.
+	  This is effectively subtraction.
+    </dl>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>~0</kbd>
+	<samp>-1</samp>
+        On most computers, the all-1's bit pattern corresponds to -1.
+        (In case the typography isn't clear, that's "tilde zero" and "minus one".)
+      </div>
+
+      <div class="example">
+	<kbd>37 &amp; 1</kbd>
+	<samp>1</samp>
+        The 1's bit of 37 is set.
+      </div>
+
+      <div class="example">
+	<kbd>33 | 65</kbd>
+	<samp>97</samp>
+	33 has 1's and 32's bits set, 65 has 1's and 64's bits set, so their
+	bitwise-OR has 1's, 32's, and 64's set.
+      </div>
+
+      <div class="example">
+	<kbd>{a:"left",b:"left"} &amp; {a:"right",c:"right"}</kbd>
+	<samp>{"a":"left"}</samp>
+	Intersection.
+	The result can only contain members whose keys (names) appear in both
+	operands; in this case, that's just the "a" member.
+	The value of the left operand's "a" is kept in the result.
+      </div>
+
+      <div class="example">
+	<kbd>{a:"left",b:"left"} | {a:"right",c:"right"}</kbd>
+	<samp>{"a":"right","b":"left","c":"right"}</samp>
+	Union.
+	The result object contains members that appear in either operand.
+	If it appears in both, then the value from the right operand is used in the
+	result.
+	That means "a" and "c" have the values from the right operand, but the
+	"b" is also in the result using the value from the left operand.
+      </div>
+
+      <div class="example">
+	<kbd>{a:"left",b:"left"} ^ {a:"right",c:"right"}</kbd>
+	<samp>{"b":"left"}</samp>
+	Subtraction.
+	Since the right operand contains "a", that is deleted from the left operand
+	to produce the result.
+	The "c" member of the right operand has no effect since the left operand
+	already has no "c".
+	The values of the right operand's members are irrelevant.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores @ this | {histogram: "%".repeat(score)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>run</th><th>score</th><th>histogram</th></tr>
+	    <tr><td>Peter</td><td>1</td><td>10</td><td>%%%%%%%%%%</td></tr>
+	    <tr><td>Paul</td><td>1</td><td>20</td><td>%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Mary</td><td>1</td><td>30</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Peter</td><td>2</td><td>25</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Paul</td><td>2</td><td>30</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Mary</td><td>2</td><td>35</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Paul</td><td>3</td><td>25</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	    <tr><td>Mary</td><td>3</td><td>40</td><td>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</td></tr>
+	  </table>
+	</samp>
+	The <tt>|</tt> operator is particularly handy for adding columns to tables.
+	Here we're looping over the <tt>test.scores</tt> table from the sample data.
+	The subexpression on the right of the <a target="_PARENT" href="../index.html?op=each">@</a>
+	gets evaluated for each row, with <tt>this</tt> set to the row's object.
+	We're adding a "histogram" column, formed by repeating "%" to reflect
+	<tt>this.score</tt>.
+	<p>
+	The fact that the "grid" display format for tables happens to use the "|"
+	character as a column delimiter is just a happy coincidence.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The ~ (tilde, "bitwise not") operator doesn't work with objects.
+
+      </ul>
+    </details>
+
+  </body>
+</body>

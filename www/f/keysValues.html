@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>keysValues</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc keysValues - Convert an object or table into an array of key/value pairs">
+    <meta name="keywords" content="array, object, jsoncalc, function reference, keysValues">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>keysValues - Convert an object or table into an array of key/value pairs</h1>
+    <dl>
+      <dt>keysValues(<var>obj</var>)
+      <br/>keysValues(<var>table</var>)
+      <dd>
+      When applied to an object <var>obj</var>, this spreads the object's contents
+      to an array of objects with members named "key" and "value".
+      <dd>
+      When applied to a table (array of objects), it converts each one separately,
+      resulting in an array of arrays of <tt>{key,value}</tt> objects.
+      This two-layer structure is similar to how the
+      <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function represents groups, and the
+      @ operator knows how to deal with groups.
+      Combine that with the <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> aggregate function
+      and you have a versatile way to bulk-adjust tables.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>keysValues({foo:2,bar:true})</kbd>
+	<samp>
+	  <table>
+	    <tr><th>key</th><th>value</th></tr>
+	    <tr><td>foo</td><td>2</td></tr>
+	    <tr><td>bar</td><td>true</td></tr>
+	  </table>
+	</samp>
+	This returns <tt>[{key:"foo",value:2},{key:"bar",value:true}]</tt> but since
+	that's an array of objects, <strong>jsoncalc</strong> displays it as a grid.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.keysValues() @ objectAgg(key.toMixedCase(), value)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>Name</th><th>Run</th><th>Score</th></tr>
+	    <tr><td>Peter</td><td>1</td><td>10</td></tr>
+	    <tr><td>Paul</td><td>1</td><td>20</td></tr>
+	    <tr><td>Mary</td><td>1</td><td>30</td></tr>
+	    <tr><td>Peter</td><td>2</td><td>25</td></tr>
+	    <tr><td>Paul</td><td>2</td><td>30</td></tr>
+	    <tr><td>Mary</td><td>2</td><td>35</td></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	    <tr><td>Paul</td><td>3</td><td>25</td></tr>
+	    <tr><td>Mary</td><td>3</td><td>40</td></tr>
+	  </table>
+	</samp>
+	The names of the <tt>test.scores</tt> columns are lowercase, but here we
+	convert them to mixed case (capitalizing the first letter).
+	You can see the effect of this in the column headings.
+	The <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a>
+	function reassembles the key/value pairs back into objects.
+      </div>
+
+    </details>
+
+  </body>
+</body>

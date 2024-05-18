@@ -1,0 +1,99 @@
+If I wanted to store the function documentation as JSON, what would that
+look like?
+
+Maybe a big object, where the function name is the member key (name) and
+the value stores info about the function.  The value would be an object
+with the following members:
+
+summary
+	A one-line description
+
+sections
+	An array of strings from the list ["string","number","array","object",
+	"datetime","aggregate"].  Maybe "boolean" if I ever have a boolean
+	function.
+
+parameters
+	An array of arrays of strings.  Each subarray lists a calling variation.
+	For example, the item for join() would have [["arr"],["arr","delim"]]
+
+description
+	An array of text (strings), bullet lists (arrays) and examples
+	(objects with "code", "output", and maybe "text" members).
+
+	When converting to HTML, we'd need to look within the text for
+	things that might be links or highlighted words, so we can add the
+	appropriate HTML cruft.  This would be done for all for strings
+	in the "description" array including bullet list arrays, and for
+	"text" members of examples.  The things to highlight would be:
+
+	  * Library data types, starting with "json" and ending with
+	    "_t".  This would be converted to a link to the datatype
+	    reference.
+
+	  * Library functions, starting with "json_" and followed by
+	    "()".  This would be converted to a link to the library
+	    function reference.
+
+	  * Calc functions, followed by "()" but *NOT* starting with
+	    "json_".  This would be converted to a link to the calc
+	    function reference.
+
+	  * The function that the page is about, ending with "()" and
+	    having the same name as this function entry.  It would be
+	    wrapped in <tt> tags.  I.e., reference pages shouldn't link
+	    to themselves.
+
+	  * Parameter names should be wrapped in <var> tags.
+
+	  * A few other words whould be highlighted, mostly "-ljson"
+	    and "jsoncalc".
+
+examples (optional)
+	An array of example objects, similar to what the description can use.
+
+notes (optional)
+	An array of strings providing bullet points about the function's
+	quirks or useful tricks, or objects containing examples.
+	These strings and objects are subject to the same automatic
+	highlighting/linking as other text.  Objects should be considered
+	to be part of the note that precedes them.
+
+-------------------------------------------------------------------------------
+The above sounds fairly clean to me.
+
+Here's the complete entry for join():
+
+{
+  "name":"join",
+  "summary":"Combine an array of strings into a single string",
+  "sections":["array"],
+  "parameters":[["arr"],["arr","delim"]],
+  "description":[
+    "The join() function concatenates an array of strings together to form a single long string.",
+    "The delim argument is optional.  If you omit it, \",\" is used as the default."
+  ],
+  "examples":[
+    {
+      "code":"join([\"life\", \"the universe\", \"and everything\"])",
+      "output":"\"life,the universe,and everything\"",
+      "text":"This example uses the default delimiter, which is just a comma with no spaces."
+    }
+  ]
+}
+
+-------------------------------------------------------------------------------------
+The advantages of putting the documentation in a JSON file are:
+ * It could become the basis of the help system.
+ * It's easier to refactor the website layout.
+ * It's more compact than HTML pages, so easier to edit.
+
+The disadvantages are:
+ * Mangling the text to add links and highlights could be non-trivial.
+ * I hate XML because its a text markup language masquerading as a data
+   language.  So now I'm contemplating using a real data language as a
+   text markup language?
+
+It'd be interesting to see if I could come up with a jsoncalc script that
+converts its own documentation to HTML.  There's *a lot* of work I'd need
+to do before I could even consider that.

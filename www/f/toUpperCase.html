@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>toUpperCase</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc toUpperCase - Convert a string to uppercase">
+    <meta name="keywords" content="string, jsoncalc, function reference, toUpperCase">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>toUpperCase - Convert a string to uppercase</h1>
+    <dl>
+      <dt>toUpperCase(<var>str</var>)
+      <dd>
+      This returns an all-uppercase version of string <var>str</var>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>toUpperCase("top10")</kbd>
+	<samp>"TOP10"</samp>
+        Notice that non-alphanumeric characters are unchanged.
+      </div>
+
+      <div class="example">
+	<kbd>"Top10".toUpperCase()</kbd>
+	<samp>"TOP10"</samp>
+        The usual JavaScript notation works too.
+      </div>
+
+    </details>
+
+  </body>
+</body>

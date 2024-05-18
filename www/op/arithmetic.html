@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Arithmetic operators">
+    <meta name="keywords" content="string, number, jsoncalc, operator reference, *, /, %, +, -">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Arithmetic operators</h1>
+    <table class="opList">
+      <tr><td class="left"></td><td class="op">-</td><td class="right">number</td><td class="opdesc">Negation (subtract <var>number</var> from 0)</td></tr>
+      <tr><td class="left">number</td><td class="op">/</td><td class="right">number</td><td class="opdesc">Divide <var>number</var>s</td></tr>
+      <tr><td class="left">number</td><td class="op">%</td><td class="right">number</td><td class="opdesc">Remainder from integer division (modulo)</td></tr>
+      <tr><td class="left">number</td><td class="op">*</td><td class="right">number</td><td class="opdesc">Multiply <var>number</var>s</td></tr>
+      <tr><td colspan="4" class="divider"></td></tr>
+      <tr><td class="left">number<br/>string</td><td class="op">+</td><td class="right">number<br/>string</td><td class="opdesc">Add <var>number</var>s or concatenate <var>string</var>s</td></tr>
+      <tr><td class="left">number</td><td class="op">-</td><td class="right">number</td><td class="opdesc">Subtract <var>number</var>s</td></tr>
+    </table>
+      These are the usual arithmetic operators, with the usual precedences.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>2 + 2</kbd>
+	<samp>4</samp>
+	<kbd>1 + 2 * 3</kbd>
+	<samp>7</samp>
+	<kbd>22 / 7</kbd>
+	<samp>3.14286</samp>
+	<kbd>(9 * 60 + 30) * 60 + 18</kbd>
+	<samp>34218</samp>
+        Yes, <strong>jsoncalc</strong> is a decent calculator.
+      </div>
+
+      <div class="example">
+	<kbd>"Json" + "Calc"</kbd>
+	<samp>"JsonCalc"</samp>
+        As in JavaScript,
+        the <tt>+</tt> operator does double-duty as a string concatenation operator.
+      </div>
+
+      <div class="example">
+	<kbd>"layer"+2+1</kbd>
+	<samp>"layer21"</samp>
+	<kbd>"layer"+(2+1)</kbd>
+	<samp>"layer3"</samp>
+	Mixing strings with numbers is allowed; the numbers are converted to strings.
+	The mixture is no longer associative though; you might need to add parentheses.
+      </div>
+
+
+    </details>
+
+  </body>
+</body>

@@ -4,6 +4,10 @@ testcalc
 core
 tags
 .jsoncalc_history
+try
+NOTES
+www/notes
+www/table.elv
 
 # Prerequisites
 *.d

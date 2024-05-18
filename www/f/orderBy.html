@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>orderBy</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc orderBy - Sort a table">
+    <meta name="keywords" content="array, jsoncalc, function reference, orderBy">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>orderBy - Sort a table</h1>
+    <dl>
+      <dt>orderBy(<var>table</var>, <var>columns</var>)
+      <dd>
+      This sorts a table accoring via a given list of column names.
+      <p>
+      The <var>table</var> is simply an array of objects.
+      Each object is a row, and the members of each rows' object serve as columns.
+      <p>
+      The <var>columns</var> list is an array of strings, corresponding to the object
+      member keys (column names).
+      You may also precede any field name by a <tt>true</tt> flag to indicate that
+      that field should be sorted in descending order, instead of the usual ascending
+      order.
+      <p>
+      For the sake of convenience, if you just want to sort by a single column in
+      ascending sequence, you can just pass its name as a string, instead of an
+      array of strings.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>orderBy(emojis, "codepoint")</kbd>
+	<samp>
+	  <table>
+	    <tr><th>emoji</th><th>codepoint</th><th>name</th><th>group</th></tr>
+	    <tr><td>&#x1f4a3;</td><td>U+1f4a3</td><td>bomb</td><td>misc </td></tr>
+	    <tr><td>&#x1f4a9;</td><td>U+1f4a9</td><td>pile of poo</td><td>misc </td></tr>
+	    <tr><td>&#x1f600;</td><td>U+1f600</td><td>grinning face</td><td>face </td></tr>
+	    <tr><td>&#x1f615;</td><td>U+1f615</td><td>confused face</td><td>face </td></tr>
+	    <tr><td>&#x1f923;</td><td>U+1f923</td><td>rolling on the floor laughing</td><td>face </td></tr>
+	    <tr><td>&#x1f973;</td><td>U+1f973</td><td>partying face</td><td>face </td></tr>
+	  </table>
+	</samp>
+	The output is the "emojis" table, sorted by ascending codepoint.
+	Since we're only sorting by a single column, we can pass "codepoint" as a
+	simple string instead of an array of strings.
+      </div>
+
+      <div class="example">
+	<kbd>emojis.orderBy([true, "group", "name"])</kbd>
+	<samp>
+	  <table>
+	    <tr><th>emoji</th><th>codepoint</th><th>name</th><th>group</th></tr>
+	   <tr><td>&#x1f4a3;</td><td>U+1f4a3</td><td>bomb</td><td>misc</td></tr>
+	   <tr><td>&#x1f4a9;</td><td>U+1f4a9</td><td>pile of poo</td><td>misc</td></tr>
+	   <tr><td>&#x1f615;</td><td>U+1f615</td><td>confused face</td><td>face</td></tr>
+	   <tr><td>&#x1f600;</td><td>U+1f600</td><td>grinning face</td><td>face</td></tr>
+	   <tr><td>&#x1f973;</td><td>U+1f973</td><td>partying face</td><td>face</td></tr>
+	   <tr><td>&#x1f923;</td><td>U+1f923</td><td>rolling on the floor laughing</td><td>face</td></tr>
+	  </table>
+	</samp>
+	This time we're sorting by descending "group", and ascending "name".
+	Also, just for the sake of variety, this time we used JavaScript's object
+	method notation for the function call.
+      </div>
+
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This only works on arrays of objects (i.e., tables) because it uses
+	names of object members to guide the sort comparisons.
+
+      </ul>
+    </details>
+  </body>
+</body>

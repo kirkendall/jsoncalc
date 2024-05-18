@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>nameBits</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc nameBits - Decode a bitmap">
+    <meta name="keywords" content="number, object, jsoncalc, function reference, nameBits">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>nameBits - Decode a bitmap</h1>
+    <dl>
+      <dt>nameBits(<var>int</var>, <var>names</var>, <var>delim</var>)
+      <br/>nameBits(<var>int</var>, <var>names</var>)
+      <dd>
+      Returns the names of "1" bits in <var>int</var>.
+      <p>
+      The <var>delim</var> parameter is optional.
+      If you supply a <var>delim</var> string, then the function returns a string
+      with <var>delim</var> inserted between the names of the set bits.
+      Without a <var>delim</var>, the function returns an object in which the member
+      names reflect the set bits, and the values of those members are the bits
+      themselves.
+      <p>
+      The <var>names</var> is an array of strings giving the bit names.
+      <var>names</var>[0] is the name of the 2^0 bit,
+      <var>names</var>[1] is the name of the 2^1 but, and so on.
+      <p>
+      You can also get fancy.
+      If an element of <var>names</var> is itself an array, then that subarray
+      is used as an enumeration of a group of bits.
+      The length of the subarray is rounded up to the next power of 2, and that
+      determines how many bits the subarray will use to select a name.
+      The first name in a subarray corresponds to the first <strong>non-zero</strong>
+      value in that field.
+      If you want to assign a name to the all-zeroes bit pattern, then the subarray's
+      length must be exactly a power of 2 and the last element will then be used for
+      the all-zeroes bit pattern.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>nameBits(6, ["one","two","four"], "+")</kbd>
+	<samp>"two+four"</samp>
+	The value 6 has the second and third bits set, so the names "two" and "four"
+	are used.
+	We also pass "+" as the delimiter, so that's inserted between the names.
+      </div>
+
+      <div class="example">
+	<kbd>nameBits(6, ["one","two","four"])</kbd>
+	<samp>{"two":2,"four":4}</samp>
+	  <td>
+	    This is the same as the first example, except we don't pass a delimiter
+	    so the returned value is an object.
+	  </td>
+      </div>
+
+      <div class="example">
+	<kbd>nameBits(13, ["bold","italic",["sub","super","base"]])</kbd>
+	<samp>{"bold":1,"base":12}</samp>
+	This example uses a subarray of names.
+	Since there are 3 names in the subarray,
+	it will use 2 bits from <var>int</var>.
+      </div>
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>If you want the names as an array, the simplest way to do get it is
+        to apply the <a target="_PARENT" href="../index.html?f=keys">keys()</a> function to the object.
+        <div class="example">
+	  <kbd>nameBits(13, ["bold","italic",["sub","super","base"]]).keys()</kbd>
+	  <samp>["bold","base"]</samp>
+        </div>
+
+        <li>If you add up the values of the returned object's members, you should get
+        the original <var>int</var> back.
+        (This assumes you've defined a name for every bit.)
+
+        <li>For single bits, the value of the corresponding object member will always
+        have a non-zero value.
+        This means you can use the member name as though it was a boolean.
+        <div class="example">
+	  <div class="calc">nameBits(13, ["bold","italic",["sub","super","base"]]).bold ? "heavy" : "light"</div>
+	  <div class="result">"heavy"</div>
+        </div>
+      </ul>
+    </details>
+  </body>
+</body>

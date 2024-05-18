@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>join</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc join - Combine an array of strings into a single string">
+    <meta name="keywords" content="string, array, jsoncalc, function reference, join">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>join - Combine an array of strings into a single string</h1>
+    <dl>
+      <dt>join(<var>arr</var>)
+      <br/>join(<var>arr</var>, <var>delim</var>)
+      <dd>
+      The <tt>join()</tt> function concatenates an array of strings together
+      to form a single long string.
+      <p>
+      The <var>delim</var> argument is optional.
+      If you omit it, "," is used as the default.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>join(["life", "the universe", "and everything"])</kbd>
+	<samp>"life,the universe,and everything"</samp>
+        This example uses the default delimiter, which is just a comma with no spaces.
+      </div>
+
+    </details>
+
+  </body>
+</body>

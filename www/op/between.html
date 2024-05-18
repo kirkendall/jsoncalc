@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - BETWEEN operator">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, between">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>BETWEEN operator</h1>
+    <table class="opList">
+      <tr><td class="left">number</td><td class="op">BETWEEN</td><td class="right">lower <span class="op">AND</span> upper</td><td class="opdesc">Test whether number is between lower and upper</td></tr>
+    </table>
+      This is a ternary (three-operand) operator inherited from SQL.
+      It is effectively the same as a pair of comparisons.
+      It can work on numbers or strings.
+      When comparing strings, the comparison will be case-insensitive since that's
+      the SQL norm.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>2 between 4 and 10</kbd>
+	<samp>false</samp>
+	<kbd>7 between 4 and 10</kbd>
+	<samp>true</samp>
+        No surprises.  Note that the "and" here is part of the "between" operator,
+        and is <strong>not</strong> a logical-and.
+      </div>
+
+      <div class="example">
+	<kbd>SELECT * FROM test.scores WHERE score BETWEEN 30 AND 40</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>run</th><th>score</th></tr>
+	    <tr><td>Mary</td><td>1</td><td>30</td></tr>
+	    <tr><td>Paul</td><td>2</td><td>30</td></tr>
+	    <tr><td>Mary</td><td>2</td><td>35</td></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	    <tr><td>Mary</td><td>3</td><td>40</td></tr>
+	  </table>
+	</samp>
+	Here we see the <tt>BETWEEN</tt> operator in its native habitat.
+	This also shows that the limits are included in the range.
+        
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>If the expression being tested is complicated, then <tt>BETWEEN</tt>
+            might be more efficient than a pair of <tt>&lt;=</tt>/<tt>&gt;=</tt>
+            comparisons, because <tt>BETWEEN</tt> only needs to compute the value
+            once.
+
+      </ul>
+    </details>
+  </body>
+</html>

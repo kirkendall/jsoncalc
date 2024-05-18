@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JsonCalc Functions</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc function summary">
+    <meta name="keywords" content="jsoncalc, function reference">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	// Called when a user selects a different section
+	function sectionChanged() {
+	    var section = $("[name=section]:checked").val();
+	    if (section == "all") {
+		$("#functionList tr").css("display", "");
+	    } else {
+		$("#functionList tr").css("display", "none");
+		$("#functionList tr." + section).css("display", "");
+	    }
+	}
+
+	// Initialization
+	$(document).ready(function() {
+	    // Adjust the visibility of functions, depending on the sections inputs
+	    $("[name=section]").on("change", sectionChanged);
+
+	    // Returning to this page after selecting a section may leave that
+	    // section still selected.  We'd better check.
+	    sectionChanged();
+
+	    // Enable click-to-copy on examples
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>JsonCalc Functions</h1>
+
+    This is a list of functions that are part of the JsonCalc query language.
+    This is <em>not</em> a list of functions in the <tt>-ljson</tt> library.
+
+    <details>
+      <summary>All functions are global.</summary>
+      You can write them using dot notation as though they're an member functions,
+      but doing so uses the data to the left of the dot for the first argument.
+      All of <strong>jsoncalc</strong>'s functions work this way.
+      <div class="example">
+        <kbd>"Example".toUpperCase()</kbd>
+        <samp>"EXAMPLE"</samp>
+        <kbd>toUpperCase("Example")</kbd>
+        <samp>"EXAMPLE"</samp>
+      </div>
+    </details>
+
+    <details>
+      <summary>All function names are case-insensitive.</summary>
+      This is consistent with <strong>jsoncalc</strong>'s goal of being a good
+      quick-and-dirty query tool.
+      <p>
+      You can also abbreviate function names to just the first latter and all
+      uppercase letters in the function's canonical name.
+      (The canonical name is the way they're listed here.)
+      <div class="example">
+        <kbd>"Example".toUpperCase()</kbd>
+        <samp>"EXAMPLE"</samp>
+        <kbd>"Example".touppercase()</kbd>
+        <samp>"EXAMPLE"</samp>
+        <kbd>"Example".tuc()</kbd>
+        <samp>"EXAMPLE"</samp>
+      </div>
+    </details>
+
+    <details>
+      <summary>Function names are in a different namespace than object members.</summary>
+      This means you can reuse function names as object member names without any
+      confusion.
+      This is important because maybe you'll be handed some JSON data with member
+      names that clash with the function names listed here.
+      No problem!
+      <div class="example">
+        <kbd>{toString:"to"}.toString</kbd>
+        <samp>"to"</samp>
+        <kbd>{toString:"to"}.toString()</kbd>
+        <samp>"{\"toString\":\"to\"}"</samp>
+      </div>
+    </details>
+
+    <details>
+      <summary>Functions are grouped into sections.</summary>
+      The split is mostly for convenience within this documentation,
+      and is done (for the most part) via the datatype of the first argument.
+      Some functions support a variety of argument types, in which case they'll
+      be listed in multiple sections.
+      It's still just one function though.
+    </details>
+
+    <details>
+      <summary>Aggregate functions accumulate results across rows of a table.</summary>
+      This is usually employed via the @ or @@ operators, or an SQL SELECT statement.
+      You can also apply them to an array directly.
+    </details>
+
+    <p>
+    <strong>Sections:</strong>
+      <label for="sectionAll"><input type="radio" id="sectionAll" name="section" value="all" checked>All</label>
+      <label for="sectionString"><input type="radio" id="sectionString" name="section" value="string">String</label>
+      <label for="sectionNumber"><input type="radio" id="sectionNumber" name="section" value="number">Number</label>
+      <label for="sectionObject"><input type="radio" id="sectionObject" name="section" value="object">Object</label>
+      <label for="sectionArray"><input type="radio" id="sectionArray" name="section" value="array">Array</label>
+      <label for="sectionBoolean"><input type="radio" id="sectionBoolean" name="section" value="boolean">Boolean</label>
+      <label for="sectionDateTime"><input type="radio" id="sectionDateTime" name="section" value="datetime">Date/Time</label>
+      <label for="sectionAggregate"><input type="radio" id="sectionAggregate" name="section" value="aggregate">Aggregate</label>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody id="functionList">
+<tr class="boolean aggregate"><td><a href="all.html">all</a></td><td>Test whether all items are true</td></tr>
+<tr class="boolean aggregate"><td><a href="any.html">any</a></td><td>Test whether any items are true</td></tr>
+<tr class="array aggregate"><td><a href="arrayAgg.html">arrayAgg</a></td><td>Build an array one element at a time</td></tr>
+<tr class="string number array"><td><a href="charCodeAt.html">charCodeAt</a></td><td>Return the codepoint (number) of a character</td></tr>
+<tr class="array aggregate"><td><a href="count.html">count</a></td><td>Count items</td></tr>
+<tr class="array"><td><a href="distinct.html">distinct</a></td><td>Remove duplicates from an array</td></tr>
+<tr class="array aggregate"><td><a href="explain.html">explain</a></td><td>Accumulate statistics about table columns</td></tr>
+<tr class="string array"><td><a href="flat.html">flat</a></td><td>Flatten nested arrays</td></tr>
+<tr class="string number array"><td><a href="fromCharCode.html">fromCharCode</a></td><td>Convert character codepoints (numbers) to a string</td></tr>
+<tr class="array"><td><a href="groupBy.html">groupBy</a></td><td>Split a table into groups</td></tr>
+<tr class="string number"><td><a href="hex.html">hex</a></td><td>Convert an integer or string to hexadecimal</td></tr>
+<tr class="string array"><td><a href="join.html">join</a></td><td>Combine an array of strings into a single string</td></tr>
+<tr class="object"><td><a href="keys.html">keys</a></td><td>Return the names of an object's members</td></tr>
+<tr class="array object"><td><a href="keysValues.html">keysValues</a></td><td>Convert an object or table into an array of key/value pairs</td></tr>
+<tr class="number aggregate"><td><a href="max.html">max</a></td><td>Find the largest value</td></tr>
+<tr class="number aggregate"><td><a href="min.html">min</a></td><td>Find the smallest value</td></tr>
+<tr class="number object"><td><a href="nameBits.html">nameBits</a></td><td>Decode a bitmap</td></tr>
+<tr class="array object aggregate"><td><a href="objectAgg.html">objectAgg</a></td><td>Collect key/value pairs into a single new object</td></tr>
+<tr class="array"><td><a href="orderBy.html">orderBy</a></td><td>Sort a table</td></tr>
+<tr class="number array aggregate"><td><a href="product.html">product</a></td><td>Multiply as series of numbers and return their product</td></tr>
+<tr class="string"><td><a href="repeat.html">repeat</a></td><td>Concatenate multiple copies of the same string</td></tr>
+<tr class="string number array object boolean datetime aggregate"><td><a href="replaceAll.html">replaceAll</a></td><td>Replace all instances in a string</td></tr>
+<tr class="string number array object boolean datetime aggregate"><td><a href="replace.html">replace</a></td><td>Replace the first matching text in a string</td></tr>
+<tr class="array aggregate"><td><a href="rowNumber.html">rowNumber</a></td><td>Generate a series of incrementing numbers</td></tr>
+<tr class="string number array object datetime"><td><a href="sizeOf.html">sizeOf</a></td><td>Count the internal memory bytes used by a given value</td></tr>
+<tr class="array"><td><a href="slice.html">slice</a></td><td>Return part of an array</td></tr>
+<tr class="string"><td><a href="substr.html">substr</a></td><td>Extract part of a string</td></tr>
+<tr class="number array aggregate"><td><a href="sum.html">sum</a></td><td>Return the sum of a series of numbers</td></tr>
+<tr class="string number"><td><a href="toFixed.html">toFixed</a></td><td>Show a given number of digits after the decimal point</td></tr>
+<tr class="string"><td><a href="toLowerCase.html">toLowerCase</a></td><td>Convert a string to lowercase</td></tr>
+<tr class="string"><td><a href="toMixedCase.html">toMixedCase</a></td><td>Capitalize words in a string</td></tr>
+<tr class="misc"><td><a href="toString.html">toString</a></td><td>Convert any value to a string</td></tr>
+<tr class="string"><td><a href="toUpperCase.html">toUpperCase</a></td><td>Convert a string to uppercase</td></tr>
+<tr class="string number array object datetime"><td><a href="typeOf.html">typeOf</a></td><td>Return a string describing the argument's data type</td></tr>
+<tr class="array object"><td><a href="unroll.html">unroll</a></td><td>Convert nested tables into a single-layer table</td></tr>
+<tr class="string"><td><a href="width.html">width</a></td><td>Calculate the width of a string</td></tr>
+<tr class="array aggregate"><td><a href="writeArray.html">writeArray</a></td><td>Write data out to a file as a JSON array</td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>

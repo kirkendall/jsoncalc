@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>min</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc min - Find the smallest value">
+    <meta name="keywords" content="number, aggregate, jsoncalc, minimum, highest, function reference, min">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>min - Find the smallest value</h1>
+    <dl>
+      <dt>min(<var>num</var>)
+      <br/>min(<var>str</var>)
+      <br/>min(<var>num</var>, <var>marker</var>)
+      <br/>min(<var>str</var>, <var>marker</var>)
+      <dd>
+      This returns the smallest value of number <var>num</var> or the alphabetically
+      earliest value string <var>str</var>,
+      or the <var>marker</var> associated with it.
+      <p>
+      When called with one argument, this holds no surprises.
+      The added <var>marker</var> argument lets you select one piece of data by looking
+      for the extreme value of another field.
+      The <var>marker</var> can be any value, even an array or object.
+      <p>
+      This is an aggregate function, meaning it accumulates the count over a series
+      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across the elements
+      of that array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>min([1,2,5,3,8,4,1])</kbd>
+	<samp>1</samp>
+        Here's we're passing an array of numbers, and it's returning the lowest one.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run") @@ score == min(score)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>run</th><th>score</th></tr>
+	    <tr><td>Peter</th><td>1</td><td>10</td></tr>
+	    <tr><td>Peter</th><td>2</td><td>25</td></tr>
+	    <tr><td>Paul</td><td>3</td><td>25</td></tr>
+	  </table>
+	</samp>
+        This returns the lowest-scoring row in each run from the <tt>test.scores</tt> table.
+        Note that we're using the @@ operator instead of @, because we want to compare
+        the score of all rows to the minimum, not just one row per group.
+      </div>
+
+      <div class="example">
+	<kbd>( test.scores @ min(score, name) )[0]</kbd>
+	<samp>"Peter"</samp>
+        Here <tt>min(score,name)</tt> finds the lowest score and returns the name
+        associated with it.
+        Since we aren't using grouping, the <tt>@</tt> operator returns one item
+        for each element in <tt>test.scores</tt> but we only want to see the name
+        once, hence the <tt>[0]</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>In the last example, if there were two people tied for the lowest score
+            then <tt>min(score,name)</tt> would still just return one name.
+      </ul>
+    </details>
+
+  </body>
+</body>

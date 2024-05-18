@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Array filter operators">
+    <meta name="keywords" content="array, aggregate, jsoncalc, operator reference, @, @@">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Array filter operators</h1>
+    <table class="opList">
+      <tr><td class="left">array</td><td class="op">@</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per group</td></tr>
+      <tr><td class="left">array</td><td class="op">@@</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per row</td></tr>
+    </table>
+    These two operators loop over the elements of their left argument (an array),
+    process each one individually via the expression of the right argument, and
+    collect the results in a new array which is the final result of the operator.
+    <p>
+    The only difference between <tt>@</tt> and <tt>@@</tt> is that if you divide
+    the array into groups (by embedding sub-arrays within the array, e.g. via the
+    <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function)
+    then <tt>@</tt> will include one result per group,
+    while <tt>@@</tt> returns a result for each element of each group.
+    <p>
+    So the right operand gets evalated a lot.
+    Usually once for each array element.
+    While it is being evaluated, the <tt>this</tt> variable is set to the element's value
+    so you can access it just by using the name <tt>this</tt>.
+    If the element is an object, then the member's objects can be accessed just by
+    giving their name; you don't need to say <tt>this.name</tt>
+    (although that works too).
+    <p>
+    The result of the right operand expression is interpreted as follows:
+    <ul>
+      <li>If the right hand expression is <tt>null</tt> or <tt>false</tt>, nothing
+          gets appended to the result array.
+      <li>If the right hand expression is <tt>true</tt>, then the element from the
+          left operand gets appended to the result without any changes.
+      <li>Anything else gets appended to the result instead of the left operand's
+          element.
+    </ul>
+    So the first two rules let you selectively remove items from the result, while
+    the last one lets you generate new result elements from the left operand elements.
+    <p>
+    These operators support aggregates functions such as
+    <a target="_PARENT" href="../index.html?f=count">count()</a> and
+    <a target="_PARENT" href="../index.html?f=max">max()</a>.
+    If the right operand uses any aggregate functions, then it will loop over the
+    array elements twice &mdash; once to accumulate results within the aggregate
+    functions, and once to generate the result element.
+    If the left array is divided into groups then it'll also separately generate
+    aggregate data for each group.
+    <p>
+    If the left argument is <tt>null</tt> instead of an array,
+    then <tt>@</tt> and <tt>@@</tt> an empty array.
+    If the left argument is any other non-array, then it is processed as though it
+    was the only element of a 1-element array.
+    These two rules are intended to simplify processing of data converted from XML.
+    Since XML doesn't have actual arrays, XML standards usually simulate it with
+    a repeatable element.
+    An empty array in XML is therefore represented by absolutely nothing, and
+    and a 1-element array is represented by just a plain ol' tag that didn't repeat.
+    Stupid XML.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>[2,3,5,7,11] @ this &lt; 6</kbd>
+	<samp>[2,3,5]</samp>
+	Test each element, and keep the ones less than 6.
+      </div>
+
+      <div class="example">
+	<kbd>[2,3,5,7,11] @ {max:max(this), min:min(this)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>max</th><th>min</th></tr>
+	    <tr><td>11</td><td>2</td></tr>
+	    <tr><td>11</td><td>2</td></tr>
+	    <tr><td>11</td><td>2</td></tr>
+	    <tr><td>11</td><td>2</td></tr>
+	    <tr><td>11</td><td>2</td></tr>
+	  </table>
+	</samp>
+	<kbd>([2,3,5,7,11] @ {max:max(this), min:min(this)})[0]</kbd>
+	<samp>{"max":11,"min":2}</samp>
+	Find the maximum and minumum values, and construct an object with their values.
+	<a target="_PARENT" href="../index.html?f=max">max()</a> and
+	<a target="_PARENT" href="../index.html?f=min">min()</a> are aggregate
+	functions, and aggregate functions usually return the same value for all
+	items in a group, or in this case for the array as a whole since we aren't
+	using groups.
+	<p>
+	Also since we aren't using groups,
+	<tt>@</tt> returns an item for each element of the left array,
+	which is why we get an array of five objects back instead of one.
+	Arrays of objects are displayed in a grid by default, which is why this doesn't
+	look like JSON.
+	<p>
+	Wrapping the expression in parentheses and adding [0] gets us just one object
+        back, which is probably what we wanted.
+      </div>
+
+      <div class="example">
+        <kbd>test.scores.groupBy("run") @ {run, max:max(score), min:min(score)}</kbd>
+        <samp>
+	  <table>
+	    <tr><th>run</th><th>max</th><th>min</th></tr>
+	    <tr><td>1</td><td>30</td><td>10</td></tr>
+	    <tr><td>2</td><td>35</td><td>25</td></tr>
+	    <tr><td>3</td><td>40</td><td>25</td></tr>
+	  </table>
+        </samp>
+        <tt>test.scores</tt> is part of the sample data.
+        It is a table (array of objects).
+        We use <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+        to divide the table into groups, and then use @ to first accumulate
+        aggregate data over all elements, and then to return one result element
+        per group.
+        This gives us a table of statistics about each run.
+      </div>
+
+      <div class="example">
+        <kbd>test.scores.groupBy("run","overall") @ {run, max:max(score), min:min(score)}</kbd>
+        <samp>
+	  <table>
+	    <tr><th>run</th><th>max</th><th>min</th></tr>
+	    <tr><td>1</td><td>30</td><td>10</td></tr>
+	    <tr><td>2</td><td>35</td><td>25</td></tr>
+	    <tr><td>3</td><td>40</td><td>25</td></tr>
+	    <tr><td>overall</td><td>40</td><td>10</td></tr>
+	  </table>
+        </samp>
+        The only change between this example and the previous one is,
+        <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+        is passed a second argument, causing it to generate an extra element at
+        the end of the array for totals.
+        This element is the object <tt>{"run":"overall"}</tt>.
+        In particular, that added element contains no "score" member so it won't affect
+        the aggregate functions.
+        Aggregates will be accumulated over each group <em>and for the elements overall</em>,
+        and since that <tt>{"run":"overall"}</tt> object isn't part of a group,
+        it uses the overall aggregates.
+      </div>
+
+      <div class="example">
+        <kbd>test.scores.groupBy("run") @@ score &gt;= avg(score) ? {run, name, score, avg(score)}</kbd>
+        <samp>
+	  <table>
+	    <tr><th>run</th><th>name</th><th>score</th><th>avg(score)</th></tr>
+	    <tr><td>1</td><td>Paul</td><td>20</td><td>20</td></tr>
+	    <tr><td>1</td><td>Mary</td><td>30</td><td>20</td></tr>
+	    <tr><td>2</td><td>Paul</td><td>30</td><td>30</td></tr>
+	    <tr><td>2</td><td>Mary</td><td>35</td><td>30</td></tr>
+	    <tr><td>3</td><td>Mary</td><td>40</td><td>31.6666666667</td></tr>
+	  </table>
+        </samp>
+        Now we're using <tt>@@</tt> instead of <tt>@</tt> because we want potentially
+        one record per element from the left array instead of one per group.
+        Details instead of summary.
+        This looks for any scores greater than or equal to the average score for
+        its run, and returns the element plus the average that it was compared to.
+        <p>
+        Another interesting thing about this example is, it uses the
+        <a target="_PARENT" href="../index.html?op=question">?:</a> operator
+        but omits the <tt>:</tt> part.
+        When you do this, <tt>:null</tt> is implied which is handy in
+        <tt>@</tt>/<tt>@@</tt> expressions since <tt>@</tt>/<tt>@@</tt>
+        adds nothing to the response for <tt>null</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Usually you'll want <tt>@</tt>.
+            The <tt>@@</tt> operator is only useful when you're comparing individual
+            values to aggregate values, and even then only if you're using groups.
+
+	<li>If the left array isn't divided into groups, the <tt>@</tt> will return
+	    one element for each left operand element.
+	    You might expect it to return just one summary item, but no.
+	    It must return one result element per ungrouped left element in order
+	    for things like the <tt>groupBy("run","overall")</tt> example above
+	    to work.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> - split a table based on member values.
+    </details>
+
+  </body>
+</body>

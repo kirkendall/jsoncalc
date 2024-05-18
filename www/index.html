@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fn</title>
+    <link rel="stylesheet" type="text/css" href="jsoncalc.css">
+    <meta name="description" content="jsoncalc function reference">
+    <meta name="keywords" content="jsoncalc, function reference, index">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="search.js"></script>
+    <script src="f/flist.js"></script>
+    <script src="op/oplist.js"></script>
+    <script>
+	// This is a collection of all searchable lists
+	var searchable = [
+	    {label:"JsonCalc functions", query:"f", member:"function", list:flist},
+	    {label:"JsonCalc operators", query:"op", member:"opcategory", list:oplist}
+	];
+	var searches;
+
+	// Initialization
+	$(document).ready(function(){
+	    // If passed a f=function query string, load it in the main iframe
+	    var namevalue = location.search.match(/\?([^=]*)=([^&]*)/);
+	    if (namevalue) {
+console.log(namevalue[1] + "=" + namevalue[2]);
+		switch (namevalue[1]) {
+		case 'f':
+		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "f/sidebar.html");
+		    break;
+		case 'op':
+		    $("#main").prop("src", "op/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "op/sidebar.html");
+		}
+	    }
+
+	    // Arrange for searching to work incrementally
+	    searches = searchInput("[name=search]");
+	});
+    </script>
+  </head>
+  <body>
+    <div class="popup"></div>
+    <table>
+      <colgroup>
+        <col style="width:8vw">
+        <col style="width:30vw">
+        <col style="width:59vw">
+      </colgroup>
+      <tr id="top" style="height:4em;overflow:hidden;">
+        <td colspan="2">
+          <h1 style="margin:0"><a href="index.html">JsonCalc</a></h1>
+        </td>
+        <td style="text-align:right">
+          <input type="search" name="search" autocomplete="off" placeholder="Search">
+	</td>
+      </tr>
+      <tr>
+        <td style="overflow-x:hidden;overflow-y:auto;height:calc(100vh - 4em);">
+          <iframe id="sidebar" src="f/sidebar.html" style="width:100%;height:100%"></iframe>
+        </td>
+        <td colspan="2" style="overflow-x:hidden; overflow-y:auto;height:calc(100vh - 4em);">
+          <iframe id="main" src="f/INTRO.html" style="width:100%; height:100%"></iframe>
+        </td>
+      </tr>
+  </body>
+</body>

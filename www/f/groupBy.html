@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>groupBy</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc groupBy - Split a table into groups">
+    <meta name="keywords" content="array, jsoncalc, function reference, groupBy">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>groupBy - Split a table into groups</h1>
+    <dl>
+      <dt>groupBy(<var>table</var>, <var>columns</var>)
+      <bt/>groupBy(<var>table</var>, <var>columns</var>, <var>totals</var>)
+      <dd>
+      This splits a table (array of objects) into an array of arrays of objects.
+      <p>
+      This is mostly to affect the scope of aggregate functions when used with
+      the @ and @@ operators.
+      For example, if you have a table of sales data which contains a "region" column
+      (meaning each row/element/object has a "region" member)
+      then you might want to group them by region so you could report the regional
+      totals or averages.
+      (Yes, this corresponds to the SQL "GROUP BY" clause.)
+      <p>
+      The <var>table</var> is simply an array of objects.
+      Each element is a row, and then members of the rows' objects serve as columns.
+      <p>
+      The <var>columns</var> list is an array of strings, corresponding to the object
+      member keys (column names).
+      For the sake of convenience, if you just want to sort by a single column in
+      ascending sequence, you can just pass its name as a string, instead of an
+      array of strings.
+      <p>
+      This doesn't sort the items;
+      it is assumed that all items to be grouped are already in consecutive rows.
+      If that assumption isn't true, then you should sort then via
+      <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a> before calling <tt>groupBy()</tt>.
+      You can use the same <var>columns</var> parameter for both.
+      (<tt>groupBy()</tt> only compares for equality so it doesn't need <tt>true</tt>
+      to denote descending sorts, but it is smart enough to skip over <tt>true</tt>
+      if it appears in the <var>columns</var> argument.)
+      <p>
+      If you pass a <var>totals</var> parameter, then <tt>orderBy()</tt> will append an
+      extra object to the end of the response array, containing a single member with
+      first name from the <var>columns</var> parameter as the member's key (name), and
+      the <var>totals</var> value as its value.
+      Due to the way @ and @@ interact with aggregates, this causes any columns that
+      use aggregate functions to apply those functions across all rows instead of
+      splitting by the group.
+      This makes it easy to get combined totals.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>groupBy(test.scores, "run")@{run,avg(score)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>run</th><th>avg(score)</th></tr>
+	    <tr><td>1</td><td>20</td></tr>
+	    <tr><td>2</td><td>30</td></tr>
+	    <tr><td>3</td><td>31.6666666667</td></tr>
+	  </table>
+	</samp>
+	The "test.scores" table is already sorted by "run" so we don't need to
+	explicitly sort it.
+	The @ operator outputs one record per group, in this case containing the
+	run number and the average score within that run.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.orderBy("name").groupBy("name","OVERALL")@{name,avg(score)}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>avg(score)</th></tr>
+	    <tr><td>Mary</td><td>35</td></tr>
+	    <tr><td>Paul</td><td>25</td></tr>
+	    <tr><td>Peter</td><td>21.6666666667</td></tr>
+	    <tr><td>OVERALL</td><td>27.2222222222</td></tr>
+	  </table>
+	</samp>
+	This time we're fetching the averages by name, so we need to sort and group
+	by name.
+	Also, we added "OVERALL" as a <var>totals</var> label,
+	so we got a row for the overall average too.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores.groupBy("run")@@score&lt;avg(score)?{run,name,score}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>run</th><th> name</th><th>score</th></tr>
+	    <tr><td>1</td><td>Peter</td><td>10</td></tr>
+	    <tr><td>2</td><td>Peter</td><td>25</td></tr>
+	    <tr><td>3</td><td>Peter</td><td>30</td></tr>
+	    <tr><td>3</td><td>Paul</td><td>25</td></tr>
+	  </table>
+	</samp>
+	The difference between @ and @@ is that @ outputs one row per group, while
+	@@ outputs one row per row.
+	We're using @@ here to list the run, name, and score of anybody who got less
+	than the average score for their run.
+	Note that we got two rows from run 3.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The result of <tt>groupBy()</tt> is no longer a table.
+        Instead, it is an array of tables,
+        possibly with an oddball "totals" object added in.
+        The @ and @@ operators work with this, and will reassemble the results as a
+        table again.
+
+      </ul>
+    </details>
+  </body>
+</body>

@@ -8,6 +8,10 @@ try
 NOTES
 www/notes
 www/table.elv
+www/f/INTRO.html
+www/f/flist.js
+www/f/sidebar.html
+www/old
 
 # Prerequisites
 *.d

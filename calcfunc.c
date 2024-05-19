@@ -551,50 +551,57 @@ json_t *jfn_flat(json_t *args, void *agdata)
 	return json_array_flat(args->first, depth);
 }
 
-/* slice(arr, start, end) - return part of an array */
+/* slice(arr/str, start, end) - return part of an array or string */
 json_t *jfn_slice(json_t *args, void *agdata)
 {
 	int	start, end;
-	int	length = -1;
+	size_t	srclength;
 	json_t	*result, *scan;
+	const char	*str, *strend;
 
-	/* If first param isn't an array, then return null */
-	if (args->first->type != JSON_ARRAY)
+	/* If first param isn't an array or string, then return null */
+	if (args->first->type == JSON_ARRAY)
+		srclength = json_length(args->first);
+	else if (args->first->type == JSON_STRING)
+		srclength = json_mbs_len(args->first->text);
+	else
 		return NULL;
 
 	/* Get the start and end parameters */
 	if (!args->first->next || args->first->next->type != JSON_NUMBER) {
 		/* No endpoints, why bother? */
-		start = 0, end = json_length(args->first); /* the whole array */
+		start = 0, end = srclength; /* the whole array/string */
 	} else {
 		/* We at least have a start */
 		start = json_int(args->first->next);
-		if (start < 0) {
-			length = json_length(args->first);
-			start = length + start;
-			if (start < 0)
-				start = 0;
-		}
+		if (start < 0)
+			start += srclength;
+		if (start < 0)
+			start = 0;
 
 		/* Do we also have an end? */
 		if (!args->first->next->next || args->first->next->next->type != JSON_NUMBER) {
-			end = json_length(args->first);
+			end = srclength;
 		} else {
 			end = json_int(args->first->next->next);
-			if (end < 0) {
-				if (length < 0)
-					length = json_length(args->first);
-				end = length + end;
-			}
+			if (end < 0)
+				end += srclength;
 			if (end < start)
 				end = start;
 		}
 	}
 
-	/* Copy the slice to a new array */
-	result = json_array();
-	for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = scan->next) {
-		json_append(result, json_copy(scan));
+	/* Now that we have the endpoints, do it! */
+	if (args->first->type == JSON_ARRAY) {
+		/* Copy the slice to a new array */
+		result = json_array();
+		for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = scan->next) {
+			json_append(result, json_copy(scan));
+		}
+	} else { /* JSON_STRING */
+		str = json_mbs_substr(args->first->text, start, NULL);
+		strend = json_mbs_substr(args->first->text, end, NULL);
+		result = json_string(str, strend - str);
 	}
 
 	return result;

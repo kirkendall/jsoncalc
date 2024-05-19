@@ -25,12 +25,21 @@ int json_equal(json_t *j1, json_t *j2)
         switch (j1->type) {
           case JSON_SYMBOL:
           case JSON_STRING:
-          case JSON_NUMBER:
-                /* Compare their literal text */
+                /* Compare their literal text, case-sensitively. */
                 return !strcmp(j1->text, j2->text);
 
+          case JSON_NUMBER:
+		/* Numbers may be binary or text. */
+		if (j1->text[0] == '\0' && j1->text[1] == 'i'
+		 && j2->text[0] == '\0' && j2->text[1] == 'i')
+			return JSON_INT(j1) == JSON_INT(j2);
+		if (j1->text[0] == '\0' && j1->text[1] == 'd'
+		 && j2->text[0] == '\0' && j2->text[1] == 'd')
+			return JSON_DOUBLE(j1) == JSON_DOUBLE(j2);
+		return json_double(j1) == json_double(j2);
+
           case JSON_ARRAY:
-                /* Compare length, and values of elements */
+                /* Compare length, and values of elements. */
                 if (json_length(j1) != json_length(j2))
                         return 0;
                 for (j1 = j1->first, j2 = j2->first; j1 && j2; j1 = j1->next, j2 = j2->next) {

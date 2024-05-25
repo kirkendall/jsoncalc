@@ -41,6 +41,13 @@ static json_t *jfn_toMixedCase(json_t *args, void *agdata);
 static json_t *jfn_substr(json_t *args, void *agdata);
 static json_t *jfn_hex(json_t *args, void *agdata);
 static json_t *jfn_toString(json_t *args, void *agdata);
+static json_t *jfn_isString(json_t *args, void *agdata);
+static json_t *jfn_isArray(json_t *args, void *agdata);
+static json_t *jfn_isTable(json_t *args, void *agdata);
+static json_t *jfn_isObject(json_t *args, void *agdata);
+static json_t *jfn_isNumber(json_t *args, void *agdata);
+static json_t *jfn_isInteger(json_t *args, void *agdata);
+static json_t *jfn_isNaN(json_t *args, void *agdata);
 static json_t *jfn_typeOf(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_width(json_t *args, void *agdata);
@@ -98,7 +105,14 @@ static jsonfunc_t substr_jf      = {&toMixedCase_jf, "substr",      jfn_substr};
 static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         jfn_hex};
 static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    jfn_toString};
 static jsonfunc_t String_jf      = {&toString_jf,    "String",      jfn_toString};
-static jsonfunc_t typeOf_jf      = {&String_jf,      "typeOf",      jfn_typeOf};
+static jsonfunc_t isString_jf    = {&String_jf,      "isString",    jfn_isString};
+static jsonfunc_t isArray_jf     = {&isString_jf,    "isArray",     jfn_isArray};
+static jsonfunc_t isTable_jf     = {&isArray_jf,     "isTable",     jfn_isTable};
+static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    jfn_isObject};
+static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    jfn_isNumber};
+static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   jfn_isInteger};
+static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       jfn_isNaN};
+static jsonfunc_t typeOf_jf      = {&isNaN_jf,       "typeOf",      jfn_typeOf};
 static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      jfn_sizeOf};
 static jsonfunc_t width_jf       = {&sizeOf_jf,      "width",       jfn_width};
 static jsonfunc_t keys_jf        = {&width_jf,       "keys",        jfn_keys};
@@ -378,6 +392,49 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 	free(tmpstr);
 	return tmp;
 }
+
+static json_t *jfn_isString(json_t *args, void *agdata)
+{
+	return json_symbol(args->first->type == JSON_STRING ? "true" : "false", -1);
+}
+
+static json_t *jfn_isObject(json_t *args, void *agdata)
+{
+	return json_symbol(args->first->type == JSON_OBJECT ? "true" : "false", -1);
+}
+
+static json_t *jfn_isArray(json_t *args, void *agdata)
+{
+	return json_symbol(args->first->type == JSON_ARRAY ? "true" : "false", -1);
+}
+
+static json_t *jfn_isTable(json_t *args, void *agdata)
+{
+	return json_symbol(json_is_table(args->first) ? "true" : "false", -1);
+}
+
+static json_t *jfn_isNumber(json_t *args, void *agdata)
+{
+	return json_symbol(args->first->type == JSON_NUMBER ? "true" : "false", -1);
+}
+
+static json_t *jfn_isInteger(json_t *args, void *agdata)
+{
+	double d;
+
+	if (args->first->type != JSON_NUMBER)
+		return json_symbol("false", -1);
+	if (args->first->text[0] == '\0' && args->first->text[1] == 'i')
+		return json_symbol("true", -1);
+	d = json_double(args->first);
+	return json_symbol(d == (int)d ? "true" : "false", -1);
+}
+
+static json_t *jfn_isNaN(json_t *args, void *agdata)
+{
+	return json_symbol(args->first->type != JSON_NUMBER ? "true" : "false", -1);
+}
+
 
 /* typeOf(data) returns a string identifying the data's type */
 static json_t *jfn_typeOf(json_t *args, void *agdata)

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>fn</title>
+    <title>BETWEEN operator</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
     <meta name="description" content="jsoncalc - BETWEEN operator">
     <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, between">
@@ -21,14 +21,13 @@
   <body>
     <h1>BETWEEN operator</h1>
     <table class="opList">
-      <tr><td class="left">number</td><td class="op">BETWEEN</td><td class="right">lower <span class="op">AND</span> upper</td><td class="opdesc">Test whether number is between lower and upper</td></tr>
+      <tr><td class="left">number<br/>string</td><td class="op">BETWEEN</td><td class="right">lower <span class="op">AND</span> upper</td><td class="opdesc">Test whether number or string is between lower and upper</td></tr>
     </table>
-      This is a ternary (three-operand) operator inherited from SQL.
-      It is effectively the same as a pair of comparisons.
-      It can work on numbers or strings.
-      When comparing strings, the comparison will be case-insensitive since that's
-      the SQL norm.
-    </dl>
+    This is a ternary (three-operand) operator inherited from SQL.
+    It is effectively the same as a pair of comparisons.
+    It can work on numbers or strings.
+    When comparing strings,
+    the comparison will be case-insensitive since that's SQL convention.
     <details open>
       <summary>Examples</summary>
 

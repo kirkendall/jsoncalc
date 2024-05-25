@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JsonCalc</title>
+    <link rel="stylesheet" type="text/css" href="jsoncalc.css">
+    <meta name="description" content="jsoncalc introduction">
+    <meta name="keywords" content="jsoncalc, introduction, intro, welcome">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="clipboard.js"></script>
+    <script>
+	// Called when a user selects a different section
+	function sectionChanged() {
+	    var section = $("[name=section]:checked").val();
+	    if (section == "all") {
+		$("#functionList tr").css("display", "");
+	    } else {
+		$("#functionList tr").css("display", "none");
+		$("#functionList tr." + section).css("display", "");
+	    }
+	}
+
+	// Initialization
+	$(document).ready(function() {
+	    // Adjust the visibility of functions, depending on the sections inputs
+	    $("[name=section]").on("change", sectionChanged);
+
+	    // Returning to this page after selecting a section may leave that
+	    // section still selected.  We'd better check.
+	    sectionChanged();
+
+	    // Enable click-to-copy on examples
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>JsonCalc</h1>
+    <div id="mainpanels">
+
+      <div>
+        <h2>What is JsonCalc?</h2>
+        <strong>JsonCalc</strong> is a C library for manipulating JSON data,
+        and a program that uses that library.  The program is intended to be
+        used for interactively exploring JSON data, or used it in a shell script
+        to generate JSON or convert it to other formats.
+        <p>
+        The program can be run interactively or as part of a shell script.
+        It has a rather powerful set of features, using a mixture of JavaScript
+        and SQL.  There are also some unique added features but mostly it's
+        intended to be close enough to JavaScript and SQL that if you're
+        familiar with those two languages then you can be productive with
+        <strong>JsonCalc</strong> right away.
+        <p>
+        <a target="_PARENT" href="index.html?main=shell">Examples in a shell script</a>
+        <a target="_PARENT" href="index.html?main=interactive">Examples of interactive use</a>
+        <a target="_PARENT" href="index.html?main=download">How to download/install JsonCalc</a>
+      </div>
+
+      <div>
+        <h2>News and Articles</h2>
+      </div>
+
+      <div>
+        <h2>Scripting language</h2>
+        <a target="_PARENT" href="index.html?main=tutscript">Tutorial</a>
+        <a target="_PARENT" href="index.html?op">Operator reference</a>
+        <a target="_PARENT" href="index.html?f">Function reference</a>
+      </div>
+
+      <div>
+        <h2>C library</h2>
+      </div>
+    </div>
+
+
+
+  </body>
+</html>

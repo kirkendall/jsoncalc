@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SELECT operator</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - SELECT operator">
+    <meta name="keywords" content="array, jsoncalc, operator reference, select">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>SELECT operator</h1>
+    <table class="opList">
+      <tr><td class="left"></td><td class="op">SELECT</td><td class="right">...</td><td class="opdesc">SQL-like SELECT operator</td></tr>
+    </table>
+
+    The <tt>SELECT</tt> operator is a fairly full-featured version of SQL's SELECT statement.
+    The full syntax is...
+    <blockquote>
+      SELECT DISTINCT <var>columns</var>
+      FROM <var>table</var>
+      WHERE <var>condition</var>
+      GROUP BY <var>fields</var>
+      ORDER BY <var>fields</var>
+    </blockquote>
+    ... but everything except <tt>SELECT</tt> is optional.
+    <p>
+    The optional <tt>DISTINCT</tt> keyword causes adjacent duplicate records
+    to be omitted from the response table.
+    <p>
+    The optional <var>columns</var> list selects the columns to include.
+    It is basically the contents of a <tt>{...}</tt> object generator without
+    the curly braces.
+    You can use complex expressions, not just column names.
+    You can include alternate names for columns by appending "<tt>AS</tt> <var>name</var>".
+    If you omit the <var>columns</var> list, or give just <tt>*</tt> as the list,
+    then all fields from the source table are included.
+    <p>
+    The optional <tt>FROM</tt> <var>table</var> says which table
+    (array of objects) to use as the starting point.
+    This can be any expression that returns a table,
+    even another <tt>SELECT</tt> clause.
+    Commas in the <var>table</var> expression will be interpreted as
+    "natural join" operations, which elsewhere in <strong>JsonCalc</strong>
+    is represented by the <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
+    If you omit the <tt>FROM</tt> <var>table</var> clause,
+    <strong>JsonCalc</strong> will use <tt>this</tt> if it's a table,
+    or look for a table in a JSON file named on the command line.
+    <p>
+    The optional <tt>WHERE</tt> <var>condition</var> clause lets you select
+    which rows from the source table will be used to construct the result table.
+    It should be any boolean expression, and can even use aggregate functions.
+    (In SQL, you'd need a separate "HAVING" clause for that.)
+    If you omit the <tt>WHERE</tt> <var>condition</var> clause, then all
+    rows from the source table are used to generate the result table.
+    <p>
+    The optional <tt>GROUP BY</tt> <var>fields</var> clause causes the source
+    table to be split into segments that share the same values in the listed
+    fields. This has two effects.  First, any aggregate functions such as
+    <a target="_PARENT" href="../index.html?f=count">count()</a> or
+    <a target="_PARENT" href="../index.html?f=avg">avg()</a> to generate
+    independent results for each group; e.g., <tt>count(*)</tt> would return
+    the number of rows in each group, instead of the overall number of rows.
+    Second, only one row per group will be included in the result table.
+    <p>
+    The optional <tt>ORDER BY</tt> <var>fields</var> clause causes rows to
+    be sorted by their values in the listed fields.  You may also follow any
+    field name in the list with <tt>DESCENDING</tt> or <tt>DESC</tt> to make
+    it be sorted in descending order instead of the default ascending order.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>SELECT * FROM test.cust</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>contact</th><th>joined</th></tr>
+	    <tr><td>Peter</td><td>[table]</td><td>2024-01-02</td></tr>
+	    <tr><td>Paul</td><td>[table]</td><td>2023-10-15</td></tr>
+	    <tr><td>Mary</td><td></td><td>2022-08-09</td></tr>
+	    <tr><td>Ziggy</td><td>[table]</td><td>2023-04-17</td></tr>
+	  </table>
+	</samp>
+	This dumps the test.cust table from the sample data.
+      </div>
+
+      <div class="example">
+	<kbd>SELECT run, avg(score) AS `average score` FROM test.scores GROUP BY run</kbd>
+	<samp>
+	  <table>
+	    <tr><th>run</th><th>average score</th></tr>
+	    <tr><td>1</td><td>20</td></tr>
+	    <tr><td>2</td><td>30</td></tr>
+	    <tr><td>3</td><td>31.6667</td></tr>
+	  </table>
+	</samp>
+	This divides the table.scores table into segments that have the same
+	"run" number.  It then generates one row for each group, with the
+	run number and computed average score.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li><strong>JsonCalc</strong> expressions are case-insensitive.
+            Although the examples here give "SELECT" and related words in
+            uppercase, you can also write them in lowercase.
+
+	<li><strong>JsonCalc</strong> has several other SQL-like features.  The
+	    <a target="_PARENT" href="../index.html?op=equal">=, &lt;&gt;</a>,
+	    <a target="_PARENT" href="../index.html?op=like">LIKE</a>, and
+	    <a target="_PARENT" href="../index.html?op=between">BETWEEN</a>
+	    operators are present, and are case-insensitive as is customary
+	    in SQL.  The
+	    <a target="_PARENT" href="../index.html?op=bool">AND, OR, and NOT</a>
+	    operators are there too.
+
+	<li>Internally, <tt>SELECT</tt> expressions are converted to "native"
+            functions and operators. An expression such as
+            "<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY a</tt>"
+            would become "<tt>(table.groupBy(["e","f"]) @ d>5 ? {aprime:a, b}).orderBy("aprime")</tt>".
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">@, @@</a></td><td>Array filtering operators</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=equal">=, &lt;&gt;</a></td><td>SQL-like case-insensitive equality operators</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=like">LIKE</a></td><td>LIKE pattern comparison operator</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=BETWEEN">BETWEEN</a></td><td>BETWEEN comparison operator</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a></td><td>Table grouping function</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a></td><td>Table sorting function</td></tr>
+    </details>
+
+  </body>
+</body>

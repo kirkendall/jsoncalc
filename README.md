@@ -1,6 +1,6 @@
 # jsoncalc
 
-JsonCalc is a library for accessing JSON data, and a program that uses that library.
+JsonCalc is a library for accessing JSON data, and a program that uses that library.  The program is a quick little tool for exploring or converting JSON data.  
 
 The library is written in C. It has functions for parsing JSON into an internal "json_t" format.  Other functions can then extract data from the json_t, or manipulate it (adding or changing values), convert it back into JSON or other formats, and ultimately free the data.  Most of the functions are very simple, and are each intended to do one thing well.  They can handle large data files efficiently; you are *NOT* required to load the whole file into memory before processing any of it.  It supports UTF-8 text.
 

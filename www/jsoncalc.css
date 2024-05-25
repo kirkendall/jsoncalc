@@ -1,4 +1,4 @@
-body>table {
+table.layout {
 	border-collapse: collapse;
 	max-height: 97vh;
 }
@@ -15,6 +15,43 @@ body>table {
 #top input[type=search] {
   margin-right: 1.5em;
 }
+
+#mainpanels {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: space-evenly;
+	align-items:stretch;
+}
+
+#mainpanels>div {
+	margin: 1em;
+	padding: 1em;
+	box-shadow: 5px 5px 15px black;
+	border: thin solid black;
+	width: 30em;
+	max-width: 40vw;
+	height: 20em;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+#mainpanels h2 {
+	margin-top: 0;
+}
+
+#mainpanels a,
+#mainpanels a:visited {
+	border: 3px outset #f0f0f0;
+	white-space: nowrap;
+	color: black;
+	background-color: #e8e8e8;
+	text-decoration: none;
+	margin: 0.2em;
+	display: inline-block;
+}
+
+/*****************************************************************************/
 
 table.referencelist {
 	border-collapse: collapse;
@@ -140,5 +177,11 @@ table.opList td.right {
 }
 table.opList td.opdesc {
 	text-align: left;
+	padding-left: 0.75em;
+}
+table.opList span.op {
+	font-style: normal;
+	font-weight: bold;
+	font-size: 110%;
 }
 

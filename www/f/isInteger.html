@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>isInteger</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc isInteger - Test for Integer">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, isInteger">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>isInteger - Test for Integer</h1>
+    <dl>
+      <dt>isInteger(<var>arg</var>)
+      <dd>
+      Return <tt>true</tt> is <var>arg</var> is an integer, else return <tt>false</tt>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>isInteger(5)</kbd>
+	<samp>true</samp>
+	<kbd>isInteger(5.0000001)</kbd>
+	<samp>false</samp>
+        5 is an integer, 5.0000001 is not.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a></td><td>Return a string describing the argument's type</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isArray">isArray()</a></td><td>Test whether the argument is an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isObject">isObject()</a></td><td>Test whether the argument is an object</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isNumber">isNumber()</a></td><td>Test whether the argument is a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isNaN">isNaN()</a></td><td>Test whether the argument is not a number</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>fn</title>
+    <title>Subscript operators</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc - Category of operators">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, op">
+    <meta name="description" content="jsoncalc - Subscript operators">
+    <meta name="keywords" content="array, jsoncalc, operator reference, [, ]">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script src="../clipboard.js"></script>
@@ -19,65 +19,67 @@
     </script>
   </head>
   <body>
-    <h1>Category of operators</h1>
+    <h1>Subscript operators</h1>
     <table class="opList">
-      <tr><th>Left<br/>Operand</th><th>Operator</th><th>Right<br/>Operand</th><th>Description</th></tr>
-      <tr><td class="left">object</td><td class="op">.</td><td class="right">name</td><td class="opdesc">Access a member of an object by name</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">expr</td><td class="op">IS NULL<br/>IS NOT NULL</td><td class="right"></td><td class="opdesc">Compare expr to <tt>null</tt></td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left"></td><td class="op">~</td><td class="right">number</td><td class="opdesc">Bitwise "not"</td></tr>
-      <tr><td class="left"></td><td class="op">-</td><td class="right">number</td><td class="opdesc">Negation (subtract <var>number</var> from 0)</td></tr>
-      <tr><td class="left"></td><td class="op">!<br/>NOT</td><td class="right">bool</td><td class="opdesc">Logical "not"</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number</td><td class="op">/</td><td class="right">number</td><td class="opdesc">Divide <var>number</var>s</td></tr>
-      <tr><td class="left">number</td><td class="op">%</td><td class="right">number</td><td class="opdesc">Remainder from integer division (modulo)</td></tr>
-      <tr><td class="left">number</td><td class="op">*</td><td class="right">number</td><td class="opdesc">Multiply <var>number</var>s</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">+</td><td class="right">number<br/>string</td><td class="opdesc">Add <var>number</var>s or concatenate <var>string</var>s</td></tr>
-      <tr><td class="left">number</td><td class="op">-</td><td class="right">number</td><td class="opdesc">Subtract <var>number</var>s</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">&gt;=<br/>&gt;<br/>&lt;<br/>&lt;=</td><td class="right">number</br>string</td><td class="opdesc">Comparison. Strings are case-sensitive.</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">==<br/>!=</td><td class="right">number<br/>string</td><td class="opdesc">Equality comparison</td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">=<br/>&lt;&gt;</td><td class="right">number<br/>string</td><td class="opdesc">case-insensitive equality comparison</td></tr>
-      <tr><td class="left">expr</td><td class="op">===<br/>!==</td><td class="right">expr</td><td class="opdesc">Strict equality comparison</td></tr>
-      <tr><td class="left">string</td><td class="op">LIKE<br/>NOT LIKE</td><td class="right">pattern</td><td class="opdesc">Test a string against a pattern</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">expr</td><td class="op">IN</td><td class="right">array</td><td class="opdesc">Test whether an array contains a value</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">array<br/>object</td><td class="op">[</td><td class="right">number <span class="op">]</span><br/>name <span class="op">:</span> expr <span class="op">]</span><br/>string <span class="op">]</span></td><td class="opdesc">Subscripting</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>object</td><td class="op">&</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise AND or object member intersection</td></tr>
-      <tr><td class="left">number<br/>object</td><td class="op">^</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise XOR or object member subtraction</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>object</td><td class="op">|</td><td class="right">number<br/>object</td><td class="opdesc">Bitwise OR or object member union</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">bool</td><td class="op">&&</td><td class="right">bool</td><td class="opdesc">Logical AND</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">expr</td><td class="op">??</td><td class="right">expr</td><td class="opdesc">If left expr is non-null, return it; else return right</td></tr>
-      <tr><td class="left">bool</td><td class="op">||</td><td class="right">bool</td><td class="opdesc">Logical OR</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">name</td><td class="op">:</td><td class="right">expr</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
-      <tr><td class="left">expr</td><td class="op">AS</td><td class="right">name</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
-      <tr><td class="left">number</td><td class="op">BETWEEN</td><td class="right">lower <span class="op">AND</span> upper</td><td class="opdesc">Test whether number is between lower and upper</td></tr>
-      <tr><td class="left">bool</td><td class="op">?</td><td class="right">expr<br/>expr <span class="op">:</span> expr</td><td class="opdesc">Return second or third expr, depending on bool</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number</td><td class="op">..</td><td class="right">number</td><td class="opdesc">Array of integers between endpoints</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">table</td><td class="op">@=<br/>@&lt;<br/>@&gt;</td><td class="right">table</td><td class="opdesc">Natural join, left and right join</td></tr>
-      <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">array</td><td class="op">@<br/>@@</td><td class="right">expr</td><td class="opdesc">Array filtering. @ returns 1 per group, @@ returns all</td></tr>
+      <tr><td class="left">array</td><td class="op">[</td><td class="right">number <span class="op">]</span></td><td class="opdesc">Subscript by index number</td></tr>
+      <tr><td class="left">table</td><td class="op">[</td><td class="right">name <span class="op">:</span> expr <span class="op">]</span></td><td class="opdesc">Subscript by object member value</td></tr>
+      <tr><td class="left">object</td><td class="op">[</td><td class="right">string <span class="op">]</span></td><td class="opdesc">Member lookup using <var>string</var> as key</td></tr>
     </table>
-      Describe the operators here.
-    </dl>
+    Subscripting is mostly for extracting a single element from an array.
+    Usually you'll select the element by supplying its index number.
+    Subscript numbers start at 0.
+    <p>
+    If the left argument is a table (array of objects), then you can 
+    also use the <tt>[</tt><var>key</var><tt>:</tt><var>value</var><tt>]</tt>
+    notation to search for the first element containing a member with the
+    <var>key</var> and <var>value</var>.
+    The <var>value</var> can be any expression; if it is a simple string
+    then you must enclose it in quotes.
+    <p>
+    If the left argument is an object, then you can use subscripting to look
+    up the value of a member with a given key.
+    This is exactly like <var>object</var><tt>.</tt><var>key</var> notation,
+    except that the key can be a computed string.
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>arg op arg</kbd>
-	<samp>Returned value</samp>
-        Description of the example.  Explain why it works.
+	<kbd>(1..100)[58]</kbd>
+	<samp>59</samp>
+	<tt>(1..100)</tt> is an array of integers from 1 to 100.
+	<tt>[58]</tt> finds the 59'th element, since subscript numbers start
+	at 0.
+      </div>
+
+      <div class="example">
+	<kbd>test.cust[0].contact[type:"email"]</kbd>
+	<samp>{"type":"email","address":"pboy@test.org"}</samp>
+	<tt>test.cust</tt> is part of the sample data.
+	It is a table in which each row/object can contain a <tt>contact</tt>
+	member whose value is a table of contact methods.
+	Here we're looking at the first element's <tt>contact</tt> list,
+	and selecting the one with <tt>type:"email"</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>test.cust @ contact[type:"email"].address</kbd>
+	<samp>["pboy@test.org","notringo@lp.uk"]</samp>
+	Across all four customers in <tt>test.cust</tt>,
+	we're scanning for a contact method containing <tt>type:"email"</tt>,
+	and collecting the corresponding <tt>address</tt> in an array.
+	In <tt>test.cust</tt>, one row has no <tt>contact</tt>, and one has
+	<tt>contact</tt> but none of its elements contains <tt>type:"email"</tt>.
+	The <tt>@</tt> operator filters those out, so we just get the two
+	actual email addresses that appear in <tt>test.cust</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>{a:1,b:2}["a"]</kbd>
+	<samp>1</samp>
+	Here we're looking up a member's value, using subscripts to provide
+	the key.
+	This is the same as <tt>{a:1,b:2}.a</tt> except that subscripts allow
+	us to compute the key, instead of having it hardcoded in the expression.
       </div>
 
     </details>
@@ -86,14 +88,15 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Quirks and tips get described here.  Use examples.
+        <li>Any member lookup first tries to find it using a case-sensitive
+            search.  If that fails, then a case-insensitive search is tried.
 
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=equal">==</a> - Equality 0perators
+      <a target="_PARENT" href="../index.html?op=dot">.a> Dot 0perators
     </details>
 
   </body>

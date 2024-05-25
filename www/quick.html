@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Quick Intro to JsonCalc</title>
+    <link rel="stylesheet" type="text/css" href="jsoncalc.css">
+    <meta name="description" content="jsoncalc quick intro">
+    <meta name="keywords" content="jsoncalc, introduction, quick, intro, overview">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Quick Introduction to JsonCalc</h1>
+    This document just breezes quickly through the features of the
+    <strong>JsonCalc</strong> program.
+    It is intended to give you a feel for what it can do, but not explain
+    every detail of how it's doing it.
+    By the time you reach the end of this document, you should have a good feel
+    for whether <strong>JsonCalc</strong> can help you do what you need to do.
+    <p>
+    Only the <strong>JsonCalc</strong> program and its language are described
+    here.
+    The library that it uses is a whole other story.
+
+    <h2>Who is JsonCalc for?</h2>
+    Me.  I wrote it for me.
+    <p>
+    I'm a systems programmer who maintains interfaces with a wide variety
+    of service providers.
+    I dig through a lot of JSON data.
+    99.9% of that can be automated, using <strong>JsonCalc</strong> and/or
+    its library.
+    Sometimes, though, I need to dig through the downloaded data manually,
+    and there's a lot of it.
+    I need to compare what was downloaded to what ended up in our own database.
+    <p>
+    I also generate requests to send to the service providers.
+    Those tend to be small, real-time requests, in contrast to the downloads
+    which are large batch files.
+    <p>
+    The data that I deal with comes from a service provider's database.
+    It's stored in tables there.
+    The JSON data may use nested data structures, but there's a strong
+    table orientation throughout most of it.
+    JsonCalc is good with tables.
+    <p>
+    Often the data was, at some point, represented in XML.  It gets converted
+    to JSON but still has some of the stink of XML on it.  Especially arrays.
+    XML doesn't support the concept of arrays, so usually they're represented
+    by repeatable elements.  But this means an empty array is simply gone,
+    and a one-element array can become a simple variable.  Another XML-ism
+    is that you often get objects inside of objects inside of objects.
+    There can be good reasons for doing this in any data language, but
+    it happens more in XML.  JsonCalc has a <tt>..</tt> operator which is
+    sort of a "deep search" version of the usual <tt>.</tt> operator to help
+    with this.
+
+    <h2>What is JsonCalc like?</h2>
+    Syntactically, the main influences are JavaScript and SQL.
+    There are some new operators and functions, but mostly its like a
+    stripped-down JavaScript with some SQL features added in.
+    It supports the most common JavaScript functions and operators.
+    <p>
+    You can also declare variables, and define functions.
+    That can be handy in scripts, but my big motivator was that variables
+    and functions can save you some typing when you're using it interactively
+    to explore a big dataset.
+    <p>
+    An expression on a line by itself (no assignment or <tt>return</tt>)
+    will output the result of that expression.
+    This is great for interactive use.
+    It's also sort of like the debugging console in most desktop web browsers.
+    <p>
+    Here are a few examples just to whet your appetite.
+    The bold text is a JsonCalc expression, and the text after it is the result.
+    You can click on any bold text to copy it to the clipboard; if you 
+    have JsonCalc installed and running on your computer, this makes it easy
+    to play with the examples.
+
+    <div class="example">
+      <kbd>1 + 2 * 3</kbd>
+      <samp>7</samp>
+      It makes a decent calculator.
+    </div>
+
+    <div class="example">
+      <kbd>test.scores</kbd>
+      <samp>
+	<table>
+	  <tr><th>name</th><th>run</th><th>score</th></tr>
+	  <tr><td>Peter</td><td>1</td><td>10</td></tr>
+	  <tr><td>Paul</td><td>1</td><td>20</td></tr>
+	  <tr><td>Mary</td><td>1</td><td>30</td></tr>
+	  <tr><td>Peter</td><td>2</td><td>25</td></tr>
+	  <tr><td>Paul</td><td>2</td><td>30</td></tr>
+	  <tr><td>Mary</td><td>2</td><td>35</td></tr>
+	  <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	  <tr><td>Paul</td><td>3</td><td>25</td></tr>
+	  <tr><td>Mary</td><td>3</td><td>40</td></tr>
+	</table>
+      </samp>
+      test.scores is a JSON array of objects.
+      JsonCalc treats that as a table and, by default, outputs it as a grid.
+    </div>
+
+    <div class="example">
+      <kbd>SELECT run, avg(score) AS avg FROM test.scores GROUP BY run</kbd>
+      <samp>
+	<table>
+	  <tr><th>run</th><th>avg</th></tr>
+	  <tr><td>1</td><td>20</td></tr>
+	  <tr><td>2</td><td>30</td></tr>
+	  <tr><td>3</td><td>31.6667</td></tr>
+	</table>
+      </samp>
+      <kbd>(SELECT run, avg(score) AS avg FROM test.scores GROUP BY run).length</kbd>
+      <samp>3</samp>
+      Looks just a bit like SQL there, doesn't it?
+      SELECT is an operator though, and it returns a JSON array of objects.
+      So in the second example, we take the length of that array and it's
+      simply 3.
+    </div>
+
+    <div class="example">
+      <kbd>test.scores.groupBy("run") @ {run, avg: avg(score)}</kbd>
+      <samp>
+	<table>
+	  <tr><th>run</th><th>avg</th></tr>
+	  <tr><td>1</td><td>20</td></tr>
+	  <tr><td>2</td><td>30</td></tr>
+	  <tr><td>3</td><td>31.6667</td></tr>
+	</table>
+      </samp>
+      Internally, the SELECT operator is converted into a set of "native"
+      operators and functions.
+      The <a target="_PARENT" href="index.html?op=each">@</a> operator
+      takes an array as its left operand; processes each element of the
+      array via the right operand; and collects the results in a new array.
+      <tt>@</tt> also knows about grouping, and accumulates a separate
+      <tt>avg(score)</tt> for each group, and then returns only one
+      element per group.
+      Thus, we end up with an array of 3 objects, where each object has
+      members named "run" and "avg".
+    </div>
+
+    <p>
+    These are just one-liners.  Nothing fancy or too complicated.
+    The big takeaway is: JsonCalc expressions are a lot like JavaScript,
+    with a bit of SQL and a not-all-that-magical <tt>@</tt> operator.
+
+    <h2>How can JsonCalc help process downloads?</h2>
+
+    JsonCalc is very good at converting JSON data to other formats.
+    Those formats could be a different JSON layout (e.g., to convert data
+    from different service providers to a single consistent format),
+    or CSV or even a series of shell script records.
+    <p>
+    When looping over large arrays, JsonCalc <em>does not</em> need to load
+    the whole array into memory before processing can begin.
+    Instead, it parses as much as it can, and notes where the large
+    arrays appear in the JSON document, without loading them.
+    During processing, as you loop over the array it will read the records
+    piecemeal.
+    <p>
+    JsonCalc cannot generate XML data.
+
+
+    <h2>How can JsonCalc help for uploads?</h2>
+    JsonCalc can construct JSON data from p
+
+    <h2>Why run JsonCalc interactively?</h2>
+    It has lots of little features:
+    <ul>
+      <li>JsonCalc uses the GNU readline library, to provide line editing,
+          history, and name completion.
+      <li>Any expression on a line by itself will output its result.
+          You don't need to add "print" all the time.
+      <li>It is case-insensitive.  When looking up an object member, it first
+          tries to find it in a case-sensitive way but if that fails then it
+          tries case-insensitive.  This can save you from some frustration.
+      <li>In addition to the usual <tt>.</tt> operator, there's a <tt>..</tt>
+          operator which will do a "deep" search for a member.
+      <li>You can configure it to automatically load JSON data from files
+          in a given directory, on demand.
+          So if you have a group of related JSON documents, they can all be
+          at-hand, and you can cross-reference them all you want.
+    </ul>
+    It also supports plugins, which is a HUGE feature.
+    Most plugins are for things like fetching data from a server,
+    but a few are useful for interactive use.
+
+    <h2>How big is JsonCalc?  How fast is it?</h2>
+    JsonCalc is a "medium weight" JSON tool.
+    The program itself is about 5 times bigger than the 
+    <a href="https://jqlang.github.io/jq/">jq</a> JSON query tool
+    or the <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
+    A full-fledged JavaScript interpreter would be about 30 times larger
+    than JsonCalc though.
+    <p>
+    The internal representation of JSON data is likely to be around 5 times
+    larger than the JSON text that it comes from.  It could be anywhere from
+    2 times larger to more than 10 times larger, but 5 is a good thumb rule.
+    Bear in mind, though, that large arrays aren't normally read into memory
+    all at once.  If you process them to build another large array, that
+    result array will be in memory so that's where you need to be aware of
+    bulk.
+    <p>
+    Speed is hard to gauge.  My computer isn't all that new, but it can
+    process a 60 megabyte JSON file in about a second.  That's fast enough
+    for me.
+
+    <h2>Can JsonCalc be extended?</h2>
+
+    <h2>Where should I look next?</h2>
+
+  </body>
+</html>

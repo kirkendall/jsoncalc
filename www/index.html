@@ -21,8 +21,11 @@
 	// Initialization
 	$(document).ready(function(){
 	    // If passed a f=function query string, load it in the main iframe
-	    var namevalue = location.search.match(/\?([^=]*)=([^&]*)/);
+	    var namevalue = location.search.match(/\?([^=&]*)=?([^&]*)/);
 	    if (namevalue) {
+		if (!namevalue[2])
+			namevalue[2] = "INTRO";
+
 console.log(namevalue[1] + "=" + namevalue[2]);
 		switch (namevalue[1]) {
 		case 'f':
@@ -32,6 +35,10 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		case 'op':
 		    $("#main").prop("src", "op/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "op/sidebar.html");
+		    break;
+		case 'quick':
+		    $("#main").prop("src", "quick.html");
+		    break;
 		}
 	    }
 
@@ -42,9 +49,9 @@ console.log(namevalue[1] + "=" + namevalue[2]);
   </head>
   <body>
     <div class="popup"></div>
-    <table>
+    <table class="layout">
       <colgroup>
-        <col style="width:8vw">
+        <col style="width:10vw">
         <col style="width:30vw">
         <col style="width:59vw">
       </colgroup>
@@ -58,10 +65,10 @@ console.log(namevalue[1] + "=" + namevalue[2]);
       </tr>
       <tr>
         <td style="overflow-x:hidden;overflow-y:auto;height:calc(100vh - 4em);">
-          <iframe id="sidebar" src="f/sidebar.html" style="width:100%;height:100%"></iframe>
+          <iframe id="sidebar" src="sidebar.html" style="width:100%;height:100%"></iframe>
         </td>
         <td colspan="2" style="overflow-x:hidden; overflow-y:auto;height:calc(100vh - 4em);">
-          <iframe id="main" src="f/INTRO.html" style="width:100%; height:100%"></iframe>
+          <iframe id="main" src="INTRO.html" style="width:100%; height:100%"></iframe>
         </td>
       </tr>
   </body>

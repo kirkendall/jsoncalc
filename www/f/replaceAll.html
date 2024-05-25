@@ -21,13 +21,13 @@
   <body>
     <h1>replaceAll - Replace all instances in a string</h1>
     <dl>
-      <dt>replaceAll(<var>str</var>, <var>searchstr</var>, <replacestr</var>)
-      <br/>replaceAll(<var>str</var>, <var>searchstr</var>, <replacestr</var>, true)
+      <dt>replaceAll(<var>str</var>, <var>searchstr</var>, <var>replacestr</var>)
+      <br/>replaceAll(<var>str</var>, <var>searchstr</var>, <var>replacestr</var>, true)
       <br/>replaceAll(<var>str</var>, <var>regex</var>, <var>replacepattern</var>)
       <dd>
       Return a version of string <var>str</var> in which every instance of
       substring <var>searchstr</var> has been replaced by <var>replacestr</var>.
-      The replacement is case-sensitive, unless you add an extra <tt>true</tt> argument.
+      The search is case-sensitive, unless you add an extra <tt>true</tt> argument.
       <p>
       Alternatively, return a version of string <var>str</var> in which the first
       match of regular expression <var>regex</var> is replaced by a string derived
@@ -36,7 +36,7 @@
       <var>regex</var>.
       <var>replacepattern</var> is a string which may include the following symbols
       to access all or part of the matching text.
-      <table>
+      <table class="referencelist">
         <tr><th>Symbol</th><th>What it's replaced by</th></tr>
         <tr><td>$&amp; or $0</td><td>Copy of the matching text in <var>str</var></td></tr>
         <tr><td>$1 to $9</td><td>Text matching 1st to 9th \(\)-wrapped portion of <var>regex</var></td></tr>

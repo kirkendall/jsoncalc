@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>isObject</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc isObject - Test for Object">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, isObject">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>isObject - Test for Object</h1>
+    <dl>
+      <dt>isObject(<var>arg</var>)
+      <dd>
+      Return <tt>true</tt> is <var>arg</var> is an object, else return <tt>false</tt>.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>isObject({a:4})</kbd>
+	<samp>true</samp>
+        <tt>{a:4}</tt> is indeed an object.
+      </div>
+
+      <div class="example">
+	<kbd>isObject([1,2,3])</kbd>
+	<samp>false</samp>
+        <strong>JsonCalc</strong> differs from JavaScript in that arrays
+        are not considered to be objects.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a></td><td>Return a string describing the argument's type</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isArray">isArray()</a></td><td>Test whether the argument is an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isNumber">isNumber()</a></td><td>Test whether the argument is a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isInteger">isInteger()</a></td><td>Test whether the argument is an integer</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isNaN">isNaN()</a></td><td>Test whether the argument is not a number</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

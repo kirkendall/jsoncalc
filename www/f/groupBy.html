@@ -22,11 +22,11 @@
     <h1>groupBy - Split a table into groups</h1>
     <dl>
       <dt>groupBy(<var>table</var>, <var>columns</var>)
-      <bt/>groupBy(<var>table</var>, <var>columns</var>, <var>totals</var>)
+      <br/>groupBy(<var>table</var>, <var>columns</var>, <var>totals</var>)
       <dd>
-      This splits a table (array of objects) into an array of arrays of objects.
+      This splits a table (array of objects) into segments, based on the values of the <var>columns</var> members.  The result is an array of arrays of objects.
       <p>
-      This is mostly to affect the scope of aggregate functions when used with
+      This is useful mostly as a way to affect the scope of aggregate functions when used with
       the @ and @@ operators.
       For example, if you have a table of sales data which contains a "region" column
       (meaning each row/element/object has a "region" member)
@@ -39,9 +39,8 @@
       <p>
       The <var>columns</var> list is an array of strings, corresponding to the object
       member keys (column names).
-      For the sake of convenience, if you just want to sort by a single column in
-      ascending sequence, you can just pass its name as a string, instead of an
-      array of strings.
+      For the sake of convenience, if you just want to group by a single column,
+      you can just pass its name as a string, instead of an array of strings.
       <p>
       This doesn't sort the items;
       it is assumed that all items to be grouped are already in consecutive rows.

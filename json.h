@@ -70,13 +70,8 @@ typedef struct {
 	int	nest;	/* current item in the stack */
 	int	maxnest;/* size of the stack */
 
-	/* This flag is used to stop parsing, via a call to json_parse_stop()
-	 * or by a diverter returning JSON_STOP
-	 */
+	/* This flag is used to stop parsing */
 	int	stop;	/* stop parsing */
-
-	/* This is a linked list of diversions */
-	struct json_divert_s *divert;
 
 	/* The following are just for debugging purposes */
 	const char	*file;	/* name of file being parsed, if any */
@@ -88,18 +83,6 @@ typedef struct {
 } json_parse_t;
 
 BEGIN_C
-typedef struct json_divert_s
-{
-	struct json_divert_s *next;
-	json_t *(*handler)(json_parse_t *parse, json_t *element);
-	json_t	*found;	/* the found container (NULL if not found yet) */
-	void	*data; /* available to diversion handler for other data */
-	long	diverted; /* counts items parsed in array */
-	long	deleted;  /* counts items where handler returned NULL */
-	long	changed;  /* counts items where handler returned other record */
-	char	expr[1];/* expression for finding the container */
-} json_divert_t;
-
 /* This is used to track "used" items, for the benefit of json_free_unused().
  * The "used" array is maintained by the json_used() and json_unused()
  * functions.  "hash" and "hashsize" are built by json_is_used(), but
@@ -144,8 +127,6 @@ typedef struct {
         int calc;       /* Output information about complex expressions */
 } json_debug_t;
 
-END_C
-
 extern json_debug_t json_debug_flags;
 extern jsonformat_t json_format_default;
 extern char json_format_color_result[20];
@@ -158,7 +139,6 @@ extern char json_format_color_end[20];
 /* Magic value that diverters can return to stop processing */
 #define JSON_STOP ((json_t *)1)
 
-BEGIN_C
 /* Error handling */
 typedef void (*json_catcher_t)(json_parse_t *parse, char *fmt, ...);
 json_catcher_t json_throw;
@@ -190,7 +170,6 @@ extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data
 /* Parsing */
 extern const char *json_token(const char *str, json_token_t *token);
 extern void json_parse_begin(json_parse_t *state, int maxnest);
-extern json_divert_t *json_parse_divert(json_parse_t *state, char *expr, json_t *(*f)(json_parse_t *parse, json_t *element));
 extern void json_parse_newbuf(json_parse_t *state, const char *buf, long offset);
 extern void json_parse_token(json_parse_t *state, json_token_t *token);
 extern int json_parse_append(json_parse_t *state, json_t *container, json_t *more);

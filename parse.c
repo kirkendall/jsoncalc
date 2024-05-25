@@ -278,40 +278,6 @@ void json_parse_begin(json_parse_t *state, int maxnest)
 	state->nest = -1;
 }
 
-/* Add a diversion to a parsing context.  This will allow you to selectively
- * avoid adding elements to an array.  The handler function should either
- * return the object (or some other object) to insert into the array, *OR*
- * it should process the item, free it via json_free(), and return NULL.
- * This gives you a way to process large JSON arrays one element at a time.
- * The expr should either be an expression selecting the array to divert, or
- * NULL to divert all array insertions.
- */
-json_divert_t *json_parse_divert(json_parse_t *state, char *expr, json_t *(*handler)(json_parse_t *parse, json_t *element))
-{
-	json_divert_t *divert;
-
-	/* NULL is stored as "" */
-	if (!expr)
-		expr = "";
-
-	/* Create a json_divert_t struct for this diversion */
-	divert = (json_divert_t *)malloc(sizeof(json_divert_t) + strlen(expr));
-	strcpy(divert->expr, expr);
-	divert->found = NULL;
-	divert->data = NULL;
-	divert->diverted = divert->deleted = divert->changed = 0;
-	divert->handler = handler;
-
-	/* Insert it into a linked-list of diversions for this parse state */
-	divert->next = state->divert;
-	state->divert = divert;
-
-	/* Return it.  The calling function might need to adjust the
-	 * "data" element, or check the counters after parsing.
-	 */
-	return divert;
-}
-
 
 /* Alert the parse state that you're starting a new line buffer.  You should
  * call this for each line, when reading from a file.
@@ -352,23 +318,10 @@ void json_parse_stop(json_parse_t *state)
 	}
 }
 
-/* Process a single diverted element */
-static json_t *diverted(json_parse_t *state, json_divert_t *divert, json_t *json)
-{
-	json_t *result = (*divert->handler)(state, json);
-	divert->diverted++;
-	if (!result)
-		divert->deleted++;
-	else if (result != json)
-		divert->changed++;
-	return result;
-}
-
 /* Incorporate a token into the parsed object */
 void json_parse_token(json_parse_t *state, json_token_t *token)
 {
 	json_t *json;
-	json_divert_t *divert;
 
 	/* remember the position of this token, for debugging */
 	if (token->type != JSON_BADTOKEN)
@@ -420,14 +373,6 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 	  	 */
 	  	json = state->stack[state->nest--];
 
-		/* Allow for diversions */
-		for (divert = state->divert; state->nest >= 0 && json && divert; divert = divert->next)
-		{
-			if ((!*divert->expr && state->stack[state->nest]->type == JSON_ARRAY)
-			  || state->stack[state->nest] == divert->found)
-				json = diverted(state, divert, json);
-		}
-
 		/* Merge it into the outer object */
 		if (json == JSON_STOP)
 			json_parse_stop(state);
@@ -446,42 +391,6 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 		if (state->nest >= 0)
 			json_parse_append(state, state->stack[state->nest], json);
 	  	state->stack[++state->nest] = json;
-
-	  	/* Does this array match any diversions? */
-	  	for (divert = state->divert; divert; divert = divert->next)
-	  	{
-	  		/* An empty/NULL expr matches every array */
-	  		if (!*divert->expr)
-	  			continue;
-
-	  		/* This is tricky.  For consistency's sake, we'd like
-	  		 * to use json_by_expr() to detect whether this array
-	  		 * matches an expression, but we can't -- json_by_expr()
-	  		 * works on fully parsed json_t trees, but the name of
-	  		 * this array is indicated by incomplete JSON_KEY
-	  		 * entries in the state.  So we fake it.
-	  		 */
-	  		int i, len, ignorecase;
-	  		char *term, *key;
-	  		ignorecase = strchr(divert->expr, '~') != NULL;
-	  		for (i = 0, term = divert->expr; term && i < state->nest; i++)
-	  		{
-	  			if (state->stack[i]->type != JSON_KEY)
-	  				continue;
-	  			key = state->stack[i]->text;
-				len = strlen(key);
-	  			if ((ignorecase ? strncasecmp(term, key, len) : strncmp(term, key, len)) || isalnum(term[len]))
-	  				term = NULL; /* no match */
-	  			else
-	  			{
-	  				term += len;
-	  				while (*term && strchr(".[]\"~", *term))
-	  					term++;
-	  			}
-	  		}
-	  		if (term && !*term)
-	  			divert->found = json;
-	  	}
 	  	break;
 
 	  case JSON_ENDARRAY:
@@ -523,15 +432,7 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 			state->stack[0] = json;
 		else
 		{
-			/* Allow for diversions */
-			for (divert = state->divert; divert && json; divert = divert->next)
-			{
-				if ((!*divert->expr && state->stack[state->nest]->type == JSON_ARRAY)
-				  || state->stack[state->nest] == divert->found)
-					json = diverted(state, divert, json);
-			}
-			if (json)
-				json_parse_append(state, state->stack[state->nest], json);
+			json_parse_append(state, state->stack[state->nest], json);
 		}
 		break;
 
@@ -581,21 +482,12 @@ int json_parse_complete(json_parse_t *state)
 json_t *json_parse_end(json_parse_t *state)
 {
 	json_t *json;
-	json_divert_t *divert;
 
 	/* Complain if we aren't at a good stopping point */
 	if (!json_parse_complete(state))
 	{
 		json_throw(state, "Incomplete parse");
 		return NULL;
-	}
-
-	/* Free the diversion list */
-	while (state->divert)
-	{
-		divert = state->divert->next;
-		free(state->divert);
-		state->divert = divert;
 	}
 
 	/* Free the stack (but remember the json_t tree first) */
@@ -632,10 +524,6 @@ json_t *json_parse_string(const char *str)
  * returns the json_t tree.  If you do pass a state, then this function
  * returns the json_t tree for the data parsed to far, but you need to call
  * json_parse_end() to get the final value.
- *
- * The state parameter is supported mostly so you can call json_parse_divert()
- * before calling json_parse_file().  It can also be used to implement
- * something like "include" or "concatenate" features in your JSON files.
  */
 json_t *json_parse_file(json_parse_t *state, char *filename)
 {

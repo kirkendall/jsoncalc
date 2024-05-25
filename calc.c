@@ -1000,9 +1000,17 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		/* Scan the right-hand list, looking for an exact match */
 		if (right->type == JSON_ARRAY) {
 
-			for (scan = right->first; scan; scan = scan->next) {
-				if (json_equal(left, scan))
-					break;
+			if (left->type == JSON_STRING) {
+				for (scan = right->first; scan; scan = scan->next) {
+					if (scan->type == JSON_STRING && !json_mbs_casecmp(left->text, scan->text))
+						break;
+				}
+
+			} else {
+				for (scan = right->first; scan; scan = scan->next) {
+					if (json_equal(left, scan))
+						break;
+				}
 			}
 			result = json_symbol(scan ? "true" : "false", -1);
 		}

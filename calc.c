@@ -400,6 +400,37 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 	return result;
 }
 
+/* Assign a value.  We want to navigate down through an L-value to find the
+ * thing to be modified.  Returns NULL on success, or a json_t "null" on
+ * failure.
+ */
+json_t *jcassign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
+{
+	json_t	*container;
+	char	*key;
+
+	/* If lvalue is simply "name" then look for it in the context */
+	if (lvalue->op == JSONOP_NAME
+	 || (lvalue->op == JSONOP_LITERAL && lvalue->u.literal->type == JSON_STRING)) {
+		/* Find the context layer that contains this variable */
+		if (lvalue->op == JSONOP_NAME)
+			key = lvalue->u.text;
+		else
+			key = lvalue->u.literal->text;
+		container = json_context_object_by_key(context, key);
+		if (!container)
+			return json_symbol("null", -1); /* unknown variable */
+
+		/* Replace it with a new version */
+		json_append(container, json_key(key, json_copy(rvalue)));
+		return NULL;
+	}
+
+	/* Otherwise we need to get tricky */
+	return json_symbol("null", -1); /* not implemented yet */
+}
+
+
 /* Evaluate an expression and return the result.
  *   calc       The expression to evaluate.  This should be obtained from a 
  *              previous call to json_calc_parse().
@@ -1028,6 +1059,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		break;
 
 	  case JSONOP_ASSIGN:
+		USE_RIGHT_OPERAND(calc);
+		result = jcassign(calc->LEFT, right, context);
+		if (result == NULL) {
+			if (freeright) {
+				result = right;
+				freeright = NULL;
+			} else {
+				result = json_copy(right);
+			}
+		}
+		break;
+
 	  case JSONOP_CONST:
 	  case JSONOP_FUNCTION:
 	  case JSONOP_RETURN:

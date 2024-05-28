@@ -214,6 +214,7 @@ extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
 jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, json_t *(*autoload)(char *name));
 json_t *json_context_by_key(jsoncontext_t *context, char *key);
+json_t *json_context_object_by_key(jsoncontext_t *context, char *key);
 json_t *json_context_default_table(jsoncontext_t *context);
 
 /* The following are for debugging memory leaks.  They're only used if your

@@ -66,7 +66,7 @@ static struct {
 	{"AND",		"&&",	140,	JCOP_INFIX},
 	{"ARRAY",	"ARR",	-1,	JCOP_OTHER},
 	{"AS",		"AS",	121,	JCOP_INFIX},
-	{"ASSIGN",	"ASGN",	121,	JCOP_INFIX},
+	{"ASSIGN",	"ASGN",	120,	JCOP_INFIX},
 	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
 	{"BITAND",	"&",	160,	JCOP_INFIX},
 	{"BITNOT",	"~",	240,	JCOP_PREFIX},
@@ -389,6 +389,36 @@ static int jcregex(stack_t *stack)
 	return 0;
 }
 
+/* Test whether the parseing stack is in a context where "=" is an assignment
+ * operator, not a comparison operator.
+ */
+static int jcisassign(stack_t *stack)
+{
+	int	sp = stack->sp;
+	jsoncalc_t	*jc;
+
+	/* Any basic l-value can be followed by "[]" to denote appending
+	 * to an array.
+	 */
+	if (sp >= 3 && stack->stack[sp - 2]->op == JSONOP_SUBSCRIPT && stack->stack[sp - 1]->op == JSONOP_ENDARRAY)
+		sp -= 2;
+
+	/* Expect the first item on the stack to be a series of name.name
+	 * or name[subscript] operators.  Subscripts are allowed to be complex
+	 * so we don't test them.
+	 */
+	if (sp != 1)
+		return 0;
+	for (jc = stack->stack[0];
+	     jc && ((jc->op == JSONOP_DOT && jc->RIGHT->op == JSONOP_NAME)
+		|| jc->op == JSONOP_SUBSCRIPT);
+	     jc = jc->LEFT) {
+	}
+	if (!jc || jc->op != JSONOP_NAME)
+		return 0;
+	return 1;
+}
+
 /* Given a starting point within a text buffer, parse the next token (storing
  * its details in *token) and return a pointer to the character after the token.
  */
@@ -592,6 +622,10 @@ char *lex(char *str, token_t *token, stack_t *stack)
 		/* SUBTRACT could be NEGATE -- depends on context */
 		if (token->op == JSONOP_SUBTRACT && (pattern(stack, "^") || pattern(stack, "+")))
 			token->op = JSONOP_NEGATE;
+
+		/* ICEQ could be ASSIGN -- depends on context */
+		if (token->op == JSONOP_ICEQ && jcisassign(stack))
+			token->op = JSONOP_ASSIGN;
 
 		if (json_debug_flags.calc)
 			printf("lex(): operator JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
@@ -821,6 +855,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
 	  case JSONOP_EXPLAIN:
+	  case JSONOP_ASSIGN:
 		json_calc_free(jc->LEFT);
 		json_calc_free(jc->RIGHT);
 		break;
@@ -853,7 +888,6 @@ void json_calc_free(jsoncalc_t *jc)
 		free(jc->u.regex.preg);
 		break;
 
-	  case JSONOP_ASSIGN:
 	  case JSONOP_CONST:
 	  case JSONOP_FUNCTION:
 	  case JSONOP_RETURN:
@@ -1907,6 +1941,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
 	  case JSONOP_EXPLAIN:
+	  case JSONOP_ASSIGN:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, ag);
 		break;
@@ -1929,7 +1964,6 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 		jc->u.func.args = parseag(jc->u.func.args, ag);
 		break;
 
-	  case JSONOP_ASSIGN:
 	  case JSONOP_CONST:
 	  case JSONOP_FUNCTION:
 	  case JSONOP_RETURN:

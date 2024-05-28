@@ -94,6 +94,36 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key)
         return NULL;
 }
 
+/* This returns the object from context containing a given key.  If no such
+ * key is found, it returns NULL.
+ *
+ * This is different from json_context_by_key().  This function returns the
+ * object that contains of the key, instead of the value of the key.  This
+ * is useful when you want to assign a value to it.
+ */
+json_t *json_context_object_by_key(jsoncontext_t *context, char *key)
+{
+        json_t  *val;
+
+        while (context) {
+                /* !!! Skip if "const", and maybe if autoload */
+
+                /* If "this" is an object, check for a member */
+                if (context->data->type == JSON_OBJECT) {
+                        val = json_by_key(context->data, key);
+                        if (val)
+                                return context->data;
+                }
+
+                /* Not found here.  Try older contexts */
+                context = context->older;
+        }
+
+        /* Nope, not in any context */
+        return NULL;
+}
+
+
 /* Returns the default table for a "SELECT" statement.
  *
  * In SQL "SELECT" statements, the "FROM" clause is optional.  If it is omitted

@@ -44,11 +44,8 @@ clean:
 tags: $(SRC) $(LIBSRC) $(HDRS)
 	elvtags $(SRC) $(LIBSRC) $(HDRS)
 
-rcsdiff: $(SRC) $(LIBSRC) $(HDRS) Makefile
-	rcsdiff -c $(SRC) $(LIBSRC) $(HDRS) Makefile
-
 wc: $(SRC) $(LIBSRC) $(HDRS)
-	wc $(SRC) $(LIBSRC) $(HDRS)
+	wc $(SRC) $(LIBSRC) $(HDRS)|sort -n
 
 gitinit:
 	git add $(SRC) $(TESTSRC) $(LIBSRC) $(HDRS)

@@ -38,7 +38,8 @@ json_t *json_copy(json_t *json)
 		return json_key(json->text, json_copy(json->first));
 
 	  case JSON_STRING:
-	  case JSON_SYMBOL:
+	  case JSON_BOOL:
+	  case JSON_NULL:
 		return json_simple(json->text, -1, json->type);
 
 	  case JSON_NUMBER:

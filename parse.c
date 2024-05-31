@@ -15,9 +15,24 @@ json_t *json_simple_from_token(json_token_t *token)
 {
         size_t len;
         json_t  *json;
+        const char *s, *end;
+
+        /* Null is easy.  We don't want the text "null" in it though */
+        if (token->type == JSON_NULL)
+		return json_null();
 
         /* Non-strings and empty strings are easy */
 	if (token->type != JSON_STRING || token->len == 0)
+                return json_simple(token->start, token->len, token->type);
+
+        /* Most strings don't have character escapes (backslashes).
+         * Optimize for that.
+         */
+	for (s = token->start, end = s + token->len; s != end; s++) {
+		if (*s == '\\')
+			break;
+	}
+	if (s == end)
                 return json_simple(token->start, token->len, token->type);
 
         /* Handle character escapes */
@@ -189,10 +204,13 @@ const char *json_token(const char *str, json_token_t *token)
 
 			/* The only legal symbols are true, false, and null. */
 			if ((token->len == 4 && !strncmp(str, "true", 4))
-			 || (token->len == 5 && !strncmp(str, "false", 5))
-			 || (token->len == 4 && !strncmp(str, "null", 4)))
+			 || (token->len == 5 && !strncmp(str, "false", 5)))
 			{
-				token->type = JSON_SYMBOL;
+				token->type = JSON_BOOL;
+			}
+			else if (token->len == 4 && !strncmp(str, "null", 4))
+			{
+				token->type = JSON_NULL;
 			}
 			else
 			{
@@ -224,8 +242,8 @@ const char *json_token(const char *str, json_token_t *token)
 	{
 	}
 
-	/* Strings and symbols may be used as keys.  Look for ":" */
-	if ((token->type == JSON_STRING || token->type == JSON_SYMBOL) && *str == ':')
+	/* Strings may be used as keys.  Look for ":" */
+	if (token->type == JSON_STRING && *str == ':')
 	{
 		token->type = JSON_KEY;
 		str++;
@@ -256,7 +274,8 @@ const char *json_token(const char *str, json_token_t *token)
 		  case JSON_KEY:	typename = "KEY"; quote="\"";	break;
 		  case JSON_STRING:	typename = "STRING";quote="\"";	break;
 		  case JSON_NUMBER:	typename = "NUMBER";	break;
-		  case JSON_SYMBOL:	typename = "SYMBOL";	break;
+		  case JSON_BOOL:	typename = "BOOL";	break;
+		  case JSON_NULL:	typename = "NULL";	break;
 		  default:		typename = "BADTOKEN";
 		}
 		fprintf(stderr, "%s %s%.*s%s\n", typename, quote, (int)token->len, token->start, quote);
@@ -423,7 +442,8 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 
 	  case JSON_STRING:
 	  case JSON_NUMBER:
-	  case JSON_SYMBOL:
+	  case JSON_BOOL:
+	  case JSON_NULL:
 		/* Merge the value into the object/array/key on the top of
 		 * the stack.
 		 */
@@ -453,7 +473,8 @@ void json_parse_token(json_parse_t *state, json_token_t *token)
 		  case JSON_ENDARRAY:
 		  case JSON_STRING:
 		  case JSON_NUMBER:
-		  case JSON_SYMBOL:
+		  case JSON_BOOL:
+		  case JSON_NULL:
 			state->nest--;
 			if (state->nest >= 0)
 			{

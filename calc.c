@@ -359,7 +359,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				json_context_free(local, 0);
 
 				/* If null/false, skip it, if true add element*/
-				if (tmp->type == JSON_SYMBOL) {
+				if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
 					/* Skip for null or false, add for true */
 					if (json_is_true(tmp))
 						json_append(result, json_copy(gscan));
@@ -376,7 +376,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			local = json_context(context, scan, NULL);
 			tmp = json_calc(calc, local, ag ? ag : NULL);
 			json_context_free(local, 0);
-			if (tmp->type == JSON_SYMBOL) {
+			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
 				/* Skip for null or false, add for true */
 				if (json_is_true(tmp))
 					json_append(result, json_copy(scan));
@@ -419,7 +419,7 @@ json_t *jcassign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
 			key = lvalue->u.literal->text;
 		container = json_context_object_by_key(context, key);
 		if (!container)
-			return json_symbol("null", -1); /* unknown variable */
+			return json_error_null(1, "unknown variable \"%s\"", key);
 
 		/* Replace it with a new version */
 		json_append(container, json_key(key, json_copy(rvalue)));
@@ -427,7 +427,7 @@ json_t *jcassign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
 	}
 
 	/* Otherwise we need to get tricky */
-	return json_symbol("null", -1); /* not implemented yet */
+	return json_null(); /* !!! not implemented yet */
 }
 
 
@@ -757,12 +757,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_ISNULL:
 		USE_RIGHT_OPERAND(calc);
-		result = json_symbol(json_is_null(right) ? "true" : "false", -1);
+		result = json_bool(json_is_null(right));
 		break;
 
 	  case JSONOP_ISNOTNULL:
 		USE_RIGHT_OPERAND(calc);
-		result = json_symbol(json_is_null(right) ? "false" : "true", -1);
+		result = json_bool(!json_is_null(right));
 		break;
 
 	  case JSONOP_NEGATE:
@@ -811,12 +811,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			else if (calc->op == JSONOP_MULTIPLY)
 				result = json_from_double(nl * nr);
 			else if (nr == 0.0)
-				result = json_symbol("null", -1);
+				result = json_error_null(1, "division by 0");
 			else if (calc->op == JSONOP_DIVIDE)
 				result = json_from_double(nl / nr);
 			else if ((int)nr == 0)
-				result = json_symbol("null", -1);
-			else /* JSONOP_DIVIDE */
+				result = json_error_null(1, "modulo by 0");
+			else /* JSONOP_MODULO */
 				result = json_from_double((int)nl % (int)nr);
 		}
 		break;
@@ -871,7 +871,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_NOT:
 		USE_RIGHT_OPERAND(calc);
-		result = json_symbol(json_is_true(right) ? "false" : "true", -1);
+		result = json_bool(!json_is_true(right));
 		break;
 
 	  case JSONOP_AND:
@@ -882,7 +882,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			USE_RIGHT_OPERAND(calc);
 			il = json_is_true(right);
 		}
-		result = json_symbol(il ? "true" : "false", -1);
+		result = json_bool(il);
 		break;
 
 	  case JSONOP_EQSTRICT:
@@ -897,7 +897,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		il = json_equal(left, right);
 		if (calc->op == JSONOP_NESTRICT)
 			il = !il;
-		result = json_symbol(il ? "true" : "false", -1);
+		result = json_bool(il);
 		break;
 
 	  case JSONOP_LT:
@@ -921,10 +921,14 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				il = 1;
 			else
 				il = 0;
-		} else if ((left->type == JSON_SYMBOL || right->type == JSON_SYMBOL)
+		} else if ((left->type == JSON_BOOL || right->type == JSON_BOOL)
 		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
 			/* Compare as booleans, but only for equality */
 			il = json_is_true(left) != json_is_true(right);
+		} else if ((left->type == JSON_NULL || right->type == JSON_NULL)
+		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
+		        /* null is null, no difference */
+		        il = 0;
 		} else {/* hopefully string, but other types work too */
 			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE)
 				il = json_mbs_casecmp(left->text, right->text);
@@ -945,7 +949,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		}
 
 		/* Set the result */
-		result = json_symbol(ir ? "true" : "false", -1);
+		result = json_bool(ir);
 		break;
 
 	  case JSONOP_BETWEEN:
@@ -953,7 +957,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		USE_LEFT_OPERAND(calc);
 
 		/* Test lower bound.  Note that we have to use USE_LEFT_OPERAND()
-		 * again since calc->RIGHT is the whole "AND" clause and we want the
+		 * again since calc->RIGHT is the entire "AND" clause and we want the
 		 * left branch of that.  So first we juggle variables a bit...
 		 */
 		scan = left;
@@ -965,12 +969,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		freeleft = found;
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 			if (json_double(left) < json_double(right))
-				result = json_symbol("false", -1);
+				result = json_bool(0);
 		} else if (left->type == JSON_STRING && right->type == JSON_STRING) {
 			if (json_mbs_casecmp(left->text, right->text) < 0)
-				result = json_symbol("false", -1);
+				result = json_bool(0);
 		} else
-			result = json_symbol("null", -1);
+			result = json_null();
 
 		if (freeright) {
 			json_free(freeright);
@@ -984,18 +988,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			USE_RIGHT_OPERAND(calc->RIGHT);
 			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 				if (json_double(left) > json_double(right))
-					result = json_symbol("false", -1);
+					result = json_bool(0);
 			} else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
 				if (json_mbs_casecmp(left->text, right->text) > 0)
-					result = json_symbol("false", -1);
+					result = json_bool(0);
 			}
 			else
-				result = json_symbol("null", -1);
+				result = json_null();
 		}
 
 		/* If no result, I guess we're okay */
 		if (!result)
-			result = json_symbol("true", -1);
+			result = json_bool(1);
 
 		break;
 
@@ -1008,18 +1012,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 && regexec((regex_t *)calc->RIGHT->u.regex.preg, left->text, 10, matches, 0) == 0
 			 && matches[0].rm_so == 0
 			 && matches[0].rm_eo == strlen(left->text))
-				result = json_symbol("true", -1);
+				result = json_bool(1);
 			else
-				result = json_symbol("false", -1);
+				result = json_bool(0);
 		} else  {
 			USE_RIGHT_OPERAND(calc);
 			if (left->type != JSON_STRING || right->type != JSON_STRING) {
-				result = json_symbol("false", -1);
+				result = json_bool(0);
 			} else {
 				il = json_mbs_like(left->text, right->text);
 				if (calc->op == JSONOP_NOTLIKE)
 					il = !il;
-				result = json_symbol(il ? "true" : "false", -1);
+				result = json_bool(il);
 			}
 		}
 		break;
@@ -1043,7 +1047,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 						break;
 				}
 			}
-			result = json_symbol(scan ? "true" : "false", -1);
+			result = json_bool(scan != NULL);
 		}
 		break;
 
@@ -1104,7 +1108,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	/* If no result, then use null */
 	if (!result)
-		result = json_symbol("null", -1);
+		result = json_null();
 
 	/* Free operands, if appropriate */
 	json_free(freeleft);

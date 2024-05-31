@@ -20,7 +20,7 @@ typedef enum {
 	JSON_BADTOKEN, JSON_NEWLINE,
 	JSON_OBJECT, JSON_ENDOBJECT,
 	JSON_ARRAY, JSON_ENDARRAY, JSON_DEFERRED,
-	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_SYMBOL
+	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_NULL, JSON_BOOL
 } json_type_t;
 
 /* These represent a parsed token */
@@ -34,16 +34,17 @@ typedef struct {
 /* This represents a JSON value.  The way it is used depends on the type:
  * JSON_OBJECT	first points to first member
  * JSON_ARRAY	first points to first element
- * JSON_KEY	first points to value, string contains name
- * JSON_STRING	string contains value
- * JSON_NUMBER	string contains value, as a string
- * JSON_SYMBOL	string contains value, as a string
+ * JSON_KEY	first points to value, text contains name
+ * JSON_STRING	text contains value
+ * JSON_NUMBER	text contains value, as a string
+ * JSON_BOOL	text contains "true" or "false"
+ * JSON_NULL	text is "" or an error message
  */
 typedef struct json_s {
 	struct json_s *next;	/* next element of an array or object */
 	struct json_s *first;	/* contents of this object, array, or key */
 	json_type_t type : 4;	/* type of this json_t node */
-	unsigned    memslot:12; /* Used for JSON_DEBUG_MEMORY */
+	unsigned    memslot:12; /* used for JSON_DEBUG_MEMORY */
 	char        text[14];	/* value of string, number, boolean; name of key */
 } json_t;
 
@@ -151,7 +152,9 @@ extern json_t *json_simple(const char *str, size_t len, json_type_t type);
 extern json_t *json_simple_from_token(json_token_t *token);
 extern json_t *json_string(const char *str, size_t len);
 extern json_t *json_number(const char *str, size_t len);
-extern json_t *json_symbol(const char *str, size_t len);
+extern json_t *json_bool(int boolean);
+extern json_t *json_null(void);
+extern json_t *json_error_null(int code, char *fmt, ...);
 extern json_t *json_from_int(int i);
 extern json_t *json_from_double(double f);
 extern json_t *json_key(const char *key, json_t *value);
@@ -225,7 +228,9 @@ extern void json_debug_free(const char *file, int line, json_t *json);
 extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, json_type_t type);
 extern json_t *json_debug_string(const char *file, int line, const char *str, size_t len);
 extern json_t *json_debug_number(const char *file, int line, const char *str, size_t len);
-extern json_t *json_debug_symbol(const char *file, int line, const char *str, size_t len);
+extern json_t *json_debug_bool(const char *file, int line, int boolean);
+extern json_t *json_debug_null(const char *file, int line);
+extern json_t *json_debug_error_null(const char *file, int line, char *fmt, ...);
 extern json_t *json_debug_from_int(const char *file, int line, int i);
 extern json_t *json_debug_from_double(const char *file, int line, double f);
 extern json_t *json_debug_key(const char *file, int line, const char *key, json_t *value);
@@ -238,7 +243,9 @@ extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 #define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
 #define json_string(str, len)		json_debug_string(__FILE__, __LINE__, str, len)
 #define json_number(str, len)		json_debug_number(__FILE__, __LINE__, str, len)
-#define json_symbol(str, len)		json_debug_symbol(__FILE__, __LINE__, str, len)
+#define json_bool(boolean)			json_debug_bool(__FILE__, __LINE__, boolean)
+#define json_null()			json_debug_null(__FILE__, __LINE__)
+#define json_error(...)			json_debug_error(__FILE__, __LINE__, __VA_ARGS__)
 #define json_from_int(i)		json_debug_from_int(__FILE__, __LINE__, i)
 #define json_from_double(f)		json_debug_from_double(__FILE__, __LINE__, f)
 #define json_key(key, value)		json_debug_key(__FILE__, __LINE__, key, value)

@@ -23,10 +23,13 @@ int json_equal(json_t *j1, json_t *j2)
 
         /* Compare types as appropriate */
         switch (j1->type) {
-          case JSON_SYMBOL:
+          case JSON_BOOL:
           case JSON_STRING:
                 /* Compare their literal text, case-sensitively. */
                 return !strcmp(j1->text, j2->text);
+
+	  case JSON_NULL:
+		return 1;
 
           case JSON_NUMBER:
 		/* Numbers may be binary or text. */

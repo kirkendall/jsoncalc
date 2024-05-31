@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
@@ -18,7 +19,9 @@
 # undef json_number
 # undef json_from_int
 # undef json_from_double
-# undef json_symbol
+# undef json_bool
+# undef json_null
+# undef json_error_null
 # undef json_array
 # undef json_key
 # undef json_object
@@ -60,7 +63,8 @@ size_t json_sizeof(json_t *json)
                 switch (json->type) {
                   case JSON_STRING:
                   case JSON_NUMBER:
-                  case JSON_SYMBOL:
+                  case JSON_BOOL:
+                  case JSON_NULL:
                   case JSON_KEY:
                         /* Add the text length including the termating \0,
                          * tweaked for alignment
@@ -184,13 +188,46 @@ json_t *json_number(const char *str, size_t len)
 	return json_simple(str, len, JSON_NUMBER);
 }
 
-/* Allocate a json_t for a given symbol (usually "true" or "false") expressed
- * as a string.  If you pass * -1 for len, it'll compute the length via
- * strlen().
- */
-json_t *json_symbol(const char *str, size_t len)
+/* Allocate a json_t for a boolean value. */
+json_t *json_bool(int boolean)
 {
-	return json_simple(str, len, JSON_SYMBOL);
+	if (boolean)
+		return json_simple("true", 4, JSON_BOOL);
+	else
+		return json_simple("false", 4, JSON_BOOL);
+}
+
+/* Allocate a json_t for a null value */
+json_t *json_null(void)
+{
+	return json_simple("", 0, JSON_NULL);
+}
+
+/* Allocate a json_t for a null value, encoding an error message */
+json_t *json_error_null(int code, char *fmt, ...)
+{
+	char	buf[200], *bigbuf;
+	int	len;
+	va_list	ap;
+	json_t	*result;
+
+	/* First try it in a modest buffer.  Usually works. */
+	va_start(ap, fmt);
+	len = vsnprintf(buf, sizeof buf, fmt, ap);
+	va_end(ap);
+	if (len < 0)
+		return json_null();
+	if (len <= sizeof buf)
+		return json_simple(buf, len - 1, JSON_NULL);
+
+	/* Allocate a larger buffer to hold the string, and use it */
+	bigbuf = (char *)malloc(len);
+	va_start(ap, fmt);
+	vsnprintf(bigbuf, len, fmt, ap);
+	va_end(ap);
+	result = json_simple(buf, len - 1, JSON_NULL);
+	free(bigbuf);
+	return result;
 }
 
 /* Allocate a json_t for a given integer */
@@ -362,12 +399,48 @@ json_t *json_debug_number(const char *file, int line, const char *str, size_t le
 	return json_debug_simple(file, line, str, len, JSON_NUMBER);
 }
 
-/* Allocate a json_t for a given symbol (usually "true" or "false") expressed
- * as a string */
-json_t *json_debug_symbol(const char *file, int line, const char *str, size_t len)
+/* Allocate a json_t for a given boolean */
+json_t *json_debug_bool(const char *file, int line, int boolean)
 {
-	return json_debug_simple(file, line, str, len, JSON_SYMBOL);
+	if (boolean)
+		return json_debug_simple(file, line, "true", 4, JSON_BOOL);
+	else
+		return json_debug_simple(file, line, "false", 5, JSON_BOOL);
 }
+
+/* Allocate a json_t for a given boolean */
+json_t *json_debug_null(const char *file, int line)
+{
+	return json_debug_simple(file, line, "", 0, JSON_NULL);
+}
+
+/* Allocate a json_t for a given boolean */
+json_t *json_debug_error_null(const char *file, int line, char *fmt, ...)
+{
+	char	buf[200], *bigbuf;
+	int	len;
+	va_list	ap;
+	json_t	*result;
+
+	/* First try it in a modest buffer.  Usually works. */
+	va_start(ap, fmt);
+	len = vsnprintf(buf, sizeof buf, fmt, ap);
+	va_end(ap);
+	if (len < 0)
+		return json_debug_null(file, line);
+	if (len <= sizeof buf)
+		return json_debug_simple(file, line, buf, len - 1, JSON_NULL);
+
+	/* Allocate a larger buffer to hold the string, and use it */
+	bigbuf = (char *)malloc(len);
+	va_start(ap, fmt);
+	vsnprintf(bigbuf, len, fmt, ap);
+	va_end(ap);
+	result = json_debug_simple(file, line, buf, len - 1, JSON_NULL);
+	free(bigbuf);
+	return result;
+}
+
 
 /* Allocate a json_t for a given integer */
 json_t *json_debug_from_int(const char *file, int line, int i)

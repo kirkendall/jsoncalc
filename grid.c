@@ -103,7 +103,7 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 		for (c = 0, col = explain->first; col; c++, col = col->next) {
 			/* Fetch the cell's text */
 			cell = json_by_key(row, json_text_by_key(col, "key"));
-			if (!cell || (cell->type == JSON_SYMBOL && *cell->text == 'n'))
+			if (!cell || cell->type == JSON_NULL)
 				text = format->null;
 			else if (cell->type == JSON_ARRAY)
 				text = json_is_table(cell) ? "[table]" : "[array]";

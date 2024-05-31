@@ -297,7 +297,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 
 	/* If not a string or no other parameters, just return null */
 	if (args->first->type != JSON_STRING || !args->first->next)
-		return json_symbol("null", -1);
+		return json_null();
 	str = args->first->text;
 
 	/* Get the length of the string.  We'll need that to adjust bounds */
@@ -305,7 +305,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 
 	/* Get the starting position */
 	if (args->first->next->type != JSON_NUMBER)
-		return json_symbol("null", -1);
+		return json_null();
 	start = json_int(args->first->next);
 	if (start < 0 && start + len >= 0)
 		start = len + start;
@@ -316,7 +316,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 	if (!args->first->next->next)
 		limit = len - start; /* all the way to the end */
 	else if (args->first->next->next->type != JSON_NUMBER)
-		return json_symbol("null", -1);
+		return json_null();
 	else {
 		limit = json_int(args->first->next->next);
 		if (start + limit > len)
@@ -368,7 +368,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		return result;
 	}
-	return json_symbol("null", -1);
+	return json_null();
 }
 
 /* toString(arg) converts arg to a string */
@@ -381,10 +381,14 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 	if (args->first->type == JSON_STRING)
 		return json_copy(args->first);
 
-	/* If symbol or non-binary number, convert its text to a string. */
+	/* If boolean or non-binary number, convert its text to a string. */
 	if (args->first->type == JSON_NUMBER
-	 || (args->first->type == JSON_SYMBOL && args->first->text[0] != '\0'))
+	 || (args->first->type == JSON_BOOL && args->first->text[0] != '\0'))
 		return json_string(args->first->text, -1);
+
+	/* If null, return "null" */
+	if (args->first->type == JSON_NULL)
+		return json_string("null", 4);
 
 	/* For anything else, use json_serialize() */
 	tmpstr = json_serialize(args->first, 0);
@@ -395,27 +399,27 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 
 static json_t *jfn_isString(json_t *args, void *agdata)
 {
-	return json_symbol(args->first->type == JSON_STRING ? "true" : "false", -1);
+	return json_bool(args->first->type == JSON_STRING);
 }
 
 static json_t *jfn_isObject(json_t *args, void *agdata)
 {
-	return json_symbol(args->first->type == JSON_OBJECT ? "true" : "false", -1);
+	return json_bool(args->first->type == JSON_OBJECT);
 }
 
 static json_t *jfn_isArray(json_t *args, void *agdata)
 {
-	return json_symbol(args->first->type == JSON_ARRAY ? "true" : "false", -1);
+	return json_bool(args->first->type == JSON_ARRAY);
 }
 
 static json_t *jfn_isTable(json_t *args, void *agdata)
 {
-	return json_symbol(json_is_table(args->first) ? "true" : "false", -1);
+	return json_bool(json_is_table(args->first));
 }
 
 static json_t *jfn_isNumber(json_t *args, void *agdata)
 {
-	return json_symbol(args->first->type == JSON_NUMBER ? "true" : "false", -1);
+	return json_bool(args->first->type == JSON_NUMBER);
 }
 
 static json_t *jfn_isInteger(json_t *args, void *agdata)
@@ -423,16 +427,16 @@ static json_t *jfn_isInteger(json_t *args, void *agdata)
 	double d;
 
 	if (args->first->type != JSON_NUMBER)
-		return json_symbol("false", -1);
+		return json_bool(0);
 	if (args->first->text[0] == '\0' && args->first->text[1] == 'i')
-		return json_symbol("true", -1);
+		return json_bool(1);
 	d = json_double(args->first);
-	return json_symbol(d == (int)d ? "true" : "false", -1);
+	return json_bool(d == (int)d);
 }
 
 static json_t *jfn_isNaN(json_t *args, void *agdata)
 {
-	return json_symbol(args->first->type != JSON_NUMBER ? "true" : "false", -1);
+	return json_bool(args->first->type != JSON_NUMBER);
 }
 
 
@@ -456,7 +460,7 @@ static json_t *jfn_width(json_t *args, void *agdata)
 	switch (args->first->type) {
 	case JSON_STRING:
 	case JSON_NUMBER:
-	case JSON_SYMBOL:
+	case JSON_BOOL:
 		return json_from_int(json_mbs_width(json_text(args->first)));
 	default:
 		return NULL;
@@ -493,7 +497,7 @@ static json_t *jfn_join(json_t *args, void *agdata)
 
 	/* If first parameter isn't an array, return null */
 	if (args->first->type != JSON_ARRAY)
-		return json_symbol("null", -1);
+		return json_null();
 
 	/* Get the delimiter */
 	if (args->first->next && args->first->next->type == JSON_STRING)
@@ -545,7 +549,7 @@ json_t *jfn_orderBy(json_t *args, void *agdata)
 	 * an array of fields and "true" for descending
 	 */
 	if (!json_is_table(args->first) || !order || order->type != JSON_ARRAY || !order->first)
-		return json_symbol("null", -1);
+		return json_null();
 
 	/* Sort a copy of the table */
 	result = json_copy(args->first);
@@ -727,7 +731,7 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 	/* Check for a "strict" flag or field list as the second parameter */
 	fieldlist = args->first->next;
 	if (fieldlist) {
-		if (fieldlist->type == JSON_SYMBOL && json_is_true(fieldlist)) {
+		if (fieldlist->type == JSON_BOOL && json_is_true(fieldlist)) {
 			bestrict = 1;
 			fieldlist = fieldlist->next;
 		}
@@ -1280,7 +1284,8 @@ static json_t *jfn_rowNumber(json_t *args, void *agdata)
 	/* First arg defines the counting style.  If it is null or false then
 	 * no item is returned and the count isn't incremented.
 	 */
-	if (args->first->type == JSON_SYMBOL && args->first->text[0] != 't')
+	if (args->first->type == JSON_NULL
+	 || (args->first->type == JSON_BOOL && !json_is_true(args->first)))
 		return NULL;
 
 	/* If it is a number, then add that to the counter */
@@ -1322,7 +1327,7 @@ static json_t *jfn_min(json_t *args, void *agdata)
 
 	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
-		return json_symbol("null", -1);
+		return json_null();
 	if (data->json)
 		return json_copy(data->json);
 	if (data->sval)
@@ -1371,7 +1376,7 @@ static json_t *jfn_max(json_t *args, void *agdata)
 
 	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
-		return json_symbol("null", -1);
+		return json_null();
 	if (data->json)
 		return json_copy(data->json);
 	if (data->sval)
@@ -1420,7 +1425,7 @@ static json_t *jfn_avg(json_t *args, void *agdata)
 	agdata_t *data = (agdata_t *)agdata;
 
 	if (data->count == 0)
-		return json_symbol("null", -1);
+		return json_null();
 	return json_from_double(data->val / (double)data->count);
 }
 static void jag_avg(json_t *args, void *agdata)
@@ -1487,7 +1492,7 @@ static void jag_product(json_t *args, void *agdata)
 static json_t *jfn_any(json_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return json_symbol(i ? "true" : "false", -1);
+	return json_bool(i);
 }
 static void jag_any(json_t *args, void *agdata)
 {
@@ -1499,7 +1504,7 @@ static void jag_any(json_t *args, void *agdata)
 static json_t *jfn_all(json_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return json_symbol(i ? "false" : "true", -1);
+	return json_bool(!i);
 }
 static void jag_all(json_t *args, void *agdata)
 {
@@ -1518,7 +1523,7 @@ static json_t *jfn_explain(json_t *args, void *agdata)
 	*(json_t **)agdata = NULL;
 
 	if (!stats)
-		stats = json_symbol("null", -1);
+		stats = json_null();
 	return stats;
 }
 
@@ -1549,7 +1554,7 @@ static json_t *jfn_writeArray(json_t *args, void *agdata)
 			fclose(fp);
 		*(FILE **)agdata = NULL;
 	}
-	return json_symbol("null", -1);
+	return json_null();
 }
 
 static void jag_writeArray(json_t *args, void *agdata)
@@ -1558,11 +1563,12 @@ static void jag_writeArray(json_t *args, void *agdata)
 	json_t	*item;
 	char    *ser;
 
-	/* For "null" or "false", do nothing.  For "true" we'd *like* to substitute
-	 * "this" but unfortunately we don't have access to the context.
+	/* For "null" or "false", do nothing.  For "true" we'd *like* to
+	 * substitute "this" but unfortunately we don't have access to the
+	 * context.
 	 */
 	item = args->first;
-	if (item->type == JSON_SYMBOL) {
+	if (item->type == JSON_BOOL) {
 		if (!json_is_true(item))
 			return;
 	}

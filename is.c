@@ -15,8 +15,10 @@ int json_is_true(json_t *json)
 
         /* Otherwise it depents on type and value */
         switch (json->type) {
-          case JSON_SYMBOL:
+          case JSON_BOOL:
                 return json->text[0] == 't';
+	  case JSON_NULL:
+		return 0;
           case JSON_STRING:
                 return json->text[0] != '\0';
           case JSON_NUMBER:
@@ -35,7 +37,7 @@ int json_is_true(json_t *json)
  */
 int json_is_null(json_t *json)
 {
-	return (!json || (json->type == JSON_SYMBOL && *json->text == 'n'));
+	return (!json || json->type == JSON_NULL);
 }
 
 /* Test whether a JSON value is an array of objects */
@@ -78,7 +80,15 @@ static size_t shorthelper(json_t *json, size_t oneline)
                         size += strlen(json->text) + 2; /* ignoring escapes */
                         break;
                   case JSON_NUMBER:
-                  case JSON_SYMBOL:
+			if (*json->text)
+				size += strlen(json->text);
+			else
+				size += 10;
+			break;
+                  case JSON_NULL:
+			size += 4;
+			break;
+                  case JSON_BOOL:
                         size += strlen(json->text);
                         break;
                   case JSON_KEY:

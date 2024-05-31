@@ -104,8 +104,12 @@ static void jcprint(json_t *json, FILE *fp, int indent, jsonformat_t *format)
 			fputs(scan->text, fp);
 		break;
 
-	  case JSON_SYMBOL:
+	  case JSON_BOOL:
 		fputs(scan->text, fp);
+		break;
+
+	  case JSON_NULL:
+		fputs("null", fp);
 		break;
 
 	  default:
@@ -201,11 +205,11 @@ static void jccsvsingle(json_t *elem, FILE *fp, jsonformat_t *format)
 		else
 			fputs(elem->text, fp);
 		break;
-	case JSON_SYMBOL:
-		if (json_is_null(elem))
-			fputs(format->null, fp);
-		else
-			fputs(elem->text, fp);
+	case JSON_BOOL:
+		fputs(elem->text, fp);
+		break;
+	case JSON_NULL:
+		fputs(format->null, fp);
 		break;
 	case JSON_STRING:
 		putc('"', fp);

@@ -257,6 +257,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
+	  case JSONOP_ASSIGN:
 		if (calc->LEFT) {
 			printf("(");
 			json_calc_dump(calc->LEFT);
@@ -328,7 +329,6 @@ void json_calc_dump(jsoncalc_t *calc)
 		printf(" %s ", json_calc_op_name(calc->op));
 		break;
 
-	  case JSONOP_ASSIGN:
 	  case JSONOP_CONST:
 	  case JSONOP_FUNCTION:
 	  case JSONOP_RETURN:
@@ -691,9 +691,12 @@ static jsoncalc_t *jcalloc(token_t *token)
 	} else if (token->op == JSONOP_NUMBER) {
 		jc->op = JSONOP_LITERAL;
 		jc->u.literal = json_number(token->full, token->len);
-	} else if (token->op == JSONOP_BOOLEAN || token->op == JSONOP_NULL) {
+	} else if (token->op == JSONOP_BOOLEAN) {
 		jc->op = JSONOP_LITERAL;
-		jc->u.literal = json_symbol(token->full, token->len);
+		jc->u.literal = json_bool(*token->full == 't');
+	} else if (token->op == JSONOP_NULL) {
+		jc->op = JSONOP_LITERAL;
+		jc->u.literal = json_null();
 	}
 
 	/* SELECT needs some extra space allocated during parsing. */
@@ -730,9 +733,12 @@ static jsoncalc_t *jcalloc(token_t *token)
 		/* Compile the regex */
 		err = regcomp((regex_t *)jc->u.regex.preg, tmp, ignorecase ? REG_ICASE : 0);
 		if (err) {
-			/* I guess treat it like null */
+			char	buf[200];
+			/* Fetch the error messaged */
+			regerror(err, (regex_t *)jc->u.regex.preg, buf, sizeof buf);
+			/* Stuff it into a null */
 			jc->op = JSONOP_LITERAL;
-			jc->u.literal = json_symbol("null", -1);
+			jc->u.literal = json_error_null(2, "%s", buf);
 		}
 	}
 
@@ -1543,7 +1549,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			jc = top[-6];
 			if (!jc->u.select->orderby)
 				jc->u.select->orderby = json_array();
-			json_append(jc->u.select->orderby, json_symbol("true",-1));
+			json_append(jc->u.select->orderby, json_bool(1));
 			json_append(jc->u.select->orderby, json_string(top[-4]->u.text, -1));
 
 			/* Discard first name and comma, but keep "SO" and "n"*/
@@ -1570,7 +1576,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			jc = top[-4];
 			if (!jc->u.select->orderby)
 				jc->u.select->orderby = json_array();
-			json_append(jc->u.select->orderby, json_symbol("true",-1));
+			json_append(jc->u.select->orderby, json_bool(1));
 			json_append(jc->u.select->orderby, json_string(top[-2]->u.text, -1));
 			json_calc_free(top[-2]);
 			stack->sp -= 2; /* keep "SO" */

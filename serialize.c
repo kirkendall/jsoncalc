@@ -75,12 +75,19 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		}
 		break;
 
-	  case JSON_SYMBOL:
+	  case JSON_BOOL:
 		len += strlen(json->text); /* simple value */
-		if (buf)
-		{
+		if (buf) {
 			strcpy(buf, json->text);
 			buf += strlen(buf);
+		}
+		break;
+
+	  case JSON_NULL:
+		len += 4;
+		if (buf) {
+			strcpy(buf, "null");
+			buf += 4;
 		}
 		break;
 

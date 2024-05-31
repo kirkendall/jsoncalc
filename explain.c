@@ -64,11 +64,10 @@ char *json_typeof(json_t *json)
 		if (!json->first)
 			return "object*";
 		return "object";
-	  case JSON_SYMBOL:
-		/* Distinguish between null and true/false */
-		if (*json->text == 'n')
-			return "null";
+	  case JSON_BOOL:
 		return "boolean";
+	  case JSON_NULL:
+		return "null";
 	  case JSON_STRING:
 		/* Strings may be dates, times, or datetimes. Or just strings */
 		if (digitpattern(json->text, "####-##-##"))
@@ -188,7 +187,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 
 			/* If newtype is "null" then the element is nullable */
 			if (!strcmp(newtype, "null"))
-				json_append(stats, json_key("nullable", json_symbol("true", -1)));
+				json_append(stats, json_key("nullable", json_bool(1)));
 
 			/* Mixing types is  bit tricky */
 			oldtype = json_text_by_key(stats, "type");
@@ -230,7 +229,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 				newwidth = json_mbs_width(col->first->text);
 			}
 			json_append(stats, json_key("width", json_from_int(newwidth)));
-			json_append(stats, json_key("nullable", json_symbol(!strcmp(newtype, "null") || !firstrow ? "true" : "false", -1)));
+			json_append(stats, json_key("nullable", json_bool(!strcmp(newtype, "null") || !firstrow)));
 			json_append(columns, stats);
 			oldtype = newtype;
 		}
@@ -259,7 +258,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 	 */
 	for (stats = columns->first; stats; stats = stats->next) {
 		if (json_by_key(row, json_text_by_key(stats, "key")) == NULL)
-			json_append(stats, json_key("nullable", json_symbol("true", -1)));
+			json_append(stats, json_key("nullable", json_bool(1)));
 	}
 
 	/* Return the array of stats */

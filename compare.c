@@ -18,9 +18,9 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 
 	// Check parameters.
 	if (obj1->type != JSON_OBJECT || obj2->type != JSON_OBJECT)
-		json_throw(NULL, "Records passed to json_compare() must be objects");
+		/* EEE "Records passed to json_compare() must be objects" */
 	if (orderby->type != JSON_ARRAY && orderby->type != JSON_STRING)
-		json_throw(NULL, "The field list passed to json_compare() must be an array or a string");
+		/* EEE "The field list passed to json_compare() must be an array or a string" */
 
 	// For each field...
 	descending = 0;

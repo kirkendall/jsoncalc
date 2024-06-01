@@ -20,7 +20,7 @@ json_t *json_by_key(json_t *container, char *key)
 	 */
 	if (container->type != JSON_OBJECT && container->type != JSON_ARRAY)
 	{
-		json_throw(NULL, "Attempt to find named item in a non-object");
+		/* EEE "Attempt to find named item in a non-object"); */
 		return NULL;
 	}
 
@@ -83,7 +83,7 @@ json_t *json_by_index(json_t *container, int idx)
 	/* Only arrays should have indexed values */
 	if (container->type != JSON_ARRAY)
 	{
-		json_throw(NULL, "Attempt to find indexed item in a non-array");
+		/* EEE "Attempt to find indexed item in a non-array" */
 		return NULL;
 	}
 
@@ -142,8 +142,7 @@ json_t *json_by_expr(json_t *container, char *expr, char **next)
 		{
 			if (container->type != JSON_ARRAY)
 			{
-			        if (json_debug_flags.expr)
-			                json_throw(NULL, "Attempt to use an index on a non-array vian an expr");
+			        /* EEE if (json_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
 			        return NULL;
 			}
 			container = json_by_index(container, atoi(expr));
@@ -156,8 +155,7 @@ json_t *json_by_expr(json_t *container, char *expr, char **next)
 		{
 			if (container->type != JSON_OBJECT)
 			{
-			        if (json_debug_flags.expr)
-			                json_throw(NULL, "Attempt to find a member in a non-object via an expr");
+			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
 			        return NULL;
 			}
 			for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
@@ -172,8 +170,7 @@ json_t *json_by_expr(json_t *container, char *expr, char **next)
 		{
 			if (container->type != JSON_OBJECT)
 			{
-			        if (json_debug_flags.expr)
-			                json_throw(NULL, "Attempt to find a member in a non-object via an expr");
+			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
 			        return NULL;
 			}
 			expr++;

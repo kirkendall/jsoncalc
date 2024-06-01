@@ -15,7 +15,7 @@ int json_length(json_t *container)
 	/* Defend against invalid arguments */
 	if (container->type != JSON_ARRAY && container->type != JSON_OBJECT)
 	{
-		json_throw(NULL, "Attempt to find length of a non-array");
+		/* EEE "Attempt to find length of a non-array" */
 		return 0;
 	}
 

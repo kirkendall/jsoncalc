@@ -82,7 +82,7 @@ static struct {
 	{"DIVIDE",	"/",	220,	JCOP_INFIX},
 	{"DOT",		".",	270,	JCOP_INFIX},
 	{"EACH",	"@@",	5,	JCOP_INFIX}, /*!!!*/
-	{"ELIPSIS",	"..",	100,	JCOP_INFIX}, /*!!!*/
+	{"ELIPSIS",	"..",	270,	JCOP_INFIX}, /*!!!*/
 	{"ENDARRAY",	"]",	0,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	JCOP_OTHER},
 	{"ENDPAREN",	")",	0,	JCOP_OTHER},
@@ -1408,7 +1408,7 @@ static int pattern_verbose(stack_t *stack, char *want, jsoncalc_t *next)
 }
 
 #define PATTERN(x)	(pattern_verbose(stack, match = (x), next))
-#define PREC(o)		(!next || operators[o].prec >= operators[next->op].prec)
+#define PREC(o)		(!next || operators[o].prec >= operators[next->op].prec + (operators[next->op].optype == JCOP_RIGHTINFIX ? 1 : 0))
 
 
 /* Reduce the parse state, back to a given precedence level or the most

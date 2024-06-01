@@ -170,7 +170,7 @@ json_t *autoload(char *key)
 		return NULL;
 
 	/* Try to parse the file */
-	json = json_parse_file(NULL, filename);
+	json = json_parse_file(filename);
 	return json;
 }
 
@@ -453,7 +453,7 @@ static void load_config()
 	}
 
 	/* Load it */
-	config = json_parse_file(NULL, filename);
+	config = json_parse_file(filename);
 	if (!config)
 		return;
 
@@ -684,7 +684,7 @@ int main(int argc, char **argv)
 		/* If it ends with ".json", load it as a file */
 		len = strlen(argv[i]);
 		if (len > 5 && !strcmp(argv[i] + len - 4, ".json")) {
-			tmp = json_parse_file(NULL, argv[i]);
+			tmp = json_parse_file(argv[i]);
 			if (tmp) {
 				tmp->next = files;
 				files = tmp;

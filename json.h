@@ -63,26 +63,6 @@ typedef struct json_s {
 #define JSON_DOUBLE(j)	(((double *)((j) + 1))[-1])
 #define JSON_INT(j)	(((int *)((j) + 1))[-1])
 
-
-/* This is used for parsing. */
-typedef struct {
-	/* The following implement a parsing stack */
-	json_t **stack;	/* stack of parsing items */
-	int	nest;	/* current item in the stack */
-	int	maxnest;/* size of the stack */
-
-	/* This flag is used to stop parsing */
-	int	stop;	/* stop parsing */
-
-	/* The following are just for debugging purposes */
-	const char	*file;	/* name of file being parsed, if any */
-	long	lineno;	/* line number */
-	long	offset;	/* offset of buf relative to start of JSON data */
-	const char	*buf;	/* start of buffer */
-	const char	*token;	/* pointer within buf of last token */
-	size_t	len;	/* length of token */
-} json_parse_t;
-
 BEGIN_C
 /* This is used to track "used" items, for the benefit of json_free_unused().
  * The "used" array is maintained by the json_used() and json_unused()
@@ -137,13 +117,22 @@ extern char json_format_color_error[20];
 extern char json_format_color_debug[20];
 extern char json_format_color_end[20];
 
-/* Magic value that diverters can return to stop processing */
-#define JSON_STOP ((json_t *)1)
+/* This represents a file that is open for reading JSON data.  The file is
+ * mapped into memory starting at "base", and can be accessed like a giant
+ * string.
+ */
+typedef struct {
+	int		fd;	/* File descriptor of the open file */
+	size_t		size;	/* Size of the file, in bytes */
+	const char	*base;	/* Contents of the file, as a giant string */
+} jsonfile_t;
+
+/* Files */
+jsonfile_t *json_file_load(const char *filename);
+void json_file_unload(jsonfile_t *jf);
+FILE *json_file_update(const char *filename);
 
 /* Error handling */
-typedef void (*json_catcher_t)(json_parse_t *parse, char *fmt, ...);
-json_catcher_t json_throw;
-json_catcher_t json_catch(json_catcher_t f);
 extern char *json_debug(char *flags);
 
 /* Manipulation */
@@ -160,6 +149,7 @@ extern json_t *json_from_double(double f);
 extern json_t *json_key(const char *key, json_t *value);
 extern json_t *json_object();
 extern json_t *json_array();
+extern char *json_append(json_t *container, json_t *more);
 extern size_t json_sizeof(json_t *json);
 extern char *json_typeof(json_t *json);
 extern void json_sort(json_t *array, json_t *orderby);
@@ -168,19 +158,10 @@ extern json_t *json_array_flat(json_t *array, int depth);
 extern json_t *json_unroll(json_t *table, json_t *nestlist);
 extern json_t *json_array_group_by(json_t *array, json_t *orderby);
 extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
-#define json_append(container, more) json_parse_append(NULL, container, more)
 
 /* Parsing */
-extern const char *json_token(const char *str, json_token_t *token);
-extern void json_parse_begin(json_parse_t *state, int maxnest);
-extern void json_parse_newbuf(json_parse_t *state, const char *buf, long offset);
-extern void json_parse_token(json_parse_t *state, json_token_t *token);
-extern int json_parse_append(json_parse_t *state, json_t *container, json_t *more);
-extern int json_parse_complete(json_parse_t *state);
-extern json_t *json_parse_end(json_parse_t *state);
-extern void json_parse_stop(json_parse_t *state);
 extern json_t *json_parse_string(const char *str);
-extern json_t *json_parse_file(json_parse_t *state, char *filename);
+extern json_t *json_parse_file(const char *filename);
 
 /* Serialization / Output */
 extern json_t *json_explain(json_t *stats, json_t *row, int depth);

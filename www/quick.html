@@ -53,16 +53,21 @@
     table orientation throughout most of it.
     JsonCalc is good with tables.
     <p>
-    Often the data was, at some point, represented in XML.  It gets converted
-    to JSON but still has some of the stink of XML on it.  Especially arrays.
+    Often the data was, at some point, represented in XML.
+    It gets converted to JSON but still has some of the stink of XML on it.
+    Especially arrays.
     XML doesn't support the concept of arrays, so usually they're represented
-    by repeatable elements.  But this means an empty array is simply gone,
-    and a one-element array can become a simple variable.  Another XML-ism
-    is that you often get objects inside of objects inside of objects.
+    by repeatable elements.
+    But this means an empty array is simply gone,
+    and a one-element array can become a simple variable.
+    Mane of JsonCalc's array operators and functions were written with this
+    in mind.
+    Another XML-ism is that you often get objects inside of objects inside
+    of objects.
     There can be good reasons for doing this in any data language, but
-    it happens more in XML.  JsonCalc has a <tt>..</tt> operator which is
-    sort of a "deep search" version of the usual <tt>.</tt> operator to help
-    with this.
+    it happens more in XML.
+    JsonCalc has a <tt>..</tt> operator which is sort of a "deep search"
+    version of the usual <tt>.</tt> operator to help with this.
 
     <h2>What is JsonCalc like?</h2>
     Syntactically, the main influences are JavaScript and SQL.
@@ -163,6 +168,53 @@
     Those formats could be a different JSON layout (e.g., to convert data
     from different service providers to a single consistent format),
     or CSV or even a series of shell script records.
+
+    <div class="example">
+      <kbd>jsoncalc -Otable=sh -c test.scores</kbd>
+      <samp>
+name=Peter run=1 score=10<br/>
+name=Paul run=1 score=20<br/>
+name=Mary run=1 score=30<br/>
+name=Peter run=2 score=25<br/>
+name=Paul run=2 score=30<br/>
+name=Mary run=2 score=35<br/>
+name=Peter run=3 score=30<br/>
+name=Paul run=3 score=25<br/>
+name=Mary run=3 score=40
+      </samp>
+      This is an example of what the "-Otable=sh" output looks like, for
+      processing data in a shell script.
+      Each line of output has one row (one object from an object array) in
+      a format that looks like shell variable assignments.
+      If any of these values required quoting to protect it from the shell,
+      such quoting would be automatically added.
+      You can also tweak the variable names by adding a <tt>-Oprefix="my_"</tt> flag
+      to JsonCalc, if necessary.
+    </div>
+
+    <div class="example">
+      <kbd>jsoncalc -Otable=sh -c test.scores | while read row<br/>
+      do<div style="padding-left: 2em;">
+      eval $row<br/>
+      echo "$name scored $score in run# $run"
+      </div>done</kbd>
+      <samp>
+	Peter scored 10 in run# 1<br/>
+	Paul scored 20 in run# 1<br/>
+	Mary scored 30 in run# 1<br/>
+	Peter scored 25 in run# 2<br/>
+	Paul scored 30 in run# 2<br/>
+	Mary scored 35 in run# 2<br/>
+	Peter scored 30 in run# 3<br/>
+	Paul scored 25 in run# 3<br/>
+	Mary scored 40 in run# 3
+      </samp>
+      This example shows how the command from the first example could be used
+      in a shell to process records individually.
+      The shell reads the lines one at a time into a shell variable named "rec".
+      It then uses <tt>eval $rec</tt> to set shell variables from the record.
+      Those variables can then be used any way you want.
+    </div>
     <p>
     When looping over large arrays, JsonCalc <em>does not</em> need to load
     the whole array into memory before processing can begin.
@@ -175,7 +227,60 @@
 
 
     <h2>How can JsonCalc help for uploads?</h2>
-    JsonCalc can construct JSON data from p
+    JsonCalc allows you to construct JSON data, either in temporary files or
+    in environment variables.
+    You can also set JsonCalc variables on its command line, and use the
+    values of those variables in the script.
+    <div class="example">
+      <kbd>export customer="{}"<br/>
+      eval $(jsoncalc -vcustomer -cthis.custno=custno custno=12554)<br/>
+      eval $(jsoncalc -vcustomer -cthis.firstname=first first=Steve)<br/>
+      eval $(jsoncalc -vcustomer -cthis.lastname=last last=Kirkendall)<br/>
+      eval $(jsoncalc -vcustomer -cthis.contactok=contact contact=false)<br/>
+      echo $customer</kbd>
+      <samp>{"custno":12445,"firstname":"Steve","lastname":"Kirkendall","contactok":false}</samp>
+      In this example, we're building the JSON data piecemeal in an environment
+      variable.
+      First we use the shell to initialize <tt>customer</tt> to be an empty object.
+      Then we invoke JsonCalc repeatedly to add/update the data.
+      The <tt>-vcustomer</tt> option tells it to read the initial JSON data
+      from the <tt>$customer</tt> enviroment variable, and then before exiting
+      write a shell command for changing the value of that variable.
+      The <tt>custno=12554</tt> argument sets a variable in JsonCalc,
+      and <tt>-cthis.custno=custno</tt> adds it to the object.
+      In the end, we're left with a complete JSON object in the
+      <tt>$customer</tt> environment variable.
+      <p>
+      One important detail here is that when setting variables on the
+      command line, if the value looks like JSON then it is interpreted as
+      JSON; otherwise it it coerced into being a JSON string.
+      In this example, <tt>12554</tt> looks like a JSON number, so it's
+      number, and <tt>false</tt> looks like a JSON boolean, so its boolean.
+      You can see this in the final object.
+    </div>
+
+    <div class="example">
+      <kbd>file=/tmp/jsoncalc$$.json<br/>
+      echo "{}">$file<br/>
+      jsoncalc -u -cthis.custno=custno custno=12554 $file<br/>
+      jsoncalc -u -c'this.firstname=first;this.lastname=last' first=Steve last=Kirkendall $file<br/>
+      jsoncalc -u -cthis.contactok=contact contact=false $file<br/>
+      cat $file</kbd>
+      <samp>{"custno":12445,"firstname":"Steve","lastname":"Kirkendall","contactok":false}</samp>
+      This is the same as the previous example, except that we're building
+      the JSON in a temporary file instead of an environment variable.
+      Also, just for variety, I combined first and last names into a single invocation.
+      <p>
+      First we let the shell choose a filename, and initialize the file to an
+      empty object.
+      Then we invoke JsonCalc repeatedly to add/update the data.
+      The <tt>-u</tt> option tells it to write the data out to the same file
+      that it read it from;
+      the file name is the last thing on the command line.
+      You don't need the shell's <tt>eval $(...)</tt> when using files.
+      In the end, we're left with a complete JSON object in the
+      <tt>$file</tt> file. 
+    </div>
 
     <h2>Why run JsonCalc interactively?</h2>
     It has lots of little features:
@@ -203,24 +308,73 @@
     The program itself is about 5 times bigger than the 
     <a href="https://jqlang.github.io/jq/">jq</a> JSON query tool
     or the <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
-    A full-fledged JavaScript interpreter would be about 30 times larger
-    than JsonCalc though.
+    A full-fledged JavaScript interpreter would be at least 30 times larger
+    than JsonCalc, and it wouldn't interface well with shell scripts, or
+    support plugins, or autoload data from directories.
     <p>
     The internal representation of JSON data is likely to be around 5 times
     larger than the JSON text that it comes from.  It could be anywhere from
-    2 times larger to more than 10 times larger, but 5 is a good thumb rule.
+    2 times larger to more than 10 times larger, but 5 is a good rule of thumb.
     Bear in mind, though, that large arrays aren't normally read into memory
     all at once.  If you process them to build another large array, that
     result array will be in memory so that's where you need to be aware of
     bulk.
     <p>
-    Speed is hard to gauge.  My computer isn't all that new, but it can
-    process a 60 megabyte JSON file in about a second.  That's fast enough
-    for me.
+    Speed is hard to gauge because there are so many variables.
+    My computer isn't all that new, but
+    it can parse a 60 megabyte JSON file in about 300 milliseconds.
+    That's fast enough for me.
 
     <h2>Can JsonCalc be extended?</h2>
+    Yes, there are basically three ways to extend JsonCalc.
+    <p>
+    The easy way is to define a custom set of functions in JsonCalc's
+    scripting language, to do tasks that you find yourself doing often.
+    For example, the above customer-building example could be implemented
+    as a function, and then the "-c" option is just <tt>-cbuildCustomer()</tt>.
+    JsonCalc can be configured to load your functions automatically.
+    <p>
+    The next method is to modify JsonCalc's source code and recompile it.
+    If all you need to do is add a new function, that's fairly easy because
+    script functions (defined in <tt>calcfunc.c</tt>) are mostly segregated
+    from the rest of the code, so you don't need to learn <em>everything</em>
+    about JsonCalc's anatomy to add a function.
+    A few basic <tt>json_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
+    But all the source code is there if you need it.
+    <p>
+    The final way is via plugins.
+    If an existing plugin satisfies your needs, then that's an easy win.
+    If you need to write your own, the plugins included with the source code
+    should serve as good examples.
+    Technically, each plugin is a shared library which must define a "load"
+    function.
+    That function will then call JsonCalc C functions to register "hooks" for
+    things like autoloading data, adding commands, and... lots of stuff.
+    No single thing is all that complicated, but there are a lot of hooks
+    to choose from.
 
     <h2>Where should I look next?</h2>
+    Start by digging through the references for the scripting
+    <a href="index.html?op">operators</a> and
+    <a href="index.html?f">functions</a>.
+    The references are loaded with examples, which should give you some idea
+    of what JsonCalc can do.
+    Nearly all of these examples are one-liners, which is appropriate for
+    an interactive data-exploration tool.
+    <p>
+    More complex things are possible though, so 
+    eventually you'll want to go through the
+    <a href="index.html?main=tutscript">Scripting Tutorial</a>.
+    The tutorial is a lot more instructive if you have JsonCalc installed and
+    running on your computer, though, so you should
+    <a href="index.html?download">Download JsonCalc</a> first.
+    <p>
+    If you're looking for a C library of quick and powerful JSON function,
+    JsonCalc's library might satisfy.
+    There's a
+    <a href="index.html?tutlib">library tutorial</a> and
+    <a href="index.html?lib">library reference</a> here, to help you get
+    started on that.
 
   </body>
 </html>

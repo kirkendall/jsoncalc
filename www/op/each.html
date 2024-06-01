@@ -64,14 +64,14 @@
     aggregate data for each group.
     <p>
     If the left argument is <tt>null</tt> instead of an array,
-    then <tt>@</tt> and <tt>@@</tt> an empty array.
+    then <tt>@</tt> and <tt>@@</tt> return an empty array.
     If the left argument is any other non-array, then it is processed as though it
     was the only element of a 1-element array.
     These two rules are intended to simplify processing of data converted from XML.
-    Since XML doesn't have actual arrays, XML standards usually simulate it with
-    a repeatable element.
+    Since XML doesn't have actual arrays,
+    XML standards usually simulate it with a repeatable element.
     An empty array in XML is therefore represented by absolutely nothing, and
-    and a 1-element array is represented by just a plain ol' tag that didn't repeat.
+    a 1-element array is represented by just a plain ol' tag that didn't repeat.
     Stupid XML.
 
     <details open>

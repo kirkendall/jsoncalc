@@ -1089,7 +1089,10 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 
 	/* If there's a DISTINCT keyword, add a distinct() function call */
 	if (sel->distinct) {
-		jc = jcfunc("distinct", jc, NULL, NULL);
+		t.op = JSONOP_LITERAL;
+		ja = jcalloc(&t);
+		ja->u.literal = json_bool(1);
+		jc = jcfunc("distinct", jc, ja, NULL);
 	}
 
 	/* If there's a LIMIT number, add a .slice(0, limit) function call */
@@ -1484,12 +1487,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		}
 
 		/* SQL SELECT */
-		if (PATTERN("SD")) {
-			/* Fold the "DISTINCT" into "SELECT */
-			top[-2]->u.select->distinct = 1;
-			stack->sp--;
-			continue;
-		} else if (PATTERN("S*")) {
+		if (PATTERN("S*")) {
 			/* Drop the "*" */
 			stack->sp--;
 			continue;
@@ -2040,7 +2038,12 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 			err = reduce(&stack, jc, token.full);
 		else if (jc->op == JSONOP_STARTARRAY && !pattern(&stack, "^") && !pattern(&stack, "+"))
 			err = reduce(&stack, jc, token.full);
-		else if (operators[jc->op].prec >= 0)
+		else if (jc == &selectdistinct) {
+			if (stack.stack[stack.sp - 1]->op == JSONOP_SELECT) {
+				stack.stack[stack.sp - 1]->u.select->distinct = 1;
+				continue;
+			}
+		} else if (operators[jc->op].prec >= 0)
 			err = reduce(&stack, jc, token.full);
 		if (err)
 			break;

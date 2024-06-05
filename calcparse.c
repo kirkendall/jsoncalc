@@ -104,7 +104,7 @@ static struct {
 	{"LE",		"<=",	190,	JCOP_INFIX},
 	{"LIKE",	"LIK",	180,	JCOP_INFIX},
 	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
-	{"LJOIN",	"@<",	115,	JCOP_INFIX}, /*!!!*/
+	{"LJOIN",	"@<",	122,	JCOP_INFIX},
 	{"LT",		"<",	190,	JCOP_INFIX},
 	{"MODULO",	"%",	220,	JCOP_INFIX},
 	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
@@ -112,7 +112,7 @@ static struct {
 	{"NE",		"!=",	180,	JCOP_INFIX},
 	{"NEGATE",	"U-",	240,	JCOP_PREFIX},
 	{"NESTRICT",	"!==",	180,	JCOP_INFIX},
-	{"NJOIN",	"@=",	115,	JCOP_INFIX}, /*!!!*/
+	{"NJOIN",	"@=",	122,	JCOP_INFIX},
 	{"NOT",		"!",	240,	JCOP_PREFIX},
 	{"NOTLIKE",	"NLK",	180,	JCOP_INFIX},
 	{"NULL",	"NUL",	-1,	JCOP_OTHER},
@@ -123,7 +123,7 @@ static struct {
 	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
 	{"REGEX",	"REG",	-1,	JCOP_OTHER},
 	{"RETURN",	"RET",	-1,	JCOP_OTHER},
-	{"RJOIN",	"@>",	115,	JCOP_INFIX}, /*!!!*/
+	{"RJOIN",	"@>",	122,	JCOP_INFIX},
 	{"SELECT",	"SEL",	1,	JCOP_OTHER},
 	{"SEMICOLON",	";",	-1,	JCOP_OTHER},
 	{"STARTARRAY",	"[",	260,	JCOP_OTHER},
@@ -403,20 +403,27 @@ static int jcisassign(stack_t *stack)
 	if (sp >= 3 && stack->stack[sp - 2]->op == JSONOP_SUBSCRIPT && stack->stack[sp - 1]->op == JSONOP_ENDARRAY)
 		sp -= 2;
 
-	/* Expect the first item on the stack to be a series of name.name
-	 * or name[subscript] operators.  Subscripts are allowed to be complex
-	 * so we don't test them.
+	/* A name can be an lvalue */
+	if (sp == 1 && stack->stack[0]->op == JSONOP_NAME)
+		return 1;
+
+	/* For more complex assignments, the lvalue can be a name followed by
+	 * a series of dot-names and subscripts.  This is complicated slightly
+	 * by the fact that the last dot-name or subscript might not be
+	 * reduced yet since this function is called from lex().
 	 */
-	if (sp != 1)
-		return 0;
-	for (jc = stack->stack[0];
-	     jc && ((jc->op == JSONOP_DOT && jc->RIGHT->op == JSONOP_NAME)
-		|| jc->op == JSONOP_SUBSCRIPT);
-	     jc = jc->LEFT) {
+	if ((sp == 3 && stack->stack[1]->op == JSONOP_DOT && stack->stack[2]->op == JSONOP_NAME) ||
+	    (sp == 4 && stack->stack[1]->op == JSONOP_STARTARRAY && stack->stack[3]->op == JSONOP_ENDARRAY)) {
+		for (jc = stack->stack[0];
+		     jc && ((jc->op == JSONOP_DOT && jc->RIGHT->op == JSONOP_NAME)
+			|| jc->op == JSONOP_SUBSCRIPT);
+		     jc = jc->LEFT) {
+		}
+		if (!jc || jc->op != JSONOP_NAME)
+			return 0;
+		return 1;
 	}
-	if (!jc || jc->op != JSONOP_NAME)
-		return 0;
-	return 1;
+	return 0;
 }
 
 /* Given a starting point within a text buffer, parse the next token (storing

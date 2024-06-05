@@ -218,14 +218,14 @@ json_t *json_error_null(int code, char *fmt, ...)
 	if (len < 0)
 		return json_null();
 	if (len <= sizeof buf)
-		return json_simple(buf, len - 1, JSON_NULL);
+		return json_simple(buf, len, JSON_NULL);
 
 	/* Allocate a larger buffer to hold the string, and use it */
 	bigbuf = (char *)malloc(len);
 	va_start(ap, fmt);
 	vsnprintf(bigbuf, len, fmt, ap);
 	va_end(ap);
-	result = json_simple(buf, len - 1, JSON_NULL);
+	result = json_simple(buf, len, JSON_NULL);
 	free(bigbuf);
 	return result;
 }

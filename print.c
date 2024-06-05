@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -302,17 +303,37 @@ int json_print(json_t *json, FILE *fp, jsonformat_t *format)
 {
 	jsonformat_t tweaked;
 
-	/* If NULL then don't print anything (not even "null") */
+	/* If NULL pointer then don't print anything (not even "null") */
 	if (!json)
 		return 0;
+
+	/* Default output is stdout */
+	if (!fp)
+		fp = stdout;
 
 	/* Create a tweakable copy of the format */
 	if (!format)
 		format = &json_format_default;
 	tweaked = *format;
 
+	/* Maybe output error messages embedded in "null" */
+	if (tweaked.error && json->type == JSON_NULL && *json->text) {
+		if (tweaked.color && isatty(fileno(stderr)))
+			fprintf(stderr, "%s%s%s\n",
+				json_format_color_error,
+				json->text,
+				json_format_color_end);
+		else
+			fprintf(stderr, "%s\n", json->text);
+		/* ... but either way, continue to output "null" too */
+	}
+
+	/* If not writing to a tty then always inhibit colors */
+	if (!isatty(fileno(fp)))
+		tweaked.color = 0;
+
 	/* Maybe output strings unadorned (and without adding a newline) */
-	if (format->string && json && json->type == JSON_STRING) {
+	if (tweaked.string && json->type == JSON_STRING) {
 		size_t len;
 		fputs(json->text, fp);
 		len = strlen(json->text);
@@ -354,10 +375,4 @@ int json_print(json_t *json, FILE *fp, jsonformat_t *format)
 	if (!tweaked.pretty)
 		fputc('\n', fp);
 	return 0;
-}
-
-/* Pretty-print a JSON expression to stdout */
-void json_dump(json_t *json)
-{
-	json_print(json, stdout, NULL);
 }

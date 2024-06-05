@@ -88,8 +88,9 @@ typedef struct {
 	char	pretty;	/* Pretty-print JSON */
 	char	elem;	/* one element per line */
 	char	sh;	/* Quote output for shell */
-	char	color;	/* Allow the use of ANSI escape sequences */
+	char	error;	/* Error output.  Writes text in "null" to stderr */
 	char	ascii;	/* Convert non-ASCII characters to \u sequences */
+	char	color;	/* Allow the use of ANSI escape sequences */
 	char	quick;	/* Output tables piecemeal.  Use first row for names */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */

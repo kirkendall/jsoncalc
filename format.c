@@ -16,8 +16,9 @@ jsonformat_t json_format_default = {
 	1,	/* pretty - pretty-print (add whitespace to show structure) */
 	0,	/* elem - force one array element per line */
 	0,	/* sh - quote output for shell */
-	1,	/* color - use colors on ANSI terminals */
+	1,	/* error - write error nulls to stderr */
 	0,	/* ascii - use \uXXXX for non-ASCII characters */
+	1,	/* color - use colors on ANSI terminals */
 	0,	/* quick - for csv/grid, use first record to find columns */
 	"",	/* prefix - prepended to names for sh format */
 	""	/* null - text to show as null for grid format */
@@ -106,6 +107,8 @@ char *json_format(jsonformat_t *format, char *str)
 				format->string = v;
 			else if (namelen == 6 && !strncmp("pretty", str, namelen))
 				format->pretty = v;
+			else if (namelen == 5 && !strncmp("error", str, namelen))
+				format->error = v;
 			else if (namelen == 2 && !strncmp("sh", str, namelen))
 				format->sh = v;
 			else if (namelen == 5 && !strncmp("color", str, namelen))
@@ -163,9 +166,9 @@ char *json_format_str(jsonformat_t *fmt)
 
 	/* Table formats */
 	switch (fmt->table) {
-	case 's':	strcat(buf, "sh,");	break;
-	case 'c':	strcat(buf, "csv,");	break;
-	case 'g':	strcat(buf, "grid,");	break;
+	case 's':	strcat(buf, "table=sh,");	break;
+	case 'c':	strcat(buf, "table=csv,");	break;
+	case 'g':	strcat(buf, "table=grid,");	break;
 	}
 
 	/* If prefix for table=sh, then output prefix */
@@ -177,9 +180,10 @@ char *json_format_str(jsonformat_t *fmt)
 		sprintf(buf + strlen(buf), "null=%s,", fmt->null);
 
 	/* Always add the last few booleans, and the "digits" setting */
-	sprintf(buf + strlen(buf), "%s%s%s%s",
+	sprintf(buf + strlen(buf), "%s%s%s%s%s",
 		fmt->quick ? "quick," : "",
 		fmt->sh ? "sh," : "",
+		fmt->error ? "error," : "noerror,",
 		fmt->ascii ? "ascii," : "noascii,",
 		fmt->color ? "color" : "nocolor");
 
@@ -191,7 +195,7 @@ static struct {
 	char *name;
 	int  code;
 } colors[] = {
-	{"bold", 1}, {"underlined", 4},
+	{"bold",1},{"italic",3},{"underlined",4},{"blinking",5},{"reverse",7},
 	{"black", 30}, {"red", 31}, {"green", 32}, {"yellow", 33},
 	{"blue", 34}, {"magenta", 35}, {"cyan", 36}, {"white", 37},
 	{"on black", 40}, {"on red", 41}, {"on green", 42}, {"on yellow", 43},

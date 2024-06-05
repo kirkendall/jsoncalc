@@ -297,7 +297,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 
 	/* If not a string or no other parameters, just return null */
 	if (args->first->type != JSON_STRING || !args->first->next)
-		return json_null();
+		return json_error_null(1, "substr() requires a string");
 	str = args->first->text;
 
 	/* Get the length of the string.  We'll need that to adjust bounds */
@@ -305,7 +305,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 
 	/* Get the starting position */
 	if (args->first->next->type != JSON_NUMBER)
-		return json_null();
+		return json_error_null(1, "substr() position must be a number");
 	start = json_int(args->first->next);
 	if (start < 0 && start + len >= 0)
 		start = len + start;
@@ -316,7 +316,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 	if (!args->first->next->next)
 		limit = len - start; /* all the way to the end */
 	else if (args->first->next->next->type != JSON_NUMBER)
-		return json_null();
+		return json_error_null(1, "substr() length must be a number");
 	else {
 		limit = json_int(args->first->next->next);
 		if (start + limit > len)
@@ -368,7 +368,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		return result;
 	}
-	return json_null();
+	return json_error_null(1, "hex() only works on numbers or strings");
 }
 
 /* toString(arg) converts arg to a string */
@@ -497,7 +497,7 @@ static json_t *jfn_join(json_t *args, void *agdata)
 
 	/* If first parameter isn't an array, return null */
 	if (args->first->type != JSON_ARRAY)
-		return json_null();
+		return json_error_null(1, "join() requires an array");
 
 	/* Get the delimiter */
 	if (args->first->next && args->first->next->type == JSON_STRING)
@@ -549,7 +549,7 @@ json_t *jfn_orderBy(json_t *args, void *agdata)
 	 * an array of fields and "true" for descending
 	 */
 	if (!json_is_table(args->first) || !order || order->type != JSON_ARRAY || !order->first)
-		return json_null();
+		return json_error_null(1, "orderBy() requires a table and an array of keys");
 
 	/* Sort a copy of the table */
 	result = json_copy(args->first);

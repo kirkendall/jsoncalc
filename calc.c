@@ -956,9 +956,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		assert(calc->RIGHT->op == JSONOP_AND);
 		USE_LEFT_OPERAND(calc);
 
-		/* Test lower bound.  Note that we have to use USE_LEFT_OPERAND()
-		 * again since calc->RIGHT is the entire "AND" clause and we want the
-		 * left branch of that.  So first we juggle variables a bit...
+		/* Test lower bound. Note that we have to use USE_LEFT_OPERAND()
+		 * again since calc->RIGHT is the entire "AND" clause and we
+		 * want the left branch of that.  So first we juggle variables
+		 * a bit...
 		 */
 		scan = left;
 		found = freeleft;
@@ -974,7 +975,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			if (json_mbs_casecmp(left->text, right->text) < 0)
 				result = json_bool(0);
 		} else
-			result = json_null();
+			result = json_error_null(1, "BETWEEN only works on strings and numbers");
 
 		if (freeright) {
 			json_free(freeright);
@@ -994,7 +995,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 					result = json_bool(0);
 			}
 			else
-				result = json_null();
+				result = json_error_null(1, "BETWEEN only works on strings and numbers");
 		}
 
 		/* If no result, I guess we're okay */

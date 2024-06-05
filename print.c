@@ -24,10 +24,11 @@ static void jcprint(json_t *json, FILE *fp, int indent, jsonformat_t *format)
 				putc('\\', fp);
 			}
 			else if (*str == '\'' && format->sh) {
-				/* For "sh" format, the entire output is enclosed in
-				 * ' quotes which is great for everything except the
-				 * ' character itself.  For that, we need to end the
-				 * quote, add a backslash-', and start a new quote.
+				/* For "sh" format, the entire output is
+				 * enclosed in ' quotes which is great for
+				 * everything except the ' character itself.
+				 * For that, we need to end the quote, add a
+				 * backslash-', and start a new quote.
 				 */
 				putc('\'', fp);
 				putc('\\', fp);

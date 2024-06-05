@@ -3,18 +3,17 @@
 #include <string.h>
 #include "json.h"
 
-/* Compare two records, given a list of fields.  Return 1 if the first
- * record compares as higher, -1 if the second record compares as higher,
- * or 0 if they compare as equal.  orderby is a list of field names (array
- * of stgrings); to select descending order, add a "-" to the front of the
- * field name, OR insert a true symbol into the list before the field name..
+/* Compare two objects, given a list of keys.  Return 1 if the first object
+ * compares as higher, -1 if the second object compares as higher, or 0 if
+ * they compare as equal.  orderby is a list of keys names (array of strings);
+ * to select descending order for any key, insert a true symbol into the
+ * list before the key string.
  */
 int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 {
 	json_t *field1, *field2, *key;
 	int	descending;
 	double	diff;
-	char	*keyname;
 
 	// Check parameters.
 	if (obj1->type != JSON_OBJECT || obj2->type != JSON_OBJECT)
@@ -39,14 +38,9 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 		if (key->type != JSON_STRING)
 			continue;
 
-		/* Get the keyname.  If prefixed by "-" then inver descending */
-		keyname = key->text;
-		if (*keyname == '-') {
-			descending = !descending;
-			keyname++;
-		}
-		field1 = json_by_key(obj1, keyname);
-		field2 = json_by_key(obj2, keyname);
+		/* Get the members for the next key */
+		field1 = json_by_key(obj1, key->text);
+		field2 = json_by_key(obj2, key->text);
 		if (json_is_null(field1) && json_is_null(field2))
 			continue; // if both are NULL, skip it
 		if (json_is_null(field1))

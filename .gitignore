@@ -11,6 +11,8 @@ www/table.elv
 www/f/INTRO.html
 www/f/flist.js
 www/f/sidebar.html
+www/op/sidebar.html
+www/op/oplist.js
 www/old
 
 # Prerequisites

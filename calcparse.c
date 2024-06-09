@@ -64,6 +64,7 @@ static struct {
 	{"ADD",		"+",	210,	JCOP_INFIX},
 	{"AG",		"AG",	-1,	JCOP_OTHER},
 	{"AND",		"&&",	140,	JCOP_INFIX},
+	{"APPEND",	"A[]",	120,	JCOP_INFIX},
 	{"ARRAY",	"ARR",	-1,	JCOP_OTHER},
 	{"AS",		"AS",	121,	JCOP_INFIX},
 	{"ASSIGN",	"ASGN",	120,	JCOP_INFIX},
@@ -76,7 +77,6 @@ static struct {
 	{"COALESCE",	"??",	130,	JCOP_INFIX},
 	{"COLON",	":",	121,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
 	{"COMMA",	",",	110,	JCOP_INFIX},
-	{"CONST",	"CONS",	110,	JCOP_OTHER},
 	{"DESCENDING",	"DES",	3,	JCOP_POSTFIX},
 	{"DISTINCT",	"DIS",	2,	JCOP_OTHER},
 	{"DIVIDE",	"/",	220,	JCOP_INFIX},
@@ -91,7 +91,6 @@ static struct {
 	{"EXPLAIN",	"EXP",	1,	JCOP_PREFIX},
 	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	JCOP_OTHER},
-	{"FUNCTION",	"FN",	-1,	JCOP_OTHER}, /* function definition */
 	{"GE",		">=",	190,	JCOP_INFIX},
 	{"GROUP",	"@",	5,	JCOP_INFIX},	/*!!!*/
 	{"GROUPBY",	"GRO",	2,	JCOP_OTHER},
@@ -122,17 +121,14 @@ static struct {
 	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
 	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
 	{"REGEX",	"REG",	-1,	JCOP_OTHER},
-	{"RETURN",	"RET",	-1,	JCOP_OTHER},
 	{"RJOIN",	"@>",	122,	JCOP_INFIX},
 	{"SELECT",	"SEL",	1,	JCOP_OTHER},
-	{"SEMICOLON",	";",	-1,	JCOP_OTHER},
 	{"STARTARRAY",	"[",	260,	JCOP_OTHER},
 	{"STARTOBJECT",	"{",	260,	JCOP_OTHER},
 	{"STARTPAREN",	"(",	260,	JCOP_OTHER},
 	{"STRING",	"STR",	-1,	JCOP_OTHER},
 	{"SUBSCRIPT",	"S[",	170,	JCOP_OTHER},
 	{"SUBTRACT",	"-",	210,	JCOP_INFIX}, /* or JSONOP_NEGATE */
-	{"VAR",		"VAR",	-1,	JCOP_OTHER},
 	{"WHERE",	"WHE",	2,	JCOP_OTHER},
 	{"INVALID",	"XXX",	666,	JCOP_OTHER}
 };
@@ -258,6 +254,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
 	  case JSONOP_ASSIGN:
+	  case JSONOP_APPEND:
 		if (calc->LEFT) {
 			printf("(");
 			json_calc_dump(calc->LEFT);
@@ -328,14 +325,6 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_REGEX:
 		printf(" %s ", json_calc_op_name(calc->op));
 		break;
-
-	  case JSONOP_CONST:
-	  case JSONOP_FUNCTION:
-	  case JSONOP_RETURN:
-	  case JSONOP_SEMICOLON:
-	  case JSONOP_VAR:
-		/* Not used yet */
-		abort();
 	}
 }
 
@@ -390,29 +379,38 @@ static int jcregex(stack_t *stack)
 }
 
 /* Test whether the parseing stack is in a context where "=" is an assignment
- * operator, not a comparison operator.
+ * operator, not a comparison operator.  Return JSONOP_ICEQ if it is a
+ * comparison, or one of JSON_ASSIGN or JSON_APPEND for assignment.
+ *
+ * THIS FUNCTION CAN MODIFY THE PARSE STACK!  For JSON_APPEND (denoted by []=)
+ * it will remove the [].
  */
-static int jcisassign(stack_t *stack)
+static jsonop_t jcisassign(stack_t *stack)
 {
 	int	sp = stack->sp;
 	jsoncalc_t	*jc;
+	jsonop_t	op = JSONOP_ASSIGN;
 
+{int i;printf("jcisassign():");for(i=0;i<sp;i++)printf(" %s", operators[stack->stack[i]->op].symbol); printf("\n");}
 	/* Any basic l-value can be followed by "[]" to denote appending
 	 * to an array.
 	 */
-	if (sp >= 3 && stack->stack[sp - 2]->op == JSONOP_SUBSCRIPT && stack->stack[sp - 1]->op == JSONOP_ENDARRAY)
+	if (sp >= 3 && stack->stack[sp - 2]->op == JSONOP_STARTARRAY && stack->stack[sp - 1]->op == JSONOP_ENDARRAY) {
+		op = JSONOP_APPEND;
 		sp -= 2;
+	}
 
 	/* A name can be an lvalue */
 	if (sp == 1 && stack->stack[0]->op == JSONOP_NAME)
-		return 1;
+		goto IsAssign;
 
 	/* For more complex assignments, the lvalue can be a name followed by
 	 * a series of dot-names and subscripts.  This is complicated slightly
 	 * by the fact that the last dot-name or subscript might not be
 	 * reduced yet since this function is called from lex().
 	 */
-	if ((sp == 3 && stack->stack[1]->op == JSONOP_DOT && stack->stack[2]->op == JSONOP_NAME) ||
+	if (sp == 1 ||
+	    (sp == 3 && stack->stack[1]->op == JSONOP_DOT && stack->stack[2]->op == JSONOP_NAME) ||
 	    (sp == 4 && stack->stack[1]->op == JSONOP_STARTARRAY && stack->stack[3]->op == JSONOP_ENDARRAY)) {
 		for (jc = stack->stack[0];
 		     jc && ((jc->op == JSONOP_DOT && jc->RIGHT->op == JSONOP_NAME)
@@ -420,10 +418,19 @@ static int jcisassign(stack_t *stack)
 		     jc = jc->LEFT) {
 		}
 		if (!jc || jc->op != JSONOP_NAME)
-			return 0;
-		return 1;
+			return JSONOP_ICEQ;
+		goto IsAssign;
 	}
-	return 0;
+	return JSONOP_ICEQ;
+
+IsAssign:
+	/* For JSONOP_APPEND, remove the empty brackets from the stack */
+	if (op == JSONOP_APPEND) {
+		json_calc_free(stack->stack[sp]); /* JSONOP_SUBSCRIPT */
+		json_calc_free(stack->stack[sp + 1]); /* JSONOP_ENDARRAY */
+		stack->sp = sp;
+	}
+	return op;
 }
 
 /* Given a starting point within a text buffer, parse the next token (storing
@@ -559,7 +566,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			token->len = 7;
 			token->op = JSONOP_EXPLAIN;
 		} else if (jcselecting(stack)) {
-			/* The following SQL keywords are only recongized as
+			/* The following SQL keywords are only recognized as
 			 * part of a "select" clause.  This is because some of
 			 * them such as "from" and "desc" are often used as
 			 * member names, and "distinct" is a jsoncalc function
@@ -631,8 +638,8 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			token->op = JSONOP_NEGATE;
 
 		/* ICEQ could be ASSIGN -- depends on context */
-		if (token->op == JSONOP_ICEQ && jcisassign(stack))
-			token->op = JSONOP_ASSIGN;
+		if (token->op == JSONOP_ICEQ)
+			token->op = jcisassign(stack);
 
 		if (json_debug_flags.calc)
 			printf("lex(): operator JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
@@ -869,6 +876,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_BETWEEN:
 	  case JSONOP_EXPLAIN:
 	  case JSONOP_ASSIGN:
+	  case JSONOP_APPEND:
 		json_calc_free(jc->LEFT);
 		json_calc_free(jc->RIGHT);
 		break;
@@ -900,14 +908,6 @@ void json_calc_free(jsoncalc_t *jc)
 		regfree((regex_t *)jc->u.regex.preg);
 		free(jc->u.regex.preg);
 		break;
-
-	  case JSONOP_CONST:
-	  case JSONOP_FUNCTION:
-	  case JSONOP_RETURN:
-	  case JSONOP_SEMICOLON:
-	  case JSONOP_VAR:
-		/* These aren't used yet. */
-		abort();
 
 	  case JSONOP_DISTINCT:
 	  case JSONOP_FROM:
@@ -1009,7 +1009,7 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 	return jc;
 }
 
-/* Convert a select statement to a jsoncalc_t */
+/* Convert a select statement to "native" jsoncalc_t */
 static jsoncalc_t *jcselect(jsonselect_t *sel)
 {
 	jsoncalc_t *jc, *ja;
@@ -1740,16 +1740,23 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		}
 
+#if 0
 		/* Subscripts on a value */
 		if (PATTERN("x[]")) {
-			/* Empty subscript */
+			/* Empty subscript.  This only works at the end of
+			 * an l-value (before an assignment operator) but
+			 * we parse it wherever it occurs because we don't
+			 * want to mistake [] for an empty array generator.
+			 */
 			t.op = JSONOP_SUBSCRIPT;
 			jc = jcalloc(&t);
 			jc->LEFT = top[-3];
 			top[-3] = jc;
 			stack->sp -= 2;
 			continue;
-		} else if (PATTERN("x[x]")) {
+		} else
+#endif
+		if (PATTERN("x[x]")) {
 			/* Subscript with a value */
 			t.op = JSONOP_SUBSCRIPT;
 			jc = jcalloc(&t);
@@ -1953,6 +1960,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_BETWEEN:
 	  case JSONOP_EXPLAIN:
 	  case JSONOP_ASSIGN:
+	  case JSONOP_APPEND:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, ag);
 		break;
@@ -1974,14 +1982,6 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 		/* Check arguments */
 		jc->u.func.args = parseag(jc->u.func.args, ag);
 		break;
-
-	  case JSONOP_CONST:
-	  case JSONOP_FUNCTION:
-	  case JSONOP_RETURN:
-	  case JSONOP_SEMICOLON:
-	  case JSONOP_VAR:
-		/* These aren't used yet. */
-		abort();
 
 	  case JSONOP_AG:
 	  case JSONOP_STARTPAREN:

@@ -54,6 +54,8 @@ static void format_usage()
 	printf("  -Onull=%-6sFor table=grid, this is how null will be shown.\n", json_format_default.null);
 	printf("  -O%-11sConvert any non-ASCII characters to \\uXXXX sequences.\n", json_format_default.ascii ? "ascii" : "noascii");
 	printf("  -O%-11sAdd shell quoting to JSON output.\n", json_format_default.sh ? "sh" : "nosh");
+	printf("  -O%-11sFor simple strings, output them without quoting.\n", json_format_default.string ? "string" : "nostring");
+	printf("  -O%-11sFor simple nulls, if the null represents an error then show it.\n", json_format_default.error ? "error" : "noerror");
 	printf("  -O%-11sAdd color for ANSI terminals.\n", json_format_default.color ? "color" : "nocolor");
 	printf("  -Odigits=%-4dPrecision when converting numbers to strings.\n", json_format_default.digits);
 }
@@ -106,7 +108,8 @@ static void usage(char *fmt, char *data)
 	puts("       -v env     Read environment variable $env var, output cmd to set it.");
 	puts("       -i         Interactive.");
 	puts("       -r         Inhibit the use of readline for interactive input.");
-	puts("       -u         Update any modified *.json files named on the command line.");
+	puts("       -u         Update - Write back any modified *.json files listed in args.");
+	puts("       -s         Safer - Limit shell and file access for security.");
 	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
 	puts("       -D dir     Autoload files from directory \"dir\".");
 	puts("       -O format  Adjusts the output format. Use -O? for more info.");
@@ -352,7 +355,7 @@ char **jsoncalc_completion(const char *text, int start, int end)
 	next = strpbrk(&buf[scan], ".[");
 	c = *next;
 	*next = '\0';
-	completion_container = json_context_by_key(context, &buf[scan]);
+	completion_container = json_context_by_key(context, &buf[scan], NULL);
 	*next = c;
 	if (!completion_container)
 		return NULL;
@@ -720,6 +723,7 @@ int main(int argc, char **argv)
 		printf("\"this\": %s\n", str);
 		free(str);
 		context = json_context(context, jcthis, NULL);
+		context->flags = JSON_CONTEXT_THIS | JSON_CONTEXT_LOCAL;
 	}
 
 	if (expr) {

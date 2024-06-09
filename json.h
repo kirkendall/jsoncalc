@@ -64,17 +64,6 @@ typedef struct json_s {
 #define JSON_INT(j)	(((int *)((j) + 1))[-1])
 
 BEGIN_C
-/* This is used to track "used" items, for the benefit of json_free_unused().
- * The "used" array is maintained by the json_used() and json_unused()
- * functions.  "hash" and "hashsize" are built by json_is_used(), but
- * retained between invocations so it doesn't need to rebuild the hash table
- * every time.
- */
-typedef struct jsoncontext_s {
-    struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
-    json_t *data;     /* a used item */
-    json_t *(*autoload)(char *key); /* called from json_used_by_key() */
-} jsoncontext_t;
 
 /* This stores info about formatting -- mostly output formatting, since for
  * input we take whatever we're given.
@@ -195,12 +184,6 @@ extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
 #define json_text_by_index(container, index) json_text(json_by_index((container), (index)))
 /* The next parameter may be NULL.  See json_by_expr() for more details. */
 #define json_text_by_expr(container, expr, next) json_text(json_by_expr((container), (expr), (next)))
-
-jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata);
-jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, json_t *(*autoload)(char *name));
-json_t *json_context_by_key(jsoncontext_t *context, char *key);
-json_t *json_context_object_by_key(jsoncontext_t *context, char *key);
-json_t *json_context_default_table(jsoncontext_t *context);
 
 /* The following are for debugging memory leaks.  They're only used if your
  * program defined JSON_DEBUG_MEMORY.

@@ -11,6 +11,7 @@ typedef enum {
         JSONOP_ADD,
 	JSONOP_AG,
 	JSONOP_AND,
+	JSONOP_APPEND,
 	JSONOP_ARRAY,
 	JSONOP_AS,
 	JSONOP_ASSIGN,
@@ -23,7 +24,6 @@ typedef enum {
 	JSONOP_COALESCE,
 	JSONOP_COLON,
 	JSONOP_COMMA,
-	JSONOP_CONST,
 	JSONOP_DESCENDING,
 	JSONOP_DISTINCT,
 	JSONOP_DIVIDE,
@@ -38,7 +38,6 @@ typedef enum {
 	JSONOP_EXPLAIN,
 	JSONOP_FNCALL,
 	JSONOP_FROM,
-	JSONOP_FUNCTION,
 	JSONOP_GE,
 	JSONOP_GROUP,
 	JSONOP_GROUPBY,
@@ -69,20 +68,16 @@ typedef enum {
 	JSONOP_ORDERBY,
 	JSONOP_QUESTION,
 	JSONOP_REGEX,
-	JSONOP_RETURN,
 	JSONOP_RJOIN,
 	JSONOP_SELECT,
-	JSONOP_SEMICOLON,
 	JSONOP_STARTARRAY,
 	JSONOP_STARTOBJECT,
 	JSONOP_STARTPAREN,
 	JSONOP_STRING,
 	JSONOP_SUBSCRIPT,
 	JSONOP_SUBTRACT,
-	JSONOP_VAR,
 	JSONOP_WHERE,
-	/* This must be the last */
-	JSONOP_INVALID,
+	JSONOP_INVALID /* <-- This must be the last */
 } jsonop_t;
 
 /* This is used to represent an expression, or part of an expression */
@@ -123,6 +118,18 @@ typedef struct jsonfunc_s {
 } jsonfunc_t;
 #define JSONFUNC_JSONFREE 1	/* Call json_free() on the agdata afterward */
 #define JSONFUNC_FREE 2		/* Call free() on the agdata afterward */
+
+/* This is used to track context (the stack of variable definitions).  */
+typedef struct jsoncontext_s {
+    struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
+    json_t *data;     /* a used item */
+    json_t *(*autoload)(char *key); /* called from json_used_by_key() */
+    void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
+    enum {JSON_CONTEXT_THIS = 1, /* Context can be "this" or "that" */
+          JSON_CONTEXT_CONST = 2,/* Context can't be changed by script */
+          JSON_CONTEXT_LOCAL = 4 /* Where to add VAR or CONST variables */
+    } flags;
+} jsoncontext_t;
 
 
 /* This stores a list of aggregate functions used in a given context.  Each
@@ -168,3 +175,11 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr);
 void json_calc_free(jsoncalc_t *calc);
 void *json_calc_ag(jsoncalc_t *calc, void *agdata);
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata);
+
+jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata);
+jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, json_t *(*autoload)(char *name));
+json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
+json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
+json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
+json_t *json_context_default_table(jsoncontext_t *context);
+

@@ -1,12 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "json.h"
+#include "calc.h"
 
 /* This file defines the context functions.  Contexts are used in json_calc()
  * to provide access to outside data, as though they were variables.  The
  * functions here let you manage a stack of contexts, and search for named
- * values defined within the context.
+ * values defined within the context, and assign new values to variables.
  */
 
 /* Free a context.  Returns the next older context, or NULL if none.
@@ -54,29 +56,45 @@ jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, json_t *(*autolo
 /* Scan items in a context list for given name, and return its value.  If not
  * found, return NULL.  As special cases, the name "this" returns the most
  * recently added item and "that" returns the second-most-recent.
+ *
+ * Some context layers can have autoloaders.  If the name isn't found in the
+ * layer already, then the autoloader is given a shot... except that if
+ * reflayer is not null (used for assignments) then it isn't.
+ *
+ * context is the top of the context stack to search.
+ * key is the member name to search for.
+ * reflayer, if not NULL, will be be set to the context layer containing key.
  */
-json_t *json_context_by_key(jsoncontext_t *context, char *key)
+json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer)
 {
         json_t  *val;
+	int	firstthis;
 
+        firstthis = 1;
         while (context) {
                 /* "this" returns the most recently added item in its entirety*/
-                if (!strcmp(key, "this"))
-                        return context->data;
-
-                /* "that" returns the next older item */
-                if (!strcmp(key, "that") && context->older)
-                        return context->older->data;
+                if (context->flags & JSON_CONTEXT_THIS) {
+			if (!strcmp(key, "this")
+			 || (!strcmp(key, "that") && !firstthis)) {
+				if (reflayer)
+					*reflayer = context;
+				return context->data;
+			}
+			firstthis = 0;
+		}
 
                 /* If "this" is an object, check for a member */
                 if (context->data->type == JSON_OBJECT) {
                         val = json_by_key(context->data, key);
-                        if (val)
+                        if (val) {
+				if (reflayer)
+					*reflayer = context;
                                 return val;
+			}
                 }
 
                 /* If there's an "autoload" handler, give it a shot */
-                if (context->autoload) {
+                if (context->autoload && !reflayer) {
                         val = (*context->autoload)(key);
                         if (val) {
 				/* Add it to the autonames object */
@@ -94,35 +112,220 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key)
         return NULL;
 }
 
-/* This returns the object from context containing a given key.  If no such
- * key is found, it returns NULL.
- *
- * This is different from json_context_by_key().  This function returns the
- * object that contains of the key, instead of the value of the key.  This
- * is useful when you want to assign a value to it.
+/* For a given L-value, find its layer, container, and value.  This is used
+ * for assigning or appending to variables.  Return 1 on success, 0 if error.
  */
-json_t *json_context_object_by_key(jsoncontext_t *context, char *key)
+static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
 {
-        json_t  *val;
+	json_t	*value, *t, *v;
 
-        while (context) {
-                /* !!! Skip if "const", and maybe if autoload */
+	switch (lvalue->op) {
+	case JSONOP_NAME:
+	case JSONOP_LITERAL:
+		/* Literal can only be a string, serving as a quoted name */
+		if (lvalue->op == JSONOP_LITERAL && lvalue->u.literal->type != JSON_STRING)
+			return 0;
 
-                /* If "this" is an object, check for a member */
-                if (context->data->type == JSON_OBJECT) {
-                        val = json_by_key(context->data, key);
-                        if (val)
-                                return context->data;
-                }
+		/* Get the name */
+		if (lvalue->op == JSONOP_NAME)
+			*refkey = lvalue->u.text;
+		else
+			*refkey = lvalue->u.literal->text;
 
-                /* Not found here.  Try older contexts */
-                context = context->older;
-        }
+		/* Look for it in the context */
+		value = json_context_by_key(context, *refkey, reflayer);
 
-        /* Nope, not in any context */
-        return NULL;
+		/* If found, celebrate */
+		if (!value)
+			return 0;
+		if (refcontainer)
+			*refcontainer = context->data;
+		if (refvalue)
+			*refvalue = value;
+		return 1;
+
+	case JSONOP_DOT:
+		/* Recursively look up the left side of the dot */
+		if (!jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)
+		 || value == NULL)
+			return 0;
+
+		/* If lhs of dot isn't an object, that's a problem */
+		if (value->type != JSON_OBJECT)
+			return 0;
+
+		/* For DOT, the right parameter should just be a name */
+		if (lvalue->u.param.right->op == JSONOP_NAME)
+			*refkey = lvalue->u.param.right->u.text;
+		else if (lvalue->u.param.right->op == JSONOP_LITERAL
+		      && lvalue->u.param.right->u.literal->type == JSON_STRING)
+			*refkey = lvalue->u.param.right->u.literal->text;
+		else
+			/* invalid rhs of a dot */
+			return 0;
+
+		/* Look for the name in this object.  If not found, "t" will
+		 * be null, which is a special type of failure.
+		 */
+		t = json_by_key(value, *refkey);
+		if (!t && !refvalue)
+			return 0;
+
+		/* The value becomes the container, and "t" becomes the value */
+		if (refcontainer)
+			*refcontainer = value;
+		if (refvalue)
+			*refvalue = t;
+		return 1;
+
+	case JSONOP_SUBSCRIPT:
+		/* Recursively look up the left side of the subscript */
+		if (!jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)
+		 || value == NULL)
+			return 0;
+
+		/* The [key:value] style of subscripts is handled specially */
+		if (lvalue->u.param.right->op == JSONOP_COLON) {
+			abort(); /* a[b:c]=d isn't handled yet */
+		} else {
+			/* Use json_calc() to evaluate the subscript */
+			t = json_calc(lvalue->u.param.right, context, NULL);
+
+			/* Look it up.  array[number] or object[string] */
+			if (value->type == JSON_ARRAY && t->type == JSON_NUMBER)
+				v = json_by_index(value, json_int(t));
+			else if (value->type == JSON_OBJECT && t->type == JSON_STRING) {
+				*refkey = t->text;
+				v = json_by_key(value, *refkey);
+			} else {
+				/* Bad subscript */
+				json_free(t);
+				return 0;
+			}
+			json_free(t);
+
+			/* Not finding a value is bad... unless we don't need
+			 * one.  Its okay to assign new members to an existing
+			 * object.
+			 */
+			if (!v && (*refvalue))
+				return 0;
+
+			/* Return what we found */
+			if (refcontainer)
+				*refcontainer = value;
+			if (refvalue)
+				*refvalue = v;
+			return 1;
+		}
+
+	default:
+		/* Invalid operation in an l-value */
+		return 0;
+	}
 }
 
+/* Assign a variable.  Returns NULL on success, or a json_t "null" with an
+ * error message if it fails.
+ *
+ * "rvalue" will be freed when the context is freed.  This function DOES NOT
+ * make a copy of it; it uses "rvalue" directly.  If that's an issue then the
+ * calling function should make a copy.
+ */
+json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
+{
+	jsoncontext_t	*layer;
+	json_t	*container, *value, *scan;
+	char	*key;
+
+	/* We can't use a value that's already part of something else. */
+	assert(rvalue->next == NULL);
+
+	/* Get the details on what to change.  Note that for new members,
+	 * value may be NULL even if jxlvalue() returns 1.
+	 */
+	if (!jxlvalue(lvalue, context, &layer, &container, &value, &key))
+		return json_error_null(1, "Unknown variable \"%s\"", key);
+
+	/* If it's const then fail */
+	if (layer->flags & JSON_CONTEXT_CONST)
+		return json_error_null(1, "Can't change const \"%s\"", key);
+
+	/* Objects are easy, arrays are hard */
+	if (container->type == JSON_OBJECT)
+		json_append(container, json_key(key, rvalue));
+	else {
+		if (!value)
+			return json_error_null(1, "Unset subscript for array \"%s\"", key);
+
+		/* Use the tail of the array with the new value */
+		rvalue->next = value->next;
+
+		/* Replace either the head of the array or a later element */
+		if (value == container->first) {
+			/* Replace the first element with a new one */
+			container->first = rvalue;
+		} else {
+			/* Scan for the element before the changed one */
+			for (scan = container->first; scan->next != value; scan = scan->next) {
+			}
+
+			/* Replace the element after it with a new one */
+			scan->next = rvalue;
+		}
+
+		/* Free the old value (but not its siblings) */
+		value->next = NULL;
+		json_free(value);
+	}
+
+	/* If this layer has a callback for modifications, call it */
+	if (layer->modified)
+		(*layer->modified)(layer, lvalue);
+
+	/* All good! */
+	return NULL;
+}
+
+
+/* Append to an array variable.  Returns NULL on success, or a json_t "null"
+ * with an error message if it fails.
+ *
+ * "rvalue" will be freed when the context is freed.  This function DOES NOT
+ * make a copy of it; it uses "rvalue" directly.  If that's an issue then the
+ * calling function should make a copy.
+ */
+json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
+{
+	jsoncontext_t	*layer;
+	json_t	*container, *value;
+	char	*key;
+
+	/* We can't use a value that's already part of something else. */
+	assert(rvalue->next == NULL);
+
+	/* Get the details on what to change */
+	if (!jxlvalue(lvalue, context, &layer, &container, &value, &key)
+	 || value == NULL)
+		return json_error_null(1, "Unknown variable \"%s\"", key);
+
+	/* If it's const then fail */
+	if (layer->flags & JSON_CONTEXT_CONST)
+		return json_error_null(1, "Can't change const \"%s\"", key);
+
+	/* We can only append to arrays */
+	if (value->type != JSON_ARRAY)
+		return json_error_null(1, "Can't append to %s \"%s\"", json_typeof(value), key);
+
+	/* Append! */
+	json_append(value, rvalue);
+
+	/* If this layer has a callback for modifications, call it */
+	if (layer->modified)
+		(*layer->modified)(layer, lvalue);
+
+	return NULL;
+}
 
 /* Returns the default table for a "SELECT" statement.
  *

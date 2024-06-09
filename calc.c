@@ -260,7 +260,7 @@ static json_t *jcsimple(jsoncalc_t *calc, jsoncontext_t *context)
 
 	/* If simple name then look it up */
 	if (calc->op == JSONOP_NAME)
-		return json_context_by_key(context, calc->u.text);
+		return json_context_by_key(context, calc->u.text, NULL);
 
 	/* We can do name.name too */
 	if (calc->op == JSONOP_DOT
@@ -400,36 +400,6 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 	return result;
 }
 
-/* Assign a value.  We want to navigate down through an L-value to find the
- * thing to be modified.  Returns NULL on success, or a json_t "null" on
- * failure.
- */
-json_t *jcassign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context)
-{
-	json_t	*container;
-	char	*key;
-
-	/* If lvalue is simply "name" then look for it in the context */
-	if (lvalue->op == JSONOP_NAME
-	 || (lvalue->op == JSONOP_LITERAL && lvalue->u.literal->type == JSON_STRING)) {
-		/* Find the context layer that contains this variable */
-		if (lvalue->op == JSONOP_NAME)
-			key = lvalue->u.text;
-		else
-			key = lvalue->u.literal->text;
-		container = json_context_object_by_key(context, key);
-		if (!container)
-			return json_error_null(1, "unknown variable \"%s\"", key);
-
-		/* Replace it with a new version */
-		json_append(container, json_key(key, json_copy(rvalue)));
-		return NULL;
-	}
-
-	/* Otherwise we need to get tricky */
-	return json_null(); /* !!! not implemented yet */
-}
-
 
 /* Evaluate an expression and return the result.
  *   calc       The expression to evaluate.  This should be obtained from a 
@@ -464,7 +434,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		break;
 
 	  case JSONOP_NAME:
-		result = json_copy(json_context_by_key(context, calc->u.text));
+		result = json_copy(json_context_by_key(context, calc->u.text, NULL));
 		break;
 
 	  case JSONOP_ARRAY:
@@ -1010,9 +980,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		if (calc->RIGHT->op == JSONOP_REGEX) {
 			regmatch_t matches[10];
 			if (left->type == JSON_STRING
-			 && regexec((regex_t *)calc->RIGHT->u.regex.preg, left->text, 10, matches, 0) == 0
-			 && matches[0].rm_so == 0
-			 && matches[0].rm_eo == strlen(left->text))
+			 && regexec((regex_t *)calc->RIGHT->u.regex.preg, left->text, 10, matches, 0) == 0)
 				result = json_bool(1);
 			else
 				result = json_bool(0);
@@ -1065,24 +1033,31 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_ASSIGN:
 		USE_RIGHT_OPERAND(calc);
-		result = jcassign(calc->LEFT, right, context);
+
+		/* We always want a copy */
+		if (!freeright)
+			freeright = right = json_copy(right);
+
+		result = json_context_assign(calc->LEFT, right, context);
 		if (result == NULL) {
-			if (freeright) {
-				result = right;
-				freeright = NULL;
-			} else {
-				result = json_copy(right);
-			}
+			/* success, so the right value is still used */
+			freeright = NULL;
 		}
 		break;
 
-	  case JSONOP_CONST:
-	  case JSONOP_FUNCTION:
-	  case JSONOP_RETURN:
-	  case JSONOP_SEMICOLON:
-	  case JSONOP_VAR:
-		/* These aren't used yet. */
-		abort();
+	  case JSONOP_APPEND:
+		USE_RIGHT_OPERAND(calc);
+
+		/* We always want a copy */
+		if (!freeright)
+			freeright = right = json_copy(right);
+
+		result = json_context_append(calc->LEFT, right, context);
+		if (result == NULL) {
+			/* success, so the right value is still used */
+			freeright = NULL;
+		}
+		break;
 
 	  case JSONOP_STRING:
 	  case JSONOP_NUMBER:

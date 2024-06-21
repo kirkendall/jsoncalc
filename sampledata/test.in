@@ -157,7 +157,7 @@ sum(1..9)
 =45
 toFixed(50.2, 2)
 ="50.20"
-[{foo:"bar"}].typeOf()
+[{foo:"bar"}].typeOf(true)
 ="table"
 "String".width()
 =6

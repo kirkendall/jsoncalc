@@ -8,7 +8,10 @@
 #include "calc.h"
 
 
-/* Check whether a string matches a given pattern */
+/* Check whether a string matches a given pattern.  # matches any digit,
+ * ? matches either any non-digit or the end of str, and anything else must
+ * match exactly.
+ */
 static int digitpattern(char *str, char *pattern)
 {
 	for(;; str++, pattern++) {
@@ -22,8 +25,9 @@ static int digitpattern(char *str, char *pattern)
 		if (!*pattern)
 			return 0;
 
-		/* # matches any single digit, ? an single non-digit, and
-		 * other characters must match exactly.
+		/* # matches any single digit, ? any single non-digit, and
+		 * other characters must match exactly. (The case where ?
+		 * appears at the end of the string is handled above.)
 		 */
 		if (*pattern == '#' && !isdigit(*str))
 			return 0;
@@ -39,18 +43,19 @@ static int digitpattern(char *str, char *pattern)
  * values are:
  *   "boolean"	The symbols true and false.
  *   "null"	A NULL pointer, or the symbol null, or unexpected/error values
- *   "object*"  Empty object
  *   "object"	Any object
  *   "number"	Any number
+ *   "string"	Any other string
+ *   "array"	Any other array
+ * If "extended" is true, then it can refine the response as follows:
+ *   "array*"	Empty array
+ *   "table"	A non-empty array of objects
+ *   "object*"  Empty object
  *   "date"     A string that looks like an ISO-8601 date
  *   "time"     A string that looks like an time
  *   "datetime"	A string that looks like a datetime
- *   "string"	Any other string.
- *   "array*"	Empty array
- *   "table"	A non-empty array of objects
- *   "array"	Any other array
  */
-char *json_typeof(json_t *json)
+char *json_typeof(json_t *json, int extended)
 {
 	/* Defend against NULL */
 	if (!json)
@@ -61,7 +66,7 @@ char *json_typeof(json_t *json)
 	  case JSON_NUMBER:
 		return "number";
 	  case JSON_OBJECT:
-		if (!json->first)
+		if (!json->first && extended)
 			return "object*";
 		return "object";
 	  case JSON_BOOL:
@@ -70,21 +75,27 @@ char *json_typeof(json_t *json)
 		return "null";
 	  case JSON_STRING:
 		/* Strings may be dates, times, or datetimes. Or just strings */
-		if (digitpattern(json->text, "####-##-##"))
-			return "date";
-		else if (digitpattern(json->text, "##:##?"))
-			return "time";
-		else if (digitpattern(json->text, "####-##-##T##:##?"))
-			return "datetime";
+		if (extended) {
+			if (!*json->text)
+				return "string*";
+			if (digitpattern(json->text, "####-##-##"))
+				return "date";
+			if (digitpattern(json->text, "##:##?"))
+				return "time";
+			if (digitpattern(json->text, "####-##-##T##:##?"))
+				return "datetime";
+		}
 		return "string";
 	  case JSON_ARRAY:
 		/* If it's a non-empty array of objects, call it a table.
 		 * Otherwise, it's an array.
 		 */
-		if (!json->first)
-			return "array*";
-		if (json_is_table(json))
-			return "table";
+		if (extended) {
+			if (!json->first)
+				return "array*";
+			if (json_is_table(json))
+				return "table";
+		}
 		return "array";
 	  default:
 		/* Shouldn't happen */
@@ -95,7 +106,7 @@ char *json_typeof(json_t *json)
 /* Combine oldtype and newtype.  Try to keep the result as specific as
  * possible.  If total chaos, just return "mixed".
  */
-static char *mixtypes(char *oldtype, char *newtype, json_t *json)
+char *json_mix_types(char *oldtype, char *newtype)
 {
 	/* If typenames are the same, or oldtype is "mixed", it's easy */
 	if (!strcmp(oldtype, newtype) || !strcmp(oldtype, "mixed"))
@@ -113,9 +124,10 @@ static char *mixtypes(char *oldtype, char *newtype, json_t *json)
 	 * empty arrays, or empty objects.  Don't let an empty value mess up
 	 * what we thought we knew about the type.
 	 */
-	if (((json->type == JSON_ARRAY || json->type == JSON_OBJECT) && !json->first)
-	 || (json->type == JSON_STRING && !*json->text))
+	if (strchr(newtype, '*'))
 		return oldtype;
+	if (strchr(oldtype, '*'))
+		return newtype;
 
 	/* Mixing "object*" and "object" is "object" */
 	if (!strncmp(oldtype, "object", 6) && !strncmp(newtype, "object", 6))
@@ -123,7 +135,7 @@ static char *mixtypes(char *oldtype, char *newtype, json_t *json)
 
 	/* Mixing "table" and "array" is an "array" */
 	if ((!strcmp(newtype, "table") || !strncmp(newtype, "array", 5))
-	 && (!strcmp(newtype, "table") || !strncmp(newtype, "array", 5)))
+	 && (!strcmp(oldtype, "table") || !strncmp(oldtype, "array", 5)))
 		return "array";
 
 	/* "date", "time", and "datetime" are all variations of string.
@@ -137,7 +149,7 @@ static char *mixtypes(char *oldtype, char *newtype, json_t *json)
 	return "mixed";
 }
 
-/* Collect column info from a single and merge it into aggregated info.  If
+/* Collect column info from a single row and merge it into aggregated info. If
  * the aggregated info is NULL, allocate it.  Depth is 0 normally, or higher
  * values to allow embedded objects and tables (arrays of objects) to also
  * be explained -- 1 allows a single layer, 2 for 2 layers deep, etc.  -1
@@ -171,7 +183,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 		assert(col->type == JSON_KEY);
 
 		/* Derive the type by examining the key's value */
-		newtype = json_typeof(col->first);
+		newtype = json_typeof(col->first, 1);
 
 		/* Locate the columns entry for this line, if any */
 		for (stats = columns->first; stats; stats = stats->next) {
@@ -191,7 +203,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 
 			/* Mixing types is  bit tricky */
 			oldtype = json_text_by_key(stats, "type");
-			newtype = mixtypes(oldtype, newtype, col);
+			newtype = json_mix_types(oldtype, newtype);
 			if (newtype)
 				json_append(stats, json_key("type", json_string(newtype, -1)));
 			newtype = oldtype;

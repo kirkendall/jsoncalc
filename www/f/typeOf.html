@@ -22,14 +22,19 @@
     <h1>typeOf - Return a string describing the argument's data type</h1>
     <dl>
       <dt>typeOf(<var>arg</var>)
+      <br/>typeOf(<var>arg</var>, true)
+      <br/>typeOf(<var>arg</var>, <var>typestr</var>)
       <dd>
       This returns a string describing the data type of its argument.
       <p>
-      In addition to the six basic data types supported by JSON,
-      (<tt>null</tt>, <tt>boolean</tt>, <tt>string</tt>, <tt>number</tt>, <tt>array</tt>, and <tt>object</tt>)
-      it also attempts to refine some of the types.
-      For example, if a string is formatted like an ISO-8601 date, then it returns
-      "date" instead of "string".
+      In its basic form without any extra arguments, 
+      it will return one of the six data types supported by JSON:
+      "null", "boolean", "string", "number", "array", or "object".
+      <p>
+      Passing a second argument (other than <tt>false</tt>) causes it to return
+      a more refined description of the type.
+      For example, if a string is formatted like an ISO-8601 date,
+      then it returns "date" instead of "string".
       The complete list of values that it can return is:
       <table>
         <tr>
@@ -72,8 +77,12 @@
 	  possibly with seconds, fractions of a second, and/or a timezone appended).</td>
 	</tr>
 	<tr>
+	  <td>"string*"</td>
+	  <td>An empty string.
+	</tr>
+	<tr>
 	  <td>"string"</td>
-	  <td>Any string not formatted like an ISO date, time, or datetime.</td>
+	  <td>Any non-empty string not formatted like an ISO date, time, or datetime.</td>
 	</tr>
 	<tr>
 	  <td>"table"</td>
@@ -87,20 +96,49 @@
 	  <td>"array"</td>
 	  <td>Any other array.
 	</tr>
+        <tr>
+	  <td>"mixed"</td>
+	  <td>A combination of data types, as described in the next paragraph.
+        </tr>
       </table>
     </dl>
+    <p>
+    If the second argument is a string, it should be a value returned from
+    a previous call too <tt>typeOf()</tt>.
+    The return value of this new <tt>typeOf()</tt> call will indicate the
+    mixture of the data types.
+    For example, if a value is always a string but sometimes formatted like
+    an ISO-8601 date and sometimes not, then the return value will be
+    simply "string" instead of "date".
+    The use of "*" to mark empty strings, arrays, and objects is intended
+    to help this type mixing.
+    If there is no consistency to the types, then it returns "mixed".
+
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>typeOf([])</kbd>
-	<samp>"array*"</samp>
-        An empty array.  Note the "*" appended to the response.
+	<kbd>{x:1,y:2}.typeOf()</kbd>
+	<samp>"object"</samp>
+	A object.
       </div>
 
       <div class="example">
-	<kbd>{x:1,y:2}.typeOf()</kbd>
-	<samp>"object"</samp>
+	<kbd>typeOf([], true)</kbd>
+	<samp>"array*"</samp>
+        An empty array.  Note the "*" appended to the response, because the
+        array is empty and there's a second argument.
+      </div>
+
+      <div class="example">
+	<kbd>typeof([], "date")</kbd>
+	<samp>"date"</samp>
+	Here's an example that combines types.
+	In data converted from XML, there is some ambiguity because an empty
+	XML tag may indicicate an empty string, empty object, or empty array.
+	A simple XML parser is likely to get it wrong.
+	If a tag is sometimes a date and sometimes empty, then the empty tag
+	probably isn't really an array, so we stick with "date".
       </div>
 
     </details>

@@ -443,7 +443,18 @@ static json_t *jfn_isNaN(json_t *args, void *agdata)
 /* typeOf(data) returns a string identifying the data's type */
 static json_t *jfn_typeOf(json_t *args, void *agdata)
 {
-	return json_string(json_typeof(args->first), -1);
+	char	*type, *mixed;
+	if (!args->first->next || (args->first->next->type == JSON_BOOL && *args->first->next->text == 'f'))
+		type = json_typeof(args->first, 0);
+	else {
+		type = json_typeof(args->first, 1);
+		if (args->first->next->type == JSON_STRING) {
+			mixed = json_mix_types(args->first->next->text, type);
+			if (mixed)
+				type = mixed;
+		}
+	}
+	return json_string(type, -1);
 }
 
 /* Estimate the memory usage of a json_t datum */

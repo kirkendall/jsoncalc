@@ -305,12 +305,14 @@ name=Mary run=3 score=40
 
     <h2>How big is JsonCalc?  How fast is it?</h2>
     JsonCalc is a "medium weight" JSON tool.
-    The program itself is about 5 times bigger than the 
-    <a href="https://jqlang.github.io/jq/">jq</a> JSON query tool
-    or the <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
+    The program itself is about the same size as the
+    <a href="https://jqlang.github.io/jq/">jq</a> JSON query tool,
+    but about 5 times larger than the
+    <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
     A full-fledged JavaScript interpreter would be at least 30 times larger
     than JsonCalc, and it wouldn't interface well with shell scripts, or
-    support plugins, or autoload data from directories.
+    support plugins, or autoload data from directories, or the
+    <a target="_PARENT" href="index.html?op=each">@</a> operator.
     <p>
     The internal representation of JSON data is likely to be around 5 times
     larger than the JSON text that it comes from.  It could be anywhere from

@@ -374,7 +374,8 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			g++;
 		} else {
 			local = json_context(context, scan, NULL);
-			tmp = json_calc(calc, local, ag ? ag : NULL);
+			local->flags |= JSON_CONTEXT_THIS;
+			tmp = json_calc(calc, local, ag);
 			json_context_free(local, 0);
 			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
 				/* Skip for null or false, add for true */
@@ -1023,9 +1024,11 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_FROM:
 		/* This is used to fetch the default table for a SELECT
 		 * statement that has no explicit FROM clause.  It is handled
-		 * by jcsimple(), not here.
+		 * by jcsimple(), not here.  If we get here, that means there
+		 * is no default table.
 		 */
-		abort();
+		result = json_error_null(1, "There is no default table for SELECT");
+		break;
 
 	  case JSONOP_REGEX:
 		/* Using a regular expression where it isn't expected is an error */

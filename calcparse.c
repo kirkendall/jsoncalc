@@ -81,7 +81,7 @@ static struct {
 	{"DISTINCT",	"DIS",	2,	JCOP_OTHER},
 	{"DIVIDE",	"/",	220,	JCOP_INFIX},
 	{"DOT",		".",	270,	JCOP_INFIX},
-	{"EACH",	"@@",	5,	JCOP_INFIX}, /*!!!*/
+	{"EACH",	"@@",	115,	JCOP_INFIX}, /*!!!*/
 	{"ELIPSIS",	"..",	270,	JCOP_INFIX}, /*!!!*/
 	{"ENDARRAY",	"]",	0,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	JCOP_OTHER},
@@ -92,7 +92,7 @@ static struct {
 	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	JCOP_OTHER},
 	{"GE",		">=",	190,	JCOP_INFIX},
-	{"GROUP",	"@",	5,	JCOP_INFIX},	/*!!!*/
+	{"GROUP",	"@",	115,	JCOP_INFIX},	/*!!!*/
 	{"GROUPBY",	"GRO",	2,	JCOP_OTHER},
 	{"GT",		">",	190,	JCOP_INFIX},
 	{"ICEQ",	"=",	180,	JCOP_INFIX},

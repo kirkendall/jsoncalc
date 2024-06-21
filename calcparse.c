@@ -64,10 +64,10 @@ static struct {
 	{"ADD",		"+",	210,	JCOP_INFIX},
 	{"AG",		"AG",	-1,	JCOP_OTHER},
 	{"AND",		"&&",	140,	JCOP_INFIX},
-	{"APPEND",	"A[]",	120,	JCOP_INFIX},
+	{"APPEND",	"A[]",	110,	JCOP_INFIX},
 	{"ARRAY",	"ARR",	-1,	JCOP_OTHER},
 	{"AS",		"AS",	121,	JCOP_INFIX},
-	{"ASSIGN",	"ASGN",	120,	JCOP_INFIX},
+	{"ASSIGN",	"ASGN",	110,	JCOP_INFIX},
 	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
 	{"BITAND",	"&",	160,	JCOP_INFIX},
 	{"BITNOT",	"~",	240,	JCOP_PREFIX},
@@ -98,12 +98,12 @@ static struct {
 	{"ICEQ",	"=",	180,	JCOP_INFIX},
 	{"ICNE",	"<>",	180,	JCOP_INFIX},
 	{"IN",		"IN",	175,	JCOP_INFIX},
-	{"ISNOTNULL",	"N!",	250,	JCOP_POSTFIX}, /* postfix operator */
-	{"ISNULL",	"N=",	250,	JCOP_POSTFIX}, /* postfix operator */
+	{"ISNOTNULL",	"N!",	117,	JCOP_POSTFIX}, /* postfix operator */
+	{"ISNULL",	"N=",	117,	JCOP_POSTFIX}, /* postfix operator */
 	{"LE",		"<=",	190,	JCOP_INFIX},
 	{"LIKE",	"LIK",	180,	JCOP_INFIX},
 	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
-	{"LJOIN",	"@<",	122,	JCOP_INFIX},
+	{"LJOIN",	"@<",	117,	JCOP_INFIX},
 	{"LT",		"<",	190,	JCOP_INFIX},
 	{"MODULO",	"%",	220,	JCOP_INFIX},
 	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
@@ -111,7 +111,7 @@ static struct {
 	{"NE",		"!=",	180,	JCOP_INFIX},
 	{"NEGATE",	"U-",	240,	JCOP_PREFIX},
 	{"NESTRICT",	"!==",	180,	JCOP_INFIX},
-	{"NJOIN",	"@=",	122,	JCOP_INFIX},
+	{"NJOIN",	"@=",	117,	JCOP_INFIX},
 	{"NOT",		"!",	240,	JCOP_PREFIX},
 	{"NOTLIKE",	"NLK",	180,	JCOP_INFIX},
 	{"NULL",	"NUL",	-1,	JCOP_OTHER},
@@ -121,7 +121,7 @@ static struct {
 	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
 	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
 	{"REGEX",	"REG",	-1,	JCOP_OTHER},
-	{"RJOIN",	"@>",	122,	JCOP_INFIX},
+	{"RJOIN",	"@>",	117,	JCOP_INFIX},
 	{"SELECT",	"SEL",	1,	JCOP_OTHER},
 	{"STARTARRAY",	"[",	260,	JCOP_OTHER},
 	{"STARTOBJECT",	"{",	260,	JCOP_OTHER},

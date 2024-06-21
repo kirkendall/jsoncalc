@@ -127,7 +127,8 @@ typedef struct jsoncontext_s {
     void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
     enum {JSON_CONTEXT_THIS = 1, /* Context can be "this" or "that" */
           JSON_CONTEXT_CONST = 2,/* Context can't be changed by script */
-          JSON_CONTEXT_LOCAL = 4 /* Where to add VAR or CONST variables */
+          JSON_CONTEXT_LOCAL = 4,/* Where to add VAR or CONST variables */
+          JSON_CONTEXT_AUTOLOAD_FIRST = 8 /* try autoload() before *data */
     } flags;
 } jsoncontext_t;
 

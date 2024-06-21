@@ -74,14 +74,12 @@
         This returns the highest score in each run from the <tt>test.scores</tt> table.
         Note that we need to use <tt>@@</tt> instead of <tt>@</tt> because we need to
         compare all rows to the <tt>max(score)</tt>, not just one row per group.
-        What if we chose tried the wrong group?
       </div>
 
       <div class="example">
 	<kbd>( test.scores @ max(score, run) )[0]</kbd>
 	<samp>3</samp>
         This returns the run with the highest score.
-        (<tt>test.scores</tt> is part of the sample data.)
         Note that the <tt>@</tt> operator returns an array of the max value,
         but we only want one copy of it, hence the <tt>[0]</tt>.
       </div>

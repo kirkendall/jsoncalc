@@ -117,7 +117,9 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
  */
 static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
 {
-	json_t	*value, *t, *v;
+	json_t	*value, *t, *v, *m;
+	char	*skey;
+	jsoncalc_t *sub;
 
 	switch (lvalue->op) {
 	case JSONOP_NAME:
@@ -185,8 +187,44 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			return 0;
 
 		/* The [key:value] style of subscripts is handled specially */
-		if (lvalue->u.param.right->op == JSONOP_COLON) {
-			abort(); /* a[b:c]=d isn't handled yet */
+		sub = lvalue->u.param.right;
+		if (sub->op == JSONOP_COLON) {
+			/* The array[key:value] case */
+
+			/* Get the key */
+			if (sub->u.param.left->op == JSONOP_NAME)
+				skey = sub->u.param.left->u.text;
+			else if (sub->u.param.left->op == JSONOP_LITERAL
+			 && sub->u.param.left->u.literal->type == JSON_STRING)
+				skey = sub->u.param.left->u.literal->text;
+			else /* invalid key */
+				return 0;
+
+			/* Evaluate the value */
+			t = json_calc(sub->u.param.right, context, NULL);
+
+			/* Scan the array for an element with that member key
+			 * and value.
+			 */
+			for (v = value->first; v; v = v->next) {
+				if (v->type == JSON_OBJECT) {
+					m = json_by_key(v, skey);
+					if (m && json_equal(m, t))
+						break;
+				}
+			}
+
+			/* If not found, fail */
+			if (!v)
+				return 0;
+
+			/* Return what we found */
+			if (refcontainer)
+				*refcontainer = value;
+			if (refvalue)
+				*refvalue = v;
+			return 1;
+
 		} else {
 			/* Use json_calc() to evaluate the subscript */
 			t = json_calc(lvalue->u.param.right, context, NULL);
@@ -315,7 +353,7 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 
 	/* We can only append to arrays */
 	if (value->type != JSON_ARRAY)
-		return json_error_null(1, "Can't append to %s \"%s\"", json_typeof(value), key);
+		return json_error_null(1, "Can't append to %s \"%s\"", json_typeof(value, 0), key);
 
 	/* Append! */
 	json_append(value, rvalue);

@@ -65,7 +65,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		if (json->text[0] == '\0' && json->text[1] == 'i')
 			sprintf(tmp = number, "%i", JSON_INT(json));
 		else if (json->text[0] == '\0' && json->text[1] == 'i')
-			sprintf(tmp = number, "%.*g", json_format_default.digits, JSON_DOUBLE(json));
+			sprintf(tmp = number, "%.*g", format->digits, JSON_DOUBLE(json));
 		else
 			tmp = json->text;
 		len += strlen(tmp);

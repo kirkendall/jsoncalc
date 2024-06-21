@@ -79,6 +79,23 @@
         <li>The <tt>=</tt> and <tt>&lt;&gt;</tt> operators are from SQL.
             They are case-insensitive because SQL is case-insensitive.
 
+	<li>The <tt>=</tt> operator is used for comparison SQL, but assignment
+	    in JavaScript.  JsonCalc tries to use it both ways.  This rarely
+	    causes confusion though since JsonCalc only allows assignment as
+	    a separate statement; you can't sneak an assignment into an
+	    expression as you can with JavaScript.  If you do need to force
+	    something like "a=b" to be a comparison instead of an assignment,
+	    wrap it in parentheses.
+	    <div class="example">
+	      <kbd>a=b</kbd>
+	      <kbd>(a=b)</kbd>
+	      <samp>true</samp>
+	      The first example assigns the value of <tt>b</tt> to <tt>a</tt>,
+	      and returns nothing.
+	      The second example compares <tt>a</tt> to <tt>b</tt> and returns
+	      <tt>true</tt> because they're equal now.
+	    </div>
+
 	<li>The <tt>===</tt> and <tt>!==</tt> operators differ from
 	    JavaScript's.  In JavaScript, two objects or arrays are considered
 	    to be equal only if they are the same object or array.  In other

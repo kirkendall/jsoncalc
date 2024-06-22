@@ -718,8 +718,8 @@ static jsoncalc_t *jcalloc(token_t *token)
 		jc->u.select = (jsonselect_t *)calloc(1, sizeof(jsonselect_t));
 	}
 
-	/* REGEX needs a buffer allocated, and then the text and flags need to be
-	 * parsed.  Big stuff.
+	/* REGEX needs a buffer allocated, and then the text and flags need to
+	 * be parsed.  Big stuff.
 	 */
 	if (token->op == JSONOP_REGEX) {
 		int	ignorecase = 0;
@@ -2073,12 +2073,14 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr)
 
 	/* Store the end of the parse.  If there are surplus items on the
 	 * stack, then that's where parsing really ended, otherwise use
-	 * the end of the last token.
+	 * the end of the last token (or the start of it, if invalid).
 	 */
 	if (refend)
 	{
 		if (stack.sp >= 2)
 			*refend = stack.str[1];
+		else if (token.op == JSONOP_INVALID)
+			*refend = token.full;
 		else {
 			*refend = token.full + token.len;
 

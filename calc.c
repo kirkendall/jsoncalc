@@ -229,7 +229,7 @@ void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, js
 	/* Create a context with this row's data in it, and evaluate all
 	 * aggretators with that.
 	 */
-	local = json_context(context, row, NULL);
+	local = json_context(context, row, JSON_CONTEXT_THIS);
 	jcag(calc->u.ag, local, agdata);
 	json_context_free(local, 0);
 }
@@ -322,7 +322,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				/* Loop over the array elements */
 				for (gscan = scan->first; gscan; gscan = gscan->next) {
 					/* Invoke the aggregators on "this" */
-					local = json_context(context, gscan, NULL);
+					local = json_context(context, gscan, JSON_CONTEXT_THIS);
 					jcag(calc->u.ag, local, groupag[g]);
 					if (nongroup)
 						jcag(calc->u.ag, local, ag);
@@ -333,7 +333,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				g++;
 			} else {
 				/* Invoke the aggregators on "this" */
-				local = json_context(context, scan, NULL);
+				local = json_context(context, scan, JSON_CONTEXT_THIS);
 				jcag(calc->u.ag, local, ag);
 				json_context_free(local, 0);
 			}
@@ -354,7 +354,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			 */
 			for (gscan = scan->first; gscan; gscan = (op == JSONOP_EACH ? gscan->next : NULL)) {
 				/* Evaluate with element as "this" */
-				local = json_context(context, gscan, NULL);
+				local = json_context(context, gscan, JSON_CONTEXT_THIS);
 				tmp = json_calc(calc, local, ag ? groupag[g] : NULL);
 				json_context_free(local, 0);
 
@@ -373,8 +373,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			/* Prepare for the next group */
 			g++;
 		} else {
-			local = json_context(context, scan, NULL);
-			local->flags |= JSON_CONTEXT_THIS;
+			local = json_context(context, scan, JSON_CONTEXT_THIS);
 			tmp = json_calc(calc, local, ag);
 			json_context_free(local, 0);
 			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {

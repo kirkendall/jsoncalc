@@ -119,18 +119,29 @@ typedef struct jsonfunc_s {
 #define JSONFUNC_JSONFREE 1	/* Call json_free() on the agdata afterward */
 #define JSONFUNC_FREE 2		/* Call free() on the agdata afterward */
 
+/* This enum represents details about how a single context layer is used */
+typedef enum {
+	JSON_CONTEXT_VAR = 1,	/* variable -- use with GLOBAL for non-local */
+        JSON_CONTEXT_CONST = 2,	/* const -- like variable but can't assign */
+        JSON_CONTEXT_GLOBAL = 4,/* Context can't be changed by script */
+	JSON_CONTEXT_THIS = 8,  /* Context can be "this" or "that" */
+        JSON_CONTEXT_ARGS = 16, /* function arguments, and can be "arguments" */
+        JSON_CONTEXT_AUTOLOAD_FIRST = 32 /* try autoload() before *data */
+} jsoncontextflags_t;
+#define JSON_CONTEXT_LOCAL_VAR		(JSON_CONTEXT_VAR)
+#define JSON_CONTEXT_LOCAL_CONST	(JSON_CONTEXT_CONST)
+#define JSON_CONTEXT_GLOBAL_VAR		(JSON_CONTEXT_VAR|JSON_CONTEXT_GLOBAL)
+#define JSON_CONTEXT_GLOBAL_CONST	(JSON_CONTEXT_CONST|JSON_CONTEXT_GLOBAL)
+
 /* This is used to track context (the stack of variable definitions).  */
 typedef struct jsoncontext_s {
     struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
     json_t *data;     /* a used item */
     json_t *(*autoload)(char *key); /* called from json_used_by_key() */
     void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
-    enum {JSON_CONTEXT_THIS = 1, /* Context can be "this" or "that" */
-          JSON_CONTEXT_CONST = 2,/* Context can't be changed by script */
-          JSON_CONTEXT_LOCAL = 4,/* Where to add VAR or CONST variables */
-          JSON_CONTEXT_AUTOLOAD_FIRST = 8 /* try autoload() before *data */
-    } flags;
+    jsoncontextflags_t flags;
 } jsoncontext_t;
+
 
 
 /* This stores a list of aggregate functions used in a given context.  Each
@@ -178,9 +189,65 @@ void *json_calc_ag(jsoncalc_t *calc, void *agdata);
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata);
 
 jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata);
-jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, json_t *(*autoload)(char *name));
+jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);
+jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags);
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
 json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
+int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, jsoncontextflags_t flags);
 json_t *json_context_default_table(jsoncontext_t *context);
 
+/****************************************************************************/
+
+/* This describes an error.  "where" is a pointer into the source script where
+ * the error was detected, and "text" is the locale-specific text describing
+ * the error.
+ *
+ * It is also used for successfully returning values.  This is denoted by
+ * a non-NULL "ret" field.  So the try-catch mechanism allows errors to
+ * "bubble up" until they're caught, and user-defined functions allow return
+ * values to "bubble up" to the function invocation.
+ */
+typedef struct {
+	int	code;
+	char	*where;
+	json_t	*ret;
+	char	text[1];	/* extended as necessary */
+} jsonerror_t;
+
+/* This data type is used for storing command names.  Some command names are
+ * built in, but plugins can add new command names too.
+ */
+typedef struct jsoncmdname_s {
+	struct jsoncmdname_s *next;
+	char	*name;
+	struct jsoncmd_s *(*argparser)(char **refstr, jsonerror_t **referr);
+	jsonerror_t *(*run)(struct jsoncmd_s *cmd, jsoncontext_t **refcontext);
+	char	*pluginname;
+} jsoncmdname_t;
+
+/* This stores a parsed statement. */
+typedef struct jsoncmd_s {
+	char		  *where;/* source location, for reporting errors */
+	jsoncmdname_t 	  *name;/* command name and other details */
+	char		  *key;	/* Name of a variable, if the cmd uses one */
+	jsoncalc_t 	  *calc;/* calc expression, fit he cmd uses one */
+	jsoncontextflags_t flags;/* Context flags for "key" */
+	struct jsoncmd_s *sub;	/* For "then" in "if-then-else" for example */
+	struct jsoncmd_s *more;/* For "else" in "if-then-else" for example */
+	struct jsoncmd_s *next;/* in a series of statements, "next" is next */
+} jsoncmd_t;
+
+
+void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(char **refstr, jsonerror_t **referr), jsonerror_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
+jsonerror_t *json_cmd_error(char *where, int code, char *fmt, ...);
+void json_cmd_parse_whitespace(char **refstr);
+char *json_cmd_parse_key(char **refstr, int quotable);
+char *json_cmd_parse_paren(char **refstr);
+jsoncmd_t *json_cmd(char *where, jsoncmdname_t *name);
+void json_cmd_free(jsoncmd_t *cmd);
+jsoncmd_t *json_cmd_parse_single(char **refstr, jsonerror_t **referr);
+jsoncmd_t *json_cmd_parse_curly(char **refstr, jsonerror_t **referr);
+jsoncmd_t *json_cmd_parse_string(char *str);
+jsoncmd_t *json_cmd_parse_file(char *filename);
+jsonerror_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);

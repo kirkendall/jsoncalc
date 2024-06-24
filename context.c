@@ -36,7 +36,7 @@ jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata)
 /* Add a context.  Optionally add a handler for when json_context_by_key()
  * is used to search for a name that can't be found in data.
  */
-jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, json_t *(*autoload)(char *key))
+jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, jsoncontextflags_t flags)
 {
         jsoncontext_t *context;
 
@@ -47,10 +47,71 @@ jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, json_t *(*autolo
         /* Initialize it.  We leave the hash uninitialized until we need it */
         context->older = older;
         context->data = data;
-        context->autoload = autoload;
+        context->flags = flags;
 
         /* Return it */
         return context;
+}
+
+/* Locate a context layer that satisfies the "flags" argument.  If no such
+ * layer exists, then insert it into the context stack in an appropriate
+ * position.  Returns the new context, and may also adjusst the top of the
+ * context stack -- notice that we pass a reference to the stack pointer
+ * instead of the pointer itself like we do for most context functions.
+ *
+ * "flags" can be one of the following:
+ *   JSON_CONTEXT_GLOBAL_VAR	The layer for global variables
+ *   JSON_CONTEXT_GLOBAL_CONST	The layer for global constants
+ *   JSON_CONTEXT_ARGS		A new layer for function arguments
+ *   JSON_CONTEXT_LOCAL_VAR	A layer for variables within a function
+ *   JSON_CONTEXT_LOCAL_CONST	A layer for constants within a function
+ */
+jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags)
+{
+	jsoncontext_t *scan, *lag;
+
+	/* For JSON_CONTEXT_ARGS we always allocate a new layer on top */
+	if (flags == JSON_CONTEXT_ARGS) {
+		*refcontext = json_context(*refcontext, json_object(), flags);
+		return *refcontext;
+	}
+
+	/* Local? */
+	if ((flags & JSON_CONTEXT_GLOBAL) == 0) {
+		/* Scan for an existing layer that works */
+		for (lag = NULL, scan = *refcontext;
+		     scan && scan->flags != JSON_CONTEXT_ARGS;
+		     lag = scan, scan = scan->older) {
+			if (((flags ^ scan->flags) & (JSON_CONTEXT_VAR|JSON_CONTEXT_CONST)) == 0)
+				/* We found an existing layer we can use */
+				return scan;
+		}
+
+		/* No layer found, so insert one between "lag" and "scan" */
+		scan = json_context(scan, json_object(), flags);
+		if (lag)
+			lag->older = scan;
+		else
+			*refcontext = scan;
+		return scan;
+	}
+
+	/* Global!  Scan for an existing global layer that works */
+	for (lag = NULL, scan = *refcontext;
+	     scan;
+	     lag = scan, scan = scan->older) {
+		if (((flags ^ scan->flags) & (JSON_CONTEXT_VAR|JSON_CONTEXT_CONST|JSON_CONTEXT_GLOBAL)) == 0)
+			/* We found an existing layer we can use */
+			return scan;
+	}
+
+	/* No layer found, so insert one between "lag" and "scan" */
+	scan = json_context(scan, json_object(), flags);
+	if (lag)
+		lag->older = scan;
+	else
+		*refcontext = scan;
+	return scan;
 }
 
 /* Scan items in a context list for given name, and return its value.  If not
@@ -364,6 +425,32 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 
 	return NULL;
 }
+
+/* Add a variable.  If necessary (as indicated by "flags") then add a context
+ * for it too.  Return maybe-changed top of the context stack.  "flags" can be
+ * one of the following:
+ *   JSON_CONTEXT_GLOBAL_VAR	A global variable
+ *   JSON_CONTEXT_GLOBAL_CONST	A global constant
+ *   JSON_CONTEXT_LOCAL_VAR	A local variable
+ *   JSON_CONTEXT_LOCAL_CONST	A local constant
+ *
+ * Return 1 on success, or 0 if the key was already declared.
+ */
+int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, jsoncontextflags_t flags)
+{
+	jsoncontext_t	*layer;
+
+	/* Find/add the context layer */
+	layer = json_context_insert(refcontext, flags);
+
+	if (json_by_key(layer->data, key))
+		return 0;
+
+	/* Add it */
+	json_append(layer->data, json_key(key, value ? value : json_null()));
+	return 1;
+}
+
 
 /* Returns the default table for a "SELECT" statement.
  *

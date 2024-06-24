@@ -391,7 +391,6 @@ static jsonop_t jcisassign(stack_t *stack)
 	jsoncalc_t	*jc;
 	jsonop_t	op = JSONOP_ASSIGN;
 
-{int i;printf("jcisassign():");for(i=0;i<sp;i++)printf(" %s", operators[stack->stack[i]->op].symbol); printf("\n");}
 	/* Any basic l-value can be followed by "[]" to denote appending
 	 * to an array.
 	 */

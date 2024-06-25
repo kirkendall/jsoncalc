@@ -39,18 +39,18 @@ static jsonerror_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsonerror_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 
 /* Linked list of command names */
-static jsoncmdname_t jsn_if =       {NULL,		"if",		if_parse,	if_run};
-static jsoncmdname_t jsn_var =      {&jsn_if,		"var",		var_parse,	var_run};
-static jsoncmdname_t jsn_const =    {&jsn_var,		"const",	const_parse,	const_run};
-static jsoncmdname_t jsn_global =   {&jsn_const,	"global",	global_parse,	global_run};
-static jsoncmdname_t jsn_function = {&jsn_global,	"function",	function_parse,	function_run};
-static jsoncmdname_t jsn_return =   {&jsn_function,	"return",	return_parse,	return_run};
-static jsoncmdname_t *names = &jsn_return;
+static jsoncmdname_t jcn_if =       {NULL,		"if",		if_parse,	if_run};
+static jsoncmdname_t jcn_var =      {&jcn_if,		"var",		var_parse,	var_run};
+static jsoncmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run};
+static jsoncmdname_t jcn_global =   {&jcn_const,	"global",	global_parse,	global_run};
+static jsoncmdname_t jcn_function = {&jcn_global,	"function",	function_parse,	function_run};
+static jsoncmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
+static jsoncmdname_t *names = &jcn_return;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
  */
-static jsoncmdname_t jsn_calc = {NULL, "<<calc>>", NULL, calc_run};
+static jsoncmdname_t jcn_calc = {NULL, "<<calc>>", NULL, calc_run};
 
 
 
@@ -308,7 +308,7 @@ jsoncmd_t *json_cmd_parse_single(char **refstr, jsonerror_t **referr)
 	}
 
 	/* Stuff it into a jsoncmd_t */
-	cmd = json_cmd(*refstr, &jsn_calc);
+	cmd = json_cmd(*refstr, &jcn_calc);
 	cmd->calc = calc;
 
 	/* Move past the end of the statement */
@@ -373,8 +373,6 @@ static int jsline(char *buf, char *where)
 /* Parse a string for statements, and return them */
 jsoncmd_t *json_cmd_parse_string(char *str)
 {
-	jsoncmd_t *cmd;
-	jsonerror_t *err = NULL;
 
 	cmd = json_cmd_parse_single(&str, &err);
 	if (err)
@@ -382,27 +380,99 @@ jsoncmd_t *json_cmd_parse_string(char *str)
 	return cmd;
 }
 
-/* Parse a file, and return any scripts from it. */
-jsoncmd_t *json_cmd_parse_file(char *filename) 
+jsoncmd_t *json_cmd_parse_string(char *str, char *filename)
 {
-	/* Load the file into memory */
+	char	*buf = str;
+	jsonerror_t *err = NULL;
+	jsoncmd_t *cmd, *first, *next;
+	int	lineno;
 
 	/* If first line starts with "#!" then skip to second line */
+	if (str[0] == '#' && str[1] == '!') {
+		while (*str && *str != '\n')
+			str++;
+	}
 
 	/* For each statement... */
+	json_cmd_parse_whitespace(&str);
+	cmd = NULL;
+	while (*str) {
+		/* Find the line number of this command */
+		json_cmd_parse_whitespace(&str);
+		lineno = jsline(buf, str);
 
-		/* If it is a function declaration, process it now, and
-		 * DON'T add it to the list if commands for the script.
-		 */
+		/* Parse it */
+		next = json_cmd_parse_single(&str, &err);
 
-		/* If it is a variable declaration, process it now as a global
-		 * declaration (since this is the top-level of the script).
-		 * DON'T add them to the list of commands for the script.
-		 */
+		/* If error then report it and quit */
+		if (err) {
+			if (json_format_default.color)
+				fputs(json_format_color_error, stderr);
+			if (filename)
+				fprintf(stderr, "%s:", filename);
+			fprintf(stderr, "%d: %s\n", jsline(buf, err->where), err->text);
+			if (json_format_default.color)
+				fputs(json_format_color_end, stderr);
+
+			json_cmd_free(first);
+			return NULL;
+		}
+
+		/* It could be NULL, which is *NOT* an error.  That would be
+		 * for things like function definitions, which are processed
+		 * by the parser and not at run-time.  Skip NULL */
+		if (!next)
+			continue;
 
 		/* Anything else gets added to the statement chain */
+		if (cmd)
+			cmd->next = next;
+		else
+			first = next;
+		cmd = next;
 
-	/* Clean up and return the remaining statements.  Might be NULL. */
+		/* Also, store the filename and line number of this command */
+		cmd->filename = filename;
+		cmd->lineno = lineno;
+	}
+
+	/* Return the commands.  Might be NULL. */
+	return cmd;
+}
+
+/* Parse a file, and return any commands from it. */
+jsoncmd_t *json_cmd_parse_file(char *filename) 
+{
+	char	*buf;
+	size_t	size, offset;
+	ssize_t	nread;
+	jsoncmd_t *cmd;
+
+	/* Load the file into memory */
+	FILE *fp = fopen(filename, "r");
+	if (!fp) {
+		perror(filename);
+		return NULL;
+	}
+	size = 1024;
+	buf = (char *)malloc(size);
+	offset = 0;
+	while (nread = fread(buf + offset, 1, size - offset - 1, fp) > 0) {
+		offset += nread;
+		if (offset + 1 >= size) {
+			size *= 2;
+			buf = (char *)realloc(buf, size);
+		}
+	}
+	buf[offset] = '\0';
+	fclose(fp);
+
+	/* Parse it as a string */
+	cmd = json_parse_string
+
+	/* Free the buffer */
+	free(buf);
+
 }
 
 /* Run a series of statements */
@@ -432,7 +502,7 @@ static jsoncmd_t *if_parse(char **refstr, jsonerror_t **referr)
 	where = *refstr;
 
 	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(where, &jsn_if);
+	parsed = json_cmd(where, &jcn_if);
 
 	/* Get the condition */
 	str = json_cmd_parse_paren(refstr);
@@ -482,7 +552,7 @@ static jsoncmd_t *gvc_parse(char **refstr, jsonerror_t **referr, jsoncmd_t *cmd)
 	char	*end, *err;
 
 	/* The "global" command name may be followed by "var" or "const" */
-	if (cmd->name == &jsn_global) {
+	if (cmd->name == &jcn_global) {
 		if (!strncasecmp(*refstr, "var", 3) && isspace((*refstr)[3])) {
 			cmd->flags = JSON_CONTEXT_GLOBAL | JSON_CONTEXT_VAR;
 			(*refstr) += 3;
@@ -492,9 +562,9 @@ static jsoncmd_t *gvc_parse(char **refstr, jsonerror_t **referr, jsoncmd_t *cmd)
 			(*refstr) += 5;
 			json_cmd_parse_whitespace(refstr);
 		}
-	} else if (cmd->name == &jsn_var) {
+	} else if (cmd->name == &jcn_var) {
 		cmd->flags = JSON_CONTEXT_VAR;
-	} else /* jsn_const */ {
+	} else /* jcn_const */ {
 		cmd->flags = JSON_CONTEXT_CONST;
 	}
 
@@ -569,7 +639,7 @@ static jsonerror_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *var_parse(char **refstr, jsonerror_t **referr)
 {
-	return gvc_parse(refstr, referr, json_cmd(*refstr, &jsn_var));
+	return gvc_parse(refstr, referr, json_cmd(*refstr, &jcn_var));
 }
 
 static jsonerror_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
@@ -579,7 +649,7 @@ static jsonerror_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *const_parse(char **refstr, jsonerror_t **referr)
 {
-	return gvc_parse(refstr, referr, json_cmd(*refstr, &jsn_const));
+	return gvc_parse(refstr, referr, json_cmd(*refstr, &jcn_const));
 }
 
 static jsonerror_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
@@ -589,7 +659,7 @@ static jsonerror_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *global_parse(char **refstr, jsonerror_t **referr)
 {
-	return gvc_parse(refstr, referr, json_cmd(*refstr, &jsn_global));
+	return gvc_parse(refstr, referr, json_cmd(*refstr, &jcn_global));
 }
 
 static jsonerror_t *global_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)

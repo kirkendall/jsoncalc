@@ -28,6 +28,10 @@
 
 console.log(namevalue[1] + "=" + namevalue[2]);
 		switch (namevalue[1]) {
+		case 'lit':
+		    $("#main").prop("src", "lit/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "lit/sidebar.html");
+		    break;
 		case 'f':
 		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "f/sidebar.html");
@@ -35,6 +39,10 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		case 'op':
 		    $("#main").prop("src", "op/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "op/sidebar.html");
+		    break;
+		case 'cmd':
+		    $("#main").prop("src", "cmd/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "cmd/sidebar.html");
 		    break;
 		case 'quick':
 		    $("#main").prop("src", "quick.html");

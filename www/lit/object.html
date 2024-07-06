@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Objects</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Objects">
+    <meta name="keywords" content="object">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Objects</h1>
+    Object generators are represented by a pair of curly braces containing
+    a comma-delimited list of key:value pairs.
+    This is similar to JSON objects, and identical to JavaScript objects.
+    <p>
+    Unlike JSON, the member keys (names) don't need to be enclosed in quotes,
+    although that is allowed.
+    Another difference from JSON and similarity to JavaScript is that
+    the values can be any expression, not just a literal.
+    Consequently, the object returns may vary if variables vary.
+    This is why we're talking about "object generators" instead of
+    "object literals".
+    <p>
+    Also, you can omit the key and colon, and just write the value.
+    When you do this, the source text of the value is used as the key.
+    The most common use of this is to copy a variable into an object &mdash;
+    just put the variable's name in the curly braces, and its name and value
+    will be used as the member's key and value respectively.
+    <p>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>{}</kbd>
+	<samp>{}</samp>
+	Any empty object.
+      </div>
+
+      <div class="example">
+	<kbd>{x:2,"y":7.7}</kbd>
+	<samp>{"x":1,"y":7.7}</samp>
+        An object with two members.
+        I enclosed the second one's key in quotes just to show that quotes
+        are entirely optional; use them or don't as you see fit.
+        JSON always uses quotes around keys though, as you see in the output.
+      </div>
+
+      <div class="example">
+	<kbd>var x=2, y=3;<br/>{x,y,z:0,x-y}</kbd>
+	<samp>{"x":2,"y":3,"z":0,"x-y":-1}</samp>
+	An object with four members.
+	This time, <tt>x</tt> and <tt>y</tt> are set from variables, taking on
+	both their names/keys and their values.
+	The <tt>z</tt> member is explicitly set to 0.
+	In the last one, we're omitting the key-colon again so the source text
+	is used as the key even though it doesn't look like a name.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>It's worth pointing out that any JSON object is also a
+            syntactically-correct JsonCalc object generator.
+            You can copy any chunk of JSON data into a JsonCalc script and
+            have it work as intended.
+
+        <li>JavaScript's object notation doesn't allow you to omit the
+            key-colon.
+            That's purely a JsonCalc feature.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Names</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Names">
+    <meta name="keywords" content="name">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Names</h1>
+    Names (also called "keys") aren't literals.
+    They're about as close as you can get to the opposite of a literal.
+    They are used to access variables, or members or objects.
+    <p>
+    Names follow one of three basic formats:
+    <ul>
+      <li>An unquoted name must start with an underscore or letter.
+          The rest of the name may contain any combination of letters, digits,
+          or underscores.
+          This is the usually most convenient format, though it's also the
+          most constrained.
+          Also, there's a chance that the definition of "letter" may vary
+          from one computer to another, so I suggest you limit yourself to
+          ASCII letters in unquoted names.
+      <li>Backtick-quoted names.
+          These may contain any character except another backtick.
+          This notation is inherited from SQL.
+      <li>String-like names, enclosed in double-quotes or single-quotes.
+          This only works after a
+          <a target="_PARENT" href="../index.html?op=dot">.</a> operator, or
+          before a <a target="_PARENT" href="../index.html?op=colon">:</a> operator;
+          in any other context, it'll be treated like a string literal instead of a name.
+          Note that JSON text <em>always</em> double-quotes member names like this.
+    </ul>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var a = 4;<br/>`a`</kbd>
+	<samp>4</samp>
+	<kbd>"a"</kbd>
+	<samp>"a"</samp>
+        First we define a variable named <tt>a</tt> (unquoted) and set it to 4.
+        Then we access <tt>a</tt> (backtick-quoted) and its the same variable
+        so we get 4.
+        Finally, we try using double-quoted "a" but because we aren't after
+        a . operator or before a : operator, it's just a string.
+      </div>
+
+      <div class="example">
+        <kbd>{"b":true}</kbd>
+        <samp>{"b":true}</samp>
+        <kbd>{"b":true}."b"</kbd>
+        <samp>true</samp>
+        Here we use a double-quoted name before a colon and after a dot,
+        and it is indeed interpreted as a name instead of a string.
+      </div>
+
+    </details>
+
+  </body>
+</html>

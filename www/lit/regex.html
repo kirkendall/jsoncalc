@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Regular expressions</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Regular expressions">
+    <meta name="keywords" content="regex">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Regular expressions</h1>
+    Regular expressions are a standard way to describe complex text patterns,
+    JsonCalc uses them with the <a target="_PARENT" href="../index.html?op=like">LIKE</a> operator, and the <a target="_PARENT" href="../index.html?f=replace">replace()</a> function.
+    <p>
+    Regular expressions are enclosed in / (slash) characters, and may be
+    followed by <tt>i</tt> and/or <tt>g</tt> flags.
+    The / character is also used as the division operator, but context
+    allows the parser to figure it out.
+    Regular expressions are really only used after a ( or , character,
+    or after the LIKE operator.
+    The <tt>i</tt> flag makes the regular expression be case-insensitive;
+    without it, comparisons and searches would be case-sensitive.
+    The <tt>g</tt> flag can be used with the <tt>replace()</tt> function to
+    replace all matching instanges within a string; without <tt>g</tt>,
+    <tt>replace()</tt> would only replace the first match.
+    <p>
+    For a full description of the regular expression syntax,
+    see the Linux manual (i.e., run "man 7 regex").
+    The highlights are:
+    <ul>
+      <li>Most character match only themselves.  This include letters, digits,
+          and whitespace.
+      <li>A ^ at the start of the regular expression means it can only match
+          text at the start of the target string.
+      <li>A $ at the end of the regular expression means it can only match
+          text at the end of the target string.
+      <li>The . character matches any single character except newline.
+      <li>Square brackets enclose sets of characters.  This will match a single
+          character from the test string, if its in the set.
+      <li>Parentheses mark subexpressions.  These affect closure operators
+          like * and +.  Also, the <tt>replace()</tt> function can access the
+          text that matched each subexpression and use it when constructing
+          replacement text.
+      <li>* means the character or subexpression before it may occur
+          zero or more times (repeated).
+    </ul>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>/foo/</kbd>
+	<samp>null</samp>
+	This was correctly parsed as a regular expression, but
+	regular expressions don't work by themselves; they must be part of a
+	function call or operator invocation.
+	So the result is <tt>null</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>"food" like /foo/</kbd>
+	<samp>true</samp>
+        This returns <tt>true</tt> because "food" does contain f-o-o.
+      </div>
+
+      <div class="example">
+	<kbd>"food" like /^foo$/</kbd>
+	<samp>false</samp>
+        This returns <tt>false</tt> because the <tt>$</tt> means the target
+        string isn't allowed to have any text after the matching text, but
+        "food" has a "d" after the matching text.  No good.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Since JsonCalc deals strictly with JSON data,
+            and regular expressions aren't a valid JSON data type,
+            I had to get clever.
+            Regular expressions are handled like <tt>null</tt> except they
+            also have sort of a side-channel where the regular expression
+            is stored.
+            When evaluating an expression, if a regular expression is used
+            where it is expected (the LIKE operator or <tt>replace()</tt>
+            function, basically) then the regular expression is seen and
+            used; in any other context, the regular expression is just
+            <tt>null</tt>.
+
+	<li>One consequence of the above is that regular expressions can't
+	    be stored in variables.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=like">LIKE</a> - Pattern match operator
+      <a target="_PARENT" href="../index.html?f=replace">replace()</a> - String replace function
+    </details>
+
+  </body>
+</html>

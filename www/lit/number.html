@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Numbers</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Numbers">
+    <meta name="keywords" content="number">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Numbers</h1>
+    Numbers are written in the usual way &mdash;
+    an optional "-",
+    then some digits (optionally with a "." mixed in),
+    and optionally an "e" or "E" followed by an exponent.
+    <p>
+    One unusual thing about JsonCalc is that number literals
+    (including all numbers parsed from JSON documents) are stored internally
+    as text and only converted to binary when necessary,
+    while computed numbers are stored in binary and only converted to text
+    when outputting.
+    There are two reasons for this.
+    <ul>
+      <li>Converting between text and binary formats is slow; there is no
+          CPU hardware that does it instantly like most floating point
+          operations.  Often in a large JSON document, most numbers are
+          never accessed, and the ones that are will usually just
+          be copied verbatim to the output.  Let's save some time by not
+          converting them.
+      <li>The process of conversion loses precision.
+          Once a number has been converted to binary,
+          you want it to stay binary as long as possible
+          for the sake of precision,
+          and only be converted back to text when it's being output.
+    </ul>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>1.2e2</kbd>
+	<samp>1.2e2</samp>
+	<kbd>1.2e2 + 0</kbd>
+	<samp>120</samp>
+        The first example shows that numbers aren't converted to/from binary
+        unless they have to be.
+        In the second example, it has to be converted so we can perform math
+        on it, and then convert it back for output.
+        Both examples return the same number, but the first leaves the number
+        formatted as it was found, while the second one formats it the way
+        JsonCalc wants.
+      </div>
+
+    </details>
+
+  </body>
+</html>

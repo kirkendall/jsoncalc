@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Null</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Null">
+    <meta name="keywords" content="null">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Null</h1>
+    "Null" is a weird concept.
+    It is a value that signifies the absence of a value.
+    In JsonCalc (and JSON and JavaScript), it is represented by the 
+    <tt>null</tt> symbol.
+    <p>
+    JsonCalc also uses the <tt>null</tt> data type to represent errors
+    in expressions.
+    Where JavaScript might use <tt>undefined</tt> or <tt>NaN</tt>,
+    JsonCalc is limited to JSON data types, so <tt>null</tt> is all we get.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>null</kbd>
+	<samp>null</samp>
+        The simplest case.
+      </div>
+
+      <div class="example">
+	<kbd>1/0</kbd>
+	<samp>division by 0<br/>null</samp>
+        Here's an example of <tt>null</tt> representing an error.
+        Internally, this particular <tt>null</tt> carries the error message
+        with it, and when we output the <tt>null</tt>, we also output the
+        error message.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>You can prevent error nulls from outputting their error message
+            via the <tt>-Onoerror</tt> formatting option.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

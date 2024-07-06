@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Array</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Array">
+    <meta name="keywords" content="array">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Array</h1>
+    Arrays generators are represented by square brackets containing a list
+    of values.
+    In a JSON data file, each value must also be a literal, so the array as
+    a whole is a literal, but JsonCalc's array generators are different.
+    Their elements can be complex expressions, and the values of those
+    expressions can change.
+    <p>
+    The changeable nature of JsonCalc's arrays are the reason they're called
+    "generators" instead of "literals".
+    Literals never change, but generators can.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>[]</kbd>
+	<samp>[]</samp>
+        This is the simplest example.  An empty set of brackets returns an
+        empty array.
+      </div>
+
+      <div class="example">
+	<kbd>[true,1,"Y",[]]</kbd>
+	<samp>[true,1,"Y",[]]</samp>
+        Here we're generating an array with four elements.
+        Note that the elements can be of different types.
+      </div>
+
+      <div class="example">
+	<kbd>[2+2,$EDITOR]</kbd>
+	<samp>[4,"/usr/bin/vi"]</samp>
+        Here we're generating an array with two elements, both computed.
+        "2+2" only uses literals, but it could just as easily have accessed
+        a variable, or extracted data from a JSON file.
+        "$EDITOR" fetches the value of the <tt>EDITOR</tt> environment variable.
+      </div>
+
+    </details>
+
+  </body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Strings</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Strings">
+    <meta name="keywords" content="string">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Strings</h1>
+    Strings represent any character data, in UTF-8 encoding.
+    <p>
+    They are <em>not</em> chunks of binary data.
+    Only Unicode characters using UTF-8 encoding is allowed, and
+    strings cannot contain a 0x00 byte.
+    <p>
+    They may be enclosed in single quotes (apostrophes, \x27) or
+    double quotes (\x22).  When output, they'll always use double quotes
+    because that's standard for JSON.
+    <p>
+    Several escapes are allowed within the quotes, mostly to handle things
+    that would be awkward in ASCII.
+    These are:
+    <table>
+      <tr><td>\\</td><td>A single literal backslash character, \x5c</td></tr>
+      <tr><td>\"</td><td>A double-quote character, \x27</td></tr>
+      <tr><td>\'</td><td>A single-quote character, \x22</td></tr>
+      <tr><td>\b</td><td>A backspace control character, \x08</td></tr>
+      <tr><td>\e</td><td>An ASCII escape control character, \x1b</td></tr>
+      <tr><td>\f</td><td>A formfeed control character, \x0c</td></tr>
+      <tr><td>\r</td><td>A carriage-return control character, \x0d</td></tr>
+      <tr><td>\n</td><td>A newline (linefeed) control character, \x0a.</td></tr>
+      <tr><td>\t</td><td>A tab control character, \x09</td></tr>
+      <tr><td>\u<var>XXXX</var></td><td>A hex-encoded UTF-16 character</td></tr>
+      <tr><td>\u{<var>XXXXXX</var>}</td><td>A hex-encoded UTF-32 character</td></tr>
+      <tr><td>\U<var>XXXXXXXX</var></td><td>A hex-encoded UTF-32 character.</td></tr>
+      <tr><td>\x<var>XX</var></td><td>A hex-encoded character from the first 256 Unicode characters.</td></tr>
+    </table>
+    <p>
+    JsonCalc always uses UTF-8 encoding for text.
+    It allows entry of UTF-16 or UTF-32 characters via \u<var>XXXX</var>
+    and \U<var>XXXXXXXX</var>, but converts those characters to the
+    corresponding UTF-8 byte sequences.
+    It even understands and converts UTF-16 "surrogate pairs" to gain
+    access to extended Unicode characters such as emoji.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"\U1f4a3".length</kbd>
+	<samp>1</samp>
+        This is the UTF-32 escape for the "bomb" emoji.
+        That's a single character, so the length is 1.
+      </div>
+
+      <div class="example">
+	<kbd>"\U1f4a3" = "\ud83d\udca3"</kbd>
+	<samp>true</samp>
+        The bomb emoji again.
+        This time we're comparing the UTF-32 escape for the bomb emoji
+        to the UTF-16 surrogate pair for the bomb emoji.
+        They're the same thing;
+        the internal UTF-8 encodings for both strings are identical.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>For \U<var>XXXXXXXX</var>, \u<var>XXXX</var>, and \x<var>XX</var>,
+            you don't need to type all hex digits.  The highest Unicode
+            character is \U10ffff and you can write it like that without
+            any leading zeroes.
+
+	<li>When outputting Unicode text in ASCII format
+	    (via the -Oascii command-line flag),
+	    UTF-16 escapes will be used, including surrogate pairs where needed.
+
+	<li>Unicode tables often show characters in a "U+<var>XXXXX</var>" notation.
+	    This corresponds to JsonCalc's "\U<var>XXXXX</var>" notation.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

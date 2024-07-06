@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Boolean</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Boolean">
+    <meta name="keywords" content="boolean">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Boolean</h1>
+    Boolean values are represented by the <tt>true</tt> and <tt>false</tt>
+    symbols.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>true</kbd>
+	<samp>true</samp>
+        Not a lot of variety here.
+      </div>
+
+    </details>
+
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JsonCalc Literals</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc literal summary">
+    <meta name="keywords" content="jsoncalc, literal reference">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	// Initialization
+	$(document).ready(function() {
+	    // Adjust the visibility of functions, depending on the sections inputs
+	    $("[name=section]").on("change", sectionChanged);
+
+	    // Returning to this page after selecting a section may leave that
+	    // section still selected.  We'd better check.
+	    sectionChanged();
+
+	    // Enable click-to-copy on examples
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>JsonCalc Literals</h1>
+
+    Expressions in JsonCalc operate on JSON data,
+    so JsonCalc's basic data types are the same as JSON's.
+    Here we describe how those types are represented in JsonCalc expressions.
+    (Spoiler: About the same as JavaScript.)
+
+    <table>
+      <tr>
+        <td><a href="null.html">null</a></td>
+        <td>Used to represent no value, or an error.</td>
+      </tr>
+
+      <tr>
+        <td><a href="boolean.html">boolean</a></td>
+        <td>Used to represent Boolean values <tt>true</tt> and <tt>false</tt>.</td>
+      </tr>
+
+      <tr>
+        <td><a href="number.html">number</a></td>
+        <td>Digit strings used to represent numbers.</td>
+      </tr>
+
+      <tr>
+        <td><a href="string.html">string</a></td>
+        <td>Character strings.  Also used to represent dates and times, using ISO-8601 conventions.</td>
+      </tr>
+      
+      <tr>
+        <td><a href="array.html">array</a></td>
+        <td>Array generators construct new arrays from other literals or expressions.</td>
+      </tr>
+      
+      <tr>
+        <td><a href="object.html">object</a></td>
+        <td>Object generators construct new objects from other literals or expressions.</td>
+      </tr>
+
+      <tr>
+        <td><a href="name.html">name</a></td>
+        <td>Names/keys.  Not a literal, but syntactically close and I need to dissuss them somewhere so...</td>
+      </tr>
+
+      <tr>
+        <td><a href="regex.html">regex</a></td>
+        <td>Regular expressions aren't technically literals either since they
+            aren't a valid JSON data type, but JsonCalc supports them in
+            a quirky way.</td>
+      </tr>
+
+    </table>
+
+  </body>
+</html>

@@ -83,6 +83,7 @@ typedef struct {
 	char	quick;	/* Output tables piecemeal.  Use first row for names */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
+	FILE	*fp;	/* where to write to */
 } jsonformat_t;
 
 /* This is a collection of debugging flags.  These are generally set via
@@ -157,8 +158,9 @@ extern json_t *json_parse_file(const char *filename);
 /* Serialization / Output */
 extern json_t *json_explain(json_t *stats, json_t *row, int depth);
 extern char *json_serialize(json_t *json, jsonformat_t *format);
-extern int json_print(json_t *json, FILE *fp, jsonformat_t *format);
-extern int json_grid(json_t *json, FILE *fp, jsonformat_t *format);
+extern int json_print_incomplete_line;
+extern void json_print(json_t *json, jsonformat_t *format);
+extern int json_grid(json_t *json, jsonformat_t *format);
 extern char *json_format(jsonformat_t *format, char *str);
 extern char *json_format_str(jsonformat_t *format);
 extern char *json_format_color(char *str);

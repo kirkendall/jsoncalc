@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -12,7 +13,7 @@
 /* If json appears to be a table, then output it as a table/grid and return 1.
  * Otherwise return 0 without outputting anything
  */
-int json_grid(json_t *json, FILE *file, jsonformat_t *format)
+int json_grid(json_t *json, jsonformat_t *format)
 {
 	json_t	*explain, *row, *col, *cell;
 	char	*text;
@@ -21,14 +22,21 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 	char	number[40];
 	char	delim[20];
 	int	*widths, *pad;
-
-	/* If format is NULL then use the default format */
-	if (!format)
-		format = &json_format_default;
+	jsonformat_t tweaked;
 
 	/* If not a table, return 0 */
 	if (!json_is_table(json))
 		return 0;
+
+	/* If format is NULL then use the default format */
+	if (!format)
+		format = &json_format_default;
+	tweaked = *format;
+	format = &tweaked;
+	if (!format->fp) /* Default output is stdout */
+		format->fp = stdout;
+	if (!isatty(fileno(format->fp))) /* Disable color if not a tty */
+		format->color = 0;
 
 	/* Collect statistics about the columns */
 	explain = NULL;
@@ -44,7 +52,7 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 	hdrpad = '_';
 	strcpy(delim, "|");
 	if (format->color && *json_format_color_head) {
-		fputs(json_format_color_head, file);
+		fputs(json_format_color_head, format->fp);
 		hdrpad = ' ';
 	}
 	if (format->color && *json_format_color_delim) {
@@ -86,16 +94,16 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 
 		/* Output the key as a column heading */
 		for (i = 0; i < (width - wdata + 1) / 2; i++)
-			putc(hdrpad, file);
-		fputs(text, file);
+			putc(hdrpad, format->fp);
+		fputs(text, format->fp);
 		for (; i < (width - wdata); i++)
-			putc(hdrpad, file);
+			putc(hdrpad, format->fp);
 		if (col->next)
-			putc('|', file);
+			putc('|', format->fp);
 	}
 	if (format->color && *json_format_color_head)
-		fputs(json_format_color_end, file);
-	putc('\n', file);
+		fputs(json_format_color_end, format->fp);
+	putc('\n', format->fp);
 
 	/* For each row... */
 	for (row = json->first; row; row = row->next) {
@@ -125,26 +133,26 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 			 * padding now.
 			 */
 			for (i = pad[c] >> 1; i > 0; i--)
-				putc(' ', file);
+				putc(' ', format->fp);
 
 			/* Output the cell.  Alignment depends on type */
 			if (cell && cell->type == JSON_STRING) {
 				/* left-justify strings */
-				fputs(text, file);
+				fputs(text, format->fp);
 				for (i = 0; i < width - wdata; i++)
-					putc(' ', file);
+					putc(' ', format->fp);
 			} else if (cell && cell->type == JSON_NUMBER) {
 				/* right-justify numbers */
 				for (i = 0; i < width - wdata; i++)
-					putc(' ', file);
-				fputs(text, file);
+					putc(' ', format->fp);
+				fputs(text, format->fp);
 			} else {
 				/* center everything else */
 				for (i = 0; i < (width - wdata + 1) / 2; i++)
-					putc(' ', file);
-				fputs(text, file);
+					putc(' ', format->fp);
+				fputs(text, format->fp);
 				for (; i < (width - wdata); i++)
-					putc(' ', file);
+					putc(' ', format->fp);
 			}
 
 			/* If a wide column heading dictates that we nned
@@ -152,14 +160,14 @@ int json_grid(json_t *json, FILE *file, jsonformat_t *format)
 			 * that extra padding now.
 			 */
 			for (i = pad[c] - (pad[c] >> 1); i > 0; i--)
-				putc(' ', file);
+				putc(' ', format->fp);
 
 			/* Delimiter between columns */
 			if (col->next)
-				fputs(delim, file);
+				fputs(delim, format->fp);
 
 		}
-		putc('\n', file);
+		putc('\n', format->fp);
 	}
 
 	/* Discard the "explain" data */

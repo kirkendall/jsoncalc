@@ -6,7 +6,7 @@ TESTSRC=testcalc.c
 TESTOBJ=testcalc.o
 PROG=jsoncalc testcalc tryst
 LIBSRC=by.c calc.c calcfunc.c calcparse.c compare.c context.c copy.c cmd.c \
-	debug.c \qual.c explain.c file.c flat.c format.c grid.c groupby.c is.c \
+	debug.c equal.c explain.c file.c flat.c format.c grid.c groupby.c is.c \
 	length.c mbstr.c memory.c parse.c print.c serialize.c sort.c text.c \
 	walk.c
 LIBOBJ=by.o calc.o calcfunc.o calcparse.o compare.o context.o copy.o cmd.o \

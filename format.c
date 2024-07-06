@@ -21,7 +21,8 @@ jsonformat_t json_format_default = {
 	1,	/* color - use colors on ANSI terminals */
 	0,	/* quick - for csv/grid, use first record to find columns */
 	"",	/* prefix - prepended to names for sh format */
-	""	/* null - text to show as null for grid format */
+	"",	/* null - text to show as null for grid format */
+	NULL	/* output - NULL for stdout, else the fp to write to */
 };
 
 /* These store escape sequences for coloring various parts of output */

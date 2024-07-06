@@ -410,6 +410,7 @@ static char *save_config()
 	char *tmp;
 	static char	filename[200];
 	FILE	*fp;
+	jsonformat_t	fmt;
 
 	/* Collect the config data into a JSON object */
 	config = json_object();
@@ -434,7 +435,9 @@ static char *save_config()
 			return NULL;
 		}
 	}
-	json_print(config, fp, NULL);
+	fmt = json_format_default;
+	fmt.fp = fp;
+	json_print(config, &fmt);
 	fclose(fp);
 	json_free(config);
 	return filename;
@@ -691,7 +694,7 @@ int main(int argc, char **argv)
 			if (tmp) {
 				tmp->next = files;
 				files = tmp;
-				context = json_context(context, tmp, NULL);
+				context = json_context(context, tmp, 0);
 			}
 		} else {
 			/* In a name=value string, separate the name from the value */
@@ -715,15 +718,15 @@ int main(int argc, char **argv)
 
 	/* Add the autoloader */
 	autonames = json_object();
-	context = json_context(context, autonames, autoload);
+	context = json_context(context, autonames, 0);
+	context->autoload = autoload;
 
 	/* Add the context from command-line args, if any */
 	if (jcthis->first) {
 		char *str = json_serialize(jcthis, 0);
 		printf("\"this\": %s\n", str);
 		free(str);
-		context = json_context(context, jcthis, NULL);
-		context->flags = JSON_CONTEXT_THIS | JSON_CONTEXT_LOCAL;
+		context = json_context(context, jcthis, JSON_CONTEXT_THIS);
 	}
 
 	if (expr) {
@@ -738,7 +741,8 @@ int main(int argc, char **argv)
 			result = json_calc(jc, context, NULL);
 
 			/* Print */
-			if (json_print(result, stdout, NULL))
+			json_print(result, NULL);
+			if (json_print_incomplete_line)
 				putchar('\n');
 
 			/* Clean up */
@@ -840,7 +844,8 @@ int main(int argc, char **argv)
 			/* Print the result */
 			if (json_format_default.color && *json_format_color_result)
 				fputs(json_format_color_result, stdout);
-			if (json_print(result, stdout, NULL))
+			json_print(result, NULL);
+			if (json_print_incomplete_line)
 				putchar('\n');
 			if (json_format_default.color && *json_format_color_result)
 				fputs(json_format_color_end, stdout);

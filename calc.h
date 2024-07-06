@@ -199,6 +199,18 @@ json_t *json_context_default_table(jsoncontext_t *context);
 
 /****************************************************************************/
 
+/* This tracks source code for commands.  For strings, "buf" points to the
+ * string.  For files, additional memory is allocated for "buf" and must also
+ * be freed, but "filename" is a copy of a pointer to a filename string which
+ * must not be freed before the application terminates.
+ */
+typedef struct {
+	char	*filename;	/* name of source file, if any */
+	char	*buf;		/* buffer, contains entire souce file */
+	char	*str;		/* current parse position within "base" */
+	size_t	size;		/* size of "base" */
+} jsonsrc_t;
+
 /* This describes an error.  "where" is a pointer into the source script where
  * the error was detected, and "text" is the locale-specific text describing
  * the error.
@@ -209,9 +221,10 @@ json_t *json_context_default_table(jsoncontext_t *context);
  * values to "bubble up" to the function invocation.
  */
 typedef struct {
-	int	code;
-	char	*where;
-	json_t	*ret;
+	json_t	*ret;		/* if really a "return" then this is value */
+	char	*filename;	/* filename where error occurred (if any) */
+	int	lineno;		/* line number where error occurred */
+	int	code;		/* error code */
 	char	text[1];	/* extended as necessary */
 } jsonerror_t;
 
@@ -221,33 +234,35 @@ typedef struct {
 typedef struct jsoncmdname_s {
 	struct jsoncmdname_s *next;
 	char	*name;
-	struct jsoncmd_s *(*argparser)(char **refstr, jsonerror_t **referr);
+	struct jsoncmd_s *(*argparser)(jsonsrc_t *src, jsonerror_t **referr);
 	jsonerror_t *(*run)(struct jsoncmd_s *cmd, jsoncontext_t **refcontext);
 	char	*pluginname;
 } jsoncmdname_t;
 
 /* This stores a parsed statement. */
 typedef struct jsoncmd_s {
-	char		  *where;/* source location, for reporting errors */
-	jsoncmdname_t 	  *name;/* command name and other details */
-	char		  *key;	/* Name of a variable, if the cmd uses one */
-	jsoncalc_t 	  *calc;/* calc expression, fit he cmd uses one */
+	char		   *filename;/* source file, for reporting errors */
+	int		   lineno;/* line number, for reporting errors */
+	jsoncmdname_t	   *name;/* command name and other details */
+	char		   var;
+	char		   *key; /* Name of a variable, if the cmd uses one */
+	jsoncalc_t 	   *calc;/* calc expression, fit he cmd uses one */
 	jsoncontextflags_t flags;/* Context flags for "key" */
-	struct jsoncmd_s *sub;	/* For "then" in "if-then-else" for example */
-	struct jsoncmd_s *more;/* For "else" in "if-then-else" for example */
-	struct jsoncmd_s *next;/* in a series of statements, "next" is next */
+	struct jsoncmd_s   *sub; /* For "then" in "if-then-else" for example */
+	struct jsoncmd_s   *more;/* For "else" in "if-then-else" for example */
+	struct jsoncmd_s   *next;/* in a series of statements, "next" is next */
 } jsoncmd_t;
 
 
-void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(char **refstr, jsonerror_t **referr), jsonerror_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
-jsonerror_t *json_cmd_error(char *where, int code, char *fmt, ...);
-void json_cmd_parse_whitespace(char **refstr);
-char *json_cmd_parse_key(char **refstr, int quotable);
-char *json_cmd_parse_paren(char **refstr);
-jsoncmd_t *json_cmd(char *where, jsoncmdname_t *name);
+void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsonerror_t **referr), jsonerror_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
+jsonerror_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...);
+void json_cmd_parse_whitespace(jsonsrc_t *src);
+char *json_cmd_parse_key(jsonsrc_t *src, int quotable);
+char *json_cmd_parse_paren(jsonsrc_t *src);
+jsoncmd_t *json_cmd(jsonsrc_t *src, jsoncmdname_t *name);
 void json_cmd_free(jsoncmd_t *cmd);
-jsoncmd_t *json_cmd_parse_single(char **refstr, jsonerror_t **referr);
-jsoncmd_t *json_cmd_parse_curly(char **refstr, jsonerror_t **referr);
+jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr);
+jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsonerror_t **referr);
 jsoncmd_t *json_cmd_parse_string(char *str);
 jsoncmd_t *json_cmd_parse_file(char *filename);
 jsonerror_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);

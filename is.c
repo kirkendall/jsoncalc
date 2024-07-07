@@ -93,17 +93,22 @@ static size_t shorthelper(json_t *json, size_t oneline)
                         break;
                   case JSON_KEY:
                         size += strlen(json->text) + 3;
+
+			/* Handle "first" recursively */
+			size += shorthelper(json->first, oneline);
+			if (size >= oneline)
+				return size;
                         break;
                   default:
                         size += 2; /* for "[]" or "{}" */
+
+			/* Handle "first" recursively */
+			size += shorthelper(json->first, oneline);
+			if (size >= oneline)
+				return size;
                 }
 
-                /* Handle "first" recursively */
-                size += shorthelper(json->first, oneline);
-                if (size >= oneline)
-                        return size;
-
-                /* Handle "next" recursively */
+                /* Handle "next" iteratively */
                 size++; /* for "," */
                 json = json->next;
         }

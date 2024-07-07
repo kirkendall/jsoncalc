@@ -514,10 +514,10 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
                                 size += 4;
                         }
                 } else if (format->sh && *src == '\'') {
-			/* For shell quoting, the entire output will be enclosed in
-			 * ' quotes which is great for everything except ' itself.
-			 * For ' we need to end the quote, add backslash-', and start
-			 * new quotes.
+			/* For shell quoting, the entire output will be
+			 * enclosed in ' quotes which is great for everything
+			 * except ' itself.  For ' we need to end the quote,
+			 * add backslash-', and start new ' quotes.
 			 */
 			if (dst) {
 				dst[size] = '\'';
@@ -530,7 +530,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
                         /* quote and backslash need a backslash */
                         if (dst) {
                                 dst[size++] = '\\';
-                                dst[size++] = quote;
+                                dst[size++] = *src;
                         } else
 				size += 2;
                 } else {

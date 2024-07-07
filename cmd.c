@@ -105,7 +105,9 @@ jsonerror_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...
 	size_t	size;
 	jsonerror_t *err;
 
-	/* !!!Translate the message via catalog using "code" */
+	/* !!!Translate the message via catalog using "code".  EXCEPT if the
+	 * format is "%s" then assume it has already been translated.
+	 */
 
 	/* Figure out how long the message will be */
 	va_start(ap, fmt);
@@ -116,6 +118,7 @@ jsonerror_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...
 	err = (jsonerror_t *)malloc(sizeof(jsonerror_t) + size);
 
 	/* Fill the error structure */
+	memset(err, 0, sizeof(jsonerror_t) + size);
 	err->filename = filename;
 	err->lineno = lineno;
 	err->code = code;
@@ -324,6 +327,9 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr)
 			json_calc_free(calc);
 		if (!err) {
 			if (isalpha(*where)) {
+				/* It started with a name.  Parse the name,
+				 * and report it as an known command.
+				 */
 				src->str = where;
 				err = json_cmd_parse_key(src, 0);
 				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Unknown command \"%s\"", err);
@@ -400,7 +406,7 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 
 	/* For each statement... */
 	json_cmd_parse_whitespace(src);
-	cmd = NULL;
+	first = cmd = NULL;
 	while (src->str < src->buf + src->size && *src->str) {
 		/* Find the line number of this command */
 		json_cmd_parse_whitespace(src);
@@ -445,7 +451,12 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 	return first;
 }
 
-/* Parse a string as jsoncalc commands */
+/* Parse a string as jsoncalc commands.  If an error is detected then an
+ * error message will be output and this will return NULL.  However, NULL
+ * can also be returned if the text is empty, or only contains function
+ * definitions, so NULL is *not* an error indication; it just means there's
+ * nothing to execute or free.
+ */
 jsoncmd_t *json_cmd_parse_string(char *text)
 {
 	jsonsrc_t srcbuf;
@@ -461,7 +472,12 @@ jsoncmd_t *json_cmd_parse_string(char *text)
 }
 
 
-/* Parse a file, and return any commands from it. */
+/* Parse a file, and return any commands from it. If an error is detected
+ * then an error message will be output and this will return NULL.  However,
+ * NULL can also be returned if the file is empty, or only contains function
+ * definitions, so NULL is *not* an error indication; it just means there's
+ * nothing to execute or free.
+ */
 jsoncmd_t *json_cmd_parse_file(char *filename) 
 {
 	char	*buf;
@@ -505,7 +521,12 @@ jsoncmd_t *json_cmd_parse_file(char *filename)
 	return cmd;
 }
 
-/* Run a series of statements */
+/* Run a series of statements.  Returns one of four things:
+ *  NULL indicates no error or other exceptions, and execution should continue.
+ *  err->ret=1 indicates "break" - skip execution to exit a loop then continue.
+ *  err->ret=value indicates "return" - skip to end of function then use value.
+ *  err->ret=NULL indicates an error - maybe try/catch it, maybe stop & report.
+ */
 jsonerror_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	jsonerror_t *err = NULL;
@@ -665,12 +686,15 @@ static jsoncmd_t *for_parse(jsonsrc_t *src, jsonerror_t **referr)
 		json_cmd_parse_whitespace(&parensrc);
 	}
 	parsed->key = json_cmd_parse_key(&parensrc, 1);
-	if (parsed->key && !strncasecmp(parensrc.str, "of", 2) && !isalnum(parensrc.str[2]) && parensrc.str[2] != '_') {
+	if (parsed->key && parensrc.str[0] == '=') {
+		parensrc.str++;
+		json_cmd_parse_whitespace(&parensrc);
+	} else if (parsed->key && !strncasecmp(parensrc.str, "of", 2) && !isalnum(parensrc.str[2]) && parensrc.str[2] != '_') {
 		parensrc.str += 2;
 		json_cmd_parse_whitespace(&parensrc);
 	} else {
-		/* If we parsed a key, it wasn't part of "key of expr", it was
-		 * the first word of "expr".  Clean up!
+		/* If we parsed a key, it wasn't part of "key =/of expr",
+		 * it was the first word of "expr".  Clean up!
 		 */
 		if (parsed->key) {
 			free(parsed->key);
@@ -941,6 +965,13 @@ static jsonerror_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	 * then this will do the assignment too.
 	 */
 	json_t *result = json_calc(cmd->calc, *refcontext, NULL);
+
+	/* If we got an error ("null" with text), then convert to jsonerror_t */
+	if (result && result->type == JSON_NULL && *result->text) {
+		jsonerror_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
+		json_free(result);
+		return err;
+	}
 
 	/* If not an assignment, then it's an output.  Output it! */
 	if (cmd->calc->op != JSONOP_ASSIGN && cmd->calc->op != JSONOP_APPEND)

@@ -564,15 +564,42 @@ char *jcreadscript(const char *filename)
 	return buf;
 }
 
+void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
+{
+	jsonerror_t *err;
+
+	err = json_cmd_run(jc, &context);
+	if (err) {
+		if (err->ret == (json_t *)1)
+			puts("RETURNED A \"BREAK\"");
+		else if (err->ret) {
+			printf("RETURNED A VALUE: ");
+			json_print(err->ret, NULL);
+			json_free(err->ret);
+		} else {
+			fputs(json_format_color_error, stderr);
+			if (err->filename)
+				fprintf(stderr, "%s:%d: %s\n", err->filename, err->lineno, err->text);
+			else if (err->lineno)
+				fprintf(stderr, "Line %d: %s\n", err->lineno, err->text);
+			else
+				fprintf(stderr, "%s\n", err->text);
+			fputs(json_format_color_end, stderr);
+			putc('\n', stderr);
+		}
+		free(err);
+	}
+}
+
 /******************************************************************************/
 int main(int argc, char **argv)
 {
 	int i, len;
-	jsoncalc_t *jc;
-	json_t *jcthis, *result, *files, *autonames;
+	jsoncmd_t *jc;
+	json_t *jcthis, *files, *autonames;
 	char *val, *expr;
 	int	saveconfig = 0;
-	char    *tail, *err;
+	char	*errmsg;
 	int	opt;
 
 	/* set the locale */
@@ -632,20 +659,20 @@ int main(int argc, char **argv)
 			autoload_dir = optarg;
 			break;
 		case 'O':
-			if (*optarg == '?' || (err = json_format(NULL, optarg)) != NULL) {
+			if (*optarg == '?' || (errmsg = json_format(NULL, optarg)) != NULL) {
 				format_usage();
 				if (*optarg != '?') {
-					puts(err);
+					puts(errmsg);
 					return 1;
 				}
 				return 0;
 			}
 			break;
 		case 'C':
-			if (*optarg == '?' || (err = json_format_color(optarg)) != NULL) {
+			if (*optarg == '?' || (errmsg = json_format_color(optarg)) != NULL) {
 				color_usage();
 				if (*optarg != '?') {
-					puts(err);
+					puts(errmsg);
 					return 1;
 				}
 				return 0;
@@ -731,26 +758,13 @@ int main(int argc, char **argv)
 
 	if (expr) {
 		/* Compile */
-		jc = json_calc_parse(expr, &tail, &err);
-		if (*tail)
-			printf("%sTail:     %s%s\n", json_format_color_error, tail, json_format_color_end);
-		if (err)
-			printf("%sError:    %s%s\n", json_format_color_error, err, json_format_color_end);
-		if (jc) {
-			/* Evaluate */
-			result = json_calc(jc, context, NULL);
+		jc = json_cmd_parse_string(expr);
 
-			/* Print */
-			json_print(result, NULL);
-			if (json_print_incomplete_line)
-				putchar('\n');
+		/* Execute */
+		run(jc, &context);
 
-			/* Clean up */
-			json_calc_free(jc);
-			json_free(result);
-		}
-
-		free(expr);
+		/* Clean up */
+		json_cmd_free(jc);
 	} else {
 		/* Enable the use of history and name completion while
 		 * inputting expressions.
@@ -773,9 +787,9 @@ int main(int argc, char **argv)
 				if (*val == '?') {
 					format_usage();
 				} else {
-					err = json_format(NULL, val);
-					if (err)
-						puts(err);
+					errmsg = json_format(NULL, val);
+					if (errmsg)
+						puts(errmsg);
 					val = json_format_str(NULL);
 					printf("-O%s\n", val);
 					free(val);
@@ -791,9 +805,9 @@ int main(int argc, char **argv)
 				if (*val == '?') {
 					color_usage();
 				} else {
-					err = json_format_color(val);
-					if (err)
-						puts(err);
+					errmsg = json_format_color(val);
+					if (errmsg)
+						puts(errmsg);
 					val = json_format_color_str();
 					printf("-C%s\n", val);
 					free(val);
@@ -802,57 +816,15 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-			/* Maybe -Jdebug? */
-			if (!strncmp(expr, "-J", 2)) {
-				for (val = expr + 2; *val == ' '; val++) {
-				}
-				err = *val ? json_debug(val) : "";
-				if (err)
-					debug_usage();
-				free(expr);
-				continue;
-			}
-
 			/* Compile */
-			jc = json_calc_parse(expr, &tail, &err);
-			if (*tail) {
-				if (json_format_default.color)
-					printf("%sTail:     %s%s\n", json_format_color_error, tail, json_format_color_end);
-				else
-					printf("Tail:     %s\n", tail);
-			}
-			if (err) {
-				if (json_format_default.color)
-					printf("%sError:    %s%s\n", json_format_color_error, err, json_format_color_end);
-				else
-					printf("Error:    %s\n", err);
-			}
+			jc = json_cmd_parse_string(expr);
 			free(expr);
-			if (!jc)
-				continue;
 
-			if (json_debug_flags.calc) {
-				/* Dump it. */
-				printf("Parsed:  ");
-				json_calc_dump(jc);
-				putchar('\n');
-			}
-
-			/* Evaluate */
-			result = json_calc(jc, context, NULL);
-
-			/* Print the result */
-			if (json_format_default.color && *json_format_color_result)
-				fputs(json_format_color_result, stdout);
-			json_print(result, NULL);
-			if (json_print_incomplete_line)
-				putchar('\n');
-			if (json_format_default.color && *json_format_color_result)
-				fputs(json_format_color_end, stdout);
+			/* Execute */
+			run(jc, &context);
 
 			/* Clean up */
-			json_calc_free(jc);
-			json_free(result);
+			json_cmd_free(jc);
 		}
 
 		/* Leave the cursor on the line after the last, unused prompt */

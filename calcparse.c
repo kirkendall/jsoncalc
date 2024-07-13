@@ -1391,7 +1391,9 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_STARTARRAY
 			 && jc->op != JSONOP_STARTOBJECT
 			 && jc->op != JSONOP_SUBSCRIPT
-			 && jc->op != JSONOP_COLON) /* and comma? */
+			 && jc->op != JSONOP_COLON
+			 && jc->op != JSONOP_ASSIGN
+			 && jc->op != JSONOP_APPEND) /* and comma? */
 				return FALSE;
 			continue;
 		} else if (!jc || !pattern_single(jc, *pat))

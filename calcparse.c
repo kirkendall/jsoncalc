@@ -102,6 +102,7 @@ static struct {
 	{"ISNULL",	"N=",	117,	JCOP_POSTFIX}, /* postfix operator */
 	{"LE",		"<=",	190,	JCOP_INFIX},
 	{"LIKE",	"LIK",	180,	JCOP_INFIX},
+	{"LIMIT",	"LIM",	2,	JCOP_OTHER},
 	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
 	{"LJOIN",	"@<",	117,	JCOP_INFIX},
 	{"LT",		"<",	190,	JCOP_INFIX},
@@ -148,6 +149,7 @@ static jsoncalc_t selectwhere = {JSONOP_WHERE};
 static jsoncalc_t selectgroupby = {JSONOP_GROUPBY};
 static jsoncalc_t selectorderby = {JSONOP_ORDERBY};
 static jsoncalc_t selectdesc = {JSONOP_DESCENDING};
+static jsoncalc_t selectlimit = {JSONOP_LIMIT};
 
 
 /* Return the name of an operation, mostly for debugging. */
@@ -307,6 +309,10 @@ void json_calc_dump(jsoncalc_t *calc)
 
 	  case JSONOP_DESCENDING:
 		printf(" DESCENDING");
+		break;
+
+	  case JSONOP_LIMIT:
+		printf(" LIMIT");
 		break;
 
 	  case JSONOP_EXPLAIN:
@@ -591,6 +597,9 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			} else if (token->len == 4 && !strncasecmp(token->full, "desc", 4)) {
 				token->len = 4;
 				token->op = JSONOP_DESCENDING;
+			} else if (token->len == 5 && !strncasecmp(token->full, "limit", 5)) {
+				token->len = 5;
+				token->op = JSONOP_LIMIT;
 			}
 		}
 		str += token->len;
@@ -675,6 +684,7 @@ static jsoncalc_t *jcalloc(token_t *token)
 	  case JSONOP_GROUPBY: return &selectgroupby;
 	  case JSONOP_ORDERBY: return &selectorderby;
 	  case JSONOP_DESCENDING: return &selectdesc;
+	  case JSONOP_LIMIT: return &selectlimit;
 	  default:;
 	}
 
@@ -914,6 +924,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_GROUPBY:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
+	  case JSONOP_LIMIT:
 		/* These SQL keywords are harmless, and never need to be freed*/
 		return;
 
@@ -1101,17 +1112,17 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		jc = jcfunc("distinct", jc, ja, NULL);
 	}
 
-	/* If there's a LIMIT number, add a .slice(0, limit) function call */
+	/* If there's a LIMIT number, add a .slice(0,limit) function call */
 	if (sel->limit > 0) {
 		jsoncalc_t *jzero, *jlimit;
 		char	buf[30];
 		token_t	t;
-		t.op = JSON_NUMBER;
+		t.op = JSONOP_NUMBER;
 		t.full = "0";
 		t.len = 1;
 		jzero = jcalloc(&t);
 		sprintf(buf, "%d", sel->limit);
-		t.op = JSON_NUMBER;
+		t.op = JSONOP_NUMBER;
 		t.full = buf;
 		t.len = strlen(buf);
 		jlimit = jcalloc(&t);
@@ -1147,6 +1158,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
  *   W  JSONOP_WHERE
  *   G  JSONOP_GROUPBY
  *   O  JSONOP_ORDERBY
+ *   L  JSONOP_LIMIT
  *   d  JSONOP_DESCENDING
  *   .  JSONOP_DOT
  *   ,  JSONOP_COMMA
@@ -1298,6 +1310,11 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 
 	  case 'O': /* JSONOP_ORDERBY */
 		if (jc->op != JSONOP_ORDERBY)
+			return FALSE;
+		break;
+
+	  case 'L': /* JSONOP_LIMIT */
+		if (jc->op != JSONOP_LIMIT)
 			return FALSE;
 		break;
 
@@ -1598,6 +1615,15 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		} else if (PATTERN("SO") && PREC(JSONOP_ORDERBY)) {
 			stack->sp--; /* keep "S" */
+			continue;
+		} else if (PATTERN("SLl") && PREC(JSONOP_LIMIT)) {
+			/* The literal should be number.  Store it in select */
+			if (top[-1]->u.literal->type != JSON_NUMBER)
+				return "The LIMIT must be a number";
+			top[-3]->u.select->limit = json_int(top[-1]->u.literal);
+
+			/* Remove "LIMIT" and the number, but keep "SELECT" */
+			stack->sp -= 2;
 			continue;
 		} else if (PATTERN("S") && PREC(JSONOP_SELECT)) {
 			/* All parts of the SELECT have now been parsed.  All
@@ -1998,6 +2024,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_GROUPBY:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
+	  case JSONOP_LIMIT:
 	  case JSONOP_INVALID:
 		/* None of these should appear in a parsed expression */
 		abort();

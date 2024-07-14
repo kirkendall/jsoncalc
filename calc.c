@@ -409,6 +409,9 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
  *              can be scanned to obtain variable names.  May be NULL.
  *   agdata     Storage space for aggregate functions, allocated by
  *              json_calc_ag(calc, NULL), freed by json_calc_ag(NULL, ag);
+ *
+ * NOTE: For runtime errors, this mostly returns a "null" json_t node
+ * containing an error message in ->text, and the error code in ->first.
  */
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 {

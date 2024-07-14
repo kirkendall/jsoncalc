@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "json.h"
 #include "calc.h"
+#include "error.h"
 
 /* This file defines the context functions.  Contexts are used in json_calc()
  * to provide access to outside data, as though they were variables.  The
@@ -174,20 +175,22 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
 }
 
 /* For a given L-value, find its layer, container, and value.  This is used
- * for assigning or appending to variables.  Return 1 on success, 0 if error.
+ * for assigning or appending to variables.  Return 0 on success, or an error
+ * code on failure.
  */
 static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
 {
 	json_t	*value, *t, *v, *m;
 	char	*skey;
 	jsoncalc_t *sub;
+	int	err;
 
 	switch (lvalue->op) {
 	case JSONOP_NAME:
 	case JSONOP_LITERAL:
 		/* Literal can only be a string, serving as a quoted name */
 		if (lvalue->op == JSONOP_LITERAL && lvalue->u.literal->type != JSON_STRING)
-			return 0;
+			return JE_BAD_LVALUE;
 
 		/* Get the name */
 		if (lvalue->op == JSONOP_NAME)
@@ -200,22 +203,23 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 
 		/* If found, celebrate */
 		if (!value)
-			return 0;
+			return JE_UNKNOWN_VAR;
 		if (refcontainer)
 			*refcontainer = context->data;
 		if (refvalue)
 			*refvalue = value;
-		return 1;
+		return JE_OK;
 
 	case JSONOP_DOT:
 		/* Recursively look up the left side of the dot */
-		if (!jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)
-		 || value == NULL)
-			return 0;
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != JE_OK)
+			return err;
+		if (value == NULL)
+			return JE_UNKNOWN_VAR;
 
 		/* If lhs of dot isn't an object, that's a problem */
 		if (value->type != JSON_OBJECT)
-			return 0;
+			return JE_NOT_OBJECT;
 
 		/* For DOT, the right parameter should just be a name */
 		if (lvalue->u.param.right->op == JSONOP_NAME)
@@ -225,27 +229,29 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			*refkey = lvalue->u.param.right->u.literal->text;
 		else
 			/* invalid rhs of a dot */
-			return 0;
+			return JE_NOT_KEY;
 
 		/* Look for the name in this object.  If not found, "t" will
-		 * be null, which is a special type of failure.
+		 * be null, which is a special type of failure.  This failure
+		 * only happens if we expected to find a value (e.g., to append)
 		 */
 		t = json_by_key(value, *refkey);
 		if (!t && !refvalue)
-			return 0;
+			return JE_UNKNOWN_MEMBER;
 
 		/* The value becomes the container, and "t" becomes the value */
 		if (refcontainer)
 			*refcontainer = value;
 		if (refvalue)
 			*refvalue = t;
-		return 1;
+		return JE_OK;
 
 	case JSONOP_SUBSCRIPT:
 		/* Recursively look up the left side of the subscript */
-		if (!jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)
-		 || value == NULL)
-			return 0;
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != JE_OK)
+			return err;
+		if (value == NULL)
+			return JE_UNKNOWN_VAR;
 
 		/* The [key:value] style of subscripts is handled specially */
 		sub = lvalue->u.param.right;
@@ -259,10 +265,11 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 && sub->u.param.left->u.literal->type == JSON_STRING)
 				skey = sub->u.param.left->u.literal->text;
 			else /* invalid key */
-				return 0;
+				return JE_BAD_SUB_KEY;
 
 			/* Evaluate the value */
 			t = json_calc(sub->u.param.right, context, NULL);
+			/*!!! should I try to detect "null" with error text? */
 
 			/* Scan the array for an element with that member key
 			 * and value.
@@ -277,14 +284,14 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 
 			/* If not found, fail */
 			if (!v)
-				return 0;
+				return JE_UNKNOWN_SUB;
 
 			/* Return what we found */
 			if (refcontainer)
 				*refcontainer = value;
 			if (refvalue)
 				*refvalue = v;
-			return 1;
+			return JE_OK;
 
 		} else {
 			/* Use json_calc() to evaluate the subscript */
@@ -299,7 +306,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			} else {
 				/* Bad subscript */
 				json_free(t);
-				return 0;
+				return JE_BAD_SUB;
 			}
 			json_free(t);
 
@@ -308,20 +315,38 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 * object.
 			 */
 			if (!v && (*refvalue))
-				return 0;
+				return JE_UNKNOWN_SUB;
 
 			/* Return what we found */
 			if (refcontainer)
 				*refcontainer = value;
 			if (refvalue)
 				*refvalue = v;
-			return 1;
+			return JE_OK;
 		}
 
 	default:
 		/* Invalid operation in an l-value */
-		return 0;
+		return JE_BAD_LVALUE;
 	}
+}
+
+/* Return a "null" json_t for a given error code */
+static json_t *jxerror(int code, char *key)
+{
+	char	*fmt;
+	switch (code) {
+	case JE_BAD_LVALUE:	fmt = "Invalid assignment";	break;
+	case JE_UNKNOWN_VAR:	fmt = "Unknown variable \"%s\"";	break;
+	case JE_NOT_OBJECT:	fmt = "Attempt to access member in a non-object";	break;
+	case JE_NOT_KEY:	fmt = "Attempt to use a non-key as a member label";	break;
+	case JE_UNKNOWN_MEMBER:	fmt = "Object has no member \"%s\"";	break;
+	case JE_BAD_SUB_KEY:	fmt = "Invalid key for [key:value] subscript";	break;
+	case JE_UNKNOWN_SUB:	fmt = "No element found with requested subscript";	break;
+	case JE_BAD_SUB:	fmt = "Subscript as invalid type";	break;
+	default: return json_null();
+	}
+	return json_error_null(code, fmt, key);
 }
 
 /* Assign a variable.  Returns NULL on success, or a json_t "null" with an
@@ -336,6 +361,7 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	jsoncontext_t	*layer;
 	json_t	*container, *value, *scan;
 	char	*key;
+	int	err;
 
 	/* We can't use a value that's already part of something else. */
 	assert(rvalue->next == NULL);
@@ -343,19 +369,19 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	/* Get the details on what to change.  Note that for new members,
 	 * value may be NULL even if jxlvalue() returns 1.
 	 */
-	if (!jxlvalue(lvalue, context, &layer, &container, &value, &key))
-		return json_error_null(1, "Unknown variable \"%s\"", key);
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != JE_OK)
+		return jxerror(err, key);
 
 	/* If it's const then fail */
 	if (layer->flags & JSON_CONTEXT_CONST)
-		return json_error_null(1, "Can't change const \"%s\"", key);
+		return jxerror(JE_CONST, key);
 
 	/* Objects are easy, arrays are hard */
 	if (container->type == JSON_OBJECT)
 		json_append(container, json_key(key, rvalue));
 	else {
 		if (!value)
-			return json_error_null(1, "Unset subscript for array \"%s\"", key);
+			return jxerror(JE_UNKNOWN_SUB, key);
 
 		/* Use the tail of the array with the new value */
 		rvalue->next = value->next;
@@ -399,22 +425,24 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	jsoncontext_t	*layer;
 	json_t	*container, *value;
 	char	*key;
+	int	err;
 
 	/* We can't use a value that's already part of something else. */
 	assert(rvalue->next == NULL);
 
 	/* Get the details on what to change */
-	if (!jxlvalue(lvalue, context, &layer, &container, &value, &key)
-	 || value == NULL)
-		return json_error_null(1, "Unknown variable \"%s\"", key);
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != JE_OK)
+		return jxerror(err, key);
+	if (value == NULL)
+		return jxerror(JE_UNKNOWN_VAR, key);
 
 	/* If it's const then fail */
 	if (layer->flags & JSON_CONTEXT_CONST)
-		return json_error_null(1, "Can't change const \"%s\"", key);
+		return jxerror(JE_CONST, key);
 
 	/* We can only append to arrays */
 	if (value->type != JSON_ARRAY)
-		return json_error_null(1, "Can't append to %s \"%s\"", json_typeof(value, 0), key);
+		return json_error_null(JE_APPEND, "Can't append to %s \"%s\"", json_typeof(value, 0), key);
 
 	/* Append! */
 	json_append(value, rvalue);

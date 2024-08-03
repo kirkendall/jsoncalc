@@ -68,9 +68,9 @@ char *json_format(jsonformat_t *format, char *str)
 		/* process the name */
 		if (namelen == 3 && !strncmp("tab", str, namelen))
 			format->tab = value ? atoi(value) : 2;
-		else if (namelen == 5 && !strncmp("oneline", str, namelen))
+		else if (namelen == 7 && !strncmp("oneline", str, namelen))
 			format->oneline = value ? atoi(value) : 0;
-		else if (namelen == 5 && !strncmp("digits", str, namelen))
+		else if (namelen == 6 && !strncmp("digits", str, namelen))
 			format->digits = value ? atoi(value) : 0;
 		else if (namelen == 5 && !strncmp("table", str, namelen))
 			format->table = tolower(*value);

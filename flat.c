@@ -28,7 +28,7 @@ json_t *json_array_flat(json_t *array, int depth)
 	/* Start a new array */
 	result = json_array();
 
-	/* For each member of the array... */
+	/* For each element of the array... */
 	for (lag = NULL, scan = array->first; scan; scan = scan->next) {
 		/* If depth is 0 or this element isn't array, copy it */
 		if (depth == 0 || scan->type != JSON_ARRAY) {

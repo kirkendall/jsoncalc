@@ -445,22 +445,19 @@ json_t *json_debug_error_null(const char *file, int line, char *fmt, ...)
 /* Allocate a json_t for a given integer */
 json_t *json_debug_from_int(const char *file, int line, int i)
 {
-	char	buf[50];
-	sprintf(buf, "%d", i);
-	return json_debug_number(file, line, buf, strlen(buf));
+	json_t	*json = json_debug_number(file, line, "", 0);
+	json->text[1] = 'i';
+	JSON_INT(json) = i;
+	return json;
 }
 
 /* Allocate a json_t for a given floating-point number */
 json_t *json_debug_from_double(const char *file, int line, double f)
 {
-	char	buf[50];
-	long	l = (long)f;
-
-	if (f == l)
-		sprintf(buf, "%ld", l);
-	else
-		sprintf(buf, "%g", f);
-	return json_debug_number(file, line, buf, strlen(buf));
+	json_t	*json = json_debug_number(file, line, "", 0);
+	json->text[1] = 'd';
+	JSON_DOUBLE(json) = f;
+	return json;
 }
 
 /* Allocate a json_t for a key.  If value is non-NULL, then it will be used

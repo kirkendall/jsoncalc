@@ -101,7 +101,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 		if (scan->text[0] == '\0' && scan->text[1] == 'i')
 			fprintf(format->fp, "%d", JSON_INT(scan));
 		else if (scan->text[0] == '\0' && scan->text[1] == 'd')
-			fprintf(format->fp, "%.12g", JSON_DOUBLE(scan));
+			fprintf(format->fp, "%.*g", format->digits, JSON_DOUBLE(scan));
 		else
 			fputs(scan->text, format->fp);
 		break;
@@ -203,7 +203,7 @@ static void jccsvsingle(json_t *elem, jsonformat_t *format)
 		if (elem->text[0] == '\0' && elem->text[1] == 'i')
 			fprintf(format->fp, "%d", JSON_INT(elem));
 		else if (elem->text[0] == '\0' && elem->text[1] == 'd')
-			fprintf(format->fp, "%.12g", JSON_DOUBLE(elem));
+			fprintf(format->fp, "%.*g", format->digits, JSON_DOUBLE(elem));
 		else
 			fputs(elem->text, format->fp);
 		break;

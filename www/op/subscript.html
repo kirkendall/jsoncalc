@@ -22,7 +22,7 @@
     <h1>Subscript operators</h1>
     <table class="opList">
       <tr><td class="left">array</td><td class="op">[</td><td class="right">number <span class="op">]</span></td><td class="opdesc">Subscript by index number</td></tr>
-      <tr><td class="left">table</td><td class="op">[</td><td class="right">name <span class="op">:</span> expr <span class="op">]</span></td><td class="opdesc">Subscript by object member value</td></tr>
+      <tr><td class="left">table</td><td class="op">[</td><td class="right">key <span class="op">:</span> expr <span class="op">]</span></td><td class="opdesc">Subscript by object member value</td></tr>
       <tr><td class="left">object</td><td class="op">[</td><td class="right">string <span class="op">]</span></td><td class="opdesc">Member lookup using <var>string</var> as key</td></tr>
     </table>
     Subscripting is mostly for extracting a single element from an array.
@@ -74,11 +74,11 @@
       </div>
 
       <div class="example">
-	<kbd>{a:1,b:2}["a"]</kbd>
+	<kbd>{aa:1,ab:2}["a"+"a"]</kbd>
 	<samp>1</samp>
 	Here we're looking up a member's value, using subscripts to provide
 	the key.
-	This is the same as <tt>{a:1,b:2}.a</tt> except that subscripts allow
+	This is the same as <tt>{aa:1,ab:2}.aa</tt> except that subscripts allow
 	us to compute the key, instead of having it hardcoded in the expression.
       </div>
 
@@ -96,7 +96,7 @@
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=dot">.a> Dot 0perators
+      <a target="_PARENT" href="../index.html?op=dot">.</a> Dot 0perators
     </details>
 
   </body>

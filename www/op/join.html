@@ -25,7 +25,7 @@
       <tr><td class="left">table</td><td class="op">@&lt;</td><td class="right">table</td><td class="opdesc">Left natural join</td></tr>
       <tr><td class="left">table</td><td class="op">@&gt;</td><td class="right">table</td><td class="opdesc">Right natural join</td></tr>
     </table>
-    These operators allow you to combine to tables (arrays of objects) into one.
+    These operators allow you to combine two tables (arrays of objects) into one.
     <p>
     The <tt>@=</tt> "natural join" operator tries to match every object
     in the left operand against every object in the right operand.
@@ -115,7 +115,7 @@
 	    <tr><td>4</td><td>CA</td><td></td><td></td></tr>
 	  </table>
 	</samp>
-        This is identical to the first example except we used <tt>@&lt;</tt>
+        This is identical to the previous example except we used <tt>@&lt;</tt>
         instead of <tt>@=</tt>.  Because of that, the result includes store 4
         even though it has no sales.
       </div>
@@ -132,8 +132,8 @@
             then we can only keep one copy of those columns.
             And for sanity's sake, they'd better have the same value so it
             doesn't matter which one we keep.
-            <p>
-            The natural join is somewhat frowned upon by some database designers
+
+        <li>The natural join is somewhat frowned upon by some database designers
             because it depends on information (the column names that are shared)
             that isn't present in the join syntax.
             You have to dig for the column names elsewhere.
@@ -145,8 +145,8 @@
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=each">@ and @@</a> - Table filtering operator
-      <a target="_PARENT" href="../index.html?op=select">SELECT</a> - SQL-like <tt>select</tt> operator
+      <a target="_PARENT" href="../index.html?op=each">@ and @@</a> - Table filtering operator<br/>
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a> - SQL-like <tt>select</tt> operator<br/>
       <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a> - Sorting function
     </details>
 

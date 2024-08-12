@@ -104,7 +104,7 @@
     </dl>
     <p>
     If the second argument is a string, it should be a value returned from
-    a previous call too <tt>typeOf()</tt>.
+    a previous call to <tt>typeOf()</tt>.
     The return value of this new <tt>typeOf()</tt> call will indicate the
     mixture of the data types.
     For example, if a value is always a string but sometimes formatted like
@@ -154,6 +154,10 @@
 
 	<li>JavaScript's <tt>typeof()</tt> returns "object" for arrays.
 	<strong>JsonCalc</strong> politely disagrees with JavaScript on this point.
+	Also, note that JavaScript's function is written in all lowercase
+	while <strong>JsonCalc</strong> uses an uppercase "O"
+	for the sake of consistency
+	(though <strong>JsonCalc</strong> is case-insensitive so all lowercase works too).
 
       </ul>
     </details>

@@ -51,7 +51,7 @@
       to denote descending sorts, but it is smart enough to skip over <tt>true</tt>
       if it appears in the <var>columns</var> argument.)
       <p>
-      If you pass a <var>totals</var> parameter, then <tt>orderBy()</tt> will append an
+      If you pass a <var>totals</var> parameter, then <tt>groupBy()</tt> will append an
       extra object to the end of the response array, containing a single member with
       first name from the <var>columns</var> parameter as the member's key (name), and
       the <var>totals</var> value as its value.
@@ -97,20 +97,20 @@
       </div>
 
       <div class="example">
-	<kbd>test.scores.groupBy("run")@@score&lt;avg(score)?{run,name,score}</kbd>
+	<kbd>test.scores.groupBy("run") @@ score&lt;avg(score)</kbd>
 	<samp>
 	  <table>
-	    <tr><th>run</th><th> name</th><th>score</th></tr>
-	    <tr><td>1</td><td>Peter</td><td>10</td></tr>
-	    <tr><td>2</td><td>Peter</td><td>25</td></tr>
-	    <tr><td>3</td><td>Peter</td><td>30</td></tr>
-	    <tr><td>3</td><td>Paul</td><td>25</td></tr>
+	    <tr><th>name</th><th>run</th><th>score</th></tr>
+	    <tr><td>Peter</td><td>1</td><td>10</td></tr>
+	    <tr><td>Peter</td><td>2</td><td>25</td></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	    <tr><td>Paul</td><td>3</td><td>25</td></tr>
 	  </table>
 	</samp>
 	The difference between @ and @@ is that @ outputs one row per group, while
 	@@ outputs one row per row.
-	We're using @@ here to list the run, name, and score of anybody who got less
-	than the average score for their run.
+	We're using @@ here to list the name, run, and score
+	of anybody who got less than the average score for their run.
 	Note that we got two rows from run 3.
       </div>
 

@@ -60,7 +60,7 @@
     by repeatable elements.
     But this means an empty array is simply gone,
     and a one-element array can become a simple variable.
-    Mane of JsonCalc's array operators and functions were written with this
+    Many of JsonCalc's array operators and functions were written with this
     in mind.
     Another XML-ism is that you often get objects inside of objects inside
     of objects.
@@ -82,6 +82,7 @@
     <p>
     An expression on a line by itself (no assignment or <tt>return</tt>)
     will output the result of that expression.
+    There is no <tt>print</tt> command needed!
     This is great for interactive use.
     It's also sort of like the debugging console in most desktop web browsers.
     <p>
@@ -210,7 +211,7 @@ name=Mary run=3 score=40
 	Mary scored 40 in run# 3
       </samp>
       This example shows how the command from the first example could be used
-      in a shell to process records individually.
+      in a shell script to process records individually.
       The shell reads the lines one at a time into a shell variable named "row".
       It then uses <tt>eval $row</tt> to set shell variables from the record.
       Those variables can then be used any way you want.
@@ -357,8 +358,9 @@ name=Mary run=3 score=40
 
     <h2>Where should I look next?</h2>
     Start by digging through the references for the scripting
-    <a href="index.html?op">operators</a> and
-    <a href="index.html?f">functions</a>.
+    <a href="index.html?op">operators</a>,
+    <a href="index.html?f">functions</a>, and
+    <a href="index.html?cmd">commands</a>.
     The references are loaded with examples, which should give you some idea
     of what JsonCalc can do.
     Nearly all of these examples are one-liners, which is appropriate for

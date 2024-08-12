@@ -32,14 +32,14 @@
     The <tt>i</tt> flag makes the regular expression be case-insensitive;
     without it, comparisons and searches would be case-sensitive.
     The <tt>g</tt> flag can be used with the <tt>replace()</tt> function to
-    replace all matching instanges within a string; without <tt>g</tt>,
+    replace all matching instances within a string; without <tt>g</tt>,
     <tt>replace()</tt> would only replace the first match.
     <p>
     For a full description of the regular expression syntax,
     see the Linux manual (i.e., run "man 7 regex").
     The highlights are:
     <ul>
-      <li>Most character match only themselves.  This include letters, digits,
+      <li>Most characters match only themselves.  This include letters, digits,
           and whitespace.
       <li>A ^ at the start of the regular expression means it can only match
           text at the start of the target string.
@@ -47,7 +47,7 @@
           text at the end of the target string.
       <li>The . character matches any single character except newline.
       <li>Square brackets enclose sets of characters.  This will match a single
-          character from the test string, if its in the set.
+          character from the test string, if it's in the set.
       <li>Parentheses mark subexpressions.  These affect closure operators
           like * and +.  Also, the <tt>replace()</tt> function can access the
           text that matched each subexpression and use it when constructing

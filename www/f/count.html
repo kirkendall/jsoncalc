@@ -62,9 +62,18 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>For the sake of being more SQL-like, <tt>count(*)</tt> (with an asterisk
-        where the argument should be) counts all instances.
-        This is effectively the same as <tt>count(true)</tt>.
+        <li>For the sake of being more SQL-like, <tt>count(*)</tt>
+            (with an asterisk where the argument should be)
+            counts all instances.
+            This is effectively the same as <tt>count(true)</tt>.
+
+        <li>If all you want to do is check the size of an array,
+            <kbd>array.length</kbd> will be much faster than
+            <kbd>array.count()</kbd>.
+            Function calls aren't very efficient.
+            Arguments are passed by value, so <tt>array.count()</tt>
+            acts on a copy of the array, while <tt>array.length</tt>
+            can act on the original array &mdash; no copying needed.
 
       </ul>
     </details>

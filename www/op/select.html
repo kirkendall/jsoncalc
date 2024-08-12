@@ -30,8 +30,8 @@
       SELECT DISTINCT <var>columns</var>
       FROM <var>table</var>
       WHERE <var>condition</var>
-      GROUP BY <var>fields</var>
-      ORDER BY <var>fields</var>
+      GROUP BY <var>columns</var>
+      ORDER BY <var>columns</var>
     </blockquote>
     ... but everything except <tt>SELECT</tt> is optional.
     <p>
@@ -41,10 +41,11 @@
     The optional <var>columns</var> list selects the columns to include.
     It is basically the contents of a <tt>{...}</tt> object generator without
     the curly braces.
-    You can use complex expressions, not just column names.
-    You can include alternate names for columns by appending "<tt>AS</tt> <var>name</var>".
+    You can use complex expressions to compute new values;
+    you aren't limited to just column names.
+    You can include alternate names for columns by appending "<tt>AS</tt> <var>key</var>".
     If you omit the <var>columns</var> list, or give just <tt>*</tt> as the list,
-    then all fields from the source table are included.
+    then all columns from the source table are included.
     <p>
     The optional <tt>FROM</tt> <var>table</var> says which table
     (array of objects) to use as the starting point.
@@ -54,7 +55,8 @@
     "natural join" operations, which elsewhere in <strong>JsonCalc</strong>
     is represented by the <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
     If you omit the <tt>FROM</tt> <var>table</var> clause,
-    <strong>JsonCalc</strong> will use <tt>this</tt> if it's a table,
+    <strong>JsonCalc</strong> will choose a default &mdash;
+    <tt>this</tt> if it's a table, else a file from the command line.
     or look for a table in a JSON file named on the command line.
     <p>
     The optional <tt>WHERE</tt> <var>condition</var> clause lets you select
@@ -64,9 +66,10 @@
     If you omit the <tt>WHERE</tt> <var>condition</var> clause, then all
     rows from the source table are used to generate the result table.
     <p>
-    The optional <tt>GROUP BY</tt> <var>fields</var> clause causes the source
+    The optional <tt>GROUP BY</tt> <var>columns</var> clause causes the source
     table to be split into segments that share the same values in the listed
-    fields. This has two effects.  First, any aggregate functions such as
+    columns. This has two effects.
+    First, it directs any aggregate functions such as
     <a target="_PARENT" href="../index.html?f=count">count()</a> or
     <a target="_PARENT" href="../index.html?f=avg">avg()</a> to generate
     independent results for each group; e.g., <tt>count(*)</tt> would return
@@ -131,8 +134,19 @@
 
 	<li>Internally, <tt>SELECT</tt> expressions are converted to "native"
             functions and operators. An expression such as
-            "<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY a</tt>"
-            would become "<tt>(table.groupBy(["e","f"]) @ d>5 ? {aprime:a, b}).orderBy("aprime")</tt>".
+            <span style="white-space:nowrap">"<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY a</tt>"</span>
+            would become
+            <span style="white-space:nowrap">"<tt>(table.groupBy(["e","f"]) @ d>5 ? {aprime:a, b}).orderBy("aprime")</tt>".</span>
+
+	<li>In the FROM clause, the use of a comma to denote natural join is
+	    different from SQL, where it is cross product.  This is mostly
+	    because SQL allows joined tables to have columns with the same
+	    name but different values, while JSON's objects don't.
+
+	<li>If the SELECT clause's <var>columns</var> list contains complex
+	    expressions without an "AS <var>key</var>" to assign it a name,
+	    then the expression's source code is used as the default name.
+	    You can get some wild-looking keys that way, but they work.
 
       </ul>
     </details>

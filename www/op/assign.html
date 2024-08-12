@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment operators</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Assignment operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, =">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Assignment operators</h1>
+    <table class="opList">
+      <tr><td class="left">lvalue</td><td class="op">=</td><td class="right">value</td><td class="opdesc">Assign</td></tr>
+      <tr><td class="left">lvalue</td><td class="op">[] =</td><td class="right">value</td><td class="opdesc">Append to an array</td></tr>
+    </table>
+    The assign and append operators change the values of variables,
+    or parts of variables.
+    <p>
+    An "lvalue" is a subset of expression syntax that starts with a
+    variable name, and may then use a mixture of subscripts and the
+    <a href="dot.html">.<var>key</var></a> operator to identify the
+    data to be changed.  Subscript values may use complex expressions.
+    <p>
+    The use of empty brackets is a special notation, used only in conjunction
+    with the <tt>=</tt> operator for appending instead of assigning.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var a = 1; a = 2; a</kbd>
+	<samp>2</samp>
+        This creates a variable "a", and initializes it to 1,
+        but then assigns it the value 2.
+        When we output "a", we get 2.
+      </div>
+
+      <div class="example">
+	<kbd>test.scores[0].score = 99; test.scores</kbd>
+	<samp><table>
+<tr><th>name</th><th>run</th><th>score</th></tr>
+<tr><td>Peter</td><td>1</td><td>99</td></tr>
+<tr><td>Paul</td><td>1</td><td>20</td></tr>
+<tr><td>Mary</td><td>1</td><td>30</td></tr>
+<tr><td>Peter</td><td>2</td><td>25</td></tr>
+<tr><td>Paul</td><td>2</td><td>30</td></tr>
+<tr><td>Mary</td><td>2</td><td>35</td></tr>
+<tr><td>Peter</td><td>3</td><td>30</td></tr>
+<tr><td>Paul</td><td>3</td><td>25</td></tr>
+<tr><td>Mary</td><td>3</td><td>40</td></tr>
+</table>
+</samp>
+        Here we're using a more complex lvalue.
+        "test" is defined in the sample data.
+        We change the first score to 99 (from 10) and output the results.
+      </div>
+
+      <div class="example">
+	<kbd>var a = [1,2,3]; a[] = 4; a[] = 5; a</kbd>
+	<samp>[1,2,3,4,5]</samp>
+        This is the "append" version of assignment, as indicated by the empty
+        pair of brackets before the "=" operator.
+        We start with <tt>[1,2,3]</tt> and then append <tt>4</tt> and <tt>5</tt>
+        before outputting it.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The = sign is also used as a case-insensitive equal comparison operator.
+            Generally there's little chance of confusion since <tt>=</tt> is only
+            considered to be an assignment when it is preceded by an lvalue,
+            and the lvalue occurs at the start of a command.  You can force
+            the = sign to be considered a case-insensitive equal comparison by
+            wrapping the expression in parentheses.
+            <div class="example">
+              <kbd>var s; s="steve"; (s="Steve")</kbd>
+	      <samp>true</samp>
+	      First we assign "steve" to s, which outputs nothing.
+	      Then we compare it to "Steve" and the result is <tt>true</tt>.
+	    </div>
+
+	<li>Currently there are no <tt>+=</tt> operators or anything like that.
+	    No <tt>++</tt> or <tt>--</tt> operators either. Just <tt>=</tt>.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=equal">=</a> - Equality 0perators
+    </details>
+
+  </body>
+</html>

@@ -175,15 +175,25 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
 }
 
 /* For a given L-value, find its layer, container, and value.  This is used
- * for assigning or appending to variables.  Return 0 on success, or an error
- * code on failure.
+ * for assigning or appending to variables.  Return 0 on success, or -1 on
+ * success when *refkey needs to be freed, or an error code on failure.
+ *
+ * That "-1" business is hack.  When assigning to a member of an object,
+ * *refkey should identify the member to be assigned.  But when assigning by
+ * a subscript ("object[string]" instead of "object.key") then the key is a
+ * computed value, and we evaluate/free the subscript before returning, so we
+ * need to make a dynamically-allocated copy of the key.  And then the calling
+ * function needs to free it.  I decided to make this function be static just
+ * because that hack is so obnoxious, at least this way it's only used by a
+ * couple of functions in the same source file.
  */
 static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
 {
 	json_t	*value, *t, *v, *m;
 	char	*skey;
 	jsoncalc_t *sub;
-	int	err;
+	int	err, ret;
+	jsoncontext_t *layer;
 
 	switch (lvalue->op) {
 	case JSONOP_NAME:
@@ -199,21 +209,27 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			*refkey = lvalue->u.literal->text;
 
 		/* Look for it in the context */
-		value = json_context_by_key(context, *refkey, reflayer);
+		value = json_context_by_key(context, *refkey, &layer);
 
 		/* If found, celebrate */
 		if (!value)
 			return JE_UNKNOWN_VAR;
+		if (reflayer)
+			*reflayer = layer;
 		if (refcontainer)
-			*refcontainer = context->data;
+			*refcontainer = layer->data;
 		if (refvalue)
 			*refvalue = value;
 		return JE_OK;
 
 	case JSONOP_DOT:
 		/* Recursively look up the left side of the dot */
-		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != JE_OK)
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) > JE_OK)
 			return err;
+		if (err < 0) {
+			free(*refkey);
+			return JE_UNKNOWN_MEMBER;
+		}
 		if (value == NULL)
 			return JE_UNKNOWN_VAR;
 
@@ -248,8 +264,12 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 
 	case JSONOP_SUBSCRIPT:
 		/* Recursively look up the left side of the subscript */
-		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != JE_OK)
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) > JE_OK)
 			return err;
+		if (err < 0) {
+			free(*refkey);
+			return JE_UNKNOWN_MEMBER;
+		}
 		if (value == NULL)
 			return JE_UNKNOWN_VAR;
 
@@ -308,13 +328,24 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 				json_free(t);
 				return JE_BAD_SUB;
 			}
+
+			/* Okay, we're done with the subscript "t"... EXCEPT
+			 * that if it's a string that will serve as an array
+			 * subscript then we need to keep it the string for
+			 * a while.
+			 */
+			ret = JE_OK;
+			if (t->type == JSON_STRING && refkey) {
+				*refkey = strdup(t->text);
+				ret = -1;
+			}
 			json_free(t);
 
 			/* Not finding a value is bad... unless we don't need
 			 * one.  Its okay to assign new members to an existing
 			 * object.
 			 */
-			if (!v && (*refvalue))
+			if (!v && (*refvalue) && value->type != JSON_OBJECT)
 				return JE_UNKNOWN_SUB;
 
 			/* Return what we found */
@@ -322,7 +353,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 				*refcontainer = value;
 			if (refvalue)
 				*refvalue = v;
-			return JE_OK;
+			return ret;
 		}
 
 	default:
@@ -369,17 +400,22 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	/* Get the details on what to change.  Note that for new members,
 	 * value may be NULL even if jxlvalue() returns 1.
 	 */
-	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != JE_OK)
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) > JE_OK)
 		return jxerror(err, key);
 
 	/* If it's const then fail */
-	if (layer->flags & JSON_CONTEXT_CONST)
+	if (layer->flags & JSON_CONTEXT_CONST) {
+		if (err < 0)
+			free(key);
 		return jxerror(JE_CONST, key);
+	}
 
 	/* Objects are easy, arrays are hard */
-	if (container->type == JSON_OBJECT)
+	if (container->type == JSON_OBJECT) {
 		json_append(container, json_key(key, rvalue));
-	else {
+		if (err < 0)
+			free(key);
+	} else {
 		if (!value)
 			return jxerror(JE_UNKNOWN_SUB, key);
 

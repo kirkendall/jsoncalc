@@ -561,13 +561,14 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				free(*toFree);
 			free(localag);
 		} else {
-			/* Non-aggregate functions may take a regular expression.
-			 * Since that isn't a JSON data type, the args list will just
-			 * contain NULL there; we need to scan the argument array
-			 * generator for a JSONOP_REGEX... but only for non-aggregates.
+			/* Non-aggregate built-in functions may take a regular
+			 * expression.  Since that isn't a JSON data type,
+			 * the args list will just contain "null" there; we
+			 * need to scan the argument array generator for a
+			 * JSONOP_REGEX... but only for non-aggregate built-ins.
 			 */
 			localag = agdata + calc->u.func.agoffset;
-			if (!calc->u.func.jf->agfn) {
+			if (!calc->u.func.jf->agfn && !calc->u.func.jf->user) {
 				tmp = calc->u.func.args;
 				if (tmp->LEFT && tmp->LEFT->op == JSONOP_REGEX)
 					tmp = tmp->LEFT;
@@ -579,8 +580,14 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				localag = (void *)tmp;
 			}
 
-			/* Invoke the function */
-			result = (*calc->u.func.jf->fn)(left, localag);
+			/* Invoke the function. For built-ins, call the
+			 * function directly ("jf->fn").  For user-defined
+			 * functions, call json_cmd_fncall() to do it.
+			 */
+			if (calc->u.func.jf->user)
+				result = json_cmd_fncall(left, calc->u.func.jf, context);
+			else
+				result = (*calc->u.func.jf->fn)(left, localag);
 		}
 		break;
 
@@ -898,10 +905,16 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
 			/* Compare as booleans, but only for equality */
 			il = json_is_true(left) != json_is_true(right);
-		} else if ((left->type == JSON_NULL || right->type == JSON_NULL)
-		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
-		        /* null is null, no difference */
-		        il = 0;
+		} else if (left->type == JSON_NULL || right->type == JSON_NULL){
+		        /* We allow equality comparisons to null. Anything else
+		         * is always false.
+		         */
+		        if (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)
+				il = (left->type != right->type);
+			else {
+				result = json_bool(0);
+				break;
+			}
 		} else {/* hopefully string, but other types work too */
 			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE)
 				il = json_mbs_casecmp(left->text, right->text);

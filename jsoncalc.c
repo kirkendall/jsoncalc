@@ -13,7 +13,6 @@
 #include "version.h"
 
 #define HISTORY_FILE ".jsoncalc_history"
-#define AUTOLOAD_DIR "sampledata"
 
 
 /* getopt() variables not declared in <unistd.h> */
@@ -78,25 +77,21 @@ static void debug_usage()
 {
 	puts("The -Jflags option controls debugging flags.  The flags are single letters");
 	puts("indicating what should be debugged.  The flag letters are:");
-	puts("  t  Output tokens as the JSON data is parsed.");
-	puts("  f  Output information about accessing data files.");
-	puts("  b  Output buffer information when JSON data is read in chunks.");
 	puts("  a  Call abort() when an error is detected.");
 	puts("  e  Output info about json_by_expr() calls.");
 	puts("  c  Output info about json_calc() calls.");
+	puts("  t  Trace each command as it is run.");
 	puts("");
 	puts("You may also put a + or - or = between -J and the flags to alter the way the new");
 	puts("flags are combined with existing flags.  The means are:");
 	puts("  +  Add the new flags to existing flags. (This is the default.)");
 	puts("  =  Turn off all flags except the new flags.");
 	puts("  -  Turn off existing flags that are also in new flags.");
-	printf("\nCurrent flags are: -J%s%s%s%s%s%s\n",
-		json_debug_flags.token ? "t" : "",
-		json_debug_flags.file ? "f" : "",
-		json_debug_flags.buffer ? "b" : "",
+	printf("\nCurrent flags are: -J%s%s%s%s\n",
 		json_debug_flags.abort ? "a" : "",
 		json_debug_flags.expr ? "e" : "",
-		json_debug_flags.calc ? "c" : "");
+		json_debug_flags.calc ? "c" : "",
+		json_debug_flags.trace ? "t" : "");
 }
 
 /* Output a usage message and then exit. */
@@ -143,7 +138,7 @@ json_t *autoload(char *key)
 		int     i;
 		char    *basename;
 
-		sprintf(filename, "%s/*.json", AUTOLOAD_DIR);
+		sprintf(filename, "%s/*.json", autoload_dir);
 		memset(&files, 0, sizeof files);
 		if (glob(filename, 0, NULL, &files) == 0) {
 			json = json_array();
@@ -168,7 +163,7 @@ json_t *autoload(char *key)
 	}
 
 	/* Is there a key.json file? */
-	sprintf(filename, "%s/%s.json", AUTOLOAD_DIR, key);
+	sprintf(filename, "%s/%s.json", autoload_dir, key);
 	if (access(filename, R_OK) != 0)
 		return NULL;
 
@@ -566,28 +561,30 @@ char *jcreadscript(const char *filename)
 
 void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 {
-	jsonerror_t *err;
+	jsoncmdout_t *result;
 
-	err = json_cmd_run(jc, &context);
-	if (err) {
-		if (err->ret == (json_t *)1)
+	result = json_cmd_run(jc, &context);
+	if (result) {
+		if (result->ret == &json_cmd_break)
 			puts("RETURNED A \"BREAK\"");
-		else if (err->ret) {
+		else if (result->ret == &json_cmd_continue)
+			puts("RETURNED A \"CONTINUE\"");
+		else if (result->ret) {
 			printf("RETURNED A VALUE: ");
-			json_print(err->ret, NULL);
-			json_free(err->ret);
+			json_print(result->ret, NULL);
+			json_free(result->ret);
 		} else {
 			fputs(json_format_color_error, stderr);
-			if (err->filename)
-				fprintf(stderr, "%s:%d: %s\n", err->filename, err->lineno, err->text);
-			else if (err->lineno)
-				fprintf(stderr, "Line %d: %s\n", err->lineno, err->text);
+			if (result->filename)
+				fprintf(stderr, "%s:%d: %s\n", result->filename, result->lineno, result->text);
+			else if (result->lineno)
+				fprintf(stderr, "Line %d: %s\n", result->lineno, result->text);
 			else
-				fprintf(stderr, "%s\n", err->text);
+				fprintf(stderr, "%s\n", result->text);
 			fputs(json_format_color_end, stderr);
 			putc('\n', stderr);
 		}
-		free(err);
+		free(result);
 	}
 }
 

@@ -200,6 +200,81 @@ void json_calc_function(
 	funclist = f;
 }
 
+/* This function is called automatically when the program terminates.  It
+ * frees user-defined functions, so that their resources won't be listed as
+ * a memory leak.
+ */
+static void free_user_functions()
+{
+	jsonfunc_t	*scan, *lag, *next;
+
+	/* For each function in the list... */
+	for (scan = funclist, lag = NULL; scan; scan = next) {
+		/* Skip if not user-defined */
+		next = scan->next;
+		if (!scan->user) {
+			lag = scan;
+			continue;
+		}
+
+		/* Remove it from the list */
+		if (lag)
+			lag->next = next;
+		else
+			funclist = next;
+
+		/* Free its resources */
+		free(scan->name);
+		json_cmd_free(scan->user);
+		json_free(scan->userparams);
+		free(scan);
+	}
+}
+
+/* Define or redefine a user function -- one that's defined in JsonCalc's
+ * command syntax instead of C code.  Returns 0 normally, or 1 if the function
+ * name matches a built-in function (and hence can't be refined).
+ */
+int json_calc_function_user(char *name, json_t *params, jsoncmd_t *body)
+{
+	jsonfunc_t *f;
+	static int first = 1;
+
+	/* If first, then arrange for all user-defined functions to be freed
+	 * when the program terminates.
+	 */
+	if (first) {
+		first = 0;
+		atexit(free_user_functions);
+	}
+
+	/* Look for an existing function to redefine */
+	f = json_calc_function_by_name(name);
+	if (!f) {
+		/* Allocate a new jsonfunc_t and link it into the table */
+		f = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
+		memset(f, 0, sizeof(jsonfunc_t));
+		f->next = funclist;
+		funclist = f;
+	} else if (f->user) {
+		/* Redefining, so discard the old details */
+		free(f->name);
+		json_free(f->userparams);
+		json_cmd_free(f->user);
+	} else {
+		/* Can't redefine built-ins */
+		return 1;
+	}
+
+	/* Store the new info in the jsonfunc_t */
+	f->name = name;
+	f->userparams = params;
+	f->user = body;
+
+	/* Success! */
+	return 0;
+}
+
 /* Look up a function by name, and return its info */
 jsonfunc_t *json_calc_function_by_name(char *name)
 {
@@ -225,6 +300,30 @@ jsonfunc_t *json_calc_function_by_name(char *name)
 
 	return NULL;
 }
+
+/* Called during termination to free user-defined functions -- mostly
+ * so their resources won't be listed as memory leaks.
+ */
+void json_calc_func_term()
+{
+	jsonfunc_t *doomed;
+
+	/* Loop over the user-defined functions.  They're all "before" the
+	 * built-ins.
+	 */
+	while (funclist->user) {
+		/* Remove this function from the list of functions */
+		doomed = funclist;
+		funclist = funclist->next;
+
+		/* Free its resources */
+		free(doomed->name);
+		json_cmd_free(doomed->user);
+		json_free(doomed->userparams);
+		free(doomed);
+	}
+}
+
 
 /***************************************************************************
  * Everything below this is C functions that implement JsonCalc functions. *
@@ -382,8 +481,8 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 		return json_copy(args->first);
 
 	/* If boolean or non-binary number, convert its text to a string. */
-	if (args->first->type == JSON_NUMBER
-	 || (args->first->type == JSON_BOOL && args->first->text[0] != '\0'))
+	if (args->first->type == JSON_BOOL
+	 || (args->first->type == JSON_NUMBER && args->first->text[0] != '\0'))
 		return json_string(args->first->text, -1);
 
 	/* If null, return "null" */

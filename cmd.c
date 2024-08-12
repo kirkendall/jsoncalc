@@ -24,36 +24,48 @@
  */
 
 /* Forward declarations for functions that implement the built-in commands */
-static jsoncmd_t   *if_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *while_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *for_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *break_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *try_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *var_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *const_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *function_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *return_parse(jsonsrc_t *src, jsonerror_t **referr);
-static jsonerror_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-/* format */
-/* delete */
-/* help */
-/* include */
-static jsonerror_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *if_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *while_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *for_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *break_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *case_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *default_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *default_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *try_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *var_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *const_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *function_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t   *return_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+/* format -Oflags { command } ... or without {command} have a lasting effect */
+/* delete lvalue */
+/* help topic subtopic */
+/* import "filename" */
+static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 
 /* Linked list of command names */
 static jsoncmdname_t jcn_if =       {NULL,		"if",		if_parse,	if_run};
 static jsoncmdname_t jcn_while =    {&jcn_if,		"while",	while_parse,	while_run};
 static jsoncmdname_t jcn_for =      {&jcn_while,	"for",		for_parse,	for_run};
 static jsoncmdname_t jcn_break =    {&jcn_for,		"break",	break_parse,	break_run};
-static jsoncmdname_t jcn_try =      {&jcn_break,	"try",		try_parse,	try_run};
+static jsoncmdname_t jcn_continue = {&jcn_break,	"continue",	continue_parse,	continue_run};
+static jsoncmdname_t jcn_switch =   {&jcn_continue,	"switch",	switch_parse,	switch_run};
+static jsoncmdname_t jcn_case =     {&jcn_switch,	"case",		case_parse,	case_run};
+static jsoncmdname_t jcn_default =  {&jcn_case,		"default",	default_parse,	default_run};
+static jsoncmdname_t jcn_try =      {&jcn_default,	"try",		try_parse,	try_run};
 static jsoncmdname_t jcn_var =      {&jcn_try,		"var",		var_parse,	var_run};
 static jsoncmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run};
 static jsoncmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
@@ -65,6 +77,12 @@ static jsoncmdname_t *names = &jcn_return;
  */
 static jsoncmdname_t jcn_calc = {NULL, "<<calc>>", NULL, calc_run};
 
+/* These are used to indicate special results from a series of commands.
+ * Their values are irrelevant; their unique addresses are what matters.
+ */
+json_t json_cmd_break;		/* "break" statement */
+json_t json_cmd_continue;	/* "continue" statement */
+json_t json_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
 
 /* Convert a character pointer to a line number.  "buf" is a buffer containing
  * the entire script, and "where" is a point within "buf".
@@ -82,7 +100,7 @@ static int jcmdline(jsonsrc_t *src)
 
 
 /* Add a new statement name, and its argument parser and runner. */
-void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsonerror_t **referr), jsonerror_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext))
+void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext))
 {
 	/* Allocate a jsoncmdname_t for it */
 	jsoncmdname_t *sn = (jsoncmdname_t *)malloc(sizeof(jsoncmdname_t));
@@ -99,11 +117,11 @@ void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(json
 }
 
 /* Generate an error message */
-jsonerror_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...)
+jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...)
 {
 	va_list	ap;
 	size_t	size;
-	jsonerror_t *err;
+	jsoncmdout_t *result;
 
 	/* !!!Translate the message via catalog using "code".  EXCEPT if the
 	 * format is "%s" then assume it has already been translated.
@@ -115,19 +133,19 @@ jsonerror_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...
 	va_end(ap);
 
 	/* Allocate the error structure with enough space for the message */
-	err = (jsonerror_t *)malloc(sizeof(jsonerror_t) + size);
+	result = (jsoncmdout_t *)malloc(sizeof(jsoncmdout_t) + size);
 
 	/* Fill the error structure */
-	memset(err, 0, sizeof(jsonerror_t) + size);
-	err->filename = filename;
-	err->lineno = lineno;
-	err->code = code;
+	memset(result, 0, sizeof(jsoncmdout_t) + size);
+	result->filename = filename;
+	result->lineno = lineno;
+	result->code = code;
 	va_start(ap, fmt);
-	vsnprintf(err->text, size + 1, fmt, ap);
+	vsnprintf(result->text, size + 1, fmt, ap);
 	va_end(ap);
 
 	/* Return it */
-	return err;
+	return result;
 }
 
 /*****************************************************************************
@@ -289,7 +307,7 @@ void json_cmd_free(jsoncmd_t *cmd)
  * an error message and return NULL.  If it is a function definition, return
  * it instead of processing it immediately.
  */
-jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr)
+jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmdname_t	*sn;
 	size_t 		len;
@@ -306,10 +324,10 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr)
 	 * command to all known command names.
 	 */
 	for (sn = names; sn; sn = sn->next) {
-		len = json_mbs_len(sn->name);
+		len = strlen(sn->name);
 		end = src->str + len;
 		if (!json_mbs_ncasecmp(sn->name, src->str, len)
-		 && (isspace(*end) || !*end || *end == ';' || *end == '}'))
+		 && (!isalnum(*end) && *end != '_'))
 			break;
 	}
 
@@ -350,6 +368,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr)
 	src->str = end;
 	if (*src->str == ';')
 		src->str++;
+	json_cmd_parse_whitespace(src);
 
 	/* Return it */
 	return cmd;
@@ -360,7 +379,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsonerror_t **referr)
  * should generate an error message.  An empty set of curly braces is allowed,
  * though, and should return a "NO OP" statement.
  */
-jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsonerror_t **referr)
+jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmd_t *cmd, *current;
 
@@ -381,7 +400,6 @@ jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsonerror_t **referr)
 		}
 		if (*src->str == '}')
 			src->str++;
-
 	} else {
 		cmd = json_cmd_parse_single(src, referr);
 	}
@@ -395,7 +413,7 @@ jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsonerror_t **referr)
 
 jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 {
-	jsonerror_t *err = NULL;
+	jsoncmdout_t *result = NULL;
 	jsoncmd_t *cmd, *first, *next;
 
 	/* If first line starts with "#!" then skip to second line */
@@ -412,19 +430,19 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 		json_cmd_parse_whitespace(src);
 
 		/* Parse it */
-		next = json_cmd_parse_single(src, &err);
+		next = json_cmd_parse_single(src, &result);
 
 		/* If error then report it and quit */
-		if (err) {
+		if (result) {
 			if (json_format_default.color)
 				fputs(json_format_color_error, stderr);
-			if (err->filename)
-				fprintf(stderr, "%s:", err->filename);
-			fprintf(stderr, "%d: %s\n", err->lineno, err->text);
+			if (result->filename)
+				fprintf(stderr, "%s:", result->filename);
+			fprintf(stderr, "%d: %s\n", result->lineno, result->text);
 			if (json_format_default.color)
 				fputs(json_format_color_end, stderr);
 
-			free(err);
+			free(result);
 			json_cmd_free(first);
 			return NULL;
 		}
@@ -521,28 +539,95 @@ jsoncmd_t *json_cmd_parse_file(char *filename)
 	return cmd;
 }
 
-/* Run a series of statements.  Returns one of four things:
- *  NULL indicates no error or other exceptions, and execution should continue.
- *  err->ret=1 indicates "break" - skip execution to exit a loop then continue.
- *  err->ret=value indicates "return" - skip to end of function then use value.
- *  err->ret=NULL indicates an error - maybe try/catch it, maybe stop & report.
- */
-jsonerror_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+/* Run a series of statements, and return the result */
+jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	jsonerror_t *err = NULL;
+	jsoncmdout_t *result = NULL;
 
-	while (cmd && !err) {
-		err = (*cmd->name->run)(cmd, refcontext);
-		cmd = cmd->next;
+	while (cmd && !result) {
+		/* Maybe output trace info */
+		if (json_debug_flags.trace) {
+			fprintf(stderr, "%s:%d: %s\n", cmd->filename, cmd->lineno, cmd->name->name);
+		}
+
+		/* Run the command */
+		result = (*cmd->name->run)(cmd, refcontext);
+
+		/* If mismatched "case", then skip ahead to the next case */
+		if (result && result->ret == &json_cmd_case_mismatch) {
+			/* We're handling this result here.  Free it */
+			free(result);
+			result = NULL;
+
+			/* Skip to the next "case" or "default" statement */
+			while ((cmd = cmd->next) != NULL
+			    && cmd->name != &jcn_case 
+			    && cmd->name != &jcn_default) {
+			}
+		} else {
+			/* For NULL, just go to the next command.  If it's
+			 * some other value, such as a "return", then we'll
+			 * exit the loop so changing "cmd" here is harmless.
+			 */
+			cmd = cmd->next;
+		}
 	}
-	return err;
+	return result;
 }
+
+/* Invoke a user-defined function, and return its value */
+json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
+{
+	jsoncmdout_t *result;
+	json_t	*out, *name, *value;
+
+	assert(fn->user);
+
+	/* Create a context for the arguments */
+	context = json_context(context, json_copy(fn->userparams), JSON_CONTEXT_ARGS);
+
+	/* Copy the actual args into it, by name */
+	for (name = fn->userparams->first, value = args->first;
+	     name && value;
+	     name = name->next, value = value->next) {
+		json_append(context->data, json_key(name->text, json_copy(value)));
+	}
+
+	/* Run the body of the function */
+	result = json_cmd_run(fn->user, &context);
+
+	/* Decode the "result" response */
+	if (!result) /* function terminated without "return" -- use null */
+		out = json_null();
+	else if (!result->ret) /* error - convert to error null */
+		out = json_error_null(result->code, "%s", result->text);
+	else if (result->ret == &json_cmd_break) /* "break" */
+		out = json_error_null(1, "Misuse of \"break\"");
+	else if (result->ret == &json_cmd_continue) /* "continue" */
+		out = json_error_null(1, "Misuse of \"continue\"");
+	else /* "return" */
+		out = result->ret;
+
+	/* Free "result" but not "result->ret" */
+	if (result)
+		free(result);
+
+	/* Clean up the context, possibly including local vars and consts */
+	while ((context->flags & JSON_CONTEXT_ARGS) == 0)
+		context = json_context_free(context, 1);
+	context = json_context_free(context, 1);
+
+	/* Return the result */
+	return out;
+
+}
+
 
 /****************************************************************************/
 /* Everything after this is for parsing and running built-in commands.      */
 /****************************************************************************/
 
-static jsoncmd_t *if_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *if_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmd_t	*parsed;
 	char	*str, *end, *err = NULL;
@@ -562,11 +647,12 @@ static jsoncmd_t *if_parse(jsonsrc_t *src, jsonerror_t **referr)
 
 	/* Parse the condition */
 	parsed->calc = json_calc_parse(str, &end, &err);
-	free(str);
 	if (err || *end || !parsed->calc) {
+		free(str);
 		*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"if\" condition");
 		return parsed;
 	}
+	free(str);
 
 	/* Get the "then" statements */
 	parsed->sub = json_cmd_parse_curly(src, referr);
@@ -583,7 +669,7 @@ static jsoncmd_t *if_parse(jsonsrc_t *src, jsonerror_t **referr)
 	return parsed;
 }
 
-static jsonerror_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t *jsbool = json_calc(cmd->calc, *refcontext, NULL);
 	int	bool = json_is_true(jsbool);
@@ -594,7 +680,7 @@ static jsonerror_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		return json_cmd_run(cmd->more, refcontext);
 }
 
-static jsoncmd_t *while_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *while_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmd_t	*parsed;
 	char	*str, *end, *err = NULL;
@@ -614,11 +700,12 @@ static jsoncmd_t *while_parse(jsonsrc_t *src, jsonerror_t **referr)
 
 	/* Parse the condition */
 	parsed->calc = json_calc_parse(str, &end, &err);
-	free(str);
 	if (err || *end || !parsed->calc) {
+		free(str);
 		*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"while\" condition");
 		return parsed;
 	}
+	free(str);
 
 	/* Get the "loop" statements */
 	parsed->sub = json_cmd_parse_curly(src, referr);
@@ -629,7 +716,7 @@ static jsoncmd_t *while_parse(jsonsrc_t *src, jsonerror_t **referr)
 	return parsed;
 }
 
-static jsonerror_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	for (;;) {
 		/* Evaluate the condition */
@@ -644,22 +731,29 @@ static jsonerror_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* Run the loop body.  If it has an error, then return the
 		 * error; otherwise continue to loop.
 		 */
-		jsonerror_t *err = json_cmd_run(cmd->sub, refcontext);
-		if (err) {
-			/* If we got a "break" pseudo-error, ignore it.
-			 * Otherwise (real error or "return" pseudo-error)
-			 * return it.
+		jsoncmdout_t *result = json_cmd_run(cmd->sub, refcontext);
+
+		/* If we got a "continue" then ignore it and stay in the loop */
+		if (result && result->ret == &json_cmd_continue) {
+			free(result);
+			result = NULL;
+		}
+
+		/* If "breaK', "return", or error then exit the loop */
+		if (result) {
+			/* If we got a "break", ignore it.  Otherwise ("return"
+			 * or an error) return it.
 			 */
-			if (err && err->ret == (json_t *)1) {
-				free(err);
-				err = NULL;
+			if (result && result->ret == &json_cmd_break) {
+				free(result);
+				result = NULL;
 			}
-			return err;
+			return result;
 		}
 	}
 }
 
-static jsoncmd_t *for_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmd_t	*parsed;
 	char	*str = NULL, *end, *err = NULL;
@@ -726,11 +820,11 @@ CleanUpAfterError:
 	return NULL;
 }
 
-static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t	*array, *scan;
 	jsoncontext_t *layer;
-	jsonerror_t *err = NULL;
+	jsoncmdout_t *result = NULL;
 
 	/* Evaluate the for-loop's array expression */
 	array = json_calc(cmd->calc, *refcontext, NULL);
@@ -754,8 +848,8 @@ static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
 
 			/* Execute the body of the loop */
-			err = json_cmd_run(cmd->sub, refcontext);
-			if (err)
+			result = json_cmd_run(cmd->sub, refcontext);
+			if (result)
 				break;
 		}
 	} else if (cmd->key) {
@@ -768,8 +862,8 @@ static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
 
 			/* Execute the body of the loop */
-			err = json_cmd_run(cmd->sub, &layer);
-			if (err)
+			result = json_cmd_run(cmd->sub, &layer);
+			if (result)
 				break;
 		}
 
@@ -784,8 +878,16 @@ static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			layer = json_context(*refcontext, scan, JSON_CONTEXT_THIS);
 
 			/* Run the body of the loop */
-			err = json_cmd_run(cmd->sub, &layer);
-			if (err)
+			result = json_cmd_run(cmd->sub, &layer);
+
+			/* Ignore "continue" and stay in loop.  For anything
+			 * else other than NULL, exit the loop.
+			 */
+			if (result && result->ret == &json_cmd_continue) {
+				free(result);
+				result = NULL;
+			}
+			if (result)
 				break;
 
 			/* Remove the "this" layer */
@@ -799,26 +901,28 @@ static jsonerror_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* If we got a "break" pseudo-error, ignore it.  Otherwise (real error
 	 * or "return" pseudo-error) return it.
 	 */
-	if (err && err->ret == (json_t *)1) {
-		free(err);
-		err = NULL;
+	if (result && result->ret == &json_cmd_break) {
+		free(result);
+		result = NULL;
 	}
-	return err;
+	return result;
 }
 
-static jsoncmd_t *try_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *try_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
+	/*!!!*/
 	return NULL;
 }
 
-static jsonerror_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
+	/*!!!*/
 	return NULL;
 }
 
 
 /* This is a helper function for global/local var/const declarations */
-static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsonerror_t **referr, jsoncmd_t *cmd)
+static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cmd)
 {
 	jsoncmd_t *first = cmd;
 	char	*end, *err;
@@ -862,7 +966,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsonerror_t **referr, jsoncmd_t *cmd
 
 	return first;
 }
-static jsonerror_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t	*value;
 
@@ -892,7 +996,7 @@ static jsonerror_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	return NULL;
 }
 
-static jsoncmd_t *break_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *break_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsoncmd_t *cmd = json_cmd(src, &jcn_break);
 
@@ -903,72 +1007,437 @@ static jsoncmd_t *break_parse(jsonsrc_t *src, jsonerror_t **referr)
 	return cmd;
 }
 
-static jsonerror_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Return a 'break" pseudo-error */
-	jsonerror_t *err = json_cmd_error(cmd->filename, cmd->lineno, 0, "");
-	err->ret = (json_t *)1;
-	return err;
+	jsoncmdout_t *result = json_cmd_error(cmd->filename, cmd->lineno, 0, "");
+	result->ret = &json_cmd_break;
+	return result;
 }
 
-static jsoncmd_t *var_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncmd_t *cmd = json_cmd(src, &jcn_continue);
+
+	/* No arguments or other components, but we still need to skip ";" */
+	json_cmd_parse_whitespace(src);
+	if (*src->str == ';')
+		src->str++;
+	return cmd;
+}
+
+static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	/* Return a 'break" pseudo-error */
+	jsoncmdout_t *result = json_cmd_error(cmd->filename, cmd->lineno, 0, "");
+	result->ret = &json_cmd_continue;
+	return result;
+}
+
+static jsoncmd_t *var_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	return gvc_parse(src, referr, json_cmd(src, &jcn_var));
 }
 
-static jsonerror_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	return gvc_run(cmd, refcontext);
 }
 
-static jsoncmd_t *const_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *const_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	return gvc_parse(src, referr, json_cmd(src, &jcn_const));
 }
 
-static jsonerror_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	return gvc_run(cmd, refcontext);
 }
 
-static jsoncmd_t *function_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	/* function name */
-	/* arguments */
-	/* body */
-	/* define it! */
+	char	*fname;
+	jsonsrc_t paren; /* used for scanning parameter source */
+	json_t	*params = NULL;
+	jsoncmd_t *body = NULL;
 
-	/* We're done.  Nothing more will be required at runtime */
-	return  NULL;
+	/* Function name */
+	fname = json_cmd_parse_key(src, 1);
+	if (!fname) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing function name");
+		goto Error;
+	}
+
+	/* Parameter list (the parenthesized text) */
+	paren.filename = src->filename;
+	paren.buf = paren.str = json_cmd_parse_paren(src);
+	if (!paren.buf) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing parameter list");
+		goto Error;
+	}
+	paren.size = strlen(paren.buf);
+
+	/* Parameters within the parenthesized text */
+	params = json_object();
+	json_cmd_parse_whitespace(&paren);
+	while (*paren.str) {
+		char	*pname;
+		json_t	*defvalue;
+
+		/* Parameter name */
+		pname = json_cmd_parse_key(&paren, 0);
+		if (!pname) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing parameter name");
+			goto Error;
+		}
+
+		/* If followed by = then use a default */
+		if (*paren.str == '=') {
+			jsoncalc_t *calc;
+			char	*end, *err;
+
+			/* Move past the '=' */
+			paren.str++;
+
+			/* Parse the expression */
+			err = NULL;
+			calc = json_calc_parse(paren.str, &end, &err);
+			if (err) {
+				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error - %s", err);
+				goto Error;
+			}
+			if (*end && *end != ',') {
+				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error near %.10s", end);
+				goto Error;
+			}
+			paren.str = end;
+
+			/* Evaluate the expression */
+			defvalue = json_calc(calc, NULL, NULL);
+			if (defvalue->type == JSON_NULL && *defvalue->text) {
+				*referr = json_cmd_error(src->filename, jcmdline(src), (int)(long)defvalue->first, "%s", defvalue->text);
+				goto Error;
+			}
+
+			/* Free the expression */
+			json_calc_free(calc);
+		} else {
+			/* Use null as the default value */
+			defvalue = json_null();
+		}
+
+		/* Add the parameter to the params object */
+		json_append(params, json_key(pname, defvalue));
+
+		/* Free the name */
+		free(pname);
+
+		/* If followed by comma, skip the comma */
+		if (*paren.str == ',') {
+			paren.str++;
+			json_cmd_parse_whitespace(&paren);
+		}
+	}
+	free(paren.buf);
+
+	/* body */
+	body = json_cmd_parse_curly(src, referr);
+
+	/* define it! */
+	if (!*referr) {
+		json_calc_function_user(fname, params, body);
+
+		/* We're done.  Nothing more will be required at runtime.
+		 * The fname, params, and body remain allocated since the
+		 * function needs them.
+		 */
+		return  NULL;
+	}
+
+Error:
+	if (fname)
+		free(fname);
+	if (params)
+		json_free(params);
+	if (body)
+		json_cmd_free(body);
+	return NULL;
 }
 
-static jsonerror_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Can't happen */
 	return NULL;
 }
 
-static jsoncmd_t *return_parse(jsonsrc_t *src, jsonerror_t **referr)
+static jsoncmd_t *return_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	return  NULL;
+	jsoncalc_t *calc;
+	char	*end, *err;
+	jsoncmd_t *cmd;
+	jsonsrc_t start;
+
+	/* Allocate a cmd */
+	start = *src;
+
+	/* The return value is optional */
+	json_cmd_parse_whitespace(src);
+	if (*src->str && *src->str != ';' && *src->str != '}') {
+		/* parse the expression */
+		err = NULL;
+		calc = json_calc_parse(src->str, &end, &err);
+		if (err) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error - %s", err);
+			if (calc)
+				json_calc_free(calc);
+			return NULL;
+		}
+		if (*end && (*end != ';' && *end != '}')) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error near %.10s", end);
+			if (calc)
+				json_calc_free(calc);
+			return NULL;
+		}
+		src->str = end;
+
+	} else {
+		/* With no expression, assume "null */
+		calc = json_calc_parse("null", NULL, NULL);
+	}
+
+	/* move past the ';', if there is one */
+	if (*src->str == ';')
+		src->str++;
+	json_cmd_parse_whitespace(src);
+
+	/* build the command, and return it */
+	cmd = json_cmd(&start, &jcn_return);
+	cmd->calc = calc;
+	return cmd;
 }
 
-static jsonerror_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
+	/* Return a 'return" pseudo-error */
+	jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, 0, "");
+	err->ret = json_calc(cmd->calc, *refcontext, NULL);
+	return err;
+}
+
+static jsoncmd_t *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncmd_t	*parsed;
+	char	*str, *end, *err = NULL;
+
+	/* Skip leading whitespace */
+	json_cmd_parse_whitespace(src);
+
+	/* Allocate the jsoncmd_t for it */
+	parsed = json_cmd(src, &jcn_switch);
+
+	/* Get the condition */
+	str = json_cmd_parse_paren(src);
+	if (!str) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing \"switch\" expression");
+		return parsed;
+	}
+
+	/* Parse the expression */
+	parsed->calc = json_calc_parse(str, &end, &err);
+	if (err || *end || !parsed->calc) {
+		free(str);
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"switch\" expression");
+		return parsed;
+	}
+	free(str);
+
+	/* Get the "body" statements */
+	parsed->sub = json_cmd_parse_curly(src, referr);
+	if (*referr)
+		return parsed;
+
+	/* Return it */
+	return parsed;
+}
+
+static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	jsoncontext_t *layer;
+	json_t	*switchcase;
+	jsoncmdout_t *result;
+
+	/* Evaluate the expression */
+	switchcase = json_calc(cmd->calc, *refcontext, NULL);
+
+	/* Add a context for store the "switchcase" variable */
+	layer = json_context(*refcontext, json_object(), 0);
+
+	/* Store the value in the variable */
+	json_append(layer->data, json_key("switchcase", switchcase));
+
+	/* Execute the body of the switch */
+	result = json_cmd_run(cmd->sub, &layer);
+
+	/* If exited with a "break", ignore it */
+	if (result && result->ret == &json_cmd_break) {
+		free(result);
+		result = NULL;
+	}
+
+	/* Clean up */
+	json_free(layer->data);
+	json_context_free(layer, 0);
+
+	return result;
+}
+
+static jsoncmd_t *case_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncmd_t	*parsed;
+	char	*str, *end, *err = NULL;
+	int	len, quote, nest, escape;
+
+	/* Skip leading whitespace */
+	json_cmd_parse_whitespace(src);
+
+	/* Allocate the jsoncmd_t for it */
+	parsed = json_cmd(src, &jcn_case);
+
+	/* Extract the case.  This is trickier than it sounds -- we can't just
+	 * parse it because it should end with a ":", and ":" is a valid
+	 * operator.
+	 */
+	 nest = quote = escape = 0;
+	 for (len = 0;
+	      src->str[len] >= ' ' && (nest || quote || src->str[len] != ':');
+	      len++) {
+		if (escape)
+			escape = 0;
+		else if (quote && src->str[len] == quote)
+			quote = 0;
+		else if (!quote && (src->str[len] == '"' || src->str[len] == '\''))
+			quote = src->str[len];
+		else if (quote && src->str[len] == '\\')
+			escape = 1;
+		else if (!quote && src->str[len] == '(')
+			nest++;
+		else if (!quote && src->str[len] == ')')
+			nest--;
+	}
+	if (len == 0 || src->str[len] != ':') {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing or malformed \"case\" expression");
+		return parsed;
+	}
+	str = (char *)malloc(len + 1);
+	strncpy(str, src->str, len);
+	str[len] = '\0';
+
+	/* Parse the case.  */
+	parsed->calc = json_calc_parse(str, &end, &err);
+	if (err || *end || !parsed->calc) {
+		free(str);
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"case\" expression");
+		return parsed;
+	}
+	free(str);
+
+	/* Move past the ":" */
+	src->str += len + 1;
+
+	/* Return it */
+	return parsed;
+}
+
+static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	json_t	*switchcase;
+	int	match;
+
+	/* Fetch the "switchcase" value.  Note that we only look in the top
+	 * context layer so that if switch statements are nested, we don't see
+	 * the outer one.  Use json_by_key() instead of json_context_by_key().
+	 */
+	switchcase = json_by_key((*refcontext)->data, "switchcase");
+	if (!switchcase)
+		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Can't use \"case\" outside of \"switch\"");
+
+	/* If "null" then continue with next command */
+	if (json_is_null(switchcase))
+		return NULL;
+
+	/* Compare the case value to switchcase.
+	 * 
+	 * One optimization: If the value is a literal then we don't bother
+	 * calling json_calc(), mostly so we can avoid allocating and freeing
+	 * the value.
+	 */
+	if (cmd->calc->op == JSONOP_LITERAL) {
+		match = json_equal(cmd->calc->u.literal, switchcase);
+	} else {
+		json_t *thiscase = json_calc(cmd->calc, *refcontext, NULL);
+		match = json_equal(thiscase, switchcase);
+		json_free(thiscase);
+	}
+
+	/* Anything else should match exactly.  If this does, then
+	 * set switchcase to null and return NULL so we continue to the
+	 * next statement.  If it does NOT match then we leave switchcase
+	 * unchanged, and continue to the next "case" or "default" statement.
+	 */
+	if (match) {
+		/* Match!  Change "switchcase" to null, and continue on to
+		 * the next statement.
+		 */
+		json_append((*refcontext)->data, json_key("switchcase", json_null()));
+		return NULL;
+	} else {
+		/* No match!  Leave "switchcase" unchanged, and skip to the
+		 * next "case" or "default" statement.
+		 */
+		jsoncmdout_t *result = json_cmd_error(cmd->filename, cmd->lineno, 0, "");
+		result->ret = &json_cmd_case_mismatch;
+		return result;
+	}
+}
+
+static jsoncmd_t *default_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncmd_t	*parsed;
+
+	/* Skip leading whitespace */
+	json_cmd_parse_whitespace(src);
+
+	/* Allocate the jsoncmd_t for it */
+	parsed = json_cmd(src, &jcn_default);
+
+	/* Ends with a colon */
+	if (*src->str != ':') {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error in \"default\"");
+		return parsed;
+	}
+	src->str++;
+
+	/* Return it */
+	return parsed;
+}
+
+static jsoncmdout_t *default_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	/* The "default" command always continues to the next command */
 	return NULL;
 }
 
 /* Handle an assignment or output expression */
-static jsonerror_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Calculate the result of the expression.   If it's an assignment,
 	 * then this will do the assignment too.
 	 */
 	json_t *result = json_calc(cmd->calc, *refcontext, NULL);
 
-	/* If we got an error ("null" with text), then convert to jsonerror_t */
+	/* If we got an error ("null" with text), then convert to jsoncmdout_t */
 	if (result && result->type == JSON_NULL && *result->text) {
-		jsonerror_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
+		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
 		json_free(result);
 		return err;
 	}

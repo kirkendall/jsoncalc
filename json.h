@@ -91,12 +91,10 @@ typedef struct {
  * them.
  */
 typedef struct {
-        int token;      /* Output JSON tokens as they are read */
-        int file;       /* Output information about files being scanned */
-        int buffer;     /* Output information about the input buffer */
         int abort;      /* Controls whether some errors cause an abort */
         int expr;       /* Output information about simple expressions */
         int calc;       /* Output information about complex expressions */
+        int trace;      /* Trace commands as they're run */
 } json_debug_t;
 
 extern json_debug_t json_debug_flags;

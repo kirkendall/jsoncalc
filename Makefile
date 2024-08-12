@@ -1,5 +1,5 @@
 DATA=sampledata
-HDRS=calc.h json.h
+HDRS=calc.h json.h error.h
 SRC=jsoncalc.c
 OBJ=jsoncalc.o
 TESTSRC=testcalc.c

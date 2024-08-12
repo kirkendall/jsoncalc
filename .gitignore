@@ -4,8 +4,8 @@ testcalc
 core
 tags
 .jsoncalc_history
-try
 NOTES
+Bug
 www/notes
 www/table.elv
 www/f/INTRO.html
@@ -14,6 +14,22 @@ www/f/sidebar.html
 www/op/sidebar.html
 www/op/oplist.js
 www/old
+
+# Big ugly test data
+sampledata/appts.json
+sampledata/find.json
+sampledata/foo.jc
+sampledata/foo.json
+sampledata/github.json
+sampledata/owner.json
+sampledata/pet.json
+sampledata/sales.json
+sampledata/stores.json
+sampledata/test3.in
+
+# Test scripts and programs
+*.j*
+try*
 
 # Prerequisites
 *.d

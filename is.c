@@ -22,7 +22,13 @@ int json_is_true(json_t *json)
           case JSON_STRING:
                 return json->text[0] != '\0';
           case JSON_NUMBER:
-                return json->text[0] != '0' || json->text[1] != '\0';
+                if (json->text[0] == '0')
+			return 0; /* 0 in string form */
+		if (json->text[0] != '\0')
+			return 1; /* non-0 in string form */
+                if (json->text[1] == 'i')
+			return JSON_INT(json) != 0; /* binary integer */
+                return JSON_DOUBLE(json) != 0.0; /* binary double */
           case JSON_ARRAY:
           case JSON_OBJECT:
                 return json->first != NULL;

@@ -148,17 +148,18 @@ static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   jfn_objectAg
 static jsonfunc_t *funclist      = &objectAgg_jf;
 
 
-/* Register a function that can be called via json_calc().  The function
+/* Register a C function that can be called via json_calc().  The function
  * should look like...
  *
  *    json_t *myFunction(json_t *args, void *agdata).
  *
- * ... where "args" is a JSON_ARRAY of the actual parameter values; if invoked as
- * a member function then "this" is the first parameter.  Your function should
- * return newly allocated json_t data, or NULL to represent the JSON "null" symbol.
- * In particular, it should *NOT* attempt to reuse the argument data in the response.
- * The json_copy() function is your friend!  Upon return, json_calc() will free the
- * parameters immediately and the returned value eventually.
+ * ... where "args" is a JSON_ARRAY of the actual parameter values; if invoked
+ * as a member function then "this" is the first parameter.  Your function
+ * should return newly allocated json_t data, or NULL to represent the JSON
+ * "null" symbol.  In particular, it should *NOT* attempt to reuse the
+ * argument data in the response.  The json_copy() function is your friend!
+ * Upon return, json_calc() will free the parameters immediately and the
+ * returned value eventually.
  *
  * The agfn and agsize parameters are only for aggregate functions.  They
  * should be NULL and 0 for non-aggregate functions.  For aggregate functions,
@@ -237,7 +238,7 @@ static void free_user_functions()
  */
 int json_calc_function_user(char *name, json_t *params, jsoncmd_t *body)
 {
-	jsonfunc_t *f;
+	jsonfunc_t *fn;
 	static int first = 1;
 
 	/* If first, then arrange for all user-defined functions to be freed
@@ -249,27 +250,27 @@ int json_calc_function_user(char *name, json_t *params, jsoncmd_t *body)
 	}
 
 	/* Look for an existing function to redefine */
-	f = json_calc_function_by_name(name);
-	if (!f) {
+	fn = json_calc_function_by_name(name);
+	if (!fn) {
 		/* Allocate a new jsonfunc_t and link it into the table */
-		f = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
-		memset(f, 0, sizeof(jsonfunc_t));
-		f->next = funclist;
-		funclist = f;
-	} else if (f->user) {
+		fn = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
+		memset(fn, 0, sizeof(jsonfunc_t));
+		fn->next = funclist;
+		funclist = fn;
+	} else if (fn->user) {
 		/* Redefining, so discard the old details */
-		free(f->name);
-		json_free(f->userparams);
-		json_cmd_free(f->user);
+		free(fn->name);
+		json_free(fn->userparams);
+		json_cmd_free(fn->user);
 	} else {
 		/* Can't redefine built-ins */
 		return 1;
 	}
 
 	/* Store the new info in the jsonfunc_t */
-	f->name = name;
-	f->userparams = params;
-	f->user = body;
+	fn->name = name;
+	fn->userparams = params;
+	fn->user = body;
 
 	/* Success! */
 	return 0;
@@ -300,30 +301,6 @@ jsonfunc_t *json_calc_function_by_name(char *name)
 
 	return NULL;
 }
-
-/* Called during termination to free user-defined functions -- mostly
- * so their resources won't be listed as memory leaks.
- */
-void json_calc_func_term()
-{
-	jsonfunc_t *doomed;
-
-	/* Loop over the user-defined functions.  They're all "before" the
-	 * built-ins.
-	 */
-	while (funclist->user) {
-		/* Remove this function from the list of functions */
-		doomed = funclist;
-		funclist = funclist->next;
-
-		/* Free its resources */
-		free(doomed->name);
-		json_cmd_free(doomed->user);
-		json_free(doomed->userparams);
-		free(doomed);
-	}
-}
-
 
 /***************************************************************************
  * Everything below this is C functions that implement JsonCalc functions. *

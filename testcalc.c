@@ -49,11 +49,11 @@ char *test(char *str, json_t *names)
 	compiled = json_debug_count;
 
         /* Evaluate it */
-        context = json_context(NULL, names, 0);
+        context = json_context(NULL, names, JSON_CONTEXT_NOFREE);
         result = json_calc(calc, context, NULL);
         resultstr = json_serialize(result, NULL);
         json_free(result);
-        json_context_free(context, 0);
+        json_context_free(context);
 
         /* Memory leak in json_calc? */
         calcleaks = json_debug_count - compiled;

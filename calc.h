@@ -124,23 +124,21 @@ typedef struct jsonfunc_s {
 
 /* This enum represents details about how a single context layer is used */
 typedef enum {
-	JSON_CONTEXT_VAR = 1,	/* variable -- use with GLOBAL for non-local */
-        JSON_CONTEXT_CONST = 2,	/* const -- like variable but can't assign */
-        JSON_CONTEXT_GLOBAL = 4,/* Context can't be changed by script */
-	JSON_CONTEXT_THIS = 8,  /* Context can be "this" or "that" */
-        JSON_CONTEXT_ARGS = 16, /* function arguments, and can be "arguments" */
-        JSON_CONTEXT_AUTOLOAD_FIRST = 32 /* try autoload() before *data */
+	JSON_CONTEXT_NOFREE = 1,/* Don't free the data when context is freed */
+	JSON_CONTEXT_VAR = 2,	/* variable -- use with GLOBAL for non-local */
+        JSON_CONTEXT_CONST = 4,	/* const -- like variable but can't assign */
+        JSON_CONTEXT_GLOBAL = 8,/* Context is accessible everywhere */
+	JSON_CONTEXT_THIS = 16, /* Context can be "this" or "that" */
+        JSON_CONTEXT_ARGS = 32, /* Function arguments and local vars/consts */
+        JSON_CONTEXT_NOCACHE = 64, /* try autoload() before *data */
+        JSON_CONTEXT_UPDATE = 128 /* Data has been modified (set via context->modified() function */
 } jsoncontextflags_t;
-#define JSON_CONTEXT_LOCAL_VAR		(JSON_CONTEXT_VAR)
-#define JSON_CONTEXT_LOCAL_CONST	(JSON_CONTEXT_CONST)
-#define JSON_CONTEXT_GLOBAL_VAR		(JSON_CONTEXT_VAR|JSON_CONTEXT_GLOBAL)
-#define JSON_CONTEXT_GLOBAL_CONST	(JSON_CONTEXT_CONST|JSON_CONTEXT_GLOBAL)
 
 /* This is used to track context (the stack of variable definitions).  */
 typedef struct jsoncontext_s {
     struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
     json_t *data;     /* a used item */
-    json_t *(*autoload)(char *key); /* called from json_used_by_key() */
+    json_t *(*autoload)(char *key); /* called from json_context_by_key() */
     void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
     jsoncontextflags_t flags;
 } jsoncontext_t;
@@ -247,9 +245,12 @@ void json_calc_free(jsoncalc_t *calc);
 void *json_calc_ag(jsoncalc_t *calc, void *agdata);
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata);
 
-jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata);
+void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context));
+jsoncontext_t *json_context_free(jsoncontext_t *context);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);
 jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags);
+jsoncontext_t *json_context_std(json_t *data);
+jsoncontext_t *json_context_args(jsoncontext_t *context, jsonfunc_t *fn, json_t *args);
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
 json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);

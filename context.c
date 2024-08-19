@@ -1,21 +1,47 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 #include "json.h"
 #include "calc.h"
 #include "error.h"
 
 /* This file defines the context functions.  Contexts are used in json_calc()
- * to provide access to outside data, as though they were variables.  The
+ * to provide access to outside data, in the manner of variables.  The
  * functions here let you manage a stack of contexts, and search for named
  * values defined within the context, and assign new values to variables.
  */
 
-/* Free a context.  Returns the next older context, or NULL if none.
- * Optionally frees the data associated with the context ("this").
+/* This datatype is used to maintain a list functions to call when creating
+ * a new context.  The list is built by jsonc_context_hook, and used by
+ * json_context_std().
  */
-jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata)
+typedef struct contexthook_s {
+	struct contexthook_s *next;
+	jsoncontext_t *(*addcontext)(jsoncontext_t *context);
+} contexthook_t;
+
+static contexthook_t *extralayers = NULL;
+
+/* Add a function which may add 0 ot more layers to the standard context.
+ * This is mostly intended to allow plugs to define symbols that should
+ * be globally accessible to jsoncalc.  The jsoncalc program itself may
+ * use it for adding the autoload directory.
+ */
+void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
+{
+	contexthook_t *hook = (contexthook_t *)malloc(sizeof(contexthook_t));
+	hook->addcontext = addcontext;
+	hook->next = extralayers;
+	extralayers = hook;
+}
+
+
+/* Free a context.  Also frees the data associated with it, unless
+ * context->flags has the JSON_CONTEXT_NOFREE bit set.
+ */
+jsoncontext_t *json_context_free(jsoncontext_t *context)
 {
         jsoncontext_t *older;
 
@@ -24,10 +50,10 @@ jsoncontext_t *json_context_free(jsoncontext_t *context, int freedata)
                 return NULL;
 
         /* If supposed to free data, do that */
-        if (freedata)
+        if ((context->flags & JSON_CONTEXT_NOFREE) == 0)
 		json_free(context->data);
 
-        /* Free it */
+        /* Free the context */
         older = context->older;
         free(context);
 
@@ -59,13 +85,6 @@ jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, jsoncontextflags
  * position.  Returns the new context, and may also adjusst the top of the
  * context stack -- notice that we pass a reference to the stack pointer
  * instead of the pointer itself like we do for most context functions.
- *
- * "flags" can be one of the following:
- *   JSON_CONTEXT_GLOBAL_VAR	The layer for global variables
- *   JSON_CONTEXT_GLOBAL_CONST	The layer for global constants
- *   JSON_CONTEXT_ARGS		A new layer for function arguments
- *   JSON_CONTEXT_LOCAL_VAR	A layer for variables within a function
- *   JSON_CONTEXT_LOCAL_CONST	A layer for constants within a function
  */
 jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags)
 {
@@ -115,29 +134,281 @@ jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_
 	return scan;
 }
 
+/* This is an autoload handler for supplying the current date/time.  If the
+ * time hasn't changed since the last call, it simply returns NULL so the
+ * cached value can be reused.
+ */
+static json_t *stdcurrent(char *key)
+{
+	static time_t lastnow;
+	static struct tm localtm, utctm;
+	time_t now;
+	char buf[30];
+
+	/* For "now", return the current time as a number */
+	if (!strcasecmp(key, "now")) {
+		time(&now);
+		return json_from_int((int)now);
+	}
+
+	/* Are we looking for a formatted time value? */
+	if (!strcasecmp(key, "current_date")
+	 || !strcasecmp(key, "current_time")
+	 || !strcasecmp(key, "current_datetime")
+	 || !strcasecmp(key, "current_timestamp")
+	 || !strcasecmp(key, "current_tz")) {
+		/* If the time has changed since the last call, then refresh
+		 * the "struct tm" buffers.  Two things to note here: First,
+		 * The "lastnow" variable is initialized to 0, and the current
+		 * time certainly is not 0, so the first call will definitely
+		 * fetch new time values.  Second, if multiple stacks use this
+		 * function simultaneously then they'll be doing it for the
+		 * same "now" value so there is no race condition.  Threadsafe!
+		 */
+		time(&now);
+		if (now != lastnow) {
+			(void)gmtime_r(&now, &utctm);
+			(void)localtime_r(&now, &localtm);
+			lastnow = now;
+		}
+
+		/* Format it as appropriate */
+		if (!strcasecmp(key, "current_date")) {
+			sprintf(buf, "%04d-%02d-%02d",
+				localtm.tm_year + 1900,
+				localtm.tm_mon + 1,
+				localtm.tm_mday);
+		} else if (!strcasecmp(key, "current_time")) {
+			sprintf(buf, "%02d:%02d:%02d",
+				localtm.tm_hour,
+				localtm.tm_min,
+				localtm.tm_sec);
+		} else if (!strcasecmp(key, "current_datetime")) {
+			sprintf(buf, "%04d-%02d-%02dT%02d:%02d:%02d",
+				localtm.tm_year + 1900,
+				localtm.tm_mon + 1,
+				localtm.tm_mday,
+				localtm.tm_hour,
+				localtm.tm_min,
+				localtm.tm_sec);
+		} else if (!strcasecmp(key, "current_timestamp")) {
+			sprintf(buf, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+				utctm.tm_year + 1900,
+				utctm.tm_mon + 1,
+				utctm.tm_mday,
+				utctm.tm_hour,
+				utctm.tm_min,
+				utctm.tm_sec);
+		} else /* current_timezone */ {
+			int hours, minutes;
+
+			/* Find the difference in hours and minutes between
+			 * UTC and local time.  Start by assuming date is the
+			 * same.
+			 */
+			hours = utctm.tm_hour - localtm.tm_hour;
+			minutes = utctm.tm_min - localtm.tm_min;
+
+			/* If date is actually different, adjust hours */
+			if (utctm.tm_mday < localtm.tm_mday)
+				hours -= 24;
+			else if (utctm.tm_mday > localtm.tm_mday)
+				hours += 24;
+
+			/* We want minutes to be the same sign as hours.
+			 * If different, adjust hours and minutes.
+			 */
+			if (hours * minutes < 0) { /* opposite signs */
+				if (minutes < 0) {
+					minutes += 60;
+					hours--;
+				} else {
+					minutes -= 60;
+					hours++;
+				}
+			}
+
+			/* Format it */
+			if (hours < 0)
+				sprintf(buf, "-%02d:%02d", -hours, -minutes);
+			else
+				sprintf(buf, "+%02d:%02d", hours, minutes);
+		}
+
+		/* Return it as a string */
+		return json_string(buf, -1);
+	}
+
+	/* No other special names */
+	return NULL;
+}
+
+/* This creates the first several layers of a typical context stack.  "base"
+ * should be an object containing immutable data for the first layer (to which
+ * this function will add its own members), or NULL if you don't want to add
+ * your own immutable data.
+ *
+ * The context stack will contain direct references to "base" (not copies).
+ * "base" will be freed when the context is freed.
+ */
+jsoncontext_t *json_context_std(json_t *base)
+{
+	json_t	*global, *vars, *consts, *current_data;
+	jsoncontext_t *context;
+	contexthook_t *hook;
+
+	/* If there is no "base", then start with an empty object. */
+	if (!base)
+		base = json_object();
+
+	/* Add a "global" symbol, and object with "vars" and "consts" members */
+	global = json_object();
+	vars = json_object();
+	consts = json_object();
+	json_append(global, json_key("vars", vars));
+	json_append(global, json_key("consts", consts));
+	json_append(base, json_key("global", global));
+
+	/* Add a "current_data" symbol, initially set to null */
+	current_data = json_null();
+	json_append(base, json_key("current_data", current_data));
+
+	/* Create the base layer of the context */
+	context = json_context(NULL, base, JSON_CONTEXT_GLOBAL);
+
+	/* Make it autoload the time variables.  These should not be cached.
+	 * Also add dummy versions of all time variables, mostly for the
+	 * benefit of the name completion.
+	 */
+	context->autoload = stdcurrent;
+	context->flags |= JSON_CONTEXT_NOCACHE;
+	json_append(base, json_key("current_date", json_null()));
+	json_append(base, json_key("current_time", json_null()));
+	json_append(base, json_key("current_datetime", json_null()));
+	json_append(base, json_key("current_timestamp", json_null()));
+	json_append(base, json_key("current_tz", json_null()));
+
+	/* Allow plugins or applications to add their own layers */
+	for (hook = extralayers; hook; hook = hook->next)
+		context = (*hook->addcontext)(context);
+
+	/* Create a layer to serve as "this", containing the contents of
+	 * the "current_data" symbol
+	 */
+	context = json_context(context, current_data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
+
+	/* Create a layer above that for the contents of "global", namely the
+	 * "vars" and "consts" symbols.  Since these will be freed when the
+	 * lower level is freed, we don't want to free them when this layer
+	 * is freed.
+	 */
+	context = json_context(context, global, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_NOFREE);
+
+	/* Create two more layers, exposing the contents of "vars" and "consts".
+	 * Again, we don't free it when this context is freed because they're
+	 * defined in a lower layer.
+	 */
+	context = json_context(context, consts, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
+	context = json_context(context, vars, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_VAR | JSON_CONTEXT_NOFREE);
+
+	/* DONE! Return the context stack. */
+	return context;
+}
+
+
+/* This adds context layers for a user function call.  "fn" identifies the
+ * function being called, mostly so we can see what arguments it uses.
+ * "args" is an array containing the argument values.
+ *
+ * The context will contain COPIES of the argument values.  Those copies will
+ * be automatically freed when the context layer is freed.
+ */
+jsoncontext_t *json_context_args(jsoncontext_t *context, jsonfunc_t *fn, json_t *args)
+{
+	json_t	*cargs, *name, *value;
+	json_t	*vars, *consts;
+
+	/* Build an object containing the actual arguments */
+	cargs = json_copy(fn->userparams);
+	for (name = fn->userparams->first, value = args->first;
+	     name && value;
+	     name = name->next, value = value->next) {
+		json_append(cargs, json_key(name->text, json_copy(value)));
+	}
+
+	/* Also "vars" and "consts" to the arguments object */
+	vars = json_object();
+	json_append(cargs, json_key("vars", vars));
+	consts = json_object();
+	json_append(cargs, json_key("consts", consts));
+
+	/* Add an "args" context layer containing those arguments */
+	context = json_context(context, cargs, JSON_CONTEXT_ARGS);
+
+	/* Add a "this" context containing the value of the first arg */
+	if (args->first)
+		context = json_context(context, json_copy(args->first), JSON_CONTEXT_THIS);
+
+	/* Add other layers exposing the contents of "vars" and "consts".
+	 * Since that data will be freed when the "args" layer is freed,
+	 * we don't want to free them when these layers are freed.
+	 */
+	context = json_context(context, consts, JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
+	context = json_context(context, vars, JSON_CONTEXT_VAR | JSON_CONTEXT_NOFREE);
+
+	/* Return the modified context */
+	return context;
+}
+
+
+/******************************************************************************/
+
+
 /* Scan items in a context list for given name, and return its value.  If not
  * found, return NULL.  As special cases, the name "this" returns the most
- * recently added item and "that" returns the second-most-recent.
+ * recently added item with JSON_CONTEXT_THIS set, and "that" returns the
+ * second-most-recent.
  *
  * Some context layers can have autoloaders.  If the name isn't found in the
  * layer already, then the autoloader is given a shot... except that if
- * reflayer is not null (used for assignments) then it isn't.
+ * reflayer is not null (used for assignments) then we skip that because
+ * autoloaded items can't be modified.
  *
  * context is the top of the context stack to search.
  * key is the member name to search for.
  * reflayer, if not NULL, will be be set to the context layer containing key.
+ * Also, a non-NULL reflayer implies that we're trying to assign, so only
+ * contexts marked with JSON_CONTEXT_VAR or JSON_CONTEXT_CONST will be checked.
  */
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer)
 {
         json_t  *val;
 	int	firstthis;
+	int	otherlocal;
 
         firstthis = 1;
+        otherlocal = 0;
         while (context) {
+		/* Skip if local to some other function */
+		if ((context->flags & JSON_CONTEXT_GLOBAL) != 0)
+			otherlocal = 0;
+		if (otherlocal) {
+			context = context->older;
+			continue;
+		}
+
+		/* If we're looking to assign, skip context that isn't a
+		 * "var" or "const" layer.
+		 */
+		if (reflayer && (context->flags & (JSON_CONTEXT_VAR|JSON_CONTEXT_CONST)) == 0) {
+			context = context->older;
+			continue;
+		}
+
                 /* "this" returns the most recently added item in its entirety*/
                 if (context->flags & JSON_CONTEXT_THIS) {
-			if (!strcmp(key, "this")
-			 || (!strcmp(key, "that") && !firstthis)) {
+			if (!strcasecmp(key, "this")
+			 || (!strcasecmp(key, "that") && !firstthis)) {
 				if (reflayer)
 					*reflayer = context;
 				return context->data;
@@ -145,7 +416,24 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
 			firstthis = 0;
 		}
 
-                /* If "this" is an object, check for a member */
+                /* If there's an "autoload" handler and this layer doesn't
+                 * cache results of autoloading, then give it a shot
+                 */
+                if (context->autoload && !reflayer && (context->flags & JSON_CONTEXT_NOCACHE) != 0) {
+                        val = (*context->autoload)(key);
+                        if (val) {
+				/* Add it to the autoload object.  Since this
+				 * layer doesn't cache results, the only reason
+				 * for doing this is so the value can be freed
+				 * later, when the context is freed.  That's
+				 * a very good reason though!
+				 */
+                                json_append(context->data, json_key(key, val));
+                                return val;
+                        }
+                }
+
+                /* If context data is an object, check for a member */
                 if (context->data->type == JSON_OBJECT) {
                         val = json_by_key(context->data, key);
                         if (val) {
@@ -156,17 +444,18 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
                 }
 
                 /* If there's an "autoload" handler, give it a shot */
-                if (context->autoload && !reflayer) {
+                if (context->autoload && !reflayer && (context->flags & JSON_CONTEXT_NOCACHE) == 0) {
                         val = (*context->autoload)(key);
                         if (val) {
-				/* Add it to the autonames object */
-                                if (context->data->type == JSON_OBJECT)
-                                        json_append(context->data, json_key(key, val));
+				/* Add it to the autoload object */
+                                json_append(context->data, json_key(key, val));
                                 return val;
                         }
                 }
 
                 /* Not found here.  Try older contexts */
+                if (context->flags & JSON_CONTEXT_ARGS)
+			otherlocal = 1;
                 context = context->older;
         }
 
@@ -502,13 +791,31 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
  */
 int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, jsoncontextflags_t flags)
 {
-	jsoncontext_t	*layer;
+	jsoncontext_t	*layer, *scan;
 
-	/* Find/add the context layer */
-	layer = json_context_insert(refcontext, flags);
+	/* Find the context layer.  Also scan for duplicate name. */
+	for (layer = NULL, scan = *refcontext; scan; scan = scan->older) {
 
-	if (json_by_key(layer->data, key))
-		return 0;
+		/* If this layer holds args/consts/vars, and one of them is
+		 * the name we're trying to declare, then return 0.  This
+		 * intentionally does NOT protect against the case where
+		 * "this" contains a member with the name that you want to
+		 * declare.
+		 */
+		if ((scan->flags & (JSON_CONTEXT_VAR | JSON_CONTEXT_CONST | JSON_CONTEXT_ARGS)) != 0
+		 && json_by_key(scan->data, key))
+			return 0;
+
+		/* Stop after the args layer */
+		if (scan->flags & JSON_CONTEXT_ARGS)
+			break;
+
+		/* If this is the layer we want to add a var/const to, then
+		 * remember it.
+		 */
+		if (!layer && (scan->flags & flags) == flags)
+			layer = scan;
+	}
 
 	/* Add it */
 	json_append(layer->data, json_key(key, value ? value : json_null()));

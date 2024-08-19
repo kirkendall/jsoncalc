@@ -173,7 +173,16 @@ json_t *autoload(char *key)
 }
 
 
-
+/* This is a context hook.  It adds a layer a the standard context for
+ * autoloading files from the -Ddirectory.
+ */
+static jsoncontext_t *autodir(jsoncontext_t *context)
+{
+	/* Add the autoloader */
+	context = json_context(context, json_object(), JSON_CONTEXT_GLOBAL);
+	context->autoload = autoload;
+	return context;
+}
 
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */
@@ -593,7 +602,7 @@ int main(int argc, char **argv)
 {
 	int i, len;
 	jsoncmd_t *jc;
-	json_t *jcthis, *files, *autonames;
+	json_t *jcthis, *files;
 	char *val, *expr;
 	int	saveconfig = 0;
 	char	*errmsg;
@@ -704,9 +713,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/* Register the -Ddirectory autoload */
+	if (autoload_dir)
+		json_context_hook(autodir);
+
 	/* Build an object from any parameters after the first */
 	jcthis = json_object();
-	context = NULL;
+	context = json_context_std(jcthis);
 	files = NULL;
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
@@ -740,17 +753,12 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Add the autoloader */
-	autonames = json_object();
-	context = json_context(context, autonames, 0);
-	context->autoload = autoload;
-
 	/* Add the context from command-line args, if any */
 	if (jcthis->first) {
 		char *str = json_serialize(jcthis, 0);
 		printf("\"this\": %s\n", str);
 		free(str);
-		context = json_context(context, jcthis, JSON_CONTEXT_THIS);
+		context = json_context(context, jcthis, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	}
 
 	if (expr) {
@@ -837,9 +845,7 @@ int main(int argc, char **argv)
 
 	/* Clean up & exit */
 	while (context)
-		context = json_context_free(context, 0);
-	json_free(jcthis);
-	json_free(autonames);
+		context = json_context_free(context);
 	history_truncate_file(HISTORY_FILE, 100);
 	return 0;
 }

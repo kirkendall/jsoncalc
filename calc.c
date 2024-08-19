@@ -229,9 +229,9 @@ void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, js
 	/* Create a context with this row's data in it, and evaluate all
 	 * aggretators with that.
 	 */
-	local = json_context(context, row, JSON_CONTEXT_THIS);
+	local = json_context(context, row, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	jcag(calc->u.ag, local, agdata);
-	json_context_free(local, 0);
+	json_context_free(local);
 }
 
 /* These two macros fetch the left and right operands.  They always set the
@@ -322,20 +322,20 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				/* Loop over the array elements */
 				for (gscan = scan->first; gscan; gscan = gscan->next) {
 					/* Invoke the aggregators on "this" */
-					local = json_context(context, gscan, JSON_CONTEXT_THIS);
+					local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
 					if (nongroup)
 						jcag(calc->u.ag, local, ag);
-					json_context_free(local, 0);
+					json_context_free(local);
 				}
 
 				/* Prepare for next group */
 				g++;
 			} else {
 				/* Invoke the aggregators on "this" */
-				local = json_context(context, scan, JSON_CONTEXT_THIS);
+				local = json_context(context, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 				jcag(calc->u.ag, local, ag);
-				json_context_free(local, 0);
+				json_context_free(local);
 			}
 		}
 	}
@@ -354,9 +354,9 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			 */
 			for (gscan = scan->first; gscan; gscan = (op == JSONOP_EACH ? gscan->next : NULL)) {
 				/* Evaluate with element as "this" */
-				local = json_context(context, gscan, JSON_CONTEXT_THIS);
+				local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 				tmp = json_calc(calc, local, ag ? groupag[g] : NULL);
-				json_context_free(local, 0);
+				json_context_free(local);
 
 				/* If null/false, skip it, if true add element*/
 				if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
@@ -373,9 +373,9 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			/* Prepare for the next group */
 			g++;
 		} else {
-			local = json_context(context, scan, JSON_CONTEXT_THIS);
+			local = json_context(context, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 			tmp = json_calc(calc, local, ag);
-			json_context_free(local, 0);
+			json_context_free(local);
 			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
 				/* Skip for null or false, add for true */
 				if (json_is_true(tmp))
@@ -765,11 +765,33 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
 		if (left->type == JSON_STRING || right->type == JSON_STRING) {
-			/* String version */
-			result = json_string(left->text, strlen(left->text) + strlen(right->text));
-			strcat(result->text, right->text);
+			/* String version.  If one of the operands is a
+			 * non-string, then convert it to a string.
+			 * One minor optimization is that if a number is in
+			 * text form, or a boolean, then we can treat it as
+			 * a string already.
+			 */
+			if ((left->type == JSON_STRING || left->type == JSON_BOOL || (left->type == JSON_NUMBER && *left->text))
+			 && (right->type == JSON_STRING || right->type == JSON_BOOL || (right->type == JSON_NUMBER && *right->text))) {
+				/* Both are strings, or at least stringy */
+				result = json_string(left->text, strlen(left->text) + strlen(right->text));
+				strcat(result->text, right->text);
+			} else if (left->type != JSON_STRING) {
+				/* Left operand needs to be converted */
+				str = json_serialize(left, NULL);
+				result = json_string(str, strlen(str) + strlen(right->text));
+				strcat(result->text, right->text);
+				free(str);
+			} else { /* Right is not stringy */
+				/* Right operand needs to be converted */
+				str = json_serialize(right, NULL);
+				result = json_string(left->text, strlen(left->text) + strlen(str));
+				strcat(result->text, str);
+				free(str);
+			}
 		}
 		else if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			/* Number version */
 			result = json_from_double(json_double(left) + json_double(right));
 		}
 		break;

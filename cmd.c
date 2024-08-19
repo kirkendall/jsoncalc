@@ -319,6 +319,13 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	json_cmd_parse_whitespace(src);
 	where = src->str;
 
+	/* If it's an empty command, then return NULL */
+	if (*src->str == ';') {
+		src->str++;
+		return NULL;
+	} else if (*src->str == '}')
+		return NULL;
+
 	/* All statements begin with a command name, except for assignments
 	 * and output expressions.  Start by comparing the start of this
 	 * command to all known command names.
@@ -579,19 +586,12 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 {
 	jsoncmdout_t *result;
-	json_t	*out, *name, *value;
+	json_t	*out;
 
 	assert(fn->user);
 
-	/* Create a context for the arguments */
-	context = json_context(context, json_copy(fn->userparams), JSON_CONTEXT_ARGS);
-
-	/* Copy the actual args into it, by name */
-	for (name = fn->userparams->first, value = args->first;
-	     name && value;
-	     name = name->next, value = value->next) {
-		json_append(context->data, json_key(name->text, json_copy(value)));
-	}
+	/* Add the call frame to the context stack */
+	context = json_context_args(context, fn, args);
 
 	/* Run the body of the function */
 	result = json_cmd_run(fn->user, &context);
@@ -614,8 +614,8 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 
 	/* Clean up the context, possibly including local vars and consts */
 	while ((context->flags & JSON_CONTEXT_ARGS) == 0)
-		context = json_context_free(context, 1);
-	context = json_context_free(context, 1);
+		context = json_context_free(context);
+	context = json_context_free(context);
 
 	/* Return the result */
 	return out;
@@ -868,14 +868,13 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		}
 
 		/* Clean up */
-		json_free(layer->data);
-		json_context_free(layer, 0);
+		json_context_free(layer);
 
 	} else { /* anonymous loop */
 		/* Loop over the elements */
 		for (scan = array->first; scan; scan = scan->next) {
 			/* Add a "this" layer */
-			layer = json_context(*refcontext, scan, JSON_CONTEXT_THIS);
+			layer = json_context(*refcontext, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 
 			/* Run the body of the loop */
 			result = json_cmd_run(cmd->sub, &layer);
@@ -891,7 +890,7 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 				break;
 
 			/* Remove the "this" layer */
-			json_context_free(layer, 0);
+			json_context_free(layer);
 		}
 	}
 
@@ -1036,7 +1035,9 @@ static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *var_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	return gvc_parse(src, referr, json_cmd(src, &jcn_var));
+	jsoncmd_t *cmd = json_cmd(src, &jcn_var);
+	cmd->flags = JSON_CONTEXT_VAR;
+	return gvc_parse(src, referr, cmd);
 }
 
 static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
@@ -1046,7 +1047,9 @@ static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *const_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	return gvc_parse(src, referr, json_cmd(src, &jcn_const));
+	jsoncmd_t *cmd = json_cmd(src, &jcn_var);
+	cmd->flags = JSON_CONTEXT_CONST;
+	return gvc_parse(src, referr, cmd);
 }
 
 static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
@@ -1285,8 +1288,7 @@ static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* Clean up */
-	json_free(layer->data);
-	json_context_free(layer, 0);
+	json_context_free(layer);
 
 	return result;
 }

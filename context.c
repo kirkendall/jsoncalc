@@ -243,23 +243,19 @@ static json_t *stdcurrent(char *key)
 	return NULL;
 }
 
-/* This creates the first several layers of a typical context stack.  "base"
- * should be an object containing immutable data for the first layer (to which
- * this function will add its own members), or NULL if you don't want to add
- * your own immutable data.
- *
- * The context stack will contain direct references to "base" (not copies).
- * "base" will be freed when the context is freed.
+/* This creates the first several layers of a typical context stack.  "args"
+ * should be an object containing members that should be accessible in scripts
+ * via the "global.args" or simply "args" pseudovariables.  The "args" data
+ * will be freed when the last context layer is freed.
  */
-jsoncontext_t *json_context_std(json_t *base)
+jsoncontext_t *json_context_std(json_t *args)
 {
-	json_t	*global, *vars, *consts, *current_data;
+	json_t	*base, *global, *vars, *consts, *current_data;
 	jsoncontext_t *context;
 	contexthook_t *hook;
 
-	/* If there is no "base", then start with an empty object. */
-	if (!base)
-		base = json_object();
+	/* Start with an empty object for the base context */
+	base = json_object();
 
 	/* Add a "global" symbol, and object with "vars" and "consts" members */
 	global = json_object();
@@ -267,6 +263,8 @@ jsoncontext_t *json_context_std(json_t *base)
 	consts = json_object();
 	json_append(global, json_key("vars", vars));
 	json_append(global, json_key("consts", consts));
+	if (args)
+		json_append(global, json_key("args", args));
 	json_append(base, json_key("global", global));
 
 	/* Add a "current_data" symbol, initially set to null */
@@ -304,10 +302,12 @@ jsoncontext_t *json_context_std(json_t *base)
 	 */
 	context = json_context(context, global, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_NOFREE);
 
-	/* Create two more layers, exposing the contents of "vars" and "consts".
-	 * Again, we don't free it when this context is freed because they're
-	 * defined in a lower layer.
+	/* Create two or threee more layers, exposing the contents of "vars"
+	 * and "consts", and maybe "args".  Again, we don't free it when this
+	 * context is freed because they're defined in a lower layer.
 	 */
+	if (args)
+		context = json_context(context, args, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
 	context = json_context(context, consts, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
 	context = json_context(context, vars, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_VAR | JSON_CONTEXT_NOFREE);
 
@@ -664,6 +664,7 @@ static json_t *jxerror(int code, char *key)
 	case JE_BAD_SUB_KEY:	fmt = "Invalid key for [key:value] subscript";	break;
 	case JE_UNKNOWN_SUB:	fmt = "No element found with requested subscript";	break;
 	case JE_BAD_SUB:	fmt = "Subscript as invalid type";	break;
+	case JE_CONST:		fmt = "Attempt to change const \"%s\""; break;
 	default: return json_null();
 	}
 	return json_error_null(code, fmt, key);

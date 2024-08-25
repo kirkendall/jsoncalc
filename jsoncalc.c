@@ -602,7 +602,7 @@ int main(int argc, char **argv)
 {
 	int i, len;
 	jsoncmd_t *jc;
-	json_t *jcthis, *files;
+	json_t *args, *files;
 	char *val, *expr;
 	int	saveconfig = 0;
 	char	*errmsg;
@@ -718,8 +718,8 @@ int main(int argc, char **argv)
 		json_context_hook(autodir);
 
 	/* Build an object from any parameters after the first */
-	jcthis = json_object();
-	context = json_context_std(jcthis);
+	args = json_object();
+	context = json_context_std(args);
 	files = NULL;
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
@@ -749,16 +749,8 @@ int main(int argc, char **argv)
 				tmp = json_parse_string(val);
 			else
 				tmp = json_string(val, -1);
-			json_append(jcthis, json_key(argv[i], tmp));
+			json_append(args, json_key(argv[i], tmp));
 		}
-	}
-
-	/* Add the context from command-line args, if any */
-	if (jcthis->first) {
-		char *str = json_serialize(jcthis, 0);
-		printf("\"this\": %s\n", str);
-		free(str);
-		context = json_context(context, jcthis, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	}
 
 	if (expr) {

@@ -15,10 +15,11 @@ function searchInput(jqElement)
 	location.replace("index.html?"+$(this).data("query"));
     }
 
-    // Stuff any matching searchables into the popup, and maybe show the pop-up if
-    // anything.  "near" is a DOM object to show the pop-up near, or undefined to
-    // hide the pop-up.  Returns null unless there's only one match, in which case
-    // it returns the parameter needed to take us to that item.
+    // Stuff any matching searchables into the popup, and maybe show the
+    // pop-up if anything.  "near" is a DOM object to show the pop-up near,
+    // or undefined to hide the pop-up.  Returns null unless there's only one
+    // match, in which case it returns the parameter needed to take us to
+    // that item.
     function adjust(text, near)
     {
 	// If less than 3 letters or 1 punctuation, no meaningful results are possible.
@@ -46,13 +47,16 @@ function searchInput(jqElement)
 	    var member = searchable[s].member;
 	    for (i = 0; i < list.length; i++) {
 		if (list[i][member].toLowerCase().indexOf(text) >= 0
-		 || list[i].description.toLowerCase().indexOf(text) >= 0) {
+		 || (!list[i].dir && list[i].description.toLowerCase().indexOf(text) >= 0)) {
 		    if (first) {
 			first = false;
 			popup.append("<div class=\"searchSection\">"+searchable[s].label+"</div>");
 		    }
 		    var html = "<div class=\"searchItem\"";
-		    html += "data-query=\""+searchable[s].query+"="+encodeURIComponent(list[i].query)+"\">";
+		    if (list[i].dir)
+		        html += "data-query=\""+list[i].dir+"="+encodeURIComponent(list[i].query)+"\">";
+		    else
+		        html += "data-query=\""+searchable[s].query+"="+encodeURIComponent(list[i].query)+"\">";
 		    html += "<tt>"+htmlsafe(list[i][member])+"</tt> &nbsp; "
 		    html += htmlsafe(list[i].description)+"</div>";
 		    popup.append(html);

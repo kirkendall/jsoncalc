@@ -10,11 +10,13 @@
     <script src="search.js"></script>
     <script src="f/flist.js"></script>
     <script src="op/oplist.js"></script>
+    <script src="kwlist.js"></script>
     <script>
 	// This is a collection of all searchable lists
 	var searchable = [
 	    {label:"JsonCalc functions", query:"f", member:"function", list:flist},
-	    {label:"JsonCalc operators", query:"op", member:"opcategory", list:oplist}
+	    {label:"JsonCalc operators", query:"op", member:"opcategory", list:oplist},
+	    {label:"All documentation", member:"keyword", list:kwlist}
 	];
 	var searches;
 

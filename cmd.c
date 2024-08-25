@@ -981,8 +981,7 @@ static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		if (!json_context_declare(refcontext, cmd->key, value, cmd->flags)) {
 			/* Duplicate! */
 			json_free(value);
-			return json_cmd_error(cmd->filename, cmd->lineno, 1, "Duplicate %s %s \"%s\"",
-				(cmd->flags & JSON_CONTEXT_GLOBAL) ? "global" : "local",
+			return json_cmd_error(cmd->filename, cmd->lineno, 1, "Duplicate %s \"%s\"",
 				(cmd->flags & JSON_CONTEXT_CONST) ? "const" : "var",
 				cmd->key);
 		}

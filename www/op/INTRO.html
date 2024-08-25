@@ -29,6 +29,16 @@
       <summary>This list is sorted with highest-precedence operators first.</summary>
       So, for example, the <tt>*</tt> multiplication operator is listed before the
       <tt>+</tt> addition operator because multiplication has a higher precedence.
+      In the absence of parentheses, multiplication is done before addition.
+    </details>
+
+    <details>
+      <summary>A lone <tt>=</tt> is used two ways: as a case-insensitive equality operator, and as an assignment operator.</summary>.
+      Context is used to distinguish between its two uses.
+      If the left operand is something that could be assigned to, then it's
+      an assignment operator; otherwise it is an equality operator.
+      If necessary, you can force it to be treated like an equality operator
+      by wrapping parentheses around the expression.
     </details>
 
     <strong>Sections:</strong>

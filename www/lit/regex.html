@@ -41,19 +41,34 @@
     <ul>
       <li>Most characters match only themselves.  This include letters, digits,
           and whitespace.
-      <li>A ^ at the start of the regular expression means it can only match
-          text at the start of the target string.
-      <li>A $ at the end of the regular expression means it can only match
-          text at the end of the target string.
-      <li>The . character matches any single character except newline.
-      <li>Square brackets enclose sets of characters.  This will match a single
+      <li>A <tt>^</tt> at the start of the regular expression means it can
+          only match text at the start of the target string.
+      <li>A <tt>$</tt> at the end of the regular expression means it can only
+          match text at the end of the target string.
+      <li>The <tt>.</tt> character matches any single character.
+      <li><tt>[ ]</tt> encloses sets of characters.  This will match a single
           character from the test string, if it's in the set.
-      <li>Parentheses mark subexpressions.  These affect closure operators
-          like * and +.  Also, the <tt>replace()</tt> function can access the
+          The brackets can contain single characters, or pairs separated by
+          a hyphen for a range of characters.
+          For example <kbd>[a-zA-Z0-9]</kbd> matches any single ASCII letter or digit.
+          There are also named sets, which are maybe more readable and more
+          importantly handle non-ASCII characters too.  For example,
+          <kbd>[[:alpha:]]</kbd> matches any letter, including non-ASCII letters.
+      <li>The <tt>*</tt> character is a "closure operator" which means it
+          affects how often the expression before it
+          (often just a single character) may be repeated.
+          zero or more times.  One common
+	  example is <tt>.*</tt> which matches any text at all.
+	  (That means any character, repeated any number of times).
+      <li><tt>\+</tt> is a closure operator that means the preceding expression
+          should repeat 1 or more times.
+      <li><tt>\?</tt> is a closure operator that means the preceding expression 	  should occur 0 or 1 times; i.e. that it is optional.
+      <li><tt>\( \)</tt> marks subexpressions.
+          These affect closure operators like <tt>*</tt> and <tt>\+</tt>,
+          allowing them to match multi-character expressions.
+          Also, the <a target="_PARENT" href="../index.html?f=replace">replace()</a> function can access the
           text that matched each subexpression and use it when constructing
           replacement text.
-      <li>* means the character or subexpression before it may occur
-          zero or more times (repeated).
     </ul>
 
     <details open>
@@ -101,7 +116,7 @@
             <tt>null</tt>.
 
 	<li>One consequence of the above is that regular expressions can't
-	    be stored in variables.
+	    be stored in a var or const.
 
       </ul>
     </details>

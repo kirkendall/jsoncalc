@@ -42,12 +42,6 @@ typedef struct
 } memory_tracker_t;
 static memory_tracker_t *memory_tracker;
 
-/* These are used for recycling json_t's.  We keep them grouped by size. */
-#undef MAX_RECYCLE_SIZE /*128*/
-#ifdef MAX_RECYCLE_SIZE
-static json_t *memory_recycle[MAX_RECYCLE_SIZE / 32 + 1];
-#endif
-
 /* This counts the number of json_t's currently allocated.  Not threadsafe! */
 int json_debug_count = 0;
 
@@ -96,7 +90,7 @@ size_t json_sizeof(json_t *json)
 /* Free a JSON data tree */
 void json_free(json_t *json)
 {
-        size_t size;
+        json_t *next;
 
 	/* Defend against NULL */
 	if (!json)
@@ -107,26 +101,17 @@ void json_free(json_t *json)
          */
 	assert(json->memslot == 0 || memory_tracker[json->memslot].line != 0);
 
-	/* Recursively free contained data */
-	json_free(json->next);
-	json_free(json->first);
+	/* Iteratively free this node and its siblings */
+	while (json) {
+		/* Recursively free contained data */
+		json_free(json->first);
 
-	/* Free this json_t struct */
-        size = sizeof(json_t) - sizeof json->text + strlen(json->text) + 1;
-        size = ((size - 1) | 0x1f) + 1;
-#ifdef MAX_RECYCLE_SIZE
-        if (size <= MAX_RECYCLE_SIZE) {
-                /* Small enough that we can recycle it */
-                size /= 32;
-                json->type = JSON_BADTOKEN;
-                json->next = memory_recycle[size];
-                memory_recycle[size] = json;
+		/* Free this json_t struct */
+		next = json->next;
+		free(json);
 		json_debug_count--;
-                return;
-        }
-#endif
-	free(json);
-	json_debug_count--;
+		json = next;
+	}
 }
 
 /* Allocate a json_t node and initialize some fields */
@@ -134,9 +119,6 @@ json_t *json_simple(const char *str, size_t len, json_type_t type)
 {
 	json_t *json;
 	size_t  size;
-#ifdef MAX_RECYCLE_SIZE
-	size_t	idx;
-#endif
 
 	/* String is optional.  If omitted then use "" as a placeholder */
 	if (!str)
@@ -151,14 +133,8 @@ json_t *json_simple(const char *str, size_t len, json_type_t type)
         size = sizeof(json_t) - sizeof json->text + len + 1;
         size = ((size - 1) | 0x1f) + 1;
 
-	/* Allocate it. If we can recycle an old freed node, do that */
-#ifdef MAX_RECYCLE_SIZE
-	if (size <= MAX_RECYCLE_SIZE && memory_recycle[(idx = size / 32)]) {
-	        json = memory_recycle[idx];
-	        memory_recycle[idx] = json->next;
-	} else
-#endif
-                json = (json_t *)malloc(size);
+	/* Allocate it.  Trust malloc() to be efficient */
+        json = (json_t *)malloc(size);
 
 	/* Initialize the fields */
 	memset(json, 0, size);
@@ -346,35 +322,42 @@ static int memory_slot(const char *file, int line)
  */
 void json_debug_free(const char *file, int line, json_t *json)
 {
-        /* Defend against NULL */
-        if (!json)
-                return;
+	json_t *next;
 
-        /* If it looks like it was already freed, then complain.  This isn't
-         * reliable!  It won't reject valid free's but it might miss some
-         * invalid ones, if the memory node was recycled.
-         */
-        if (json->type == JSON_BADTOKEN) {
-                fprintf(stderr, "%s:%d: Attempt to free memory twice\n", file, line);
-                if (json->memslot)
-                        fprintf(stderr, "%s:%d: This is where it was first freed\n", memory_tracker[json->memslot].file, -memory_tracker[json->memslot].line);
-        }
+        /* Iterate over the ->next links */
+        for (; json; json = next)
+        {
+		next = json->next;
 
-        /* We track by where the json_t is allocated not by where it is freed.
-         * Decrement the allocation count for that line.
-         */
-        int slot = json->memslot;
-        if (slot != 0 && memory_tracker[slot].count == 0 ) {
-                fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line, slot);
-                abort();
-        }
-        else if (memory_tracker)
-                memory_tracker[slot].count--;
-        json_debug_free(file, line, json->first);
-        json_debug_free(file, line, json->next);
-        json->first = json->next = NULL;
-        json->memslot = memory_slot(file, -line);
-        json_free(json);
+		/* If it looks like it was already freed, then complain.
+		 * This isn't reliable!  It won't reject valid free's but it
+		 * might miss some invalid ones, if the memory was recycled.
+		 */
+		if (json->type == JSON_BADTOKEN) {
+			fprintf(stderr, "%s:%d: Attempt to free memory twice\n", file, line);
+			if (json->memslot)
+				fprintf(stderr, "%s:%d: This is where it was first freed\n", memory_tracker[json->memslot].file, -memory_tracker[json->memslot].line);
+		}
+
+		/* We track by where the json_t is allocated not by where it
+		 * is freed.  Decrement the allocation count for that line.
+		 */
+		int slot = json->memslot;
+		if (slot != 0 && memory_tracker[slot].count == 0 ) {
+			fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line, slot);
+			abort();
+		}
+		else if (memory_tracker)
+			memory_tracker[slot].count--;
+
+		/* Free the ->first link recursively */
+		json_debug_free(file, line, json->first);
+
+		/* Free this node */
+		json->first = json->next = NULL;
+		json->memslot = memory_slot(file, -line);
+		json_free(json);
+	}
 }
 
 json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, json_type_t type)

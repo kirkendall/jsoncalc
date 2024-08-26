@@ -41,6 +41,11 @@
  */
 
 
+/* This flag is used to terminate processing, generally in response to a
+ * <Ctrl-C> being pressed while running in interactive mode.
+ */
+int json_interupt;
+
 /* Implement @= natural join, @< left join, and @> right join */
 json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 {
@@ -70,6 +75,15 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 
 	/* For each row from the left table... */
 	for (; jl; jl = jl-> next) {
+		/* If interupted, then discard any result so far and return
+		 * an error null.
+		 */
+		if (json_interupt) {
+			json_free(result);
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+			return json_error_null(1, "Interupted");
+		}
+
 		/* Skip if not an object */
 		if (jl->type != JSON_OBJECT)
 			continue;
@@ -317,10 +331,19 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 
 		/* STEP 3: Loop over the array to generate aggregate data. */
 		for (g = 0, scan = first; scan; scan = scan->next) {
+			if (json_interupt) {
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+				return json_error_null(1, "Interupted");
+			}
+
 			/* Is this element a nested array? */
 			if (scan->type == JSON_ARRAY) {
 				/* Loop over the array elements */
 				for (gscan = scan->first; gscan; gscan = gscan->next) {
+					if (json_interupt) {
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+						return json_error_null(1, "Interupted");
+					}
 					/* Invoke the aggregators on "this" */
 					local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
@@ -353,6 +376,15 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			 * process the first.
 			 */
 			for (gscan = scan->first; gscan; gscan = (op == JSONOP_EACH ? gscan->next : NULL)) {
+				/* If interupted then discard results so far
+				 * and return an error null.
+				 */
+				if (json_interupt) {
+					json_free(result);
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+					return json_error_null(1, "Interupted");
+				}
+
 				/* Evaluate with element as "this" */
 				local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 				tmp = json_calc(calc, local, ag ? groupag[g] : NULL);
@@ -373,6 +405,15 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			/* Prepare for the next group */
 			g++;
 		} else {
+			/* If interupted then discard results so far
+			 * and return an error null.
+			 */
+			if (json_interupt) {
+				json_free(result);
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+				return json_error_null(1, "Interupted");
+			}
+
 			local = json_context(context, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 			tmp = json_calc(calc, local, ag);
 			json_context_free(local);
@@ -423,6 +464,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	int     il,ir;
 	char    *str;
 	void    *localag;
+
+	/* If interupted then simply return an error null */
+	if (json_interupt) {
+fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+		return json_error_null(1, "Interupted");
+	}
 
 	/* Start with freeleft and freeleft set to NULL.  The USE_LEFT_OPERAND
 	 * and USE_RIGHT_OPERAND macros will set them if appropriate.

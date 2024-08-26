@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <signal.h>
 #include <glob.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -597,6 +598,90 @@ void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 	}
 }
 
+/* This catches the SIGINT signal, and uses it to abort an ongoing computation
+ * by setting the json_interupt flag.
+ */
+static void catchinterupt(int signo)
+{
+	json_interupt = 1;
+	fprintf(stderr, "Stopping...\n");
+}
+
+
+static void interact(jsoncontext_t **contextref)
+{
+	char	*expr, *val, *errmsg;
+	jsoncmd_t *jc;
+
+	/* Enable the use of history and name completion while
+	 * inputting expressions.
+	 */
+	using_history();
+	read_history(HISTORY_FILE);
+	rl_attempted_completion_function = jsoncalc_completion;
+	rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
+
+	/* Catch SIGINT (usually <Ctrl-C>) and use it to stop computation */
+	signal(SIGINT, catchinterupt);
+
+	/* Read an expression */
+	while ((expr = jcreadline("JsonCalc: ")) != NULL) {
+		/* Ignore empty lines */
+		if (!expr[0])
+			continue;
+
+		/* Maybe -Oformat? */
+		if (!strncmp(expr, "-O", 2)) {
+			for (val = expr + 2; *val == ' '; val++) {
+			}
+			if (*val == '?') {
+				format_usage();
+			} else {
+				errmsg = json_format(NULL, val);
+				if (errmsg)
+					puts(errmsg);
+				val = json_format_str(NULL);
+				printf("-O%s\n", val);
+				free(val);
+			}
+			free(expr);
+			continue;
+		}
+
+		/* Maybe -Ccolors? */
+		if (!strncmp(expr, "-C", 2)) {
+			for (val = expr + 2; *val == ' '; val++) {
+			}
+			if (*val == '?') {
+				color_usage();
+			} else {
+				errmsg = json_format_color(val);
+				if (errmsg)
+					puts(errmsg);
+				val = json_format_color_str();
+				printf("-C%s\n", val);
+				free(val);
+			}
+			free(expr);
+			continue;
+		}
+
+		/* Compile */
+		jc = json_cmd_parse_string(expr);
+		free(expr);
+
+		/* Execute */
+		json_interupt = 0;
+		run(jc, contextref);
+
+		/* Clean up */
+		json_cmd_free(jc);
+	}
+
+	/* Leave the cursor on the line after the last, unused prompt */
+	putchar('\n');
+}
+
 /******************************************************************************/
 int main(int argc, char **argv)
 {
@@ -763,69 +848,7 @@ int main(int argc, char **argv)
 		/* Clean up */
 		json_cmd_free(jc);
 	} else {
-		/* Enable the use of history and name completion while
-		 * inputting expressions.
-		 */
-		using_history();
-		read_history(HISTORY_FILE);
-		rl_attempted_completion_function = jsoncalc_completion;
-		rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
-
-		/* Read an expression */
-		while ((expr = jcreadline("JsonCalc: ")) != NULL) {
-			/* Ignore empty lines */
-			if (!expr[0])
-				continue;
-
-			/* Maybe -Oformat? */
-			if (!strncmp(expr, "-O", 2)) {
-				for (val = expr + 2; *val == ' '; val++) {
-				}
-				if (*val == '?') {
-					format_usage();
-				} else {
-					errmsg = json_format(NULL, val);
-					if (errmsg)
-						puts(errmsg);
-					val = json_format_str(NULL);
-					printf("-O%s\n", val);
-					free(val);
-				}
-				free(expr);
-				continue;
-			}
-
-			/* Maybe -Ccolors? */
-			if (!strncmp(expr, "-C", 2)) {
-				for (val = expr + 2; *val == ' '; val++) {
-				}
-				if (*val == '?') {
-					color_usage();
-				} else {
-					errmsg = json_format_color(val);
-					if (errmsg)
-						puts(errmsg);
-					val = json_format_color_str();
-					printf("-C%s\n", val);
-					free(val);
-				}
-				free(expr);
-				continue;
-			}
-
-			/* Compile */
-			jc = json_cmd_parse_string(expr);
-			free(expr);
-
-			/* Execute */
-			run(jc, &context);
-
-			/* Clean up */
-			json_cmd_free(jc);
-		}
-
-		/* Leave the cursor on the line after the last, unused prompt */
-		putchar('\n');
+		interact(&context);
 	}
 
 	/* If supposed to write the config, do that */

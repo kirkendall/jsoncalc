@@ -53,6 +53,7 @@ static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_width(json_t *args, void *agdata);
 static json_t *jfn_keys(json_t *args, void *agdata);
 static json_t *jfn_join(json_t *args, void *agdata);
+static json_t *jfn_concat(json_t *args, void *agdata);
 static json_t *jfn_orderBy(json_t *args, void *agdata);
 static json_t *jfn_groupBy(json_t *args, void *agdata);
 static json_t *jfn_flat(json_t *args, void *agdata);
@@ -117,7 +118,8 @@ static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      jfn_sizeOf};
 static jsonfunc_t width_jf       = {&sizeOf_jf,      "width",       jfn_width};
 static jsonfunc_t keys_jf        = {&width_jf,       "keys",        jfn_keys};
 static jsonfunc_t join_jf        = {&keys_jf,        "join",        jfn_join};
-static jsonfunc_t orderBy_jf     = {&join_jf,        "orderBy",     jfn_orderBy};
+static jsonfunc_t concat_jf      = {&join_jf,        "concat",      jfn_concat};
+static jsonfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     jfn_orderBy};
 static jsonfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     jfn_groupBy};
 static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        jfn_flat};
 static jsonfunc_t slice_jf       = {&flat_jf,        "slice",       jfn_slice};
@@ -616,6 +618,72 @@ static json_t *jfn_join(json_t *args, void *agdata)
 
 	/* Return the result */
 	return result;
+}
+
+/* Combine multiple arrays to form one long array, or multiple strings to
+ * form one long string.
+ */
+static json_t *jfn_concat(json_t *args, void *agdata)
+{
+	json_t  *scan, *elem;
+	json_t  *result;
+	size_t	len;
+	char	*build;
+
+	/* Are we doing arrays or strings? */
+	if (args->first->type == JSON_ARRAY) {
+		/* Arrays -- make sure everything is an array */
+		for (scan = args->first->next; scan; scan = scan->next) {
+			if (scan->type != JSON_ARRAY && scan->type != JSON_NULL)
+				goto BadMix;
+		}
+
+		/* Start with an empty array */
+		result = json_array();
+
+		/* Append the elements of all arrays */
+		for (scan = args->first; scan; scan = scan->next) {
+			if (scan->type == JSON_NULL)
+				continue;
+			for (elem = scan->first; elem; elem = elem->next)
+				json_append(result, json_copy(elem));
+		}
+	} else {
+		/* Strings -- Can't handle objects/arrays but other types okay.
+		 * Also, count the length of the combined string, in bytes.
+		 */
+		for (len = 0, scan = args->first->next; scan; scan = scan->next) {
+			if (scan->type == JSON_ARRAY || scan->type == JSON_OBJECT)
+				goto BadMix;
+			if (scan->type == JSON_STRING || scan->type == JSON_BOOL || (scan->type == JSON_NUMBER && *scan->text))
+				len += strlen(scan->text);
+			else if (scan->type == JSON_NUMBER)
+				len += 20; /* just a guess */
+		}
+
+		/* Allocate a result string with enough space */
+		result = json_string("", len);
+
+		/* Append all of the strings together */
+		for (build = result->text, scan = args->first; scan; scan = scan->next) {
+			if (scan->type == JSON_NULL)
+				continue;
+			else if (scan->type == JSON_NUMBER && !*scan->text) {
+				if (scan->text[1] == 'i')
+					sprintf(build, "%i", JSON_INT(scan));
+				else
+					sprintf(build, "%.*g", json_format_default.digits, JSON_DOUBLE(scan));
+			} else
+				strcpy(build, scan->text);
+			build += strlen(build);
+		}
+	}
+
+	/* Return the result */
+	return result;
+
+BadMix:
+	return json_error_null(1, "concat() works on arrays or strings, not a mixture");
 }
 
 /* orderBy(arr, sortlist) - Sort an array of objects */

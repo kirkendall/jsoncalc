@@ -228,7 +228,9 @@ typedef struct jsoncmd_s {
 	struct jsoncmd_s   *more;/* For "else" in "if-then-else" for example */
 	struct jsoncmd_s   *next;/* in a series of statements, "next" is next */
 } jsoncmd_t;
-        
+
+/* This flag indicates whether computations have been interupted */
+extern int json_interupt;
 
 /* Function declarations */
 void json_calc_function(

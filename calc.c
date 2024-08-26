@@ -80,7 +80,6 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 		 */
 		if (json_interupt) {
 			json_free(result);
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
 			return json_error_null(1, "Interupted");
 		}
 
@@ -331,19 +330,15 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 
 		/* STEP 3: Loop over the array to generate aggregate data. */
 		for (g = 0, scan = first; scan; scan = scan->next) {
-			if (json_interupt) {
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+			if (json_interupt)
 				return json_error_null(1, "Interupted");
-			}
 
 			/* Is this element a nested array? */
 			if (scan->type == JSON_ARRAY) {
 				/* Loop over the array elements */
 				for (gscan = scan->first; gscan; gscan = gscan->next) {
-					if (json_interupt) {
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+					if (json_interupt)
 						return json_error_null(1, "Interupted");
-					}
 					/* Invoke the aggregators on "this" */
 					local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
@@ -381,7 +376,6 @@ fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
 				 */
 				if (json_interupt) {
 					json_free(result);
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
 					return json_error_null(1, "Interupted");
 				}
 
@@ -410,7 +404,6 @@ fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
 			 */
 			if (json_interupt) {
 				json_free(result);
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
 				return json_error_null(1, "Interupted");
 			}
 
@@ -466,10 +459,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	void    *localag;
 
 	/* If interupted then simply return an error null */
-	if (json_interupt) {
-fprintf(stderr, "%s:%d: Interupted\n", __FILE__, __LINE__);
+	if (json_interupt)
 		return json_error_null(1, "Interupted");
-	}
 
 	/* Start with freeleft and freeleft set to NULL.  The USE_LEFT_OPERAND
 	 * and USE_RIGHT_OPERAND macros will set them if appropriate.

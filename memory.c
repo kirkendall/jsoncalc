@@ -487,15 +487,11 @@ static int fixslot(json_t *json, void *data)
 /* Parse a string and return it */
 json_t *json_debug_parse_string(const char *file, int line, const char *str)
 {
-#if 1
         json_t *json;
         int slot = memory_slot(file, line);
         json = json_parse_string(str);
         json_walk(json, fixslot, &slot);
         return json;
-#else
-	return json_parse_string(str);
-#endif
 }
 
 json_t *json_debug_copy(const char *file, int line, json_t *json)

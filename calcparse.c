@@ -1410,7 +1410,8 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_SUBSCRIPT
 			 && jc->op != JSONOP_COLON
 			 && jc->op != JSONOP_ASSIGN
-			 && jc->op != JSONOP_APPEND) /* and comma? */
+			 && jc->op != JSONOP_APPEND
+			 && jc->op != JSONOP_COMMA)
 				return FALSE;
 			continue;
 		} else if (!jc || !pattern_single(jc, *pat))
@@ -1767,22 +1768,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		}
 
-#if 0
 		/* Subscripts on a value */
-		if (PATTERN("x[]")) {
-			/* Empty subscript.  This only works at the end of
-			 * an l-value (before an assignment operator) but
-			 * we parse it wherever it occurs because we don't
-			 * want to mistake [] for an empty array generator.
-			 */
-			t.op = JSONOP_SUBSCRIPT;
-			jc = jcalloc(&t);
-			jc->LEFT = top[-3];
-			top[-3] = jc;
-			stack->sp -= 2;
-			continue;
-		} else
-#endif
 		if (PATTERN("x[x]")) {
 			/* Subscript with a value */
 			t.op = JSONOP_SUBSCRIPT;

@@ -592,7 +592,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			/* Clean up */
 			if (jf->jfoptions & JSONFUNC_JSONFREE) {
 				json_free(*(json_t **)localag);
-				toFree = (void **)((json_t *)localag + 1);
+				toFree = (void **)((json_t **)localag + 1);
 			} else
 				toFree = (void **)localag;
 			if (jf->jfoptions & JSONFUNC_FREE && *toFree != NULL)

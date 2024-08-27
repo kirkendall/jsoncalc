@@ -353,14 +353,23 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 		if (!err) {
 			if (isalpha(*where)) {
 				/* It started with a name.  Parse the name,
-				 * and report it as an known command.
+				 * and report it as an unknown command.
 				 */
 				src->str = where;
 				err = json_cmd_parse_key(src, 0);
+			}
+
+			/* If no name, or a function name, then assume we got
+			 * an expression error.  (We'd like to check vars and
+			 * consts, but we don't have a context yet.) Otherwise,
+			 * treat it as an unknown command.
+			 */
+			if (!err || json_calc_function_by_name(err))
+				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Expression syntax error");
+			else
 				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Unknown command \"%s\"", err);
+			if (err)
 				free(err);
-			} else
-				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "expression syntax error");
 		} else {
 			*referr = json_cmd_error(src->filename, jcmdline(src), 1, err);
 		}

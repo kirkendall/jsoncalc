@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>concat</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc concat - concatenate arrays or strings">
+    <meta name="keywords" content="string, array, jsoncalc, function reference, concat">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>concat - concatenate arrays or stringsOne line summary</h1>
+    <dl>
+      <dt>concat(<var>arr</var>, ...)
+      <br/>concat(<var>str</var>, ...)
+      <dd>
+      Concat takes a variable number of arguments.
+      <p>
+      If all of the arguments are arrays, then it returns a new array containing
+      all of the elements from the argument arrays.
+      <p>
+      If all of the arguments are strings (or numbers or booleans which are
+      converted to strings), then it returns a new string containing the
+      concatenation of all of those strings.
+      <tt>null</tt> arguments are ignored.
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>concat("a", "beehive", "c", 3, null, true, "g")</kbd>
+	<samp>"abeehivec3trueg"</samp>
+        The <tt>null</tt> is ignored, but the other arguments are all
+        converted to strings and combined to form one long string.
+      </div>
+
+      <div class="example">
+	<kbd>var a=[1,2,3]; a.concat([4,5])</kbd>
+	<samp>[1,2,3,4,5]</samp>
+	<kbd>a</kbd>
+	<samp>[1,2,3]</samp>
+        Here we're using dot notation and doing an array concatenation.
+        Note that the <tt>a</tt> variable is unchanged; <tt>concat()</tt>
+        always returns a new array.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>String concatenation can also be done via the
+        <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator.
+        Both JavaScript and SQL allow <tt>concat()</tt> to concatenate strings,
+        so JsonCalc does too.
+
+        <li>This is the only built-in way to do array concatenation.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=arithmetic">+</a></td><td>Discussion of the <tt>+</tt> operator.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

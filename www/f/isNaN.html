@@ -29,13 +29,26 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>isNaN(null)</kbd>
+	<kbd>isNaN(1/0)</kbd>
 	<samp>true</samp>
         Most functions and operators return <tt>null</tt> when they fail.
         If you're expecting a number and get <tt>null</tt> instead, this can
         let you react to that.
       </div>
 
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>In JavaScript, <tt>NaN</tt> is a special symbol that's returned
+        in cases where a number is expected, but no number can be returned.
+        It's short for "Not a Number".
+        <tt>NaN</tt> isn't a legal JSON value though, so we use <tt>null</tt>
+        instead.
+        JsonCalc's <tt>isNaN()</tt> function returns <tt>true</tt> for any
+        non-Number.
+      </ul>
     </details>
 
     <details>

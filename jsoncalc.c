@@ -680,6 +680,9 @@ static void interact(jsoncontext_t **contextref)
 
 	/* Leave the cursor on the line after the last, unused prompt */
 	putchar('\n');
+
+	/* Clean up the history file */
+	history_truncate_file(HISTORY_FILE, 100);
 }
 
 /******************************************************************************/
@@ -861,6 +864,5 @@ int main(int argc, char **argv)
 	/* Clean up & exit */
 	while (context)
 		context = json_context_free(context);
-	history_truncate_file(HISTORY_FILE, 100);
 	return 0;
 }

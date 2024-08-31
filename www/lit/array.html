@@ -20,7 +20,7 @@
   </head>
   <body>
     <h1>Array</h1>
-    Arrays generators are represented by square brackets containing a list
+    Array generators are represented by square brackets containing a list
     of values.
     In a JSON data file, each value must also be a literal, so the array as
     a whole is a literal, but JsonCalc's array generators are different.
@@ -49,12 +49,12 @@
       </div>
 
       <div class="example">
-	<kbd>[2+2,$EDITOR]</kbd>
-	<samp>[4,"/usr/bin/vi"]</samp>
+	<kbd>[2+2,CURRENT_TIME]</kbd>
+	<samp>[4,"14:04:27"]</samp>
         Here we're generating an array with two elements, both computed.
         "2+2" only uses literals, but it could just as easily have accessed
         a variable, or extracted data from a JSON file.
-        "$EDITOR" fetches the value of the <tt>EDITOR</tt> environment variable.
+        "CURRENT_TIME" fetches the current local time in ISO-8601 format.
       </div>
 
     </details>

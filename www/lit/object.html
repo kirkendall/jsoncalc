@@ -28,7 +28,7 @@
     although that is allowed.
     Another difference from JSON and similarity to JavaScript is that
     the values can be any expression, not just a literal.
-    Consequently, the object returns may vary if variables vary.
+    Consequently, the object returned may vary if variables vary.
     This is why we're talking about "object generators" instead of
     "object literals".
     <p>
@@ -79,9 +79,36 @@
             You can copy any chunk of JSON data into a JsonCalc script and
             have it work as intended.
 
+        <li>Although JsonCalc is case-insensitive, you can still define objects
+            with members whose names differ only in case.
+            When searching for a member within an object,
+            JsonCalc first tries to find it using a case-sensitive search.
+            If that fails, then it tries a case-insensitive search.
+            <div class="example">
+	      <kbd>var obj = {"key":"metal thing", "Key":"Francis Scott"}</kbd>
+	      <kbd>obj.key</kbd>
+	      <samp>"metal thing"</samp>
+	      <kbd>obj.Key</kbd>
+	      <samp>"Francis Scott"</samp>
+	      <kbd>obj.KEY</kbd>
+	      <samp>"metal thing"</samp>
+	      The first two member searches find the correct member using a
+	      case-sensitive search.
+	      The third example must fall back on the case-insensitive search.
+            </div>
+
         <li>JavaScript's object notation doesn't allow you to omit the
             key-colon.
             That's purely a JsonCalc feature.
+
+	<li>In addition to the
+	    JavaScript-like <var>key</var>:</var>value</var> notation,
+	    you can also use an
+	    SQL-like <var>value</var> <b>AS</b> <var>key</var> notation.
+	    <div class="example">
+	      <kbd>{x + y as sum}</kbd>
+	      <samp>{"sum":5}</samp>
+	    </div>
 
       </ul>
     </details>

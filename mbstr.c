@@ -19,8 +19,7 @@ size_t json_mbs_len(const char *s)
         int     in;
         size_t  len;
 
-        for (len = 0; *s; len++)
-        {
+        for (len = 0; *s; len++) {
                 in = mbtowc(&wc, s, MB_CUR_MAX);
                 s += in;
         }
@@ -38,8 +37,7 @@ int json_mbs_width(const char *s)
         int     in;
         int     charwidth, linewidth, width;
 
-        for (width = linewidth = 0; *s; )
-        {
+        for (width = linewidth = 0; *s; ) {
 		if (*s == '\n') {
 			if (linewidth > width)
 				width = linewidth;
@@ -180,8 +178,7 @@ void json_mbs_tolower(char *s)
         int     in;
         char    dummy[MB_CUR_MAX];
 
-        while (*s)
-        {
+        while (*s) {
                 in = mbtowc(&wc, s, MB_CUR_MAX);
                 wc = towlower(wc); 
                 if (in == wctomb(dummy, wc))
@@ -200,8 +197,7 @@ void json_mbs_toupper(char *s)
         int     in;
         char    dummy[MB_CUR_MAX];
 
-        while (*s)
-        {
+        while (*s) {
                 in = mbtowc(&wc, s, MB_CUR_MAX);
                 wc = towupper(wc); 
                 if (in == wctomb(dummy, wc))
@@ -264,7 +260,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		if (capfirst && firstword)
 			ex = NULL;
 		else {
-			for (ex = exceptions->first; ex; ex = ex->next){
+			for (ex = exceptions->first; ex; ex = ex->next) {
 				if (ex->type == JSON_STRING && !json_mbs_ncasecmp(ex->text, s, wlen))
 					break;
 
@@ -302,8 +298,7 @@ int json_mbs_casecmp(const char *s1, const char *s2)
         wchar_t wc1, wc2;
         int     in1, in2;
 
-        while (*s1 && *s2)
-        {
+        while (*s1 && *s2) {
                 in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
                 in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
                 wc1 = towupper(wc1); 
@@ -334,8 +329,7 @@ int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
         wchar_t wc1, wc2;
         int     in1, in2;
 
-        while (*s1 && *s2 && len > 0)
-        {
+        while (*s1 && *s2 && len > 0) {
                 in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
                 in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
                 wc1 = towupper(wc1); 
@@ -716,8 +710,7 @@ int json_mbs_like(const char *text, const char *pattern)
         int     in1, in2;
 
         /* Compare as much literal text as possible.  Also handle '%' */
-        while (*text && *pattern && *pattern != '%')
-        {
+        while (*text && *pattern && *pattern != '%') {
                 in1 = mbtowc(&wc1, text, MB_CUR_MAX);
                 in2 = mbtowc(&wc2, pattern, MB_CUR_MAX);
                 if (wc2 != '_' && towupper(wc1) != towupper(wc2))

@@ -37,19 +37,25 @@
 	</tr>
       </thead>
       <tbody id="commandList">
+<tr><td><a href="expr"><var>expr</var></a></td><td>Evaluate <var>expr</var> and print the result.</td></tr>
 <tr><td><a href="assign"><var>lvalue</var> = <var>expr</var></a></td><td>Change the value of a variable, or part of a variable.</td></tr>
 <tr><td><a href="break.html"><b>break</b></a></td><td>Exit the body of a <b>switch</b>, <b>while</b>, or <b>for</b> command.</td></tr>
 <tr><td><a href="case.html"><b>case</b> <var>literal</var>:</a></td><td>Define a case label for a <b>switch</b> command.</td></tr>
 <tr><td><a href="const.html"><b>const</b> <var>name</var> = <var>expr</var></a></td><td>Define a constant.</td></tr>
 <tr><td><a href="continue.html"><b>continue</b></a></td><td>Skip the rest of the body of a <b>while</b> or <b>for</b> command, and continue with the next iteration of the loop.</td></tr>
 <tr><td><a href="default.html"><b>default</b>:</a></td><td>Define the default case for a <b>switch</b> command.</td></tr>
+<tr><td><a href="delete.html"><b>delete</b> <var>lvalue</var></a></td><td>Delete a variable, or part of a variable.</td></tr>
 <tr><td><a href="for.html"><b>for</b> (<b>var</b> <var>name</var> = <var>arr</var>) <var>cmds</var></a></td><td>Execute <var>cmds</var> with <var>name</var> set to each element of array <var>arr</var></td></tr>
 <tr><td><a href="function.html"><b>function</b> <var>name</var> (<var>args</var>) <var>cmds</var></a></td><td>Define a function.</td></tr>
 <tr><td><a href="if.html"><b>if</b> (<var>bool</var>) <var>cmds</var> <b>else</b> <var>cmds</var></a></td><td>Conditionally execute one code block or another.</td></tr>
-<tr><td><a href="switch.html"><b>switch</b> (<var>expr</var>) { <var>cmds</var> }</a></td><td>Jump to the <b>case</b> that matches <var>expr</var>, or <b>default</b> if there is none.</td></tr>
-<tr><td><a href="var.html"><b>var</b> <var>name</var> = <var>expr</var></a></td><td>Define a variable.  Outside of a function it defines a global variable; inside a function it defines a local variable.</td></tr>
-<tr><td><a href="while.html"><b>while</b> (<var>bool</var>) <var>cmds</var></a></td><td>Repeatedly run <var>cmds</var> until <var>bool</bar> is <tt>false</tt>.</td></tr>
+<tr><td><a href="import.html"><b>import</b> <var>name</var></a></td><td>Load a script from <var>name</var>.<b>jc</b>.</td></tr>
+<tr><td><a href="plugin.html"><b>plugin</b> <var>name</var></a></td><td>Load a plugin, if it isn't loaded already.</td></tr>
 <tr><td><a href="return.html"><b>return</b> <var>expr</var></a></td><td>Exit from the body of a function, and define the function's return value.</td></tr>
+<tr><td><a href="switch.html"><b>switch</b> (<var>expr</var>) { <var>cmds</var> }</a></td><td>Jump to the <b>case</b> that matches <var>expr</var>, or <b>default</b> if there is none.</td></tr>
+<tr><td><a href="try.html"><b>try</b> { <var>cmds</var> } <b>catch</b>(<var>name</var>) { <var>cmds</var> }</a></td><td>Catch an error instead of printing it.</td></tr>
+<tr><td><a href="var.html"><b>var</b> <var>name</var> = <var>expr</var></a></td><td>Define a variable.  Outside of a function it defines a global variable; inside a function it defines a local variable.</td></tr>
+<tr><td><a href="void.html"><b>void</b> <var>expr</var></a></td><td>Evaluate <var>expr</var> but don't print the result.</td></tr>
+<tr><td><a href="while.html"><b>while</b> (<var>bool</var>) <var>cmds</var></a></td><td>Repeatedly run <var>cmds</var> until <var>bool</var> is <tt>false</tt>.</td></tr>
       </tbody>
     </table>
   </body>

@@ -259,14 +259,14 @@ int json_calc_function_user(char *name, json_t *params, jsoncmd_t *body)
 		memset(fn, 0, sizeof(jsonfunc_t));
 		fn->next = funclist;
 		funclist = fn;
-	} else if (fn->user) {
+	} else if (fn->fn) {
+		/* Can't redefine built-ins */
+		return 1;
+	} else {
 		/* Redefining, so discard the old details */
 		free(fn->name);
 		json_free(fn->userparams);
 		json_cmd_free(fn->user);
-	} else {
-		/* Can't redefine built-ins */
-		return 1;
 	}
 
 	/* Store the new info in the jsonfunc_t */

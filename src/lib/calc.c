@@ -624,8 +624,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 */
 			if (calc->u.func.jf->user)
 				result = json_cmd_fncall(left, calc->u.func.jf, context);
-			else
+			else if (calc->u.func.jf->fn)
 				result = (*calc->u.func.jf->fn)(left, localag);
+			else
+				result = NULL; /* probably an empty user func */
 		}
 		break;
 

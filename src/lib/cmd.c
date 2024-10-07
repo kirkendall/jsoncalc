@@ -1210,7 +1210,11 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 	/* define it! */
 	if (!*referr) {
-		json_calc_function_user(fname, params, body);
+		if (json_calc_function_user(fname, params, body)) {
+			/* Tried to redefine a built-in, which isn't allowed. */
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Can't redefine built-in function \"%s\"", fname);
+			goto Error;
+		}
 
 		/* We're done.  Nothing more will be required at runtime.
 		 * The fname, params, and body remain allocated since the

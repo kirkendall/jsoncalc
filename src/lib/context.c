@@ -325,15 +325,21 @@ jsoncontext_t *json_context_std(json_t *args)
  * array, which you do NOT need to free since it'll be freed when the context
  * is freed.
  */
-json_t *json_context_file(jsoncontext_t *context, char *filename, int current)
+json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurrent)
 {
 	jsoncontext_t *globals, *thiscontext;
-	json_t	*files, *j;
-	int	current_file;
+	json_t	*files, *j, *f;
+	int	current_file, noref, i;
 
 	/* Defend against empty context */
 	if (!context)
 		return NULL;
+
+	/* If refcurrent is NULL, then assume no move */
+	if (!refcurrent) {
+		refcurrent = &noref;
+		*refcurrent = JSON_CONTEXT_FILE_SAME;
+	}
 
 	/* Locate the globals context at the bottom of the context stack */
 	thiscontext = NULL;
@@ -354,17 +360,35 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int current)
 	if (!files)
 		return NULL;
 
-	/* If given a filename, add it to the list.  Each file gets an object
-	 * containing the name, a modified flag, potentially other info.
+	/* If given a filename, check for it in the list.  If it's there, then
+	 * set *refcurrent to its index; else add it to the list.  Each file
+	 * gets an object containing the name, a modified flag, potentially
+	 * other info.
 	 */
 	if (filename) {
-		/* Create the basic entry */
-		json_t *entry = json_object();
-		json_append(entry, json_key("filename", json_string(filename, -1)));
-		json_append(entry, json_key("modified", json_bool(0)));
+		/* Scan the files table for this filename */
+		for (i = 0, j = files->first; j; j = j->next, i++)
+			if ((f = json_by_key(j, "filename")) != NULL
+			 && f->type == JSON_STRING
+			 && !strcmp(f->text, filename))
+				break;
 
-		/* Add it to the "files" list */
-		json_append(files, entry);
+		/* Did we find it? */
+		if (j) {
+			/* Select it as the current file */
+			*refcurrent = i;
+		} else {
+			/* Create the basic entry */
+			json_t *entry = json_object();
+			json_append(entry, json_key("filename", json_string(filename, -1)));
+			json_append(entry, json_key("modified", json_bool(0)));
+
+			/* Add it to the "files" list */
+			json_append(files, entry);
+
+			/* Make it be the current file */
+			*refcurrent = json_length(files) - 1;
+		}
 	}
 
 	/* Get the current_file index, if any, and use that to adjust the
@@ -373,28 +397,26 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int current)
 	j = json_by_key(globals->data, "current_file");
 	if (j) {
 		current_file = json_int(j);
-		if (current < 0)
-			current = current_file + 2 + current;
+		if (*refcurrent < 0)
+			*refcurrent = current_file + 2 + *refcurrent;
 	} else {
 		current_file = 0;
-		if (current < 0)
-			current = 0;
 	}
 
 	/* If "current" is out of range for the "files" array, clip it */
-	if (current < 0)
-		current = 0;
-	else if (current >= json_length(files))
-		current = json_length(files) - 1;
+	if (*refcurrent < 0)
+		*refcurrent = 0;
+	else if (*refcurrent >= json_length(files))
+		*refcurrent = json_length(files) - 1;
 
 	/* Load the new current file, if the numbers are different or no
 	 * file was loaded before.  Note that we don't need to explicitly
 	 * free the old data, because it gets freed when we reassign the
 	 * "current_data" member (the first json_append() below).
 	 */
-	if (current_file != current || !j) {
+	if (current_file != *refcurrent || !j) {
 		/* Load the data.  If it couldn't be loaded then say why */
-		char *currentname = json_text_by_key(json_by_index(files, current), "filename");
+		char *currentname = json_text_by_key(json_by_index(files, *refcurrent), "filename");
 		json_t *data = json_parse_file(currentname);
 		if (!data)
 			data = json_error_null(0, "File is unreadable");
@@ -402,7 +424,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int current)
 		thiscontext->data = data;
 
 		/* Update "current_file" number */
-		json_append(globals->data, json_key("current_file", json_from_int(current)));
+		json_append(globals->data, json_key("current_file", json_from_int(*refcurrent)));
 	}
 
 	/* Return the list of files */

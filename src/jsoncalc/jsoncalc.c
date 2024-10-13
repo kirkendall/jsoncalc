@@ -391,7 +391,7 @@ int main(int argc, char **argv)
 		/* If it ends with ".json", load it as a file */
 		len = strlen(argv[i]);
 		if (len > 5 && !strcmp(argv[i] + len - 5, ".json")) {
-			json_context_file(context, argv[i], 0);
+			json_context_file(context, argv[i], NULL);
 			anyfiles = 1;
 		} else {
 			/* In a name=value string, separate the name from the value */
@@ -429,7 +429,10 @@ int main(int argc, char **argv)
 	 * then assume "-".
 	 */
 	if (!interactive && !anyfiles)
-		json_context_file(context, "-", 0);
+		json_context_file(context, "-", NULL);
+
+	/* Start on the first file */
+	json_context_file(context, NULL, 0);
 
 	/* Do either the batch or interactive thing */
 	if (interactive)

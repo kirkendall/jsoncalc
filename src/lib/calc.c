@@ -694,7 +694,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			/* The "length" attribute is computed, for strings and
 			 * arrays.  To simplify processing of data that was
 			 * converted from XML, we also return 0 for null.length
-			 * and 1 for anythingelse.length -- XML doesn't do
+			 * and 1 for anything_else.length -- XML doesn't do
 			 * arrays very well.
 			 */
 			if (left->type == JSON_ARRAY)

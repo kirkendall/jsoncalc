@@ -24,34 +24,36 @@
  */
 
 /* Forward declarations for functions that implement the built-in commands */
-static jsoncmd_t   *if_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *if_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *while_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *while_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *for_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *for_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *break_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *break_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *case_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *case_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *default_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *default_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *default_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *try_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *try_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *var_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *var_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *const_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *const_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *function_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *function_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *return_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *return_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t   *void_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmd_t    *void_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t    *file_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 /* format -Oflags { command } ... or without {command} have a lasting effect */
 /* delete lvalue */
 /* help topic subtopic */
@@ -73,7 +75,8 @@ static jsoncmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run}
 static jsoncmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
 static jsoncmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
 static jsoncmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
-static jsoncmdname_t *names = &jcn_void;
+static jsoncmdname_t jcn_file =     {&jcn_void,		"file",		file_parse,	file_run};
+static jsoncmdname_t *names = &jcn_file;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
@@ -248,7 +251,7 @@ char *json_cmd_parse_paren(jsonsrc_t *src)
 	/* Find the extent of the parenthesized expression */
 	for (scan = src->str + 1, nest = 1, quote = '\0'; nest > 0; scan++) {
 		if (!*scan)
-			return NULL; /* hit end of input without ')' */
+			return NULL; /* Hit end of input without ')' */
 		else if (*scan == '\\' && (quote == '"' || quote == '\'') && scan[1])
 			scan++;
 		else if (*scan == quote)
@@ -498,7 +501,7 @@ jsoncmd_t *json_cmd_parse_string(char *text)
 {
 	jsonsrc_t srcbuf;
 
-	/* fill the src buffer */
+	/* Fill the src buffer */
 	srcbuf.filename = NULL;
 	srcbuf.buf = text;
 	srcbuf.str = text;
@@ -609,9 +612,9 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 	result = json_cmd_run(fn->user, &context);
 
 	/* Decode the "result" response */
-	if (!result) /* function terminated without "return" -- use null */
+	if (!result) /* Function terminated without "return" -- use null */
 		out = json_null();
-	else if (!result->ret) /* error - convert to error null */
+	else if (!result->ret) /* Error - convert to error null */
 		out = json_error_null(result->code, "%s", result->text);
 	else if (result->ret == &json_cmd_break) /* "break" */
 		out = json_error_null(1, "Misuse of \"break\"");
@@ -645,7 +648,7 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 	jsoncmd_t *next, *end;
 	jsoncmdout_t *result;
 
-	/* if "added" is NULL, do nothing */
+	/* If "added" is NULL, do nothing */
 	if (!added)
 		return existing;
 
@@ -656,7 +659,7 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 			end = end->next;
 	}
 
-	/* for each command from "added"... */
+	/* For each command from "added"... */
 	for (; added; added = next) {
 		next = added->next;
 		added->next = NULL;
@@ -930,7 +933,7 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* Clean up */
 		json_context_free(layer);
 
-	} else { /* anonymous loop */
+	} else { /* Anonymous loop */
 		/* Loop over the elements */
 		for (scan = array->first; scan; scan = scan->next) {
 			/* Add a "this" layer */
@@ -1119,7 +1122,7 @@ static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	char	*fname;
-	jsonsrc_t paren; /* used for scanning parameter source */
+	jsonsrc_t paren; /* Used for scanning parameter source */
 	json_t	*params = NULL;
 	jsoncmd_t *body = NULL;
 
@@ -1202,13 +1205,13 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 	free(paren.buf);
 
-	/* body -- if no body, that's okay */
+	/* Body -- if no body, that's okay */
 	if (*src->str == '{')
 		body = json_cmd_parse_curly(src, referr);
 	else
 		body = NULL;
 
-	/* define it! */
+	/* Define it! */
 	if (!*referr) {
 		if (json_calc_function_user(fname, params, body)) {
 			/* Tried to redefine a built-in, which isn't allowed. */
@@ -1252,7 +1255,7 @@ static jsoncmd_t *return_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* The return value is optional */
 	json_cmd_parse_whitespace(src);
 	if (*src->str && *src->str != ';' && *src->str != '}') {
-		/* parse the expression */
+		/* Parse the expression */
 		err = NULL;
 		calc = json_calc_parse(src->str, &end, &err, 0);
 		if (err) {
@@ -1274,12 +1277,12 @@ static jsoncmd_t *return_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		calc = json_calc_parse("null", NULL, NULL, 0);
 	}
 
-	/* move past the ';', if there is one */
+	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
 	json_cmd_parse_whitespace(src);
 
-	/* build the command, and return it */
+	/* Build the command, and return it */
 	cmd = json_cmd(&start, &jcn_return);
 	cmd->calc = calc;
 	return cmd;
@@ -1508,7 +1511,7 @@ static jsoncmd_t *void_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* The return value is optional */
 	json_cmd_parse_whitespace(src);
 	if (*src->str && *src->str != ';' && *src->str != '}') {
-		/* parse the expression */
+		/* Parse the expression */
 		err = NULL;
 		calc = json_calc_parse(src->str, &end, &err, 0);
 		if (err) {
@@ -1527,12 +1530,12 @@ static jsoncmd_t *void_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 	}
 
-	/* move past the ';', if there is one */
+	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
 	json_cmd_parse_whitespace(src);
 
-	/* build the command, and return it */
+	/* Build the command, and return it */
 	cmd = json_cmd(&start, &jcn_void);
 	cmd->calc = calc;
 	return cmd;
@@ -1542,6 +1545,142 @@ static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Evaluate the expression but return NULL */
 	json_free(json_calc(cmd->calc, *refcontext, NULL));
+	return NULL;
+}
+
+static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncalc_t *calc;
+	char	*end, *err;
+	jsoncmd_t *cmd;
+	jsonsrc_t start;
+
+	/* Allocate a cmd */
+	start = *src;
+	cmd = json_cmd(src, &jcn_file);
+
+	/* Many possible ways to invoke this.  Most commands have a strict
+	 * syntax, but file is intended mostly for interactive use and should
+	 * be user-friendly.  The main ways to invoke it are:
+	 *   file       List all files, with the current one highlighted
+	 *   file +	Move to the next file
+	 *   file -	Move to the previous file
+	 *   file word	Move to the named file.  If new, append it.
+	 *   file (expr)Move to the result of expr
+	 */
+	json_cmd_parse_whitespace(src);
+	if (!*src->str || *src->str == ';' || *src->str == '}') {
+		/* "file" with no arguments */
+	} else if (*src->str == '+' || *src->str == '-') {
+		/* Verify that it's ONLY + or -, not part of a calc expression*/
+		char ch[2];
+		ch[0] = *src->str++;
+		ch[1] = '\0';
+		json_cmd_parse_whitespace(src);
+		if (*src->str && *src->str != ';' && *src->str != '}') {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Bad use of file+ or file-");
+			return NULL;
+		}
+		cmd->key = strdup(ch);
+	} else if (*src->str == '(') {
+		/* Get the condition */
+		char *str = json_cmd_parse_paren(src);
+		if (!str) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"file\" expression");
+			return cmd;
+		}
+
+		/* Parse the expression */
+		cmd->calc = json_calc_parse(str, &end, &err, 0);
+		if (err || *end || !cmd->calc) {
+			free(str);
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"file\" expression");
+			return cmd;
+		}
+		free(str);
+	} else {
+		/* Assume it is a filename.  Find the end of it, and copy it
+		 * into the cmd->key.
+		 */
+		for (end = src->str; *end && *end != ';' && *end != '}'; end++){
+		}
+		while (end > src->str && end[-1] == ' ')
+			end--;
+		cmd->key = (char *)malloc(end - src->str + 1);
+		strncpy(cmd->key, src->str, end - src->str);
+		cmd->key[end - src->str] = '\0';
+
+		/* Move past the end of the name */
+		src->str = end;
+		json_cmd_parse_whitespace(src);
+	}
+
+	/* Move past the ';', if there is one */
+	if (*src->str == ';')
+		src->str++;
+	json_cmd_parse_whitespace(src);
+
+	/* Return the command */
+	return cmd;
+}
+
+static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	json_t *files;
+	int	current = JSON_CONTEXT_FILE_SAME;
+	int	all = 0;
+
+	/* Determine what type of "file" invocation this is */
+	if (cmd->calc) {
+		/* "file (calc) -- Evaluate the expression. */
+		json_t *result = json_calc(cmd->calc, *refcontext, NULL);
+
+		/* If we got an error, then return the error */
+		if (result->type == JSON_NULL && *result->text) {
+			jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
+			json_free(result);
+			return err;
+		}
+
+		/* If it's a number, then select a file by index */
+		if (result->type == JSON_NUMBER) {
+			current = json_int(result);
+			files = json_context_file(*refcontext, NULL, &current);
+			json_free(result);
+		} else if (result->type == JSON_STRING) {
+			files = json_context_file(*refcontext, result->text, &current);
+			json_free(result);
+		} else {
+			json_free(result);
+			return json_cmd_error(cmd->filename, cmd->lineno, 1, "file expressions should return a number or string.");
+		}
+	} else if (!cmd->key) {
+		/* "file" with no args -- List all files */
+		files = json_context_file(*refcontext, NULL, &current);
+		all = 1;
+	} else if (!strcmp(cmd->key, "+")) {
+		/* "file +" -- Move to the next file in the list */
+		current = JSON_CONTEXT_FILE_NEXT;
+		files = json_context_file(*refcontext, NULL, &current);
+	} else if (!strcmp(cmd->key, "-")) {
+		/* "file -" -- Move to the previous file in the list */
+		current = JSON_CONTEXT_FILE_PREVIOUS;
+		files = json_context_file(*refcontext, NULL, &current);
+	} else {
+		/* "file filename" -- Move to the named file */
+		files = json_context_file(*refcontext, cmd->key, &current);
+	}
+
+	/* If supposed to show all then output the whole files list.
+	 * Otherwise output just the name of the current file.  Note that
+	 * we never need to free "files" because it'll be freed when the
+	 * context is freed.
+	 */
+	if (!all)
+		files = json_by_index(files, current);
+	json_print(files, NULL);
+
+	/* Return success always */
 	return NULL;
 }
 

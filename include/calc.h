@@ -229,6 +229,13 @@ typedef struct jsoncmd_s {
 	struct jsoncmd_s   *next;/* in a series of statements, "next" is next */
 } jsoncmd_t;
 
+/* These are magic values for json_context_file() "current" argument.  They
+ * aren't enums because we could also pass an int index to select a file.
+ */
+#define JSON_CONTEXT_FILE_NEXT		(-1)
+#define JSON_CONTEXT_FILE_SAME		(-2)
+#define JSON_CONTEXT_FILE_PREVIOUS	(-3)
+
 /* This flag indicates whether computations have been interupted */
 extern int json_interupt;
 
@@ -252,7 +259,7 @@ jsoncontext_t *json_context_free(jsoncontext_t *context);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);
 jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags);
 jsoncontext_t *json_context_std(json_t *data);
-json_t *json_context_file(jsoncontext_t *context, char *filename, int current);
+json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurrent);
 jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t *args);
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);

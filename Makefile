@@ -13,3 +13,7 @@ clean:
 
 tags:
 	ctags `find . -name '*.[ch]' -print`
+
+wc:
+	@echo `find . -name '*.[ch]' -exec cat {} \; | wc -l` lines of C code
+	@echo `find www man -regex '.*\.\(html\|css\|sh\|man\|1\)' -exec cat {} \; | wc -l` lines of documentation

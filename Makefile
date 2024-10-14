@@ -11,6 +11,8 @@ all:
 clean:
 	BIN="$(BIN)" LIB="$(LIB)" PLUGIN="$(PLUGIN)" make -C src -e clean
 
+.PHONY: tags
+
 tags:
 	ctags `find . -name '*.[ch]' -print`
 

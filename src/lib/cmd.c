@@ -54,10 +54,11 @@ static jsoncmd_t    *void_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsoncmd_t    *file_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t    *import_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 /* format -Oflags { command } ... or without {command} have a lasting effect */
 /* delete lvalue */
 /* help topic subtopic */
-/* import "filename" */
 static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 
 /* Linked list of command names */
@@ -76,7 +77,8 @@ static jsoncmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	fun
 static jsoncmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
 static jsoncmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
 static jsoncmdname_t jcn_file =     {&jcn_void,		"file",		file_parse,	file_run};
-static jsoncmdname_t *names = &jcn_file;
+static jsoncmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
+static jsoncmdname_t *names = &jcn_import;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
@@ -1583,7 +1585,7 @@ static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		}
 		cmd->key = strdup(ch);
 	} else if (*src->str == '(') {
-		/* Get the condition */
+		/* Get the expression */
 		char *str = json_cmd_parse_paren(src);
 		if (!str) {
 			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"file\" expression");
@@ -1679,6 +1681,129 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	if (!all)
 		files = json_by_index(files, current);
 	json_print(files, NULL);
+
+	/* Return success always */
+	return NULL;
+}
+
+
+static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncalc_t *calc;
+	char	*end, *err;
+	jsoncmd_t *cmd;
+	jsonsrc_t start;
+
+	/* We can either invoke this with a filename (or just basename), or
+	 * a parenthesized expression yielding a string which is interpreted
+	 * the same way.
+	 */
+	start = *src;
+	json_cmd_parse_whitespace(src);
+	if (!*src->str || *src->str == ';' || *src->str == '}') {
+		/* "import" with no arguments does nothing */
+		return NULL;
+	}
+
+	/* Allocate a cmd */
+	cmd = json_cmd(&start, &jcn_import);
+	if (*src->str == '(') {
+		/* Get the expression */
+		char *str = json_cmd_parse_paren(src);
+		if (!str) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"import\" expression");
+			return cmd;
+		}
+
+		/* Parse the expression */
+		cmd->calc = json_calc_parse(str, &end, &err, 0);
+		if (err || *end || !cmd->calc) {
+			free(str);
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, err ? err : "Syntax error in \"import\" expression");
+			return cmd;
+		}
+		free(str);
+	} else {
+		/* Assume it is a filename.  Find the end of it, and copy it
+		 * into the cmd->key.
+		 */
+		for (end = src->str; *end && *end != ';' && *end != '}'; end++){
+		}
+		while (end > src->str && end[-1] == ' ')
+			end--;
+		cmd->key = (char *)malloc(end - src->str + 1);
+		strncpy(cmd->key, src->str, end - src->str);
+		cmd->key[end - src->str] = '\0';
+
+		/* Move past the end of the name */
+		src->str = end;
+		json_cmd_parse_whitespace(src);
+	}
+
+	/* Move past the ';', if there is one */
+	if (*src->str == ';')
+		src->str++;
+	json_cmd_parse_whitespace(src);
+
+	/* Return the command */
+	return cmd;
+}
+
+static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	json_t	*result = NULL;
+	char	*filename, *pathname;
+
+	/* Determine what type of "import" invocation this is */
+	if (cmd->calc) {
+		/* "import (calc) -- Evaluate the expression. */
+		result = json_calc(cmd->calc, *refcontext, NULL);
+
+		/* If we got an error, then return the error */
+		if (result->type == JSON_NULL && *result->text) {
+			jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
+			json_free(result);
+			return err;
+		}
+
+		/* Anything other than a string is an error */
+		if (result->type != JSON_STRING) {
+			json_free(result);
+			return json_cmd_error(cmd->filename, cmd->lineno, 1, "file expressions should return a number or string.");
+		}
+
+		/* The string's text is the filename */
+		filename = result->text;
+	} else {
+		/* "import filename" -- filename is stored in ->key */
+		filename = cmd->key;
+	}
+
+	/* Scan $JSONCALCPATH for the file.  Add a ".jc" extension if the
+	 * requested file doesn't already have an extension.
+	 */
+	pathname = json_file_path(filename, strchr(filename, '.') ? NULL : ".jc");
+
+	/* If not found, then return an error */
+	if (!pathname) {
+		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, 1, "Could not locate %s to import", filename);
+		if (result)
+			json_free(result);
+		return err;
+	}
+
+	/* Load the file. If it contains any code other than function
+	 * definitions, then execute it and forget it.
+	 */
+	jsoncmd_t *code = json_cmd_parse_file(pathname);
+	if (code) {
+		json_cmd_run(code, refcontext);
+		json_cmd_free(code);
+	}
+
+	/* Free the pathname.  */
+	/* !!! Hey, this isn't still referenced in function definitions, is it? */
+	free(pathname);
 
 	/* Return success always */
 	return NULL;

@@ -63,8 +63,6 @@ typedef struct json_s {
 #define JSON_DOUBLE(j)	(((double *)((j) + 1))[-1])
 #define JSON_INT(j)	(((int *)((j) + 1))[-1])
 
-BEGIN_C
-
 /* This stores info about formatting -- mostly output formatting, since for
  * input we take whatever we're given.
  */
@@ -116,10 +114,18 @@ typedef struct {
 	const char	*base;	/* Contents of the file, as a giant string */
 } jsonfile_t;
 
+/* This is the default path, used with $JSONCALCPATH is unset */
+#define JSON_PATH_DEFAULT	"~/.config/jsoncalc:/usr/share/jsoncalc:/var/lib/jsoncalc"
+
+#define JSON_PATH_DELIM		":"
+
+BEGIN_C
+
 /* Files */
 jsonfile_t *json_file_load(const char *filename);
 void json_file_unload(jsonfile_t *jf);
 FILE *json_file_update(const char *filename);
+char *json_file_path(const char *filename, const char *ext);
 
 /* Error handling */
 extern char *json_debug(char *flags);

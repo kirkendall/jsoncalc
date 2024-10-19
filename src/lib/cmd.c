@@ -59,6 +59,7 @@ static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 /* format -Oflags { command } ... or without {command} have a lasting effect */
 /* delete lvalue */
 /* help topic subtopic */
+/* plugin name */
 static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 
 /* Linked list of command names */

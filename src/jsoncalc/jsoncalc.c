@@ -450,5 +450,6 @@ int main(int argc, char **argv)
 	/* Clean up & exit */
 	while (context)
 		context = json_context_free(context);
+	json_cmd_free(initcmd);
 	return 0;
 }

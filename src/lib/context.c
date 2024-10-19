@@ -417,9 +417,14 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 	if (current_file != *refcurrent || !j) {
 		/* Load the data.  If it couldn't be loaded then say why */
 		char *currentname = json_text_by_key(json_by_index(files, *refcurrent), "filename");
-		json_t *data = json_parse_file(currentname);
-		if (!data)
-			data = json_error_null(0, "File is unreadable");
+		json_t *data;
+		if (!currentname)
+			data = json_error_null(0, "There is no current file");
+		else {
+			data = json_parse_file(currentname);
+			if (!data)
+				data = json_error_null(0, "File \"%s\" is unreadable", currentname);
+		}
 		json_append(globals->data, json_key("current_data", data));
 		thiscontext->data = data;
 

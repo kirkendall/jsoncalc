@@ -50,7 +50,7 @@ static json_t *jfn_isInteger(json_t *args, void *agdata);
 static json_t *jfn_isNaN(json_t *args, void *agdata);
 static json_t *jfn_typeOf(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
-static json_t *jfn_width(json_t *args, void *agdata);
+static json_t *jfn_widthOf(json_t *args, void *agdata);
 static json_t *jfn_keys(json_t *args, void *agdata);
 static json_t *jfn_join(json_t *args, void *agdata);
 static json_t *jfn_concat(json_t *args, void *agdata);
@@ -99,54 +99,54 @@ static json_t *jfn_objectAgg(json_t *args, void *agdata);
 static void    jag_objectAgg(json_t *args, void *agdata);
 
 /* A linked list of the built-in functions */
-static jsonfunc_t toUpperCase_jf = {NULL,            "toUpperCase", jfn_toUpperCase};
-static jsonfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", jfn_toLowerCase};
-static jsonfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", jfn_toMixedCase};
-static jsonfunc_t substr_jf      = {&toMixedCase_jf, "substr",      jfn_substr};
-static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         jfn_hex};
-static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    jfn_toString};
-static jsonfunc_t String_jf      = {&toString_jf,    "String",      jfn_toString};
-static jsonfunc_t isString_jf    = {&String_jf,      "isString",    jfn_isString};
-static jsonfunc_t isArray_jf     = {&isString_jf,    "isArray",     jfn_isArray};
-static jsonfunc_t isTable_jf     = {&isArray_jf,     "isTable",     jfn_isTable};
-static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    jfn_isObject};
-static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    jfn_isNumber};
-static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   jfn_isInteger};
-static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       jfn_isNaN};
-static jsonfunc_t typeOf_jf      = {&isNaN_jf,       "typeOf",      jfn_typeOf};
-static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      jfn_sizeOf};
-static jsonfunc_t width_jf       = {&sizeOf_jf,      "width",       jfn_width};
-static jsonfunc_t keys_jf        = {&width_jf,       "keys",        jfn_keys};
-static jsonfunc_t join_jf        = {&keys_jf,        "join",        jfn_join};
-static jsonfunc_t concat_jf      = {&join_jf,        "concat",      jfn_concat};
-static jsonfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     jfn_orderBy};
-static jsonfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     jfn_groupBy};
-static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        jfn_flat};
-static jsonfunc_t slice_jf       = {&flat_jf,        "slice",       jfn_slice};
-static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      jfn_repeat};
-static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     jfn_toFixed};
-static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    jfn_distinct};
-static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      jfn_unroll};
-static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    jfn_nameBits};
-static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  jfn_keysValues};
-static jsonfunc_t charAt_jf      = {&keysValues_jf,  "charAt",      jfn_charAt};
-static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  jfn_charCodeAt};
-static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode",jfn_fromCharCode};
-static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     jfn_replace};
-static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  jfn_replaceAll};
-static jsonfunc_t count_jf       = {&replaceAll_jf,  "count",       jfn_count, jag_count, sizeof(long)};
-static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   jfn_rowNumber, jag_rowNumber, sizeof(int)};
-static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
-static jsonfunc_t max_jf         = {&min_jf,         "max",         jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
-static jsonfunc_t avg_jf         = {&max_jf,         "avg",         jfn_avg,   jag_avg, sizeof(agdata_t)};
-static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         jfn_sum,   jag_sum, sizeof(agdata_t)};
-static jsonfunc_t product_jf     = {&sum_jf,         "product",     jfn_product,jag_product, sizeof(agdata_t)};
-static jsonfunc_t any_jf         = {&product_jf,     "any",         jfn_any,   jag_any, sizeof(int)};
-static jsonfunc_t all_jf         = {&any_jf,         "all",         jfn_all,   jag_all, sizeof(int)};
-static jsonfunc_t explain_jf     = {&all_jf,         "explain",     jfn_explain,jag_explain, sizeof(json_t *), JSONFUNC_JSONFREE};
-static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  jfn_writeArray,jag_writeArray, sizeof(FILE *)};
-static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
-static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str",		jfn_toUpperCase};
+static jsonfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str",		jfn_toLowerCase};
+static jsonfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str",		jfn_toMixedCase};
+static jsonfunc_t substr_jf      = {&toMixedCase_jf, "substr",      "str, start, len",	jfn_substr};
+static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         "str|int, len",	jfn_hex};
+static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    "any",		jfn_toString};
+static jsonfunc_t String_jf      = {&toString_jf,    "String",      "any",		jfn_toString};
+static jsonfunc_t isString_jf    = {&String_jf,      "isString",    "any",		jfn_isString};
+static jsonfunc_t isArray_jf     = {&isString_jf,    "isArray",     "any",		jfn_isArray};
+static jsonfunc_t isTable_jf     = {&isArray_jf,     "isTable",     "any",		jfn_isTable};
+static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "any",		jfn_isObject};
+static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "any",		jfn_isNumber};
+static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "any",		jfn_isInteger};
+static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "any",		jfn_isNaN};
+static jsonfunc_t typeOf_jf      = {&isNaN_jf,       "typeOf",      "any,prevtype",	jfn_typeOf};
+static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "any",		jfn_sizeOf};
+static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str",		jfn_widthOf};
+static jsonfunc_t keys_jf        = {&widthOf_jf,       "keys",        "obj",		jfn_keys};
+static jsonfunc_t join_jf        = {&keys_jf,        "join",        "arr, delim",	jfn_join};
+static jsonfunc_t concat_jf      = {&join_jf,        "concat",      "arr|str, ...",	jfn_concat};
+static jsonfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     "tbl, columns",	jfn_orderBy};
+static jsonfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     "tbl, columns",	jfn_groupBy};
+static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        "arr, depth",	jfn_flat};
+static jsonfunc_t slice_jf       = {&flat_jf,        "slice",       "arr|str, start, end",jfn_slice};
+static jsonfunc_t repeat_jf      = {&slice_jf,       "repeat",      "str, count",	jfn_repeat};
+static jsonfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     "num, precision",	jfn_toFixed};
+static jsonfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    "arr, strict|columns",jfn_distinct};
+static jsonfunc_t unroll_jf      = {&distinct_jf,    "unroll",      "tbl, nestlist",	jfn_unroll};
+static jsonfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    "num, names, delim",jfn_nameBits};
+static jsonfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  "obj|tbl",		jfn_keysValues};
+static jsonfunc_t charAt_jf      = {&keysValues_jf,  "charAt",      "str, num",		jfn_charAt};
+static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str, num|arr",	jfn_charCodeAt};
+static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode","num|str|arr, ...",	jfn_fromCharCode};
+static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     "str, srch|re",	jfn_replace};
+static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str, srch|re",	jfn_replaceAll};
+static jsonfunc_t count_jf       = {&replaceAll_jf,  "count",       "any",		jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
+static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t max_jf         = {&min_jf,         "max",         "num|str, marker",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t avg_jf         = {&max_jf,         "avg",         "num",		jfn_avg,   jag_avg, sizeof(agdata_t)};
+static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         "num",		jfn_sum,   jag_sum, sizeof(agdata_t)};
+static jsonfunc_t product_jf     = {&sum_jf,         "product",     "num",		jfn_product,jag_product, sizeof(agdata_t)};
+static jsonfunc_t any_jf         = {&product_jf,     "any",         "bool",		jfn_any,   jag_any, sizeof(int)};
+static jsonfunc_t all_jf         = {&any_jf,         "all",         "bool",		jfn_all,   jag_all, sizeof(int)};
+static jsonfunc_t explain_jf     = {&all_jf,         "explain",     "tbl",		jfn_explain,jag_explain, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "any, filename",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
+static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "any",		jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key, value",	jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
 static jsonfunc_t *funclist      = &objectAgg_jf;
 
 
@@ -173,6 +173,7 @@ static jsonfunc_t *funclist      = &objectAgg_jf;
  */
 void json_calc_function(
 	char    *name,
+	char	*args,
 	json_t *(*fn)(json_t *args, void *agdata),
 	void   (*agfn)(json_t *args, void *agdata),
 	size_t  agsize)
@@ -186,6 +187,7 @@ void json_calc_function(
 	/* If it's already in the table then update it */
 	for (f = funclist; f; f = f->next) {
 		if (!strcmp(f->name, name)) {
+			f->args = args;
 			f->fn = fn;
 			f->agfn = agfn;
 			f->agsize = agsize;
@@ -196,6 +198,7 @@ void json_calc_function(
 	/* Add it */
 	f = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
 	f->name = name;
+	f->args = args;
 	f->fn = fn;
 	f->agfn = agfn;
 	f->agsize = agsize;
@@ -546,7 +549,7 @@ static json_t *jfn_sizeOf(json_t *args, void *agdata)
 /* Estimate the width of a string.  Some characters may be wider than others,
  * even in a fixed-pitch font.
  */
-static json_t *jfn_width(json_t *args, void *agdata)
+static json_t *jfn_widthOf(json_t *args, void *agdata)
 {
 	switch (args->first->type) {
 	case JSON_STRING:

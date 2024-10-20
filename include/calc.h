@@ -112,6 +112,7 @@ typedef struct jsoncalc_s{
 typedef struct jsonfunc_s {
         struct jsonfunc_s *next;
         char    *name;
+        char	*args;	/* comment containing arg text (NULL for user-defined)*/
         json_t *(*fn)(json_t *args, void *agdata);
         void   (*agfn)(json_t *args, void *agdata);
         size_t  agsize;
@@ -242,6 +243,7 @@ extern int json_interupt;
 /* Function declarations */
 void json_calc_function(
         char    *name,
+        char	*args,
         json_t *(*fn)(json_t *args, void *agdata),
         void   (*agfn)(json_t *args, void *agdata),
         size_t  agsize);

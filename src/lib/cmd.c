@@ -1140,8 +1140,33 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	paren.filename = src->filename;
 	paren.buf = paren.str = json_cmd_parse_paren(src);
 	if (!paren.buf) {
-		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing parameter list");
-		goto Error;
+		/* No parameter list, so just describe the named function and
+		 * return NULL.
+		 */
+		jsonfunc_t *f = json_calc_function_by_name(fname);
+		if (!f) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Unknown function \"%s\"", fname);
+			free(fname);
+			goto Error;
+		}
+
+		/* Output a description of the function */
+		if (f->fn)
+			printf("builtin ");
+		if (f->agfn)
+			printf("aggregate ");
+		printf("function %s", f->name);
+		if (f->args)
+			printf("(%s)\n", f->args);
+		else {
+			putchar('(');
+			for (params = f->userparams->first; params; params = params->next)
+				printf("%s%s", params->text, params->next ? ", " : "");
+			putchar(')');
+			putchar('\n');
+		}
+		free(fname);
+		return NULL;
 	}
 	paren.size = strlen(paren.buf);
 

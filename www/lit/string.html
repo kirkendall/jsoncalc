@@ -90,9 +90,18 @@
 	<li>When outputting Unicode text in ASCII format
 	    (via the -Oascii command-line flag),
 	    UTF-16 escapes will be used, including surrogate pairs where needed.
+	    <div class="example">
+	      <kbd>-Oascii</kbd>
+	      <samp>-Opretty,tab=2,table=grid,error,ascii,color</samp>
+	      <kbd>"\U1f4a3"</kbd>
+	      <samp>"\ud83d\udca3"</samp>
+	      Even though we entered the "bomb" emoji using UTF-32 notation,
+	      when output in ASCII it is converted to a UTF-16 surrogate pair.
+	    </div>
 
-	<li>Unicode tables often show characters in a "U+<var>XXXXX</var>" notation.
-	    This corresponds to JsonCalc's "\U<var>XXXXX</var>" notation.
+	<li>Unicode tables often show code points in a "U+<var>XXXXX</var>"
+	    notation.  This corresponds to JsonCalc's "\u{<var>XXXXX</var>}"
+	    or "\U<var>XXXXX</var>" notation.
 
       </ul>
     </details>

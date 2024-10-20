@@ -14,6 +14,7 @@
 #endif
 
 
+/* Append an element to an array */
 static void jappendarray(json_t *container, json_t *more)
 {
 	json_t	*scan;
@@ -35,6 +36,9 @@ static void jappendarray(json_t *container, json_t *more)
 	JSON_END_POINTER(container) = more;
 }
 
+/* Append a member to an object.  This version is only useable in the parser
+ * because it assumes each member is new (no duplicates).
+ */
 static void jappendobject(json_t *container, json_t *more)
 {
 	json_t	*scan;

@@ -159,7 +159,7 @@ toFixed(50.2, 2)
 ="50.20"
 [{foo:"bar"}].typeOf(true)
 ="table"
-"String".width()
+"String".widthOf()
 =6
 
 # bigger stuff

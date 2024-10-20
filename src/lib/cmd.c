@@ -1236,7 +1236,13 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Body -- if no body, that's okay */
 	if (*src->str == '{')
 		body = json_cmd_parse_curly(src, referr);
-	else
+	else if (json_calc_function_by_name(fname)) {
+		/* No body but the function is already defined -- we were
+		 * just redundantly declaring an already-defined function.
+		 */
+		free(fname);
+		return NULL;
+	} else
 		body = NULL;
 
 	/* Define it! */

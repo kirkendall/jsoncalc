@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>widthOf</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc widthOf - Calculate the width of a string">
+    <meta name="keywords" content="string, jsoncalc, function reference, widthOf">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>widthOf - Calculate the width of a string</h1>
+    <dl>
+      <dt>widthOf(<var>str</var>)
+      <dd>
+      This returns the width of a string.
+      This is different from the length because some Unicode characters
+      are double-width, some are zero-width.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Happy=\U1f600".widthOf()</kbd>
+	<samp>8</samp>
+	<kbd>"Happy=\U1f600".length</kbd>
+	<samp>7</samp>
+        This example shows that widthOf() isn't always the same as length.
+        The \U1f600 emoji is 2 columns wide, nudging the string width up a bit.
+      </div>
+
+    </details>
+
+  </body>
+</body>

@@ -2055,6 +2055,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	/* Initialize the stack */
 	stack.sp = 0;
 	stack.canassign = canassign;
+	err = NULL;
 
 	/* Scan tokens through the end of the expression */
 	while ((c = lex(c, &token, &stack)) != NULL && token.op != JSONOP_INVALID) {

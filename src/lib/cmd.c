@@ -1584,13 +1584,10 @@ static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	jsoncalc_t *calc;
 	char	*end, *err;
 	jsoncmd_t *cmd;
-	jsonsrc_t start;
 
 	/* Allocate a cmd */
-	start = *src;
 	cmd = json_cmd(src, &jcn_file);
 
 	/* Many possible ways to invoke this.  Most commands have a strict
@@ -1721,7 +1718,6 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	jsoncalc_t *calc;
 	char	*end, *err;
 	jsoncmd_t *cmd;
 	jsonsrc_t start;

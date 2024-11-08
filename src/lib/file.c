@@ -122,7 +122,7 @@ char *json_file_path(const char *filename, const char *ext)
 		if (*dir == '~')
 			needsize = snprintf(pathname, pathsize, "%s%s/%s%s", home, dir + 1, filename, ext);
 		else if (*dir == '.' && !dir[1])
-			needsize = snprintf(pathname, pathsize, "%s%s", home, dir + 1, filename, ext);
+			needsize = snprintf(pathname, pathsize, "%s%s", filename, ext);
 		else
 			needsize = snprintf(pathname, pathsize, "%s/%s%s", dir, filename, ext);
 
@@ -133,7 +133,7 @@ char *json_file_path(const char *filename, const char *ext)
 			if (*dir == '~')
 				snprintf(pathname, pathsize, "%s%s/%s%s", home, dir + 1, filename, ext);
 			else if (*dir == '.' && !dir[1])
-				snprintf(pathname, pathsize, "%s%s", home, dir + 1, filename, ext);
+				snprintf(pathname, pathsize, "%s%s", filename, ext);
 			else
 				snprintf(pathname, pathsize, "%s/%s%s", dir, filename, ext);
 		}

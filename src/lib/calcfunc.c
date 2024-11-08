@@ -52,6 +52,9 @@ static json_t *jfn_typeOf(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_widthOf(json_t *args, void *agdata);
 static json_t *jfn_keys(json_t *args, void *agdata);
+static json_t *jfn_trim(json_t *args, void *agdata);
+static json_t *jfn_trimStart(json_t *args, void *agdata);
+static json_t *jfn_trimEnd(json_t *args, void *agdata);
 static json_t *jfn_join(json_t *args, void *agdata);
 static json_t *jfn_concat(json_t *args, void *agdata);
 static json_t *jfn_orderBy(json_t *args, void *agdata);
@@ -116,8 +119,11 @@ static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "any",		jfn_
 static jsonfunc_t typeOf_jf      = {&isNaN_jf,       "typeOf",      "any,prevtype",	jfn_typeOf};
 static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "any",		jfn_sizeOf};
 static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str",		jfn_widthOf};
-static jsonfunc_t keys_jf        = {&widthOf_jf,       "keys",        "obj",		jfn_keys};
-static jsonfunc_t join_jf        = {&keys_jf,        "join",        "arr, delim",	jfn_join};
+static jsonfunc_t keys_jf        = {&widthOf_jf,     "keys",        "obj",		jfn_keys};
+static jsonfunc_t trim_jf        = {&keys_jf,        "trim",        "str",		jfn_trim};
+static jsonfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str",		jfn_trimStart};
+static jsonfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str",		jfn_trimEnd};
+static jsonfunc_t join_jf        = {&trimEnd_jf,     "join",        "arr, delim",	jfn_join};
 static jsonfunc_t concat_jf      = {&join_jf,        "concat",      "arr|str, ...",	jfn_concat};
 static jsonfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     "tbl, columns",	jfn_orderBy};
 static jsonfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     "tbl, columns",	jfn_groupBy};
@@ -577,6 +583,51 @@ static json_t *jfn_keys(json_t *args, void *agdata)
 		}
 	}
 	return result;
+}
+
+static json_t *help_trim(json_t *args, int start, int end, char *name)
+{
+	char	*substr;
+	size_t	len;
+
+	/* This only works on non-strings */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(1, "The %s function only works on strings", name);
+
+	/* Get the string to trim */
+	substr = args->first->text;
+
+	/* Trim leading spaces */
+	if (start)
+		while (*substr == ' ')
+			substr++;
+
+	/* Trim trailing spaces */
+	len = strlen(substr);
+	if (end)
+		while (len > 0 && substr[len - 1] == ' ')
+			len--;
+
+	/* Return the trimmed substring */
+	return json_string(substr, len);
+}
+
+/* trim(obj) returns a string with leading and trailing spaces removed */
+static json_t *jfn_trim(json_t *args, void *agdata)
+{
+	return help_trim(args, 1, 1, "trim");
+}
+
+/* trimStart(obj) returns a string with leading spaces removed */
+static json_t *jfn_trimStart(json_t *args, void *agdata)
+{
+	return help_trim(args, 1, 0, "trimStart");
+}
+
+/* trimEnd(obj) returns a string with trailing spaces removed */
+static json_t *jfn_trimEnd(json_t *args, void *agdata)
+{
+	return help_trim(args, 0, 1, "trimEnd");
 }
 
 /* join(arr, delim) returns a string combining values.  The delim parameter

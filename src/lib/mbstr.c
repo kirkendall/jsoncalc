@@ -89,13 +89,15 @@ const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
 }
 
 /* Find the position of "needle" within "haystack", and return a pointer to it.
- * If reflen is non-NULL then return the number of bytes (not characters) of
- * "haystack" that match.  If the needle isn't found, return NULL.
+ * if refccount is non-NULL then return the character count before the start
+ * of the match (if there is a match).  If reflen is non-NULL then return the
+ * number of bytes (not characters) of "haystack" that match.  If the needle
+ * isn't found, return NULL.
  */
-const char *json_mbs_str(const char *haystack, const char *needle, size_t *reflen, int last, int ignorecase)
+const char *json_mbs_str(const char *haystack, const char *needle, size_t *refccount, size_t *reflen, int last, int ignorecase)
 {
 	wchar_t wc, nfirst;
-	size_t	nlen;
+	size_t	nlen, ccount, foundccount;
 	int	in;
 	const char *found;
 
@@ -110,8 +112,8 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refle
 	nlen = json_mbs_len(needle);
 
 	/* Scan for matches */
-	found = NULL;
-	for (found = NULL; *haystack; haystack++) {
+	ccount = foundccount = 0;
+	for (found = NULL; *haystack; haystack += in, ccount++) {
 		/* Check to see if the first character matches */
 		in = mbtowc(&wc, haystack, MB_CUR_MAX);
 		if (in < 1)
@@ -132,6 +134,7 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refle
 
 		/* Found a match! */
 		found = haystack;
+		foundccount = ccount;
 
 		/* If we wanted first match, we're done. */
 		if (!last)
@@ -139,6 +142,8 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refle
 	}
 
 	/* Return what we found */
+	if (refccount && found)
+		*refccount = foundccount;
 	if (reflen && found) {
 		/* Convert character count to byte count */
 		json_mbs_substr(found, 0, &nlen);

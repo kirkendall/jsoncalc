@@ -72,6 +72,11 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata);
 static json_t *jfn_fromCharCode(json_t *args, void *agdata);
 static json_t *jfn_replace(json_t *args, void *agdata);
 static json_t *jfn_replaceAll(json_t *args, void *agdata);
+static json_t *jfn_includes(json_t *args, void *agdata);
+static json_t *jfn_indexOf(json_t *args, void *agdata);
+static json_t *jfn_lastIndexOf(json_t *args, void *agdata);
+static json_t *jfn_startsWith(json_t *args, void *agdata);
+static json_t *jfn_endsWith(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -140,7 +145,12 @@ static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str, num|ar
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode","num|str|arr, ...",	jfn_fromCharCode};
 static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     "str, srch|re",	jfn_replace};
 static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str, srch|re",	jfn_replaceAll};
-static jsonfunc_t count_jf       = {&replaceAll_jf,  "count",       "any",		jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t includes_jf    = {&replaceAll_jf,  "includes",  "str, srch",	jfn_includes};
+static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",  "arr|str, srch",	jfn_indexOf};
+static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf",  "arr|str, srch",	jfn_lastIndexOf};
+static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "str, srch",	jfn_startsWith};
+static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "str, srch",	jfn_endsWith};
+static jsonfunc_t count_jf       = {&endsWith_jf,    "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "num|str, marker",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -1407,7 +1417,7 @@ static json_t *help_replace(json_t *args, regex_t *preg, int globally)
 		/* STRING VERSION */
 
 		/* For each match...  */
-		while ((found = json_mbs_str(subject, search, &searchlen, 0, ignorecase)) != NULL) {
+		while ((found = json_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
 			/* Add any text from the subject string before the match */
 			if (found != subject) {
 				buf = addstr(buf, &bufsize, used, subject, (size_t)(found - subject));
@@ -1467,6 +1477,179 @@ static json_t *jfn_replaceAll(json_t *args, void *agdata)
 		return help_replace(args, NULL, 10);
 }
 
+/* This is a helper function for indexOf(), lastIndexOf(), and includes().
+ * These three are similar enough to benefit from common code.  Returns -2 or
+ * -3 on bad parameters, -1 if not found, or an index number otherwise.
+ */
+int help_indexOf(json_t *args, int last)
+{
+	int	ignorecase;
+
+	/* We need at least 2 arguments.  Third may be ignorecase flag */
+	if (!args->first->next)
+		return -2;
+	ignorecase = json_is_true(args->first->next->next);
+	if (ignorecase && args->first->next->type != JSON_STRING)
+		return -3;
+
+	/* Array version?  String version? */
+	if (args->first->type == JSON_ARRAY) {
+		/* Array version! */
+		json_t	*haystack = args->first;
+		json_t	*needle = args->first->next;;
+		json_t	*scan;
+		int	i;
+
+		/* If looking for last, start at end */
+		if (last) {
+			/* Scan the array backwards.  This is awkward and
+			 * inefficient since the array is stored as a linked
+			 * list.
+			 */
+			for (i = json_length(haystack) - 1; i >= 0; i--) {
+				scan = json_by_index(haystack, i);
+				if (ignorecase) {
+					/* Case-insensitive search for a string */
+					if (scan->type == JSON_STRING && json_mbs_casecmp(scan->text, needle->text) == 0)
+						return i;
+				} else {
+					/* Search for anything, case-sensitive */
+					if (json_equal(scan, needle))
+						return i;
+				}
+			}
+		} else {
+			/* Scan the array forward.  Much better! */
+			for (i = 0, scan = haystack->first; scan; i++, scan = scan->next) {
+
+				if (ignorecase) {
+					/* Case-insensitive search for a string */
+					if (scan->type == JSON_STRING && json_mbs_casecmp(scan->text, needle->text) == 0)
+						return i;
+				} else {
+					/* Search for anything, case-sensitive */
+					if (json_equal(scan, needle))
+						return i;
+				}
+			}
+		}
+	} else if (args->first->type == JSON_STRING) {
+		/* String version! */
+
+		char *haystack = args->first->text;
+		char *needle = args->first->next->text;
+		size_t	position;
+
+		if (json_mbs_str(haystack, needle, &position, NULL, last, ignorecase))
+			return (int)position;
+
+	} else {
+		/* Trying to seach in something other than an array or string */
+		return -2;
+	}
+
+	/* If we get here, we didn't find it */
+	return -1;
+}
+
+/* Return a boolean indicator of whether array or string contains target */
+static json_t *jfn_includes(json_t *args, void *agdata)
+{
+	int	i = help_indexOf(args, 0);
+	if (i == -2)
+		return json_error_null(1, "The %s function requires an array or string, and something to search for", "includes");
+	if (i == -3)
+		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "includes");
+	return json_bool(i >= 0);
+}
+
+/* Return a number indicating the position of the first match within an array
+ * or string, or -1 if no match is found.
+ */
+static json_t *jfn_indexOf(json_t *args, void *agdata)
+{
+	int	i = help_indexOf(args, 0);
+	if (i == -2)
+		return json_error_null(1, "The %s function requires an array or string, and something to search for", "indexOf");
+	if (i == -3)
+		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "indexOf");
+	return json_from_int(i);
+}
+
+/* Return a number indicating the position of the last match within an array
+ * or string, or -1 if no match is found.
+ */
+static json_t *jfn_lastIndexOf(json_t *args, void *agdata)
+{
+	int	i = help_indexOf(args, 1);
+	if (i == -2)
+		return json_error_null(1, "The %s function requires an array or string, and something to search for", "lastIndexOf");
+	if (i == -3)
+		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "lastIndexOf");
+	return json_from_int(i);
+}
+
+/* Return a boolean indicator of whether a string begins with a target */
+static json_t *jfn_startsWith(json_t *args, void *agdata)
+{
+	size_t	len;
+	char	*haystack, *needle;
+
+	/* Requires two strings */
+	if (args->first->type != JSON_STRING
+	 || !args->first->next
+	 || args->first->next->type != JSON_STRING) {
+		return json_error_null(1, "The %s function requires two strings", "startsWith");
+	}
+	haystack = args->first->text;
+	needle = args->first->next->text;
+
+	/* Compare the leading part of the first string to the second */
+	if (json_is_true(args->first->next->next)) {
+		/* Case-insensitive version */
+		len = json_mbs_len(needle);
+		return json_bool(json_mbs_ncasecmp(haystack, needle, len) == 0);
+	} else {
+		/* Case-sensitive version */
+		len = strlen(needle);
+		return json_bool(strncmp(haystack, needle, len) == 0);
+	}
+}
+
+/* Return a boolean indicator of whether a string ends with a target */
+static json_t *jfn_endsWith(json_t *args, void *agdata)
+{
+	size_t	haylen, len;
+	const char	*haystack, *needle;
+
+	/* Requires two strings */
+	if (args->first->type != JSON_STRING
+	 || !args->first->next
+	 || args->first->next->type != JSON_STRING) {
+		return json_error_null(1, "The %s function requires two strings", "endsWith");
+	}
+	haystack = args->first->text;
+	needle = args->first->next->text;
+
+	/* Compare the leading part of the first string to the second */
+	if (json_is_true(args->first->next->next)) {
+		/* Case-insensitive version */
+		haylen = json_mbs_len(haystack);
+		len = json_mbs_len(needle);
+		if (len > haylen)
+			return json_bool(0);
+		haystack = json_mbs_substr(haystack, haylen - len, NULL);
+		return json_bool(json_mbs_casecmp(haystack, needle) == 0);
+	} else {
+		/* Case-sensitive version */
+		haylen = strlen(haystack);
+		len = strlen(needle);
+		if (len > haylen)
+			return json_bool(0);
+		haystack += haylen - len;
+		return json_bool(strcmp(haystack, needle) == 0);
+	}
+}
 
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *

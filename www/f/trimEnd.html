@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>trimEnd</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc trimEnd - Remove trailing whitespace">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, trimEnd">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>trimEnd - Remove trailing whitespace</h1>
+    <dl>
+      <dt>trimEnd(<var>str</var>)
+      <dd>
+      <tt>trimEnd()</tt> returns a copy of <var>str</var> from which leading and
+      trailing whitespace have been removed.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"  foo bar  ".trimEnd()</kbd>
+	<samp>"  foo bar"</samp>
+	Trailing whitespace is removed, but not leading or internal whitespace.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=trim">trim()</td><td>Trim leading and trailing whitespace.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=trimStart">trimStart()</td><td>Trim leading whitespace only.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

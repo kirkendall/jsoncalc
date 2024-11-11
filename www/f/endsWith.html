@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>endsWith</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc endsWith - Test whether a string starts with another">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, endsWith">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>endsWith - Test whether a string ends with another</h1>
+    <dl>
+      <dt>endsWith(<var>str</var>, <var>substr</var>)
+      <br/>endsWith(<var>str</var>, <var>substr</var>, <strong>true</strong>)
+      <dd>
+      The <tt>endsWith</tt> function returns <tt>true</tt> if the first
+      string ends with the second, or <tt>false</tt> otherwise.
+      <p>
+      The comparison is normally case-sensitive, but you can add a <tt>true</tt>
+      argument to make it case-insensitive.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"The Universe".endsWith("verse")</kbd>
+	<samp>true</samp>
+	Now we know how "The Universe" ends.
+	It seems appropriate.
+      </div>
+
+      <div class="example">
+	<kbd>"The Universe".endsWith("whimper")</kbd>
+	<samp>false</samp>
+	Nope.  "whimper" does not appear at the end of "The Universe".
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript's version of <tt>endsWith()</tt> is case-sensitive;
+            it doesn't support a case-insensitive flag.
+            Adding <tt>true</tt> to make it case-insensitive is strictly a
+            JsonCalc thing.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=startsWith">startsWith()</a></td><td>Test whether a string starts with given text</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

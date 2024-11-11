@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>includes</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc includes - Test whether an array or string contains a value">
+    <meta name="keywords" content="string, array, jsoncalc, function reference, includes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>includes - Test whether an array or string contains a value</h1>
+    <dl>
+      <dt>includes(<var>arr</var>, <var>elem</var>)
+      <br/>includes(<var>arr</var>, <var>elem</var>, <stong>true</strong>)
+      <dt>includes(<var>str</var>, <var>substr</var>)
+      <br/>includes(<var>str</var>, <var>substr</var>, <stong>true</strong>)
+      <dd>
+      The <tt>includes</tt> function searches through either an array or a
+      string, and returns <tt>true</tt> if it contains a given value, or
+      <tt>false</tt> otherwise. 
+      <p>
+      When searching through an array,
+      the second argument is compared to each element of the array.
+      The comparison is similar to the <a target="_PARENT" href="../index.html?op=equal">===</a> operator &mdash;
+      you can search for complex values such as objects or nested arrays,
+      not just numbers or strings.
+      <p>
+      When searching through a string,
+      it looks for any instance where the second argument appears as
+      a substring of the first string
+      <p>
+      When comparing strings (either as an element of an array, or as a
+      substring within a string), comparisons are normally case-sensitive.
+      You can append a <strong>true</strong> argument to make it be
+      case-insensitive.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"I have a cat on my lap".includes("cat")</kbd>
+	<samp>true</samp>
+        There is indeed a cat on my lap.
+      </div>
+
+      <div class="example">
+	<kbd>"I have a cat on my lap".includes("dog")</kbd>
+	<samp>false</samp>
+        There word dog doesn't appear anywhere in the sentence.
+      </div>
+
+      <div class="example">
+	<kbd>"Once Upon a Time".includes("up")</kbd>
+	<samp>false</samp>
+	<kbd>"Once Upon a Time".includes("up", true)</kbd>
+	<samp>true</samp>
+	Searching for "up" case-sensitively found nothing,
+	but a case-insensitive search found it.
+      </div>
+
+      <div class="example">
+	<kbd>[1,2,3,"four","Five",3,2,1].includes(3)</kbd>
+	<samp>true</samp>
+	There is indeed at least once instance of <tt>3</tt> in that array.
+      </div>
+
+      <div class="example">
+	<kbd>[1,2,3,"four","Five",3,2,1].includes("five")</kbd>
+	<samp>false</samp>
+	<kbd>[1,2,3,"four","Five",3,2,1].includes("five", true)</kbd>
+	<samp>true</samp>
+	A case-sensitive search failed to find <tt>"five"</tt>, but
+	a case-insensitive search found it.
+      </div>
+
+      <div class="example">
+	<kbd>[{x:1,y:2},{x:3,y:4},{x:5,y:6}].includes({x:3,y:4})</kbd>
+	<samp>true</samp>
+	Here's an example of searching for a complex value.
+	The object <tt>{x:3,y:4}</tt> does indeed appear within the array.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript has no case-insensitive option.  Passing <tt>true</tt>
+            as the third parameter is strictly a JsonCalc thing.
+	<li>JavaScript's version of <tt>includes()</tt> can't search arrays
+	    for complex values.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=indexOf">indexOf()</td><td>Return the position of the first instance.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=lastIndexOf">lastIndexOf()</td><td>Return the position of the last instance.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

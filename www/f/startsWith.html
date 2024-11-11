@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>startsWith</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc startsWith - Test whether a string starts with another">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, startsWith">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>startsWith - Test whether a string starts with another</h1>
+    <dl>
+      <dt>startsWith(<var>str</var>, <var>substr</var>)
+      <br/>startsWith(<var>str</var>, <var>substr</var>, <strong>true</strong>)
+      <dd>
+      The <tt>startsWith</tt> function returns <tt>true</tt> if the first
+      string starts with the second, or <tt>false</tt> otherwise.
+      <p>
+      The comparison is normally case-sensitive, but you can add a <tt>true</tt>
+      argument to make it case-insensitive.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"The Universe".startsWith("big bang")</kbd>
+	<samp>false</samp>
+	The string "The Universe" does not start with the string "big bang".
+      </div>
+
+      <div class="example">
+	<kbd>"The Universe".startsWith("The")</kbd>
+	<samp>true</samp>
+        Yes, we have proven "The Universe" starts with "The"!
+      </div>
+
+      <div class="example">
+	<kbd>"The Universe".startsWith("the")</kbd>
+	<samp>false</samp>
+	<kbd>"The Universe".startsWith("the", true)</kbd>
+	<samp>true</samp>
+        A quick example showing how case-insensitive tests work.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript's version of <tt>startsWith()</tt> is case-sensitive;
+            it doesn't support a case-insensitive flag.
+            Adding <tt>true</tt> to make it case-insensitive is strictly a
+            JsonCalc thing.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=endsWith">endsWith()</a></td><td>Test whether a string ends with given text</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>indexOf</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc indexOf - Return position of first match">
+    <meta name="keywords" content="string, array, jsoncalc, function reference, indexOf">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>indexOf - Return position of first match</h1>
+    <dl>
+      <dt>indexOf(<var>arr</var>, <var>elem</var>)
+      <br/>indexOf(<var>arr</var>, <var>elem</var>, <stong>true</strong>)
+      <dt>indexOf(<var>str</var>, <var>substr</var>)
+      <br/>indexOf(<var>str</var>, <var>substr</var>, <stong>true</strong>)
+      <dd>
+      The <tt>indexOf</tt> function searches through either an array or a
+      string, and returns the position of the first match.
+      If no match is found, it returns -1.
+      <p>
+      When searching through an array,
+      the second argument is compared to each element of the array.
+      The subscript of the first match is returned.
+      The comparison is similar to the <a target="_PARENT" href="../index.html?op=equal">===</a> operator &mdash;
+      you can search for complex values such as objects or nested arrays,
+      not just numbers or strings.
+      <p>
+      When searching through a string,
+      it looks for the first instance where the second argument appears as
+      a substring of the first string, and returns its character index
+      within the string.
+      If the second string doesn't appear anywhere with the first, then -1
+      is returned;
+      <p>
+      When comparing strings (either as an element of an array, or as a
+      substring within a string), comparisons are normally case-sensitive.
+      You can append a <strong>true</strong> argument to make it be
+      case-insensitive.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"I have a cat on my lap".indexOf("cat")</kbd>
+	<samp>9</samp>
+        There are 9 characters before the first instance of "cat".
+      </div>
+
+      <div class="example">
+	<kbd>"I have a cat on my lap".indexOf("dog")</kbd>
+	<samp>-1</samp>
+        There word dog doesn't appear anywhere in the sentence.
+      </div>
+
+      <div class="example">
+	<kbd>"Once Upon a Time".indexOf("up")</kbd>
+	<samp>-1</samp>
+	<kbd>"Once Upon a Time".indexOf("up", true)</kbd>
+	<samp>5</samp>
+	Searching for "up" case-sensitively found nothing,
+	but a case-insensitive search found it after 5 characters.
+      </div>
+
+      <div class="example">
+	<kbd>[1,2,3,"four","Five",3,2,1].indexOf(3)</kbd>
+	<samp>2</samp>
+	The first instance of <tt>3</tt> occurs in at subscript 2.
+      </div>
+
+      <div class="example">
+	<kbd>[1,2,3,"four","Five",3,2,1].indexOf("five")</kbd>
+	<samp>-1</samp>
+	<kbd>[1,2,3,"four","Five",3,2,1].indexOf("five", true)</kbd>
+	<samp>4</samp>
+	A case-sensitive search failed to find <tt>"five"</tt>, but
+	a case-insensitive search found it.
+      </div>
+
+      <div class="example">
+	<kbd>[{x:1,y:2},{x:3,y:4},{x:5,y:6}].indexOf({x:3,y:4})</kbd>
+	<samp>1</samp>
+	Here's an example of searching for a complex value.
+	The object <tt>{x:3,y:4}</tt> appears at subscript 1.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript has no case-insensitive option.  Passing <tt>true</tt>
+            as the third parameter is strictly a JsonCalc thing.
+	<li>JavaScript's version of <tt>indexOf()</tt> can't search arrays
+	    for complex values.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=lastIndexOf">lastIndexOf()</td><td>Find the last instance, instead of the first.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=includes">includes()</td><td>Test whether a given value appears within an array.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

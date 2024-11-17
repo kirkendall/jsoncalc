@@ -38,8 +38,9 @@ void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
 }
 
 
-/* Free a context.  Also frees the data associated with it, unless
- * context->flags has the JSON_CONTEXT_NOFREE bit set.
+/* Free a single layer of context.  Also frees the data associated with it,
+ * unless context->flags has the JSON_CONTEXT_NOFREE bit set.  Returns the
+ * next layer down in the context stack.
  */
 jsoncontext_t *json_context_free(jsoncontext_t *context)
 {
@@ -60,8 +61,19 @@ jsoncontext_t *json_context_free(jsoncontext_t *context)
         return older;
 }
 
-/* Add a context.  Optionally add a handler for when json_context_by_key()
- * is used to search for a name that can't be found in data.
+/* Add a context.  "older" is a lower context layer or NULL if there is none.
+ * "data" is data (usually an object) associated with the layer, for things
+ * like local variables; it may be NULL too.  "flags" is a bitwise-OR of the
+ * following, but in practice is often 0:
+ *   JSON_CONTEXT_NOFREE  Don't free the data when context is freed
+ *   JSON_CONTEXT_VAR	  Variable -- use with GLOBAL for non-local
+ *   JSON_CONTEXT_CONST	  Const -- like variable but can't assign
+ *   JSON_CONTEXT_GLOBAL  Context is accessible everywhere
+ *   JSON_CONTEXT_THIS    Context can be "this" or "that"
+ *   JSON_CONTEXT_ARGS    Function arguments and local vars/consts
+ *   JSON_CONTEXT_NOCACHE Try autoload() before *data
+ * Additionally, you might want to set autoload() and/or modified() callback
+ * functions on the context, to handle those situations.
  */
 jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, jsoncontextflags_t flags)
 {
@@ -82,7 +94,7 @@ jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, jsoncontextflags
 
 /* Locate a context layer that satisfies the "flags" argument.  If no such
  * layer exists, then insert it into the context stack in an appropriate
- * position.  Returns the new context, and may also adjusst the top of the
+ * position.  Returns the new context, and may also adjust the top of the
  * context stack -- notice that we pass a reference to the stack pointer
  * instead of the pointer itself like we do for most context functions.
  */

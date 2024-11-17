@@ -975,14 +975,111 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *try_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	/*!!!*/
+	jsoncmd_t	*parsed;
+	char		*str = NULL;
+	jsonsrc_t	parensrc;
+
+	/* Allocate the jsoncmd_t for it */
+	parsed = json_cmd(src, &jcn_try);
+
+	/* Get the "try" statements */
+	parsed->sub = json_cmd_parse_curly(src, referr);
+	if (*referr)
+		goto CleanUpAfterError;
+
+	/* Expect "catch" */
+	if (strncasecmp(src->str, "catch", 5) || !strchr(" \t\n\r({", src->str[5])) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing \"catch\"");
+		goto CleanUpAfterError;
+	}
+	src->str += 5;
+	json_cmd_parse_whitespace(src);
+
+	/* Optional name within parentheses */
+	if (*src->str == '(') {
+		/* Get the parenthesized expression */
+		str = json_cmd_parse_paren(src);
+
+		/* It should be a single name */
+		parensrc.str = str;
+		parsed->key = json_cmd_parse_key(&parensrc, 1);
+		if (*parensrc.str) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "The argument to catch should be a single name");
+			goto CleanUpAfterError;
+		}
+
+		/* Free the string */
+		free(str);
+		str = NULL;
+	}
+
+	/* Get the "catch" statements */
+	parsed->more = json_cmd_parse_curly(src, referr);
+	if (*referr)
+		goto CleanUpAfterError;
+
+	/* !!! I supposed I could test for a "finally" statement */
+
+	/* Return it */
+	return parsed;
+
+CleanUpAfterError:
+	if (str)
+		free(str);
+	json_cmd_free(parsed);
 	return NULL;
 }
 
 static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	/*!!!*/
-	return NULL;
+	jsoncmdout_t *result;
+	jsoncontext_t *caught;
+	json_t *obj, *contextobj;
+
+	/* Run the "try" statements.  For any result other than an error,
+	 * just return it.
+	 */
+	result = json_cmd_run(cmd->sub, refcontext);
+	if (!result || result->ret)
+		return result;
+
+	/* If no "catch" block, we're done */
+	if (!cmd->more)
+		return NULL;
+
+	/* If there's a key, then we need to add a context where that name
+	 * is an object describing the error.
+	 */
+	if (cmd->key) {
+
+		/* Build the object describing the error */
+		obj = json_object();
+		if (result->filename)
+			json_append(obj, json_key("filename", json_string(result->filename, -1)));
+		json_append(obj, json_key("line", json_from_int(result->lineno)));
+		json_append(obj, json_key("code", json_from_int(result->code)));
+		json_append(obj, json_key("message", json_string(result->text, -1)));
+
+		/* Make that object be inside another object, using key as the
+		 * the member name.
+		 */
+		contextobj = json_object();
+		json_append(contextobj, json_key(cmd->key, obj));
+
+		/* Stuff it in a context, using the key as the name */
+		caught = json_context(*refcontext, contextobj, 0);
+
+		/* Run the "catch" block with this context */
+		result = json_cmd_run(cmd->more, &caught);
+
+		/* Free the context. This also frees the data allocated above.*/
+		json_context_free(caught);
+	} else {
+		/* Just run the "catch" block with the same context */
+		result = json_cmd_run(cmd->more, &caught);
+	}
+
+	return result;
 }
 
 

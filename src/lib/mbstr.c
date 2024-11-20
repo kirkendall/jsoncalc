@@ -548,7 +548,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
  * length in bytes.  This does *not* add a NUL character to the end of the
  * string, or include room for a terminating NUL character in the returned
  * length.  If "dst" is NULL then just compute the length.  If nbytes is -1
- * then use strlen() to the source string's length in bytes.
+ * then use strlen() to find the source string's length in bytes.
  */
 size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
 {
@@ -556,7 +556,7 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
         size_t size;
         int mbsize;
         wchar_t wc;
-        int limit;
+        int limit, skipcurly;
         char dummy[MB_CUR_MAX];
 
         /* If nbytes is -1 then use strlen to find the true length */
@@ -632,8 +632,10 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
                 /* hex digits needed? */
                 if (limit > 0) {
                         /* if \u{ then parse through the } */
-                        if (src[1] == '\{') {
+			skipcurly = 0;
+                        if (src[1] == '{') {
 				limit = 8;
+				skipcurly = 1;
 				src++;
                         }
 
@@ -648,8 +650,13 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
                                         wc = (wc << 4) + *src - 'a' + 10;
                                 else if (*src >= 'A' && *src <= 'F')
                                         wc = (wc << 4) + *src - 'A' + 10;
-                                else
+                                else {
+					/* We moved onto a non-hex digit, which
+					 * is *NOT* part of the sequence.
+					 */
+					src--;
                                         break;
+				}
                         }
 
                         /* If it is a UTF-16 surrogate pair high codepoint,
@@ -657,13 +664,13 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
                          */
 			if (wc >= 0xd800
 		 	 && wc < 0xdc00
-			 && src[1] == '\\'
-			 && src[2] == 'u'
-			 && (src[3] == 'd' || src[3] == 'D')
-			 && strchr("cdefCDEF", src[4])) {
+			 && src[0] == '\\'
+			 && src[1] == 'u'
+			 && (src[2] == 'd' || src[2] == 'D')
+			 && strchr("cdefCDEF", src[3])) {
 				/* Decode the second surrogate pair */
 				wchar_t	wc2 = 0;
-				src += 2;
+				src++;
 				limit = 4;
 				while (limit > 0) {
 					limit--;
@@ -674,8 +681,11 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
 						wc2 = (wc2 << 4) + *src - 'a' + 10;
 					else if (*src >= 'A' && *src <= 'F')
 						wc2 = (wc2 << 4) + *src - 'A' + 10;
-					else
+					else {
+						/* went one too far again */
+						src--;
 						break;
+					}
 				}
 
 				/* Combine them */

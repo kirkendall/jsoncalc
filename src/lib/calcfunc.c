@@ -451,19 +451,23 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 		/* Return that */
 		return result;
 	} else if (args->first->type == JSON_NUMBER) {
-		/* Get the args */
+		/* Get the args, including length */
 		n = json_int(args->first);
 		len = 0;
 		if (args->first->next && args->first->next->type == JSON_NUMBER)
 			len = json_int(args->first->next);
-		if (len > sizeof(n) * 2)
-			len = sizeof(n) * 2;
+		if (len < 0)
+			len = 0;
 
-		/* Allocate the return buffer -- probably bigger than we need */
-		result = json_string("", sizeof(n) * 2);
+		/* Allocate the return buffer -- probably bigger than we need,
+		 * but not by much.*/
+		result = json_string("", len ? len : n < 0xffffffffff ? 12 : 2 + sizeof(n) * 2);
 
 		/* Fill it */
-		sprintf(result->text, "%0*lx", len, n);
+		if (len == 0)
+			sprintf(result->text, "0x%lx", n);
+		else
+			sprintf(result->text, "%0*lx", len, n);
 
 		return result;
 	}

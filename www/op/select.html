@@ -148,6 +148,19 @@
 	    then the expression's source code is used as the default name.
 	    You can get some wild-looking keys that way, but they work.
 
+	<li>If every column in the SELECT clause's <var>columns</var> list
+	    uses aggregate functions, then there's an implied DISTINCT.
+	    <div example>
+	      <kbd>SELECT count(*) FROM test.scores</kbd>
+	      <samp>
+		<table>
+		  <tr><th>count(*)</th></tr>
+		  <tr><td>9</td></tr>
+		</table>
+		Instead of getting 9 rows that all say "9" for the row count,
+		we just get 1 row because of the implied DISTINCT.
+	      </samp>
+	    </div>
       </ul>
     </details>
 

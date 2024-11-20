@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>break</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc break - Exit a loop or switch statement">
+    <meta name="keywords" content="command, command reference, break">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>break - Exit a loop or switch statement</h1>
+    <dl>
+      <dt>break
+      <dd>
+      When used within a <a target="_PARENT" href="../index.html?cmd=switch">switch</a> statement, it marks the end of a case; without <tt>break</tt>,
+      control flow would continue into the next case.
+      <p>
+      When used within a <a target="_PARENT" href="../index.html?cmd=while">while</a>
+      or <a target="_PARENT" href="../index.html?cmd=for">for</a> loop,
+      it causes the loop to end immediately.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var i<br/>
+	     for (i = 0 .. (test.scores.length)) { if (test.scores[i].name == "Mary") break;}<br/>
+	     i</kbd>
+	<samp>2</samp>
+        This declares a variable, and then uses it to loop over the subscripts
+        of the <tt>test.scores</tt> array (part of the sample data).
+        When it finds a score with the name "Mary", it stops scanning.
+        The final "i" occurs after the loop, and is used to output the index
+        where the record was found.
+        <p>
+        In a script file, I'd want to split the for-loop onto multiple lines
+        but interactive JsonCalc requires each line to be a complete statement.
+      </div>
+
+      <div class="example">
+        <kbd>switch (3) {case 2: case 3: case 5: case 7: "prime";break; default: "non-prime";}</kbd>
+        <samp>"prime"</samp>
+        Another ugly example due to lack of newlines; sorry about that.
+        <p>
+        The four <a target="_PARENT" href="../index.html?cmd=case">case</a>
+        statements run together because there is no <tt>break</tt> between
+        them, so they all do the <tt>"prime"</tt> thing.  And then they hit
+        <tt>break</tt> so they <em>do not</em> fall though to also say
+        <tt>"non-prime"</tt>.
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>break</tt> statement always exits the innermost
+            <a target="_PARENT" href="../index.html?cmd=switch">switch</a>,
+            <a target="_PARENT" href="../index.html?cmd=while">while</a> or
+            <a target="_PARENT" href="../index.html?cmd=for">for</a> statement.
+            If you have nested loops, for example, and use <tt>break</tt> in
+            the inner loop then the outer loop will not terminate yet.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=switch">switch</a></td><td>Select code to run, based on a value.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=while">while</a></td><td>Loop until a condition is false.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=for">for</a></td><td>Loop over the values in an array.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=continue">continue</a></td><td>Skip the remainder of the loop body, and start the next iteration of the loop.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>case</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc case - Defines a branch label within a switch statement">
+    <meta name="keywords" content="command, command reference, case">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>case - Defines a branch label within a switch statement</h1>
+    <dl>
+      <dt>case <var>literal</var>:
+      <dd>
+      This only works within a <a target="_PARENT" href="../index.html?cmd=switch">switch</a> statement.
+      The expression in the <tt>switch</tt> is compared to the literal in the
+      <tt>case</tt> statement, and if they match then the code after the
+      <tt>case</tt> statement is executed.
+      <p>
+      Note that the <tt>case</tt> statement ends with a colon,
+      not a semicolon or end of input like most other commands.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>switch ("Y") { case "Y": true; break; default: false; }</kbd>
+	<samp>true</samp>
+        Because the expression in the <tt>switch</tt> is "Y",
+        the <tt>case "Y"</tt> code is executed and it outputs <tt>true</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>You'll generally want to use a
+            <a target="_PARENT" href="../index.html?cmd=break">break</a>
+            command at the end of a <tt>case</tt>'s code.
+            One big exception is that if you want multiple cases to share the
+            same code, then you can just have a series of <tt>case</tt>
+            statements all strung together, followed by some shared code and
+            a <tt>break</tt> or <tt>return</tt>.
+            <div class="example">
+              <kbd>switch (entry) {<br/>
+		   case "Yes":<br/>
+		   case "Oui":<br/>
+		   case "S&iacute;":<br/>
+		   case "Ja": "Affirmative"; break;<br/>
+		   default: "Negative";<br/>
+		   }</kbd>
+	      This compares the <tt>enty</tt> variable to multiple possible
+	      affirmative words.
+	      <p>
+	      This example is formatted across multiple lines, which means it
+	      won't paste into JsonCalc very well.
+	      You could paste it into a script file, but really this is only
+	      a fragment of an example, not something that can run cleanly
+	      by itself.
+	    </div>
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=switch">switch</a></td><td>Branch based on a computed value.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=default">default</a></td><td>Defines a branch label that matches any value.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=break">break</a></td><td>Marks the end of a <tt>switch case</tt>, or exits a loop.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

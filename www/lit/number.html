@@ -24,12 +24,15 @@
     an optional "-",
     then some digits (optionally with a "." mixed in),
     and optionally an "e" or "E" followed by an exponent.
+    Integers can also be written in hex with a "0x" prefix,
+    octal with a "0o" or "0" prefix, or
+    binary with a "0b" prefix.
     <p>
-    One unusual thing about JsonCalc is that number literals
-    (including all numbers parsed from JSON documents) are stored internally
-    as text and only converted to binary when necessary,
-    while computed numbers are stored in binary and only converted to text
-    when outputting.
+    One unusual thing about JsonCalc is that number literals parsed from
+    JSON documents are stored internally as text and only converted to
+    binary when necessary.
+    Computed numbers, and most literals parsed in a script (not JSON data)
+    are stored in binary and only converted to text when outputting.
     There are two reasons for this.
     <ul>
       <li>Converting between text and binary formats is slow; there is no
@@ -38,8 +41,8 @@
           never accessed, and the ones that are will usually just
           be copied verbatim to the output.  Let's save some time by not
           converting them.
-      <li>The process of conversion loses precision.
-          Once a number has been converted to binary,
+      <li>The process of floating point conversion loses precision.
+          Once a floating point number has been converted to binary,
           you want it to stay binary as long as possible
           for the sake of precision,
           and only be converted back to text when it's being output.
@@ -62,6 +65,23 @@
         JsonCalc wants.
       </div>
 
+      <div class="example">
+	<kbd>[0x10, 10, 010, 0b10]</kbd>
+	<samp>[16, 10, 8, 2]</samp>
+	This example shows integers in various formats.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summar>
+      <ul>
+        <li>JSON only supports decimal numbers.
+            You can use hex/octal/binary literals in scripts,
+            but not in JSON data.
+	<li>The <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
+	    function can't handle hex/octal/binary either.
+      </ul>
     </details>
 
   </body>

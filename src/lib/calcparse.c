@@ -9,6 +9,7 @@
 #include "json.h"
 #include "calc.h"
 
+
 /* This is by far the largest single source file in the whole library.
  * It defines the json_calc_parse() function, which is responsible for
  * parsing "calc" expressions for later use via the json_calc() function
@@ -485,21 +486,36 @@ char *lex(char *str, token_t *token, stack_t *stack)
 	if (isdigit(*str) || (*str == '.' && isdigit(str[1])))
 	{
 		token->op = JSONOP_NUMBER;
-		while (isdigit(token->full[token->len]))
-			token->len++;
-		if (token->full[token->len] == '.' && token->full[token->len + 1] != '.') {
-			token->len++;
+		if (*str == '0' && strchr("0123456789XxOoBb", str[1])) {
+			int	radix;
+			token->full = str;
+			if (str[1] == 'x' || str[1] == 'X')
+				radix = 16, str += 2;
+			else if (str[1] == 'o' || str[1] == 'O')
+				radix = 8, str += 2;
+			else if (str[1] == 'b' || str[1] == 'B')
+				radix = 2, str += 2;
+			else /* 0nnn, assume octal */
+				radix = 8;
+			(void)strtol(str, &str, radix);
+			token->len = str - token->full;
+		} else {
 			while (isdigit(token->full[token->len]))
 				token->len++;
-		}
-		if (token->full[token->len] == 'e' || token->full[token->len] == 'E') {
-			token->len++;
-			if (token->full[token->len] == '+' || token->full[token->len] == '-')
+			if (token->full[token->len] == '.' && token->full[token->len + 1] != '.') {
 				token->len++;
-			while (isdigit(token->full[token->len]))
+				while (isdigit(token->full[token->len]))
+					token->len++;
+			}
+			if (token->full[token->len] == 'e' || token->full[token->len] == 'E') {
 				token->len++;
+				if (token->full[token->len] == '+' || token->full[token->len] == '-')
+					token->len++;
+				while (isdigit(token->full[token->len]))
+					token->len++;
+			}
+			str += token->len;
 		}
-		str += token->len;
 		if (json_debug_flags.calc)
 			printf("lex(): number JSONOP_NUMBER \"%.*s\"\n", token->len, token->full);
 		return str;
@@ -718,7 +734,23 @@ static jsoncalc_t *jcalloc(token_t *token)
 			json_mbs_unescape(jc->u.literal->text, token->full + 1, token->len - 2);
 	} else if (token->op == JSONOP_NUMBER) {
 		jc->op = JSONOP_LITERAL;
-		jc->u.literal = json_number(token->full, token->len);
+		if (*token->full == '0' && token->full[1] && strchr("0123456789XxOoBb", token->full[1])) {
+			long	value;
+			int	radix;
+			char	*digits = token->full;
+			switch (token->full[1]) {
+			case 'x': case 'X': radix = 16;	digits += 2; break;
+			case 'o': case 'O': radix = 8;	digits += 2; break;
+			case 'b': case 'B': radix = 2;	digits += 2; break;
+			default:	    radix = 8;
+			}
+			value = strtol(digits, NULL, radix);
+			jc->u.literal = json_from_int((int)value);
+		} else if (strchr(token->full, '.') || strchr(token->full, 'e') || strchr(token->full, 'E')) {
+			jc->u.literal = json_from_double(atof(token->full));
+		} else {
+			jc->u.literal = json_from_int(atoi(token->full));
+		}
 	} else if (token->op == JSONOP_BOOLEAN) {
 		jc->op = JSONOP_LITERAL;
 		jc->u.literal = json_bool(*token->full == 't');
@@ -1024,6 +1056,103 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 	return jc;
 }
 
+/* Test whether jc uses an aggregate function */
+static int jcisag(jsoncalc_t *jc)
+{
+	/* Defend against NULL */
+	if (!jc)
+		return 0;
+
+	/* Recursively check subexpressions */
+	switch (jc->op) {
+	  case JSONOP_LITERAL:
+	  case JSONOP_STRING:
+	  case JSONOP_NUMBER:
+	  case JSONOP_BOOLEAN:
+	  case JSONOP_NULL:
+	  case JSONOP_NAME:
+	  case JSONOP_FROM:
+	  case JSONOP_REGEX:
+		return 0;
+
+	  case JSONOP_DOT:
+	  case JSONOP_ELIPSIS:
+	  case JSONOP_ARRAY:
+	  case JSONOP_OBJECT:
+	  case JSONOP_SUBSCRIPT:
+	  case JSONOP_COALESCE:
+	  case JSONOP_QUESTION:
+	  case JSONOP_COLON:
+	  case JSONOP_NJOIN:
+	  case JSONOP_LJOIN:
+	  case JSONOP_RJOIN:
+	  case JSONOP_NEGATE:
+	  case JSONOP_ISNULL:
+	  case JSONOP_ISNOTNULL:
+	  case JSONOP_MULTIPLY:
+	  case JSONOP_DIVIDE:
+	  case JSONOP_MODULO:
+	  case JSONOP_ADD:
+	  case JSONOP_SUBTRACT:
+	  case JSONOP_BITNOT:
+	  case JSONOP_BITAND:
+	  case JSONOP_BITOR:
+	  case JSONOP_BITXOR:
+	  case JSONOP_NOT:
+	  case JSONOP_AND:
+	  case JSONOP_OR:
+	  case JSONOP_LT:
+	  case JSONOP_LE:
+	  case JSONOP_EQ:
+	  case JSONOP_NE:
+	  case JSONOP_GE:
+	  case JSONOP_GT:
+	  case JSONOP_ICEQ:
+	  case JSONOP_ICNE:
+	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
+	  case JSONOP_IN:
+	  case JSONOP_EQSTRICT:
+	  case JSONOP_NESTRICT:
+	  case JSONOP_COMMA:
+	  case JSONOP_BETWEEN:
+	  case JSONOP_EXPLAIN:
+	  case JSONOP_ASSIGN:
+	  case JSONOP_APPEND:
+	  case JSONOP_EACH:
+	  case JSONOP_GROUP:
+		return jcisag(jc->LEFT) || jcisag(jc->RIGHT);
+
+	  case JSONOP_FNCALL:
+		/* If this is an aggregate function, that's our answer */
+		if (jc->u.func.jf->agfn)
+			return 1;
+
+		/* Check arguments */
+		return jcisag(jc->u.func.args);
+
+	  case JSONOP_AG:
+	  case JSONOP_STARTPAREN:
+	  case JSONOP_ENDPAREN:
+	  case JSONOP_STARTARRAY:
+	  case JSONOP_ENDARRAY:
+	  case JSONOP_STARTOBJECT:
+	  case JSONOP_ENDOBJECT:
+	  case JSONOP_SELECT:
+	  case JSONOP_DISTINCT:
+	  case JSONOP_AS:
+	  case JSONOP_WHERE:
+	  case JSONOP_GROUPBY:
+	  case JSONOP_ORDERBY:
+	  case JSONOP_DESCENDING:
+	  case JSONOP_LIMIT:
+	  case JSONOP_INVALID:
+		/* None of these should appear in a parsed expression */
+		abort();
+	}
+}
+
+
 /* Convert a select statement to "native" jsoncalc_t */
 static jsoncalc_t *jcselect(jsonselect_t *sel)
 {
@@ -1033,8 +1162,24 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	/* If there's a column list in the SELECT clause, convert it to an
 	 * object generator.
 	 */
-	if (sel->select)
+	if (sel->select) {
 		sel->select = fixcomma(sel->select, JSONOP_OBJECT);
+
+		/* If there's no "distinct" flag but all columns use aggregates
+		 * then there should be an implied "distinct".  This is why
+		 * "SELECT count(*) FROM table" returns just one count.
+		 */
+		if (!sel->distinct && sel->select) {
+			sel->distinct = 1;
+			for (jc = sel->select; jc; jc = jc->u.param.right) {
+				if (!jcisag(jc->u.param.left)) {
+					sel->distinct = 0;
+					break;
+				}
+			}
+		}
+	}
+
 	if (json_debug_flags.calc) {
 		char *tmp; 
 		printf("jcselect(\n");
@@ -1685,7 +1830,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		}
 
 		/* Function calls */
-		if (PATTERN("x()") || PATTERN("x(*)")) {
+		if (PATTERN("x()") || (PATTERN("x(*)") && !top[-2]->RIGHT)) {
 			/* Function call with no extra parameters.  If x is
 			 * a dotted expression then the left-hand-side object
 			 * is a parameter, otherwise we use "this".

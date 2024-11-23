@@ -8,12 +8,37 @@
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */
 
+/* This returns strdup(str), unless str contains characters that might confuse
+ * the parser such as spaces or punctuation; in those cases, it adds quotes.
+ */
+static void maybeQuoteCpy(char *dst, char *str)
+{
+	/* Decide whether quoting is needed */
+	int	mustQuote = 0;
+	char	*tmp;
+	size_t	len;
+
+	if (!isalpha(*str) && *str != '_')
+		mustQuote = 1;
+	else for (tmp = str + 1; *tmp; tmp++) {
+		if (!isalnum(*tmp) && *tmp != '_')
+			mustQuote = 1;
+	}
+
+	if (mustQuote)
+		*dst++ = '`';
+	strcpy(dst, str);
+	if (mustQuote)
+		strcat(dst, "`");
+}
+
 /* This tries to complete a global name by scanning the context. */
 static char *global_name_generator(const char *text, int state)
 {
 	static size_t len;
 	static json_t *scan;
 	static jsoncontext_t *con;
+	char	*tmp;
 
 	/* First time? */
 	if (state == 0) {
@@ -43,12 +68,14 @@ static char *global_name_generator(const char *text, int state)
 	 */
 	for (;;) {
 		for (; scan; scan = scan->next) {
-			if (!json_mbs_ncmp(scan->text, text, len)) {
+			if (!json_mbs_ncasecmp(scan->text, text, len)) {
 				if (scan->first->type == JSON_OBJECT)
 					rl_completion_append_character = '.';
 				else
 					rl_completion_suppress_append = 1;
-				return strdup(scan->text);
+				tmp = (char *)malloc(strlen(scan->text) + 3);
+				maybeQuoteCpy(tmp, scan->text);
+				return tmp;
 			}
 		}
 		do {
@@ -91,14 +118,14 @@ char *member_name_generator(const char *text, int state)
 	/* We're looking in a container (object) */
 	len = json_mbs_len(text + completion_key_offset);
 	for (; scan; scan = scan->next) {
-		if (!json_mbs_ncmp(scan->text, text + completion_key_offset, len)) {
+		if (!json_mbs_ncasecmp(scan->text, text + completion_key_offset, len)) {
 			if (scan->first->type == JSON_OBJECT)
 				rl_completion_append_character = '.';
 			else if (scan->first->type == JSON_ARRAY)
 				rl_completion_append_character = '[';
 			else
 				rl_completion_suppress_append = 1;
-			strcpy(&buf[completion_key_offset], scan->text);
+			maybeQuoteCpy(&buf[completion_key_offset], scan->text);
 			return strdup(buf);
 		}
 	}

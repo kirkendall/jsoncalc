@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>stringify</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc stringify - Convert data to a JSON string">
+    <meta name="keywords" content="string, array, object, jsoncalc, function reference, stringify">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>stringify - Convert data to a JSON string</h1>
+    <dl>
+      <dt>stringify(<var>data</var>)
+      <br/>stringify(JSON, <var>data</var>)
+      <dd>
+      This converts any data to a JSON string.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>JSON.stringify(1..5)</kbd>
+	<samp>"[1,2,3,4,5]"</samp>
+	The array [1,2,3,4,5] is converted to a string.
+      </div>
+
+      <div class="example">
+	<kbd>stringify({foo:1,north:true})</kbd>
+	<samp>"{\"foo\":1,\"north\":true}"</samp>
+	Here we're converting an object to a string.
+	Since JSON requires quotes around member names, stringify() adds them.
+	The backslashes are just how quotes are allowed in a quoted string.
+	Also, note that we skip the "JSON." &mdash; JsonCalc allows it but
+	doesn't require it.
+      </div>
+
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This is sensitive to the "digits" and "ascii" attributes of the
+	    default formatting settings.  You can adjust those settings via
+	    the -O<var>format</var> command-line flag. Other attributes of
+	    the default format are ignored, including "pretty".
+
+        <li>The main difference between <tt>stringify()</tt> and
+            <a target="_PARENT" href="../index.html?f=toString">toString()</a>
+            is that <tt>toString()</tt> leaves strings unchanged, while
+            <tt>stringify</tt> adds quotes and backslashes as needed to make
+            the value be valid JSON text.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=parse">parse()</td><td>Convert a JSON string to data</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=toString">toString()</td><td>Convert any non-string data to a string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</body>

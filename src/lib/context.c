@@ -273,6 +273,7 @@ jsoncontext_t *json_context_std(json_t *args)
 	global = json_object();
 	vars = json_object();
 	consts = json_object();
+	json_append(consts, json_key("JSON", json_object() ));
 	json_append(global, json_key("vars", vars));
 	json_append(global, json_key("consts", consts));
 	if (args)

@@ -77,6 +77,8 @@ static json_t *jfn_indexOf(json_t *args, void *agdata);
 static json_t *jfn_lastIndexOf(json_t *args, void *agdata);
 static json_t *jfn_startsWith(json_t *args, void *agdata);
 static json_t *jfn_endsWith(json_t *args, void *agdata);
+static json_t *jfn_stringify(json_t *args, void *agdata);
+static json_t *jfn_parse(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -145,12 +147,14 @@ static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str, num|ar
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode","num|str|arr, ...",	jfn_fromCharCode};
 static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     "str, srch|re",	jfn_replace};
 static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str, srch|re",	jfn_replaceAll};
-static jsonfunc_t includes_jf    = {&replaceAll_jf,  "includes",  "str, srch",	jfn_includes};
-static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",  "arr|str, srch",	jfn_indexOf};
-static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf",  "arr|str, srch",	jfn_lastIndexOf};
+static jsonfunc_t includes_jf    = {&replaceAll_jf,  "includes",    "str, srch",	jfn_includes};
+static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "arr|str, srch",	jfn_indexOf};
+static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "arr|str, srch",	jfn_lastIndexOf};
 static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "str, srch",	jfn_startsWith};
 static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "str, srch",	jfn_endsWith};
-static jsonfunc_t count_jf       = {&endsWith_jf,    "count",       "any",		jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t stringify_jf   = {&endsWith_jf,    "stringify",   "data",		jfn_stringify};
+static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str",		jfn_parse};
+static jsonfunc_t count_jf       = {&parse_jf,       "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "num|str, marker",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -980,8 +984,8 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 
 	/* Separate methods for strict vs. non-strict */
 	if (bestrict) {
-		/* Strict!  We want to compare each prospectiveelement against
-		 * all elemends currently in the result, and add only if new.
+		/* Strict!  We want to compare each prospective element against
+		 * all elements currently in the result, and add only if new.
 		 */
 
 		/* For each element after the first... */
@@ -1548,7 +1552,7 @@ int help_indexOf(json_t *args, int last)
 			return (int)position;
 
 	} else {
-		/* Trying to seach in something other than an array or string */
+		/* Trying to search in something other than an array or string */
 		return -2;
 	}
 
@@ -1654,6 +1658,53 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 		return json_bool(strcmp(haystack, needle) == 0);
 	}
 }
+
+
+/* Convert data to a JSON string */
+static json_t *jfn_stringify(json_t *args, void *agdata)
+{
+	char	*str;
+	json_t	*result;
+
+	/* If there are two args and the first is an empty object, then skip it
+	 * on the assumption that it is the JSON object. Convert the second
+	 * argument instead.
+	 */
+	json_t *data = args->first;
+	if (data->next && data->type == JSON_OBJECT)
+		data = data->next;
+
+	/* Convert to string */
+	str = json_serialize(data, NULL);
+
+	/* Stuff the string into a json_t and return it */
+	result = json_string(str, -1);
+	free(str);
+	return result;
+}
+
+/* Convert JSON string to data */
+static json_t *jfn_parse(json_t *args, void *agdata)
+{
+	char	*str;
+	json_t	*result;
+
+	/* If there are two args and the first is an empty object, then skip it
+	 * on the assumption that it is the JSON object. Convert the second
+	 * argument instead.
+	 */
+	json_t *data = args->first;
+	if (data->next && data->type == JSON_OBJECT)
+		data = data->next;
+
+	/* We can only parse strings */
+	if (data->type != JSON_STRING)
+		return json_error_null(0, "parse() only works on strings");
+
+	/* Parse it */
+	return json_parse_string(data->text);
+}
+
 
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *

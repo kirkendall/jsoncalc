@@ -164,17 +164,6 @@ typedef struct jsonag_s {
 } jsonag_t;
 
 
-/* This is used to collect details about a "select" statement */
-typedef struct jsonselect_s {
-	jsoncalc_t *select;	/* Selected columns as an object generator, or NULL */
-	int	distinct;
-	jsoncalc_t *from;	/* expression that returns a table, or NULL for first array in context */
-	jsoncalc_t *where;	/* expression that selects rows, or NULL for all */
-	json_t *groupby;	/* list of field names, or NULL */
-	json_t *orderby;	/* list of field names, or NULL */
-	int	limit;
-} jsonselect_t;
-
 /* This tracks source code for commands.  For strings, "buf" points to the
  * string.  For files, additional memory is allocated for "buf" and must also
  * be freed, but "filename" is a copy of a pointer to a filename string which
@@ -241,7 +230,7 @@ typedef struct jsoncmd_s {
 extern int json_interupt;
 
 /* Function declarations */
-void json_calc_function(
+void json_calc_function_hook(
         char    *name,
         char	*args,
         json_t *(*fn)(json_t *args, void *agdata),

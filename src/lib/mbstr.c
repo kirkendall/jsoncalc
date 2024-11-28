@@ -652,9 +652,10 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
                                         wc = (wc << 4) + *src - 'A' + 10;
                                 else {
 					/* We moved onto a non-hex digit, which
-					 * is *NOT* part of the sequence.
+					 * is usually NOT part of the sequence.
 					 */
-					src--;
+					if (!skipcurly || *src != '}')
+						src--;
                                         break;
 				}
                         }

@@ -51,6 +51,18 @@ typedef enum {
 	JCOP_POSTFIX	/* postfix unary operator */
 } jcoptype_t;
 
+/* This is used to collect details about a "select" statement */
+typedef struct jsonselect_s {
+	jsoncalc_t *select;	/* Selected columns as an object generator, or NULL */
+	int	distinct;
+	jsoncalc_t *from;	/* expression that returns a table, or NULL for first array in context */
+	jsoncalc_t *where;	/* expression that selects rows, or NULL for all */
+	json_t *groupby;	/* list of field names, or NULL */
+	json_t *orderby;	/* list of field names, or NULL */
+	int	limit;
+} jsonselect_t;
+
+
 /* This table defines the relationship between text and the jsonop_t symbols.
  * It also includes precedence and quirks to help the parser.  As shown here,
  * the items are grouped by how they're related, but the lex() function sorts
@@ -495,7 +507,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 				radix = 8, str += 2;
 			else if (str[1] == 'b' || str[1] == 'B')
 				radix = 2, str += 2;
-			else /* 0nnn, assume octal */
+			else /* 0nnn, assume octal (deprecated in JavaScript) */
 				radix = 8;
 			(void)strtol(str, &str, radix);
 			token->len = str - token->full;
@@ -1150,6 +1162,9 @@ static int jcisag(jsoncalc_t *jc)
 		/* None of these should appear in a parsed expression */
 		abort();
 	}
+
+	/*NOTREACHED*/
+	return 0;
 }
 
 
@@ -1674,8 +1689,8 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			top[-2]->u.select->select = top[-1];
 			stack->sp--;
 			continue;
-		} else if (PATTERN("SFx,x") && PREC(JSONOP_COMMA)) {
-			/* Comma in a FROM clause is natural join */
+		} else if (PATTERN("SFx,n") && PREC(JSONOP_COMMA)) {
+			/* Comma in a FROM clause adds to an unroll list */
 			top[-2]->op = JSONOP_NJOIN;
 			top[-2]->LEFT = top[-3];
 			top[-2]->RIGHT = top[-1];
@@ -1927,24 +1942,6 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			jc->RIGHT = top[-2];
 			top[-4] = jc;
 			stack->sp -= 3;
-			continue;
-		}
-
-		/* "in" list, similar to array generator except it lets you
-		 * use parentheses for the list instead of brackets.
-		 */
-		if (PATTERN("i(") && PREC(JSONOP_IN)) {
-			/* Treat "in (" like "in [" */
-			if (json_debug_flags.calc)
-				printf("Converting ( to [\n");
-			top[-1]->op = JSONOP_STARTARRAY;
-			continue;
-		} else if (PATTERN("xix") && PREC(JSONOP_IN)) {
-			/* We have both operands of an "in" operator */
-			top[-2]->LEFT = top[-3];
-			top[-2]->RIGHT = top[-1];
-			top[-3] = top[-2];
-			stack->sp -= 2;
 			continue;
 		}
 

@@ -836,10 +836,70 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		}
 		break;
 
+	  case JSONOP_SUBTRACT:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JSON_STRING || right->type == JSON_STRING) {
+			/* String version.  If one of the operands is a
+			 * non-string, then convert it to a string.
+			 * One minor optimization is that if a number is in
+			 * text form, or a boolean, then we can treat it as
+			 * a string already.
+			 */
+			char	*leftstr, *rightstr;
+			size_t	leftlen;
+			str = NULL;
+			if ((left->type == JSON_STRING || left->type == JSON_BOOL || (left->type == JSON_NUMBER && *left->text))
+			 && (right->type == JSON_STRING || right->type == JSON_BOOL || (right->type == JSON_NUMBER && *right->text))) {
+				/* Both are strings, or at least stringy */
+				leftstr = left->text;
+				rightstr = right->text;
+				result = json_string(left->text, strlen(left->text) + strlen(right->text));
+				strcat(result->text, right->text);
+			} else if (left->type != JSON_STRING) {
+				/* Left operand needs to be converted */
+				str = json_serialize(left, NULL);
+				leftstr = str;
+				rightstr = right->text;
+				result = json_string(str, strlen(str) + strlen(right->text));
+				strcat(result->text, right->text);
+				free(str);
+			} else { /* Right is not stringy */
+				/* Right operand needs to be converted */
+				str = json_serialize(right, NULL);
+				leftstr = left->text;
+				rightstr = str;
+			}
+
+			/* Trim trailing spaces from leftstr and leading spaces
+			 * from rightstr.
+			 */
+			for (leftlen = strlen(leftstr); leftlen > 0 && leftstr[leftlen - 1] == ' '; leftlen--) {
+			}
+			while (*rightstr == ' ')
+				rightstr++;
+
+			/* Allocate a response big enough for both trimmed
+			 * strings and a space between them.  Copy text.
+			 */
+			result = json_string(leftstr, leftlen + 1 + strlen(rightstr));
+			if (leftlen > 0 && *rightstr)
+				result->text[leftlen++] = ' ';
+			strcpy(result->text + leftlen, rightstr);
+
+			/* If we had to serialize a value, free that now */
+			if (str)
+				free(str);
+		}
+		else if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			/* Number version */
+			result = json_from_double(json_double(left) - json_double(right));
+		}
+		break;
+
 	  case JSONOP_MULTIPLY:
 	  case JSONOP_DIVIDE:
 	  case JSONOP_MODULO:
-	  case JSONOP_SUBTRACT:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
@@ -848,9 +908,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			nr = json_double(right);
 
 			/* Do the math */
-			if (calc->op == JSONOP_SUBTRACT)
-				result = json_from_double(nl - nr);
-			else if (calc->op == JSONOP_MULTIPLY)
+			if (calc->op == JSONOP_MULTIPLY)
 				result = json_from_double(nl * nr);
 			else if (nr == 0.0)
 				result = json_error_null(1, "division by 0");
@@ -1083,11 +1141,32 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		if (right->type == JSON_ARRAY) {
 
 			if (left->type == JSON_STRING) {
-				for (scan = right->first; scan; scan = scan->next) {
-					if (scan->type == JSON_STRING && !json_mbs_casecmp(left->text, scan->text))
-						break;
+				/* Is "right" a single-column table? */
+				if (json_is_table(right)) {
+					/* If single column, check value */
+					for (scan = right->first; scan; scan = scan->next) {
+						if (scan->first->first
+						 && scan->first->first->type == JSON_STRING
+						 && scan->first->next == NULL
+						 && !json_mbs_casecmp(left->text, scan->first->first->text))
+							break;
+					}
+				} else {
+					/* compare strings to strings */
+					for (scan = right->first; scan; scan = scan->next) {
+						if (scan->type == JSON_STRING
+						 && !json_mbs_casecmp(left->text, scan->text))
+							break;
+					}
 				}
 
+			} else if (left->type == JSON_NUMBER && json_is_table(right)) {
+				/* If single column, compare to value */
+				for (scan = right->first; scan; scan = scan->next) {
+					if (scan->first->next == NULL
+					 && json_equal(left, scan->first->first))
+						break;
+				}
 			} else {
 				for (scan = right->first; scan; scan = scan->next) {
 					if (json_equal(left, scan))

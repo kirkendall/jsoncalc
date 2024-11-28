@@ -28,6 +28,13 @@
     If <var>expr</var> is a string, it will be compared case-insensitively.
     Otherwise, comparisions will be strict like the
     <a target="_PARENT" href="../index.html?op=equal">===</a> operator.
+    <p>
+    If the <var>arr</var> to be scanned is a single-column table, and the
+    <var>expr</var> to find in it is a number or string, then <tt>IN</tt>
+    is smart enough to look at the value in that column instead of comparing
+    it to the whole object representing the row.
+    This is important since in SQL, often the right hand side of <tt>IN</tt>
+    is another <tt>SELECT</tt>, which returns a table.
 
     <details open>
       <summary>Examples</summary>
@@ -68,6 +75,27 @@
 	Here's the <tt>IN</tt> operator in its native habitat.
       </div>
 
+      <div class="example">
+	<kbd>SELECT * FROM test.scores WHERE name IN SELECT DISTINCT name FROM test.scores WHERE score < 30</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>run</th><th>score</th></tr>
+	    <tr><td>Peter</td><td>1</td><td>10</td></tr>
+	    <tr><td>Paul</td><td>1</td><td>20</td></tr>
+	    <tr><td>Peter</td><td>2</td><td>25</td></tr>
+	    <tr><td>Paul</td><td>2</td><td>30</td></tr>
+	    <tr><td>Peter</td><td>3</td><td>30</td></tr>
+	    <tr><td>Paul</td><td>3</td><td>25</td></tr>
+	  </table>
+	</samp>
+	In this example, the right hand argument to a <tt>IN</tt> is another
+	<tt>SELECT</tt> clause, which returns a single-column table.
+	Although each element of the list is an object containing a single
+	"name" member, the <tt>IN</tt> operator is smart enough to treat it
+	like an array of those members' values. So it sees that Peter and
+	Paul are the slackers, and it lists their scores.
+      </div>
+
     </details>
 
     <details>
@@ -76,9 +104,11 @@
 
         <li>This operator is borrowed from SQL.  For strings it is
             case-insensitive, as per SQL's custom.
-	<li>In SQL, the <var>arr</var> would be enclosed in parentheses,
+
+	<li>In SQL, if <var>arr</var> is explicitly listed
+	    then it would be enclosed in parentheses,
 	    but in <strong>JsonCalc</strong> it must be enclosed in square
-	    brackets (or be some other expression that returns an array).
+	    brackets, JSON-style.
 
       </ul>
     </details>
@@ -87,6 +117,7 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?op=equal">===</a></td><td> Equality 0perators</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=SELECT">SELECT</a></td><td>SQL "SELECT" expressions</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=includes">includes()</a></td><td>Function for testing inclusion.</td></tr>
       </table>
     </details>

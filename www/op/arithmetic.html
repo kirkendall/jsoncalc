@@ -27,9 +27,15 @@
       <tr><td class="left">number</td><td class="op">*</td><td class="right">number</td><td class="opdesc">Multiply <var>number</var>s</td></tr>
       <tr><td colspan="4" class="divider"></td></tr>
       <tr><td class="left">number<br/>string</td><td class="op">+</td><td class="right">number<br/>string</td><td class="opdesc">Add <var>number</var>s or concatenate <var>string</var>s</td></tr>
-      <tr><td class="left">number</td><td class="op">-</td><td class="right">number</td><td class="opdesc">Subtract <var>number</var>s</td></tr>
+      <tr><td class="left">number<br/>string</td><td class="op">-</td><td class="right">number<br/>string</td><td class="opdesc">Subtract <var>number</var>s or contatenate <var>string</var>s with a space</td></tr>
     </table>
-    These are the usual arithmetic operators, with the usual precedences.
+    When applied to numbers, these are the usual arithmetic operators,
+    with the usual precedences.
+    <p>
+    When applied to strings, the <tt>+</tt> and <tt>-</tt> operators
+    contatentate them.
+    <tt>+</tt> contatenates them without any other changes, while
+    <tt>-</tt> leaves exactly one space between them.
     <details open>
       <summary>Examples</summary>
 
@@ -53,6 +59,14 @@
       </div>
 
       <div class="example">
+	<kbd>"Howard" - "" - "Johnson"</kbd>
+	<samp>"Howard Johnson"</samp>
+	These three strings are concatenated with spaces between them.
+	The <tt>-</tt> operator is smart enough to avoid double spaces where
+	empty strings are involved.
+      </div>
+
+      <div class="example">
 	<kbd>"layer"+2+1</kbd>
 	<samp>"layer21"</samp>
 	<kbd>"layer"+(2+1)</kbd>
@@ -63,6 +77,14 @@
 
 
     </details>
+
+    <detail>
+      <summary>Notes</summary>
+      <ul>
+        <li>JavaScript doesn't use <tt>-</tt> for concatenation with spaces.
+            That's purely a JsonCalc thing.
+      </ul>
+    </detail>
 
   </body>
 </html>

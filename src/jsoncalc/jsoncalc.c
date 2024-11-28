@@ -23,6 +23,9 @@ extern int optind, opterr, optopt;
 /* -i -- Force interactive mode */
 int interactive = 0;
 
+/* -ccmd or -ffile -- Suggest batch mode if not forced interactive */
+int maybe_batch = 0;
+
 /* -r -- inhibit the readline library? */
 int inhibit_readline = 0;
 
@@ -303,9 +306,11 @@ int main(int argc, char **argv)
 		switch (opt) {
 		case 'c':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
+			maybe_batch = 1;
 			break;
 		case 'f':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_file(optarg), context);
+			maybe_batch = 1;
 			break;
 		case 'i':
 			interactive = 1;
@@ -402,7 +407,7 @@ int main(int argc, char **argv)
 				val = "true";
 
 			/* Does the value look like JSON? */
-			if (strchr("{[\"-.0123456789", *val)
+			if (strchr("{[\"-.0123456789", *val) /*}*/
 			 || !strcmp("true", val)
 			 || !strcmp("false", val)
 			 || !strcmp("null", val))
@@ -411,6 +416,16 @@ int main(int argc, char **argv)
 				tmp = json_string(val, -1);
 			json_append(args, json_key(argv[i], tmp));
 		}
+	}
+
+	/* If -ccmd or -ffile was given but we didn't get any initcmd then
+	 * there was probably an error (already reported) and certainly nothing
+	 * to do unless -i was also given.
+	 */
+	if (maybe_batch && !initcmd && !interactive) {
+		while (context)
+			context = json_context_free(context);
+		exit(2);
 	}
 
 	/* If no commands were defined via -ccmd or -ffile, and no -i was given

@@ -191,7 +191,7 @@ static jsonfunc_t *funclist      = &objectAgg_jf;
  * zeroes.  The idea is that agfn() will accumulate data, and fn() will return
  * the final result.
  */
-void json_calc_function(
+void json_calc_function_hook(
 	char    *name,
 	char	*args,
 	json_t *(*fn)(json_t *args, void *agdata),
@@ -1686,9 +1686,6 @@ static json_t *jfn_stringify(json_t *args, void *agdata)
 /* Convert JSON string to data */
 static json_t *jfn_parse(json_t *args, void *agdata)
 {
-	char	*str;
-	json_t	*result;
-
 	/* If there are two args and the first is an empty object, then skip it
 	 * on the assumption that it is the JSON object. Convert the second
 	 * argument instead.

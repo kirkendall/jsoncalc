@@ -101,7 +101,7 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 	 */
 	signal(SIGINT, catchinterupt);
 	rl_catch_signals = 1;
-	rl_signal_event_hook = catchRLinterupt;
+	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterupt;
 
 	/* Run the initcmds once.  (Not once for each file.) */
 	result = json_cmd_run(initcmds, contextref);

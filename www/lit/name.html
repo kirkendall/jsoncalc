@@ -71,5 +71,62 @@
 
     </details>
 
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>The <strong>JsonCalc</strong> program uses the
+            <tt>json_context_std()</tt> function to set up its stack.
+            This defines the following names:
+            <table class="referencelist">
+              <tr><th>Name</th><th>Contents</th></tr>
+              <tr><td>now</td><td>Current date/time, as a number</td></tr>
+              <tr><td>current_date</td><td>Current date, in ISO-8601 "YYYY-MM-DD" format</td></tr>
+              <tr><td>current_time</td><td>Current time, in ISO-8601 "hh:mm:ss" format</td></tr>
+              <tr><td>current_datetime</td><td>Current date/time, in ISO-8601 "YYYY-MM-DDThh:mm:ss" format</td></tr>
+              <tr><td>current_timestamp</td><td>Current date/time, in ISO-8601 "YYYY-MM-DDThh:mm:ssZ" format</td></tr>
+              <tr><td>current_tz</td><td>Current timezone, in ISO-8601 "+hh:mm" format</td></tr>
+              <tr><td>vars</td><td>Global or local variables</td></tr>
+              <tr><td>consts</td><td>Global or local constants</td></tr>
+              <tr><td>args</td><td>Object of all <var>name</var>=<var>value</var> pairs from the command line</td></tr>
+              <tr><td>files</td><td>Array of all *.json files named on the command line</td></tr>
+              <tr><td>current_file</td><td>Index into <tt>files</tt> of the current file</td></tr>
+              <tr><td>data</td><td>Contents of the current *.json file from the command line</td></tr>
+              <tr><td>global</td><td>Object containing the global <tt>vars, consts, args</tt> and <tt>files</tt></td></tr>
+              <tr><td>this</td><td>Current element in a loop, or first arg in function</td></tr>
+              <tr><td>that</td><td>Previous value of <tt>this</tt> in a nested context</td></tr>
+	    </table>
+
+        <li>User-defined functions get their own <tt>vars</tt> and
+            <tt>consts</tt> to hold local variables and constants.
+	    These will override the global versions of <tt>vars</tt>
+	    and <tt>consts</tt> but you can still access the global versions
+	    as <tt>global.vars</tt> and <tt>global.consts</tt>.
+
+	<li>You can use <tt>vars</tt> and <tt>consts</tt> to display
+	    the names and values of all global or local variables.
+	    For example, the following displays all global variables in a nice
+	    tabular form:
+	    <div class="example">
+	      <kbd>var x=4<br/>
+	      var y=1..4<br/>
+	      var z={x,y}<br/>
+	      function dump(obj) { return obj.keysValues().orderBy("key") @ {key, value: value.toString()}}<br/>
+	      dump(global.vars)</kbd>
+	      <samp>
+		<table>
+		<tr><th>key</th><th>value</th></tr>
+		<tr><td>x</td><td>4</td></tr>
+		<tr><td>y</td><td>[1,2,3,4]</td></tr>
+		<tr><td>z</td><td>{"x":4,"y":[1,2,3,4]}</td></tr>
+		</table>
+	      </samp>
+	      We declare a few global variables just so we have something to
+	      show, and then we define a function that converts an object to
+	      a table.
+	      Finally, we use that function to display <tt>global.vars</tt>.
+	    </div>
+      </ul>
+    </details>
+
   </body>
 </html>

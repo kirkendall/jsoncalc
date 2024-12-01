@@ -55,9 +55,16 @@
     "natural join" operations, which elsewhere in <strong>JsonCalc</strong>
     is represented by the <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
     If you omit the <tt>FROM</tt> <var>table</var> clause,
-    <strong>JsonCalc</strong> will choose a default &mdash;
-    <tt>this</tt> if it's a table, else a file from the command line.
-    or look for a table in a JSON file named on the command line.
+    <strong>JsonCalc</strong> will choose a default table as follows:
+    <ol>
+      <li><tt>this</tt> if it's a table.
+      <li>The contents of the current file named on the command line, if it
+          contains a table.
+      <li>The value of a member if the current file contains an object, and
+	  that value is a table.
+	  (If multiple members contain tables, <strong>JsonCalc</strong> will use the first.)
+    </ol>
+
     <p>
     The optional <tt>WHERE</tt> <var>condition</var> clause lets you select
     which rows from the source table will be used to construct the result table.
@@ -131,6 +138,10 @@
 	    in SQL.  The
 	    <a target="_PARENT" href="../index.html?op=bool">AND, OR, and NOT</a>
 	    operators are there too.
+	    The <a target="_PARENT" href="../index.html?op=in">IN</a> operator
+	    is also available, but if the right argument is a list of literals
+	    then you must enclose it in JSON-style brackets instead of SQL-style
+	    parentheses.
 
 	<li>Internally, <tt>SELECT</tt> expressions are converted to "native"
             functions and operators. An expression such as
@@ -150,7 +161,7 @@
 
 	<li>If every column in the SELECT clause's <var>columns</var> list
 	    uses aggregate functions, then there's an implied DISTINCT.
-	    <div example>
+	    <div class="example">
 	      <kbd>SELECT count(*) FROM test.scores</kbd>
 	      <samp>
 		<table>
@@ -171,6 +182,7 @@
         <tr><td><a target="_PARENT" href="../index.html?op=equal">=, &lt;&gt;</a></td><td>SQL-like case-insensitive equality operators</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=like">LIKE</a></td><td>LIKE pattern comparison operator</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=BETWEEN">BETWEEN</a></td><td>BETWEEN comparison operator</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=IN">IN</a></td><td>IN list-testing operator</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a></td><td>Table grouping function</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a></td><td>Table sorting function</td></tr>
     </details>

@@ -1180,10 +1180,20 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_FROM:
 		/* This is used to fetch the default table for a SELECT
 		 * statement that has no explicit FROM clause.  It is handled
-		 * by jcsimple(), not here.  If we get here, that means there
-		 * is no default table.
+		 * by jcsimple(), usually as an argument for the @ operator.
+		 * When SELECT is used without columns or WHERE, then we end
+		 * up here instead.
+		 *
+		 * When used with @, we can avoid creating a copy of the
+		 * table... BUT NOT HERE!  Since json_calc is returning the
+		 * table, it must be something that the calling function can
+		 * free.
 		 */
-		result = json_error_null(1, "There is no default table for SELECT");
+		result = jcsimple(calc, context);
+		if (result)
+			result = json_copy(result);
+		else
+			result = json_error_null(1, "There is no default table for SELECT");
 		break;
 
 	  case JSONOP_REGEX:

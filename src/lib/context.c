@@ -262,12 +262,12 @@ static json_t *stdcurrent(char *key)
  */
 jsoncontext_t *json_context_std(json_t *args)
 {
-	json_t	*base, *global, *vars, *consts, *current_data;
+	json_t	*base, *global, *vars, *consts, *data;
 	jsoncontext_t *context;
 	contexthook_t *hook;
 
 	/* Generate the data for the base context.  This is an object of the
-	 * form {global:{vars:{},consts:{},args{},files:[],current_data:null}
+	 * form {global:{vars:{},consts:{},args{},files:[],data:null}
 	 */
 	base = json_object();
 	global = json_object();
@@ -280,8 +280,8 @@ jsoncontext_t *json_context_std(json_t *args)
 		json_append(global, json_key("args", args));
 	json_append(global, json_key("files", json_array()));
 	json_append(base, json_key("global", global));
-	current_data = json_null();
-	json_append(base, json_key("current_data", current_data));
+	data = json_null();
+	json_append(base, json_key("data", data));
 
 	/* Create the base layer of the context */
 	context = json_context(NULL, base, JSON_CONTEXT_GLOBAL);
@@ -303,11 +303,11 @@ jsoncontext_t *json_context_std(json_t *args)
 		context = (*hook->addcontext)(context);
 
 	/* Create a layer to serve as "this", containing the contents of
-	 * the "current_data" symbol.  Since the data will be freed when
-	 * the base context is freed or current_data is assigned a new value,
+	 * the "data" symbol.  Since the data will be freed when
+	 * the base context is freed or data is assigned a new value,
 	 * we don't want to free it for this context.
 	 */
-	context = json_context(context, current_data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
+	context = json_context(context, data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 
 	/* Create a layer above that for the contents of "global", mostly the
 	 * "vars" and "consts" symbols.  Since these will be freed when the
@@ -332,11 +332,11 @@ jsoncontext_t *json_context_std(json_t *args)
 
 /* Select a new current file, and optionally append a filename to the files
  * array.  The context must have been created by json_context_std() so this
- * function can know where to stuff the file info.  The "current" parameter
+ * function can know where to stuff the file info.  The *refcurrent parameter
  * is either an index into the files array, or -1 to move forward 1, -2 to
  * stay on the same entry, or -3 to move back one entry.  Returns the files
- * array, which you do NOT need to free since it'll be freed when the context
- * is freed.
+ * array, and stuffs the current index into *refcurrent.  You do NOT need to
+ * free the returned list since it'll be freed when the context is freed.
  */
 json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurrent)
 {
@@ -425,7 +425,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 	/* Load the new current file, if the numbers are different or no
 	 * file was loaded before.  Note that we don't need to explicitly
 	 * free the old data, because it gets freed when we reassign the
-	 * "current_data" member (the first json_append() below).
+	 * "data" member (the first json_append() below).
 	 */
 	if (current_file != *refcurrent || !j) {
 		/* Load the data.  If it couldn't be loaded then say why */
@@ -438,7 +438,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 			if (!data)
 				data = json_error_null(0, "File \"%s\" is unreadable", currentname);
 		}
-		json_append(globals->data, json_key("current_data", data));
+		json_append(globals->data, json_key("data", data));
 		thiscontext->data = data;
 
 		/* Update "current_file" number */
@@ -973,7 +973,6 @@ int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, j
  */
 json_t *json_context_default_table(jsoncontext_t *context)
 {
-	jsoncontext_t *scan;
 	json_t	*found;
 
 	/* Defend against NULL */
@@ -981,32 +980,23 @@ json_t *json_context_default_table(jsoncontext_t *context)
 		return NULL;
 
 	/* If "this" is a table, use it */
-	if (json_is_table(context->data))
-		return context->data;
-
-	/* Scan for the oldest context that is a table, and use that.  It is
-	 * probably a file from the command line.
-	 */
-	for (found = NULL, scan = context->older; scan; scan = scan->older) {
-		if (json_is_table(scan->data))
-			found = scan->data;
-	}
-	if (found)
+	found = json_context_by_key(context, "this", NULL);
+	if (found && json_is_table(found))
 		return found;
 
-
-	/* Scan for the oldest context that's an object containing a "filename"
-	 * member.  This too is probably an a file from the command line.
-	 */
-	for (found = NULL, scan = context->older; scan; scan = scan->older) {
-		if (scan->data->type == JSON_OBJECT && json_by_key(scan->data, "filename"))
-			found = scan->data;
-	}
+	/* Locate the current file.  If none, then there is no default table */
+	found = json_context_by_key(context, "data", NULL);
 	if (found) {
-		/* Now scan that object for a member that's a table */
-		for (found = found->first; found; found = found->next) {
-			if (json_is_table(found->first))
-				return found->first;
+		/* If it's a table, use it */
+		if (json_is_table(found))
+			return found;
+
+		/* If it's an object, scan it for a table */
+		if (found->type == JSON_OBJECT) {
+			for (found = found->first; found; found = found->next) {
+				if (json_is_table(found->first))
+					return found->first;
+			}
 		}
 	}
 

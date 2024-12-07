@@ -79,7 +79,7 @@ static size_t shorthelper(json_t *json, size_t oneline)
 {
         size_t size = 0;
 
-        while (json) {
+        while (json && size < oneline) {
                 /* Text and punctuation */
                 switch (json->type) {
                   case JSON_STRING:
@@ -88,6 +88,21 @@ static size_t shorthelper(json_t *json, size_t oneline)
                   case JSON_NUMBER:
 			if (*json->text)
 				size += strlen(json->text);
+			else if (json->text[1] == 'i') {
+				int i = JSON_INT(json);
+				if (i < 0) {
+					size++; /* for "-" */
+					i = -i;
+				}
+				if (i < 10)
+					size += 1;
+				else if (i < 100)
+					size += 2;
+				else if (i < 1000)
+					size += 3;
+				else
+					size += 10;
+			}
 			else
 				size += 10;
 			break;
@@ -123,6 +138,7 @@ static size_t shorthelper(json_t *json, size_t oneline)
 
 /* Test whether the serialized version of an expression is short.  This is
  * quick -- it stops counting once the non-short threshold has been crossed.
+ * Also, it uses approximations so the "oneline" parameter is not precise.
  */
 int json_is_short(json_t *json, size_t oneline)
 {

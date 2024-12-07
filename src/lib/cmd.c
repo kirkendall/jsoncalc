@@ -915,6 +915,14 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 			/* Execute the body of the loop */
 			result = json_cmd_run(cmd->sub, refcontext);
+
+			/* Ignore "continue" and stay in loop.  For anything
+			 * else other than NULL, exit the loop.
+			 */
+			if (result && result->ret == &json_cmd_continue) {
+				free(result);
+				result = NULL;
+			}
 			if (result)
 				break;
 		}
@@ -929,6 +937,14 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 			/* Execute the body of the loop */
 			result = json_cmd_run(cmd->sub, &layer);
+
+			/* Ignore "continue" and stay in loop.  For anything
+			 * else other than NULL, exit the loop.
+			 */
+			if (result && result->ret == &json_cmd_continue) {
+				free(result);
+				result = NULL;
+			}
 			if (result)
 				break;
 		}

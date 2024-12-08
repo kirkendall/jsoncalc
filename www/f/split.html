@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>split</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc split - Split a string into an array of substrings">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, split">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>split - Split a string into an array of substrings</h1>
+    <dl>
+      <dt>split(<var>str</var>, <var>delim</var>)
+      <br/>split(<var>str</var>, <var>delim</var>, <var>limit</var>)
+      <br/>split(<var>str</var>, <var>regex</var>)
+      <br/>split(<var>str</var>, <var>regex</var>, <var>limit</var>)
+      <dd>
+      The <tt>split()</tt> function divides <var>str</var> (a string)
+      into an array of substrings,
+      using either <var>delim</var> (a string)
+      or <var>regex</var> (a regular expression) as the delimiter.
+      <p>
+      When using a string delimiter,
+      instances of <var>delim</var> are searched for within the string.
+      The comparison is case-sensitive.
+      If <var>delim</var> appears at the start or end of <var>str</var>,
+      then the result array will include an empty string in those places.
+      As a special case, when <var>delim</var> is "" (an empty string) then
+      <var>str</var> is divided into characters.
+      <p>
+      When using a regular expression delimiter, it's pretty much the same.
+      Searches will be case-sensitive unless you append an <tt>i</tt> flag
+      to the end of the regular expression.
+      Also, if <var>regex</var> uses any subexpressions
+      (segments enclosed in \( and \) tokens) then the text matching the
+      subexpressions will be included in the result array too.
+      <p>
+      The optional <var>limit</var> parameter is a number which sets an
+      upper limit on the length of the result array.  If <var>limit</var>
+      is positive, then the result array is simply clipped.
+      If <var>limit</var> is negative, then its absolute value is used as
+      the maxximum length, and the last entry in the array will include all
+      remaining text, even if that text contains more text that matches the
+      delimiter.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"one,two,three".split(",")</kbd>
+	<samp>["one","two","three"]</samp>
+        Commas are used to split the string into substrings.
+        The original string contains two commas, so the result array contains
+        three substrings.
+      </div>
+
+      <div class="example">
+	<kbd>"one, two,three".split(/, */)</kbd>
+	<samp>["one","two","three"]</samp>
+        This is similar to the first example, except that we're using a
+        regular expression as the delimiter.
+        This particular regular expression allows any number of
+        space characters to appear after the comma.
+        Within a regular expression, <tt>*</tt> means whatever appears
+        immediately before it (a space in this example) may occur zero or more
+        times.
+      </div>
+
+      <div class="example">
+	<kbd>"url=https://www.google.com?q=jsoncalc".split("=", 2)</kbd>
+	<samp>["url","https://www.google.com?q"]</samp>
+	<kbd>"url=https://www.google.com?q=jsoncalc".split("=", -2)</kbd>
+	<samp>["url","https://www.google.com?q=jsoncalc"]</samp>
+        Here we're splitting a
+        <span class="nowrap">"<var>name</var>=<var>value</var>"</span>
+        string into name and value.
+        First we try using a <var>limit</var> of positive 2,
+        but since the value also contains an "=", it gets clipped.
+        Using a <var>limit</var> of -2 fixes that,
+        because negative limits include all remaining text in the last element.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript's version of <tt>split()</tt> doesn't support negative
+            <var>limit</var> values.  That's a <strong>JsonCalc</strong>
+            extension.
+
+	<li>Try to avoid using regular expressions that could
+	    match an empty string.
+	    You'll generally be unhappy with the results.
+	    If <var>regex</var> does match an empty string,
+	    then <tt>split()</tt> will skip an extra character because
+	    if it didn't then it'd get stuck in an infinite loop of empty
+	    substrings.
+
+	<li>If you want to eliminate empty strings from an array, the simplest
+	    way to do it is via the <a target="_PARENT" href="../index.html?op=each">@</a> operator.
+	    <div class="example">
+	      <kbd>"*alpha*beta*".split("*") @ this != ""</kbd>
+	      <samp>["alpha","beta"]</samp>
+	      <tt>split()</tt> returns ["","alpha","beta",""], but the @ takes
+	      each element of that array and applies the <tt>this!=""</tt>
+	      expression to it; if that expression is false then the element
+	      is discarded.  We end up with just the non-empty substrings.
+	    </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?lit=regex">regex</a></td><td>Regular expressions</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">@</a></td><td>Array filtering operator</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

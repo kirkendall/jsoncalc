@@ -77,6 +77,7 @@ static json_t *jfn_indexOf(json_t *args, void *agdata);
 static json_t *jfn_lastIndexOf(json_t *args, void *agdata);
 static json_t *jfn_startsWith(json_t *args, void *agdata);
 static json_t *jfn_endsWith(json_t *args, void *agdata);
+static json_t *jfn_split(json_t *args, void *agdata);
 static json_t *jfn_stringify(json_t *args, void *agdata);
 static json_t *jfn_parse(json_t *args, void *agdata);
 
@@ -152,7 +153,8 @@ static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "arr|str, sr
 static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "arr|str, srch",	jfn_lastIndexOf};
 static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "str, srch",	jfn_startsWith};
 static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "str, srch",	jfn_endsWith};
-static jsonfunc_t stringify_jf   = {&endsWith_jf,    "stringify",   "data",		jfn_stringify};
+static jsonfunc_t split_jf   = {&endsWith_jf,    "split",   "str, delim, limit",		jfn_split};
+static jsonfunc_t stringify_jf   = {&split_jf,    "stringify",   "data",		jfn_stringify};
 static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str",		jfn_parse};
 static jsonfunc_t count_jf       = {&parse_jf,       "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
@@ -1658,6 +1660,151 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 		return json_bool(strcmp(haystack, needle) == 0);
 	}
 }
+
+
+/* Split a string into an array of substrings */
+static json_t *jfn_split(json_t *args, void *agdata)
+{
+	char	*str, *next;
+	json_t	*djson;
+	char	*delim;
+	size_t	delimlen;
+	regex_t *regex;
+	regmatch_t matches[10];
+	int	nelems, limit, all;
+	json_t	*result;
+	wchar_t	wc;	/* found multibyte char */
+	int	len;	/* length in bytes of a multibyte char */
+	int	i;
+
+	/* Check parameters */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "%s() requires a string as its first parameter", "split");
+	str = args->first->text;
+	djson = args->first->next;
+	if (!djson)
+		return json_error_null(0, "%s() requires a delimiter as its second parameter", "split");
+	regex = NULL;
+	delim = NULL;
+	if (json_is_null(djson) && agdata && ((jsoncalc_t *)agdata)->u.regex.preg)
+		regex = ((jsoncalc_t *)agdata)->u.regex.preg;
+	else {
+		if (djson->type != JSON_STRING)
+			return json_error_null(0, "%s() delimiter must be a string or regex", "split");
+		delim = djson->text;
+		delimlen = strlen(delim); /* yes, byte length not char count */
+	}
+	if (!djson->next)
+		limit = 0;
+	else if (djson->next->type != JSON_NUMBER)
+		return json_error_null(0, "%s() third parameter should be a number", "split");
+	else
+		limit = json_int(djson->next);
+	all = 0;
+	if (limit < 0) {
+		all = 1;
+		limit = -limit;
+	}
+	/* AT THIS POINT...
+	 * str is the string to be split
+	 * delim is NULL or the delimiter string, maybe "" for character split
+	 * delimlen is the byte length of delim, if delim is not NULL.
+	 * regex is NULL or the delimiter regex
+	 * limit is max array size, or 0 for unlimited
+	 * all is 1 if last element should contain all remaining text, 0 to clip
+	 */
+
+	/* Start the result array */
+	result = json_array();
+
+	/* Append substrings to the array until we hit limit.  If the last
+	 * response element is intended to include all remaining text, then
+	 * we want to end 1 step before the limit, so we can do that last
+	 * one specially.
+	 */
+	len = 1;
+	for (nelems = 0; (*str || len > 0) && (limit == 0 || nelems < limit - all); str = next) {
+		/* Find the next delimiter as char, string, or regex */
+		if (delim && !*delim) {
+			/* Find the byte length of the next char */
+			len = mbtowc(&wc, str, MB_CUR_MAX);
+
+			/* Next substring will start at next char */
+			next = str + len;
+		} else if (delim) {
+			/* Scan for the next match */
+			for (len = 0; str[len] && strncmp(&str[len], delim, delimlen); len++)
+			{
+			}
+
+			/* If we hit the end of the string without finding
+			 * a match, then "next" should be the end of str.
+			 * If there was a match, then next is after delim.
+			 */
+			if (!str[len])
+				next = &str[len];
+			else
+				next = &str[len] + delimlen;
+		} else /* regex */ {
+			/* Search for the next match */
+			if (0 == regexec(regex, str, 10, matches, 0)) {
+				/* Found! matches[0] contains overall match */
+				len = matches[0].rm_so;
+				next = &str[matches[0].rm_eo];
+
+				/* If the regex matched an empty string, then
+				 * advance by one extra character.  Otherwise
+				 * we'd get stuck in an infinite loop on the
+				 * same match.
+				 */
+				if (matches[0].rm_so == matches[0].rm_eo && *next)
+					next++;
+			} else {
+				len = strlen(str);
+				next = str + len;
+			}
+		}
+
+		/* AT THIS POINT...
+		 * str is the start of the next segment
+		 * len is the length in bytes of the next segment
+		 * next is the start of the next segment
+		 */
+
+		/* Add the next segment to the array */
+		json_append(result, json_string(str, len));
+		nelems++;
+
+		/* If we're using regexp, there may be subexpressions too */
+		if (regex) {
+			char *tail = next;
+			for (i = 1; (limit == 0 || nelems < limit - all) && i <= 9; i++) {
+				if (matches[i].rm_so >= 0) {
+					json_append(result, json_string(str + matches[i].rm_so, matches[i].rm_eo - matches[i].rm_so));
+					nelems++;
+					tail = &str[matches[i].rm_eo];
+				}
+			}
+
+			/* If we hit the limit, then set next to tail. That way,
+			 * if "all" is in effect, everything after the last
+			 * subexpression will be included in the last element.
+			 */
+			if (limit > 0 && nelems >= limit - all)
+				next = tail;
+		}
+	}
+
+	/* If we hit the limit and are doing "all", then copy everything left
+	 * into one final element.
+	 */
+	if (all && nelems >= limit - all)
+		json_append(result, json_string(str, -1));
+
+	/* Return it! */
+	return result;
+}
+
 
 
 /* Convert data to a JSON string */

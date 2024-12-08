@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>const</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc const - Declare one or more constants">
+    <meta name="keywords" content="command, command reference, const">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>const - Declare one or more constants</h1>
+    <dl>
+      <dt>const key = value
+      <dd>
+      Declare a constant.
+      Constants are like variables, except that once declared, you can't
+      assign them a new value.
+      <p>
+      For convenience, you can declare multiple constants with a single
+      <tt>const</tt> command by using a comma to delimit them.
+      <p>
+      Using <tt>const</tt> in a global context
+      (outside of a function body, basically)
+      declares a global constant.
+      <tt>const<tt> in a function body declares a constant that is only
+      accessible within that function.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>const pi=3.14159</kbd>
+	<kbd>pi</kbd>
+	<samp>3.14159</samp>
+	<kbd>pi = 3</kbd>
+	<samp>Attempt to change const "pi"</samp>
+        Declare a constant and then display it.
+        If we try to assign it a new value, we get an error message.
+      </div>
+
+      <div class="example">
+	<kbd>const min=70, max=100</kbd>
+	<kbd>80 between min and max</kbd>
+	<samp>true</samp>
+        Declare two constants on one line, and then use them.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Global constants are stored in <tt>global.consts</tt>,
+        or <tt>consts</tt> within a function to access the local consts.
+        In a global context,
+        <tt>consts</tt> is a synonym for <tt>global.consts</tt>.
+        <div class="example">
+          <kbd>consts</kbd>
+          <samp>{"JSON":{},"pi":3.14159,"min":70,"max":100}</samp>
+          <kbd>consts.keysValues()</kbd>
+          <samp>
+	    <table>
+	    <tr><th>key</th><th>value</th></tr>
+	    <tr><td>JSON</td><td>{object}</td></tr>
+	    <tr><td>pi</td><td>3.14159</td></tr>
+	    <tr><td>min</td><td>70</td></tr>
+	    <tr><td>max</td><td>100</td></tr>
+	    </table>
+	  </samp>
+	  First we dump <tt>consts</tt>.
+	  Since we're in a global context, this dumps global constants.
+	  Next we use
+	  <a target="_PARENT" href="../index.html?f=keysValues">keysValues()</a>	  to convert the <tt>consts</tt> object into a table,
+	  which is displayed in a prettier format.
+	</div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=var">var</a></td><td>Declare variables.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

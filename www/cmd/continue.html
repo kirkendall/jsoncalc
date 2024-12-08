@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>continue</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc continue - Skip to the start of the loop iteration">
+    <meta name="keywords" content="command, command reference, continue">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>continue - Skip to the start of the loop iteration</h1>
+    <dl>
+      <dt>continue
+      <dd>
+      Used within the body of a <a target="_PARENT" href="../index.html?cmd=while">while-loop</a>
+      or <a target="_PARENT" href="../index.html?cmd=for">for-loop</a>,
+      the <tt>continue</tt> command skips the remainder of the loop body
+      and starts the text iteration.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>for (var i = 10..20) {if (i%2 == 0) continue; if (i%3 == 0) continue; i}</kbd>
+	<samp>11</br>
+	13</br>
+	17</br>
+	19</samp>
+        This loops over all values from 10 to 20, skips numbers that are divisible by 2 or 3, and outputs the rest.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=while">while()</a></td><td>Loop while a condition is true</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=for">for()</a></td><td>Iterate over an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=break">break</a></td><td>Exit a loop or switch statement</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

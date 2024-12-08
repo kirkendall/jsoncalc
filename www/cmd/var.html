@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>var</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc var - Declare one or more variables">
+    <meta name="keywords" content="command, command reference, var">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>var - Declare one or more variables</h1>
+    <dl>
+      <dt>var key
+      <br/>var key = value
+      <dd>
+      Declare a variable, and optionally assign its initial value.
+      If you don't assign it an initial value, then <tt>null</tt> is used.
+      <p>
+      For convenience, you can declare multiple variables with a single
+      <tt>var</tt> command by using a comma to delimit them.
+      <p>
+      Using <tt>var</tt> in a global context
+      (outside of a function body, basically)
+      declares a global variable.
+      <tt>var<tt> in a function body declares a variable that is only
+      accessible within that function.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var i=17</kbd>
+	<kbd>i</kbd>
+	<samp>17</samp>
+	<kbd>i = i + 1</kbd>
+	<kbd>i</kbd>
+	<samp>18</samp>
+        Declare a variable and then display it, change it, and display it again.
+      </div>
+
+      <div class="example">
+	<kbd>var vmin=70, vmax=100</kbd>
+	<kbd>80 between vmin and vmax</kbd>
+	<samp>true</samp>
+        Declare two variables on one line, and then use them.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Global variables are stored in <tt>global.vars</tt>,
+        or <tt>vars</tt> within a function to access the local vars.
+        In a global context,
+        <tt>vars</tt> is a synonym for <tt>global.vars</tt>.
+        <div class="example">
+          <kbd>vars</kbd>
+          <samp>{"i":18,"vmin":70,"vmax":100}</samp>
+          <kbd>vars.keysValues()</kbd>
+          <samp>
+	    <table>
+	    <tr><th>key</th><th>value</th></tr>
+	    <tr><td>i</td><td>18</td></tr>
+	    <tr><td>vmin</td><td>70</td></tr>
+	    <tr><td>vmax</td><td>100</td></tr>
+	    </table>
+	  </samp>
+	  First we dump <tt>vars</tt>.
+	  Since we're in a global context, this dumps global variables.
+	  Next we use
+	  <a target="_PARENT" href="../index.html?f=keysValues">keysValues()</a>	  to convert the <tt>vars</tt> object into a table,
+	  which is displayed in a prettier format.
+	</div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=const">const</a></td><td>Declare constants</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=assign">key = value</a></td><td>Assign a new value to a variable</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

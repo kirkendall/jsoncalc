@@ -2,6 +2,12 @@
 # Literals
 1
 =1
+0x10
+=16
+010
+=8
+0b10
+=2
 true
 =true
 "Steve"
@@ -75,6 +81,16 @@ a===a
 =true
 o===o
 =true
+
+# Date/time arithmetic
+"2024-10-15" + "P1M"
+="2024-11-15"
+"2024-10-31" + "P1M"
+="2024-12-01"
+"2024-02-29" - "P1Y"
+="2023-03-01"
+"2024-12-31" - "2024-12-25"
+="P6D"
 
 # Global function calls
 toUpperCase(s)

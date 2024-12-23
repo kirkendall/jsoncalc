@@ -59,7 +59,7 @@ typedef struct jsonselect_s {
 	jsoncalc_t *where;	/* expression that selects rows, or NULL for all */
 	json_t *groupby;	/* list of field names, or NULL */
 	json_t *orderby;	/* list of field names, or NULL */
-	int	limit;
+	jsoncalc_t *limit;	/* expression that limits the returned values */
 } jsonselect_t;
 
 
@@ -1207,7 +1207,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		tmp = json_serialize(sel->orderby, 0);
 		printf("   orderby=%s\n", tmp);
 		free(tmp);
-		printf("   limit=%d\n", sel->limit);
+		printf("   limit=");json_calc_dump(sel->limit);putchar('\n');
 		printf(")\n");
 	}
 
@@ -1278,20 +1278,15 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	}
 
 	/* If there's a LIMIT number, add a .slice(0,limit) function call */
-	if (sel->limit > 0) {
-		jsoncalc_t *jzero, *jlimit;
+	if (sel->limit) {
+		jsoncalc_t *jzero;
 		char	buf[30];
 		token_t	t;
 		t.op = JSONOP_NUMBER;
 		t.full = "0";
 		t.len = 1;
 		jzero = jcalloc(&t);
-		sprintf(buf, "%d", sel->limit);
-		t.op = JSONOP_NUMBER;
-		t.full = buf;
-		t.len = strlen(buf);
-		jlimit = jcalloc(&t);
-		jc = jcfunc("slice", jc, jzero, jlimit);
+		jc = jcfunc("slice", jc, jzero, sel->limit);
 	}
 
 	return jc;
@@ -1657,7 +1652,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		}
 
 		/* In an array generator or SELECT clause, commas are treated
-		 * specially because we want to conver "expr AS name" to
+		 * specially because we want to convert "expr AS name" to
 		 * "name:expr", and for any other expr we want to use the
 		 * expression's source code as its name.  (So"SELECT count(*)"
 		 * uses "count(*)" as the column label.)
@@ -1783,10 +1778,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			stack->sp--; /* keep "S" */
 			continue;
 		} else if (PATTERN("SLl") && PREC(JSONOP_LIMIT)) {
-			/* The literal should be number.  Store it in select */
-			if (top[-1]->u.literal->type != JSON_NUMBER)
-				return "The LIMIT must be a number";
-			top[-3]->u.select->limit = json_int(top[-1]->u.literal);
+			top[-3]->u.select->limit = top[-1];
 
 			/* Remove "LIMIT" and the number, but keep "SELECT" */
 			stack->sp -= 2;
@@ -2227,7 +2219,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 
 	/* One last reduce */
 	if (!err)
-		err = reduce(&stack, NULL, token.full);
+		err = reduce(&stack, NULL, token.full + token.len);
 
 	/* If it compiled cleanly, look for aggregate functions */
 	if (stack.sp == 1)

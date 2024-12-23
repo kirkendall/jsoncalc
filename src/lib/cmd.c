@@ -1259,7 +1259,6 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		jsonfunc_t *f = json_calc_function_by_name(fname);
 		if (!f) {
 			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Unknown function \"%s\"", fname);
-			free(fname);
 			goto Error;
 		}
 

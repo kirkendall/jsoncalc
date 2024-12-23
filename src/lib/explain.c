@@ -8,36 +8,6 @@
 #include "calc.h"
 
 
-/* Check whether a string matches a given pattern.  # matches any digit,
- * ? matches either any non-digit or the end of str, and anything else must
- * match exactly.
- */
-static int digitpattern(char *str, char *pattern)
-{
-	for(;; str++, pattern++) {
-		/* str must be the same length as pattern, or end where
-		 * pattern has a "?"
-		 */
-		if (!*str)
-			return !*pattern || *pattern == '?';
-
-		/* If pattern ends before string, then no match */
-		if (!*pattern)
-			return 0;
-
-		/* # matches any single digit, ? any single non-digit, and
-		 * other characters must match exactly. (The case where ?
-		 * appears at the end of the string is handled above.)
-		 */
-		if (*pattern == '#' && !isdigit(*str))
-			return 0;
-		else if (*pattern == '?' && isdigit(*str))
-			return 0;
-		else if (*pattern != '#' && *pattern != '?' && *pattern != *str)
-			return 0;
-	}
-}
-
 
 /* Return a string describing the data type of a json_t.  Possible return
  * values are:
@@ -52,8 +22,9 @@ static int digitpattern(char *str, char *pattern)
  *   "table"	A non-empty array of objects
  *   "object*"  Empty object
  *   "date"     A string that looks like an ISO-8601 date
- *   "time"     A string that looks like an time
- *   "datetime"	A string that looks like a datetime
+ *   "time"     A string that looks like an ISO-8601 time
+ *   "datetime"	A string that looks like an ISO-8601 datetime
+ *   "period"	A string that looks like an ISO-8601 period
  */
 char *json_typeof(json_t *json, int extended)
 {
@@ -78,12 +49,14 @@ char *json_typeof(json_t *json, int extended)
 		if (extended) {
 			if (!*json->text)
 				return "string*";
-			if (digitpattern(json->text, "####-##-##"))
+			if (json_is_date(json))
 				return "date";
-			if (digitpattern(json->text, "##:##?"))
+			if (json_is_time(json))
 				return "time";
-			if (digitpattern(json->text, "####-##-##T##:##?"))
+			if (json_is_datetime(json))
 				return "datetime";
+			if (json_is_period(json))
+				return "period";
 		}
 		return "string";
 	  case JSON_ARRAY:

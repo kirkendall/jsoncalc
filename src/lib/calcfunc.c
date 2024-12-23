@@ -48,6 +48,10 @@ static json_t *jfn_isObject(json_t *args, void *agdata);
 static json_t *jfn_isNumber(json_t *args, void *agdata);
 static json_t *jfn_isInteger(json_t *args, void *agdata);
 static json_t *jfn_isNaN(json_t *args, void *agdata);
+static json_t *jfn_isDate(json_t *args, void *agdata);
+static json_t *jfn_isTime(json_t *args, void *agdata);
+static json_t *jfn_isDateTime(json_t *args, void *agdata);
+static json_t *jfn_isPeriod(json_t *args, void *agdata);
 static json_t *jfn_typeOf(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_widthOf(json_t *args, void *agdata);
@@ -80,6 +84,11 @@ static json_t *jfn_endsWith(json_t *args, void *agdata);
 static json_t *jfn_split(json_t *args, void *agdata);
 static json_t *jfn_stringify(json_t *args, void *agdata);
 static json_t *jfn_parse(json_t *args, void *agdata);
+static json_t *jfn_date(json_t *args, void *agdata);
+static json_t *jfn_time(json_t *args, void *agdata);
+static json_t *jfn_dateTime(json_t *args, void *agdata);
+static json_t *jfn_timeZone(json_t *args, void *agdata);
+static json_t *jfn_period(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -124,7 +133,11 @@ static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "any",		jfn_
 static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "any",		jfn_isNumber};
 static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "any",		jfn_isInteger};
 static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "any",		jfn_isNaN};
-static jsonfunc_t typeOf_jf      = {&isNaN_jf,       "typeOf",      "any,prevtype",	jfn_typeOf};
+static jsonfunc_t isDate_jf      = {&isNaN_jf,       "isDate",      "any",		jfn_isDate};
+static jsonfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "any",		jfn_isTime};
+static jsonfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "any",		jfn_isDateTime};
+static jsonfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "any",		jfn_isPeriod};
+static jsonfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "any,prevtype",	jfn_typeOf};
 static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "any",		jfn_sizeOf};
 static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str",		jfn_widthOf};
 static jsonfunc_t keys_jf        = {&widthOf_jf,     "keys",        "obj",		jfn_keys};
@@ -153,10 +166,15 @@ static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "arr|str, sr
 static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "arr|str, srch",	jfn_lastIndexOf};
 static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "str, srch",	jfn_startsWith};
 static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "str, srch",	jfn_endsWith};
-static jsonfunc_t split_jf   = {&endsWith_jf,    "split",   "str, delim, limit",		jfn_split};
-static jsonfunc_t stringify_jf   = {&split_jf,    "stringify",   "data",		jfn_stringify};
+static jsonfunc_t split_jf       = {&endsWith_jf,    "split",       "str, delim, limit",		jfn_split};
+static jsonfunc_t stringify_jf   = {&split_jf,       "stringify",   "data",		jfn_stringify};
 static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str",		jfn_parse};
-static jsonfunc_t count_jf       = {&parse_jf,       "count",       "any",		jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t date_jf        = {&parse_jf,       "date",        "str",		jfn_date};
+static jsonfunc_t time_jf        = {&date_jf,        "time",        "str, tz",		jfn_time};
+static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "str, tz",		jfn_dateTime};
+static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "str, tz",		jfn_timeZone};
+static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "str|num, unit",		jfn_period};
+static jsonfunc_t count_jf       = {&period_jf,      "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "num|str, marker",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -548,6 +566,25 @@ static json_t *jfn_isNaN(json_t *args, void *agdata)
 	return json_bool(args->first->type != JSON_NUMBER);
 }
 
+static json_t *jfn_isDate(json_t *args, void *agdata)
+{
+	return json_bool(json_is_date(args->first));
+}
+
+static json_t *jfn_isTime(json_t *args, void *agdata)
+{
+	return json_bool(json_is_time(args->first));
+}
+
+static json_t *jfn_isDateTime(json_t *args, void *agdata)
+{
+	return json_bool(json_is_datetime(args->first));
+}
+
+static json_t *jfn_isPeriod(json_t *args, void *agdata)
+{
+	return json_bool(json_is_period(args->first));
+}
 
 /* typeOf(data) returns a string identifying the data's type */
 static json_t *jfn_typeOf(json_t *args, void *agdata)
@@ -1849,6 +1886,91 @@ static json_t *jfn_parse(json_t *args, void *agdata)
 	return json_parse_string(data->text);
 }
 
+/* Return an ISO date string */
+static json_t *jfn_date(json_t *args, void *agdata)
+{
+	char	buf[100];
+
+	/* If given null or an empty string, then return a copy of it */
+	if (json_is_null(args->first)
+	 || (args->first->type == JSON_STRING && !*args->first->text))
+		return json_copy(args->first);
+
+	/* If not given a string, that's an error */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "date() expects an ISO date string");
+
+	/* Get the date from the string */
+	if (json_date(buf, args->first->text) != 0)
+		return json_error_null(0, "Malformed date");
+	return json_string(buf, -1);
+}
+
+/* Return an ISO time string, possibly tweaking the time zone */
+static json_t *jfn_time(json_t *args, void *agdata)
+{
+	char	buf[100];
+	char	*tz;
+
+	/* If given null or an empty string, then return a copy of it */
+	if (json_is_null(args->first)
+	 || (args->first->type == JSON_STRING && !*args->first->text))
+		return json_copy(args->first);
+
+	/* If not given a string, that's an error */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "time() expects an ISO dateTime or time string");
+	tz = NULL;
+	if (args->first->next) {
+		if (args->first->next->type != JSON_STRING)
+			return json_error_null(0, "date() expects an time zone string as the optional second argument");
+		tz = args->first->next->text;
+	}
+
+	/* Get the time from the string */
+	if (json_time(buf, args->first->text, tz) != 0)
+		return json_error_null(0, "Malformed time");
+	return json_string(buf, -1);
+}
+
+/* Return an ISO dateTime string, possibly tweaking the time zone */
+static json_t *jfn_dateTime(json_t *args, void *agdata)
+{
+	char	buf[100];
+	char	*tz;
+
+	/* If given null or an empty string, then return a copy of it */
+	if (json_is_null(args->first)
+	 || (args->first->type == JSON_STRING && !*args->first->text))
+		return json_copy(args->first);
+
+	/* If not given a string, that's an error */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "time() expects an ISO dateTime or time string");
+	tz = NULL;
+	if (args->first->next) {
+		if (args->first->next->type != JSON_STRING)
+			return json_error_null(0, "date() expects an time zone string as the optional second argument");
+		tz = args->first->next->text;
+	}
+
+	/* Get the time from the string */
+	if (json_datetime(buf, args->first->text, tz) != 0)
+		return json_error_null(0, "Malformed time");
+	return json_string(buf, -1);
+}
+
+/* Extract the time zone from an ISO time or dateTime */
+static json_t *jfn_timeZone(json_t *args, void *agdata)
+{
+	return NULL;
+}
+
+/* Convert ISO period between string and number. */
+static json_t *jfn_period(json_t *args, void *agdata)
+{
+	return NULL;
+}
 
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *

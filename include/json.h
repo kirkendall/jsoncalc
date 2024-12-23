@@ -184,6 +184,10 @@ extern int json_is_true(json_t *json);
 extern int json_is_null(json_t *json);
 extern int json_is_table(json_t *json);
 extern int json_is_short(json_t *json, size_t oneline);
+extern int json_is_date(json_t *json);
+extern int json_is_time(json_t *json);
+extern int json_is_datetime(json_t *json);
+extern int json_is_period(json_t *json);
 extern int json_equal(json_t *j1, json_t *j2);
 extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
 #define json_text_by_key(container, key) json_text(json_by_key((container), (key)))
@@ -243,4 +247,16 @@ const char *json_mbs_ascii(const char *str, char *buf);
 size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, jsonformat_t *format);
 size_t json_mbs_unescape(char *dst, const char *src, size_t len);
 int json_mbs_like(const char *text, const char *pattern);
+
+int json_str_date(const char *str);
+int json_str_time(const char *str);
+int json_str_datetime(const char *str);
+int json_str_period(const char *str);
+int json_date(char *result, const char *str);
+int json_time(char *result, const char *str, const char *tz);
+int json_datetime(char *result, const char *str, const char *tz);
+int json_datetime_add(char *result, const char *str, const char *period);
+int json_datetime_subtract(char *result, const char *str, const char *period);
+int json_datetime_diff(char *result, const char *str1, const char *str2);
+
 END_C

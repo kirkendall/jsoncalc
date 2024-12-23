@@ -144,3 +144,35 @@ int json_is_short(json_t *json, size_t oneline)
 {
         return shorthelper(json, oneline) < oneline;
 }
+
+/* Return 1 iff json looks like an ISO date string "YYYY-MM-DD" */
+int json_is_date(json_t *json)
+{
+	if (!json || json->type != JSON_STRING || !json_str_date(json->text))
+		return 0;
+	return 1;
+}
+
+/* Return 1 iff json looks like an ISO time string "hh:mm:ss" */
+int json_is_time(json_t *json)
+{
+	if (!json || json->type != JSON_STRING || !json_str_time(json->text))
+		return 0;
+	return 1;
+}
+
+/* Return 1 iff json looks like an ISO datetime string "YYYY-MM-DDThh:mm:ss" */
+int json_is_datetime(json_t *json)
+{
+	if (!json || json->type != JSON_STRING || !json_str_datetime(json->text))
+		return 0;
+	return 1;
+}
+
+/* Return 1 iff json looks like an ISO period string "PnYnMnWnDTnHnMnS" */
+int json_is_period(json_t *json)
+{
+	if (!json || json->type != JSON_STRING || !json_str_period(json->text))
+		return 0;
+	return 1;
+}

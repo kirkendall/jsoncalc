@@ -804,7 +804,24 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_ADD:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
-		if (left->type == JSON_STRING || right->type == JSON_STRING) {
+		if (json_is_date(left) && json_is_period(right)) {
+			/* ISO datetime+period.  Add the period to the
+			 * datetime, and return the resulting datetime.
+			 * Note that both the datetime and period are strings.
+			 */
+			char buf[50];
+			json_datetime_add(buf, left->text, right->text);
+			buf[10] = '\0';
+			result = json_string(buf, -1);
+		} else if ((json_is_date(left) || json_is_datetime(left)) && json_is_period(right)) {
+			/* ISO datetime+period.  Add the period to the
+			 * datetime, and return the resulting datetime.
+			 * Note that both the datetime and period are strings.
+			 */
+			char buf[50];
+			json_datetime_add(buf, left->text, right->text);
+			result = json_string(buf, -1);
+		} else if (left->type == JSON_STRING || right->type == JSON_STRING) {
 			/* String version.  If one of the operands is a
 			 * non-string, then convert it to a string.
 			 * One minor optimization is that if a number is in
@@ -839,7 +856,33 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_SUBTRACT:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
-		if (left->type == JSON_STRING || right->type == JSON_STRING) {
+		if (json_is_date(left) && json_is_period(right)) {
+			/* ISO date-period.  Subtract the period from the
+			 * datetime, and return the resulting datetime.
+			 * Note that both the datetime and period are strings.
+			 */
+			char buf[50];
+			json_datetime_subtract(buf, left->text, right->text);
+			buf[10] = '\0';
+			result = json_string(buf, -1);
+		} else if (json_is_datetime(left) && json_is_period(right)) {
+			/* ISO datetime-period.  Subtract the period from the
+			 * datetime, and return the resulting datetime.
+			 * Note that both the datetime and period are strings.
+			 */
+			char buf[50];
+			json_datetime_subtract(buf, left->text, right->text);
+			result = json_string(buf, -1);
+		} else if ((json_is_date(left) || json_is_datetime(left))
+		        && (json_is_date(right) || json_is_datetime(right))) {
+			/* ISO datetime-datetime.  Find the difference between
+			 * two dates, and return it as a period.
+			 * Note that the datetimes are strings.
+			 */
+			char buf[50];
+			json_datetime_diff(buf, left->text, right->text);
+			result = json_string(buf, -1);
+		} else if (left->type == JSON_STRING || right->type == JSON_STRING) {
 			/* String version.  If one of the operands is a
 			 * non-string, then convert it to a string.
 			 * One minor optimization is that if a number is in

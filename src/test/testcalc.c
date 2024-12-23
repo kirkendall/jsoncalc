@@ -7,6 +7,10 @@
 #include "json.h"
 #include "calc.h"
 
+#define GREEN	"\033[32;1m"
+#define RED	"\033[31;1m"
+#define PLAIN	"\033[m"
+
 typedef struct {
 	int	tests;
 	int	failed;
@@ -180,7 +184,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("Passed %d/%d, failed %d/%d\n", counts.tests - counts.failed, counts.tests, counts.failed, counts.tests);
+	printf("%sPassed %d/%d%s, %sfailed %d/%d%s\n", GREEN, counts.tests - counts.failed, counts.tests, PLAIN, RED, counts.failed, counts.tests, PLAIN);
         return counts.failed > 0;
 }
 

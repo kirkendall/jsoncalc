@@ -26,16 +26,41 @@
       <tr><td class="left">number</td><td class="op">%</td><td class="right">number</td><td class="opdesc">Remainder from integer division (modulo)</td></tr>
       <tr><td class="left">number</td><td class="op">*</td><td class="right">number</td><td class="opdesc">Multiply <var>number</var>s</td></tr>
       <tr><td colspan="4" class="divider"></td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">+</td><td class="right">number<br/>string</td><td class="opdesc">Add <var>number</var>s or concatenate <var>string</var>s</td></tr>
-      <tr><td class="left">number<br/>string</td><td class="op">-</td><td class="right">number<br/>string</td><td class="opdesc">Subtract <var>number</var>s or contatenate <var>string</var>s with a space</td></tr>
+      <tr><td class="left">number<br/>string<br/>date<br/>datetime</td><td class="op">+</td><td class="right">number<br/>string<br/>period</td><td class="opdesc">Add <var>number</var>s or concatenate <var>string</var>s</td></tr>
+      <tr><td class="left">number<br/>string<br/>date<br/>datetime</td><td class="op">-</td><td class="right">number<br/>string<br/>period<br/>date<br/>datetime</td><td class="opdesc">Subtract <var>number</var>s or contatenate <var>string</var>s with a space</td></tr>
     </table>
     When applied to numbers, these are the usual arithmetic operators,
     with the usual precedences.
+    The <tt>+</tt> and <tt>-</tt> operators also work with strings, and
+    ISO 8601 date/datetime/period values.
     <p>
+    Operator precedence is the same regardless of the type of data they're
+    applied to.
+    
+    <h2>Numbers</h2>
+    There are no real surprises for numbers.  They work on floating point
+    numbers except for <tt>%</tt> which works on integers.
+    
+    <h2>Strings</h2>
     When applied to strings, the <tt>+</tt> and <tt>-</tt> operators
     contatentate them.
     <tt>+</tt> contatenates them without any other changes, while
     <tt>-</tt> leaves exactly one space between them.
+
+    <h2>Dates and Periods</h2>
+    <strong>JsonCalc</strong> represents dates, datetimes, and periods as
+    strings in ISO 8601 format.
+    Although they're strings, the <tt>+</tt> and <tt>-</tt> operators don't
+    concatenate them.
+    Instead, it adds a period to a date or datetime, or subtracts a period
+    from a date or datetime, and returns the result as a new date or datetime
+    string.
+    <p>
+    You can also subtract one date or datetime from another, and get the
+    difference as a period.
+    ISO 8601 is vague about negative periods, so you'll probably be happier
+    if the left date/datetime comes after the right date/datetime.
+
     <details open>
       <summary>Examples</summary>
 
@@ -75,16 +100,69 @@
 	The mixture is no longer associative though, so you might need to add parentheses.
       </div>
 
+      <div class="example">
+	<kbd>"2024-01-15" + "P1M"</kbd>
+	<samp>"2024-02-15"</samp>
+	<kbd>"2024-01-15" - "P1M"</kbd>
+	<samp>"2023-12-15"</samp>
+        Some examples with dates and periods.
+        In the second example, changing the month also caused the year to change.
+      </div>
+
+      <div class="example">
+	<kbd>"2024-12-31" - "P1M"</kbd>
+	<samp>"2024-12-01"</samp>
+        Here's an example showing how date arithmetic can get messy.
+        You might expect the result to be <tt>"2024-11-31"</tt> but that
+        isn't a valid date since there are only 30 days in November,
+        so it gets rounded up to the first day of the following month.
+      </div>
+
+      <div class="example">
+        <kbd>"2025-01-04" - "2025-01-01"</kbd>
+        <samp>"P3D"</samp>
+        Finding the difference between two dates.
+        Here, the difference is 3 days.
+      </div>
 
     </details>
 
-    <detail>
+    <details>
       <summary>Notes</summary>
       <ul>
         <li>JavaScript doesn't use <tt>-</tt> for concatenation with spaces.
             That's purely a JsonCalc thing.
+	<li>JavaScript also doesn't have much in the way of date arithmetic
+	    either.  It represents datetimes as Date objects, which don't
+	    have anything like addition.  However, if you use setMonth() and
+	    setDate() to set a date to November 31 then it'll actually get set
+	    to December 1, just as in the above "messy" example.
+	<li>Date/datetime/period arithmetic is stable for small units
+	    (days, hours, minutes, seconds).
+	    The date messiness is worst when you try to add/subtract months
+	    after the 28th day of the month.
+	    Years are only a problem if leap days are involved.
+	    <div class="example">
+	      <kbd>"2024-02-29" + "P1Y"</kbd>
+	      <samp>"2025-03-01"</samp>
+	      There is no February 29 in 2025, so it gets rounded to March 1.
+	    </div>
+	<li>If a date/datetime/period is malformed, then it will be treated
+	    like any other string &mdash; the <tt>+</tt> and <tt>-</tt> operators
+	    will concatenate them.
       </ul>
-    </detail>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=isDate">isDate()</a></td><td>Determine whether a value is a date string.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a></td><td>Determine whether a value is a dateTime string.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a></td><td>Determine whether a value is a period string.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=period">period()</a></td><td>Extract a number from a period, or generate a period from a number.</td></tr>
+      </table>
+    </details>
+
 
   </body>
 </html>

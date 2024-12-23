@@ -79,6 +79,8 @@ table.referencelist th {
 table.referencelist td {
 	border-left: thin solid black;
 	border-right: thin solid black;
+	border-top: thin dotted black;
+	border-bottom: thin dotted black;
 	padding-left: 0.3em;
 	padding-right: 0.3em;
 }
@@ -202,3 +204,15 @@ table.opList span.op {
 	font-size: 110%;
 }
 
+blockquote.abstract {
+	text-align:center;
+	font-style: italic;
+}
+blockquote.abstract::before {
+	content: "ABSTRACT: "
+}
+article span.timestamp {
+	font-size: smaller;
+	font-style: italic;
+	float: right;
+}

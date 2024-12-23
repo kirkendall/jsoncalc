@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Date, Time, DateTime, and Period</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Date, Time, DateTime, and Period">
+    <meta name="keywords" content="string, number">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Date, Time, DateTime, and Period</h1>
+    JSON doesn't have a "Date" class like JavaScript.
+    Instead, dates and times are represented by strings.
+    JSON documents typically use ISO-8601 formats for dates, times, dateTimes,
+    and periods.
+    <strong>JsonCalc</strong> supports this pretty well.
+    <p>
+    There are functions and operators for manipulating dates and times.
+    Since they're strings, you can also use string functions and operators
+    to manipulate them.
+
+    <h2>Dates, Times, and DateTimes</h2>
+    Dates are 10-character strings in
+    "<var>YYYY</var>-<var>MM</var>-<var>DD</var>" format.
+    The hyphens are required.
+    Months and days must be zero-padded to fill their 2-character slice of
+    the date.
+    <p>
+    Times are a bit more flexible.
+    They're usually "<var>HH</var>:<var>MM</var>:<var>SS</var>",
+    but you can also omit the seconds
+    ("<var>HH</var>:<var>MM</var>"),
+    or include fractions of a second
+    ("<var>HH</var>:<var>MM</var>:<var>SS.mmmmmm</var>").
+    You can also append a time zone, as described below.
+    Without a timezone, the time is assumed to be in the local timezone.
+    <p>
+    DateTimes combine a date and a time, with a literal letter "T" between them
+    ("<var>YYYY</var>-<var>MM</var>-<var>DD</var>T<var>HH</var>:<var>MM</var>:<var>SS</var>")
+    and may also contain a timezone.
+
+    <h2>Time Zones</h2>
+    An empty time zone ("") means the time or dateTime is in your
+    local time zone.
+    If your area is subject to Daylight Savings Time, then that will affect
+    your timezone.
+    <p>
+    UTC (also known as GMT or Zulu) can be represented by "Z" or "+00:00".
+    This is <em>not</em> subject to Daylight Savings Time.
+    Many web services use UTC as their preferred time zone.
+    <p>
+    Other time zones are represented as hours and minutes east of Greenwich,
+    in "+hh:mm" or "+hhmm" format.
+    If west of Greenwich, this becomes "-hh:mm" or "-hhmm".
+    Time zones represented this way are not adjusted for Daylight Savings Time.
+    <p>
+    Converting a time or dateTime from one time zone to another is easy.
+    The <a target="_PARENT" href="../index.html?f=time">time()</a> and
+    <a target="_PARENT" href="../index.html?f=dateTime">dateTime()</a> functions
+    accept an optional time zone argument which causes the returned value to
+    be expressed in that time zone instead of its original time zone.
+    <p>
+    ISO-8601 time zone identifiers are different from Unix's.
+    Unix-style time zone names such as "PST8PDT" or "America/Los_Angeles"
+    are <em>not</em> recognized <strong>JsonCalc</strong>.
+
+    <h2>Periods</h2>
+    Periods are durations of time, and are represented by strings in
+    "P<var>n</var>Y<var>n</var>M<var>n</var>W<var>n</var>DT<var>n</var>H<var>n</var>M<var>n</var>S" format,
+    where each <var>n</var> gives the number of years, months, weeks, days,
+    hours, minutes, and seconds.
+    If <var>n</var> is 0 then both the 0 and the following letter should be
+    omitted.
+    The "T" can be omitted if there are no hours, minutes, or seconds.
+    For example, <tt>"P1M"</tt> represents one month, and
+    <tt>"PT1H30M"</tt> represents an hour and 30 minutes.
+    Numbers are allowed to overflow their intrinsic ranges, for example
+    <tt>"PT90M"</tt> also represents an hour and 30 minutes.
+    <p>
+    The <a target="_PARENT" href="../index.html?op=arithmetic">+ and - operators</a>
+    can add or subtract a period to/from a date or dateTime.
+    You can also subtract one date from another to find the time span between them, expressed as a period.
+    Date arithmetic can get messy though.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>isDate("2025-1-1")</kbd>
+	<samp>false</samp>
+	<kbd>isDate("2025-01-01")</kbd>
+	<samp>true</samp>
+        The first example isn't a valid date because the month and day aren't
+        zero-padded.
+        The second example is properly formatted.
+      </div>
+
+      <div class="example">
+	<kbd>isDateTime("2025-01-01T00:01:00Z")</kbd>
+	<samp>true</samp>
+        Here's a dateTime with time zone "Z".
+      </div>
+
+      <div class="example">
+	<kbd>"2025-02-14" &gt; "2025-01-20"</kbd>
+	<samp>true</samp>
+	<kbd>"2025-02-14" - "2025-01-20"</kbd>
+	<samp>"P25D"</samp>
+	<kbd>"2025-01-20" + "P25D"</kbd>
+	<samp>"2025-02-14"</samp>
+        The first example shows that ISO-8601 dates can be compared using the
+        normal comparison operators.  They'll be compared as strings, but that
+        works out thanks to the year-month-date order and mandatory zero-padding.
+        The second example does a little date arithmetic, and shows that the
+        difference between the two dates is 25 days.
+        The final example adds a period to a date, yielding a new date string.
+      </div>
+
+      <div class="example">
+        <kbd>"2025-01-20T14:00:00-05:00".dateTime("Z")</kbd>
+        <samp>"2025-01-20T19:00:00Z"</samp>
+        <kbd>"2025-01-20T14:00:00-05:00".dateTime("")</kbd>
+        <samp>"2025-01-20T11:00:00"</samp>
+        This converts a dateTime from the "-04:00" time zone to UTC time
+        (denoted by "Z"), and then to local time (denoted by "").
+        Note that the returned dateTime includes the time zone in its text.
+        Also, of course, your local time might be different from mine.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Date arithmetic is inherently messy.
+            Daylight savings time means days aren't always 24 hours.
+            Months aren't always 31 days.
+            Years aren't always 365 days.
+            <div class="example">
+              <kbd>"2024-02-29" + "P1Y"</kbd>
+              <samp>"2025-03-01"</samp>
+              February 29 is a valid date in 2024, but not 2025 so the date
+              gets bumped to March 1.
+	    </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=arithmetic">+ and -</a> - Arithmetic operators work on dates/times.<br/>
+      <a target="_PARENT" href="../index.html?f=isDate">isDate()</a> - Test whether a value is a date<br/>
+      <a target="_PARENT" href="../index.html?f=isTime">isTime()</a> - Test whether a value is a time<br/>
+      <a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a> - Test whether a value is a dateTime<br/>
+      <a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a> - Test whether a value is a period<br/>
+      <a target="_PARENT" href="../index.html?f=date">date()</a> - Manipulate a date<br/>
+      <a target="_PARENT" href="../index.html?f=time">time()</a> - Manipulate a time<br/>
+      <a target="_PARENT" href="../index.html?f=dateTime">dateTime()</a> - Manipulate a dateTime<br/>
+      <a target="_PARENT" href="../index.html?f=period">period()</a> - Manipulate a period<br/>
+    </details>
+
+  </body>
+</html>

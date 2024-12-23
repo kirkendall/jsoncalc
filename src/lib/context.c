@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <sys/stat.h>
 #include "json.h"
 #include "calc.h"
 #include "error.h"
@@ -342,7 +344,11 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 {
 	jsoncontext_t *globals, *thiscontext;
 	json_t	*files, *j, *f;
-	int	current_file, noref, i;
+	int	current_file, noref, i, bits;
+	struct stat st;
+	struct tm tm;
+	char	isobuf[24];
+
 
 	/* Defend against empty context */
 	if (!context)
@@ -391,9 +397,36 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 			/* Select it as the current file */
 			*refcurrent = i;
 		} else {
-			/* Create the basic entry */
+			/* Fetch info about the file */
+			if (!strcmp(filename, "-"))
+				i = fstat(0, &st);
+			else
+				i = stat(filename, &st);
+			if (i != 0)
+				bits = 0; /* can't read/write what we don't know */
+			if (!S_ISREG(st.st_mode) && !S_ISFIFO(st.st_mode))
+				bits = 0; /* can't read or write a non-file */
+			else if (st.st_uid == geteuid())
+				bits = st.st_mode & 0007;
+			else if (st.st_gid = getegid())
+				bits = st.st_mode & 0070;
+			else
+				bits = st.st_mode & 0700;
+			if (i == 0) {
+				localtime_r(&st.st_mtime, &tm);
+				sprintf(isobuf, "%04d-%02d-%02dT%02d:%02d:%02d",
+					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+					tm.tm_hour, tm.tm_min, tm.tm_sec);
+			} else
+				*isobuf = '\0';
+
+			/* Create the entry entry */
 			json_t *entry = json_object();
 			json_append(entry, json_key("filename", json_string(filename, -1)));
+			json_append(entry, json_key("size", json_from_int(bits == 0 ? 0 : st.st_size)));
+			json_append(entry, json_key("mtime", json_string(isobuf, -1)));
+			json_append(entry, json_key("readable", json_bool(bits & 0111)));
+			json_append(entry, json_key("writable", json_bool(bits & 0222)));
 			json_append(entry, json_key("modified", json_bool(0)));
 
 			/* Add it to the "files" list */

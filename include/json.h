@@ -258,5 +258,6 @@ int json_datetime(char *result, const char *str, const char *tz);
 int json_datetime_add(char *result, const char *str, const char *period);
 int json_datetime_subtract(char *result, const char *str, const char *period);
 int json_datetime_diff(char *result, const char *str1, const char *str2);
+json_t *json_datetime_fn(json_t *args, char *type);
 
 END_C

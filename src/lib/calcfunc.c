@@ -1889,75 +1889,19 @@ static json_t *jfn_parse(json_t *args, void *agdata)
 /* Return an ISO date string */
 static json_t *jfn_date(json_t *args, void *agdata)
 {
-	char	buf[100];
-
-	/* If given null or an empty string, then return a copy of it */
-	if (json_is_null(args->first)
-	 || (args->first->type == JSON_STRING && !*args->first->text))
-		return json_copy(args->first);
-
-	/* If not given a string, that's an error */
-	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "date() expects an ISO date string");
-
-	/* Get the date from the string */
-	if (json_date(buf, args->first->text) != 0)
-		return json_error_null(0, "Malformed date");
-	return json_string(buf, -1);
+	return json_datetime_fn(args, "date");
 }
 
 /* Return an ISO time string, possibly tweaking the time zone */
 static json_t *jfn_time(json_t *args, void *agdata)
 {
-	char	buf[100];
-	char	*tz;
-
-	/* If given null or an empty string, then return a copy of it */
-	if (json_is_null(args->first)
-	 || (args->first->type == JSON_STRING && !*args->first->text))
-		return json_copy(args->first);
-
-	/* If not given a string, that's an error */
-	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "time() expects an ISO dateTime or time string");
-	tz = NULL;
-	if (args->first->next) {
-		if (args->first->next->type != JSON_STRING)
-			return json_error_null(0, "date() expects an time zone string as the optional second argument");
-		tz = args->first->next->text;
-	}
-
-	/* Get the time from the string */
-	if (json_time(buf, args->first->text, tz) != 0)
-		return json_error_null(0, "Malformed time");
-	return json_string(buf, -1);
+	return json_datetime_fn(args, "time");
 }
 
 /* Return an ISO dateTime string, possibly tweaking the time zone */
 static json_t *jfn_dateTime(json_t *args, void *agdata)
 {
-	char	buf[100];
-	char	*tz;
-
-	/* If given null or an empty string, then return a copy of it */
-	if (json_is_null(args->first)
-	 || (args->first->type == JSON_STRING && !*args->first->text))
-		return json_copy(args->first);
-
-	/* If not given a string, that's an error */
-	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "time() expects an ISO dateTime or time string");
-	tz = NULL;
-	if (args->first->next) {
-		if (args->first->next->type != JSON_STRING)
-			return json_error_null(0, "date() expects an time zone string as the optional second argument");
-		tz = args->first->next->text;
-	}
-
-	/* Get the time from the string */
-	if (json_datetime(buf, args->first->text, tz) != 0)
-		return json_error_null(0, "Malformed time");
-	return json_string(buf, -1);
+	return json_datetime_fn(args, "datetime");
 }
 
 /* Extract the time zone from an ISO time or dateTime */
@@ -1969,7 +1913,7 @@ static json_t *jfn_timeZone(json_t *args, void *agdata)
 /* Convert ISO period between string and number. */
 static json_t *jfn_period(json_t *args, void *agdata)
 {
-	return NULL;
+	return json_datetime_fn(args, "period");
 }
 
 /**************************************************************************

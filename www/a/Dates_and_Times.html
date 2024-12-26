@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dates and Times</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc Dates and Times">
+    <meta name="keywords" content="string, object, datetime, jsoncalc, article, Dates and Times">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>Dates and Times</h1>
+    <h4 class="timestamp">2024-12-22</h4>
+    <blockquote class="abstract">
+      Dates and times are stored as ISO-8601 strings.
+      You can perform arithmetic on them.
+      A small set of versatile functions can alter them in other ways.
+    </blockquote>
+
+    Date calculations are inherently messy.
+    There's no way around it.
+    Days aren't always 24 hours because of Daylight Savings Time.
+    Months aren't always 31 days.
+    Years aren't always 365 days.
+    Time zones.
+    Having said that, though, JsonCalc's date and time system is about as
+    easy to use as you could hope for.
+    It is simple and consistent &mdash; a clean interface to messy data.
+
+    <h2>The Basics</h2>
+    Dates, times, datetimes, and periods are all represented as strings
+    using ISO-8601 notation.
+    <table class="referencelist">
+      <tr><td>"YYYY-MM-DD"</td><td>Date</td><td>"2025-07-04" is July 4 2025</td></tr>
+      <tr><td>"hh:mm:sstz"</td><td>Time</td><td>"12:00:00" is noon in the local timezone<br>"13:30:00Z" is 1:30pm in the UTC time zone</td></tr>
+      <tr><td>"YYYY-MM-DDThh:mm:sstz"</td><td>DateTime</td><td>"2008-12-31T23:57:00" is 3 minutes before New Years Day in the local time zone</td></tr>
+      <tr><td>"PnYnMnWnDTnHnMnS"</td><td>Period</td><td>"P3M" is three minutes<br/>"PT3M" is three minutes.</td></tr>
+    </table>
+    <p>
+    Since they're strings, you can compare them as strings, or use string
+    functions such <a target="_PARENT" href="../index.html?f=substr">substr()</a>
+    to pic them apart, and the <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator to assemble them.
+    <p>
+    But there's so much more!
+
+    <h2>Recognizing Dates and Times</h2>
+    There are <a target="_PARENT" href="../index.html?f=isDate">isDate()</a>,
+    <a target="_PARENT" href="../index.html?f=isTime">isTime()</a>,
+    <a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a>, and
+    <a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a>
+    functions for testing whether a given string is a properly formatted
+    ISO date, time, datetime, or period.
+    <p>
+    The <a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a>
+    and <a target="_PARENT" href="../index.html?f=explain">explain()</a>
+    functions can distiguish between ISO date/time/datetime/period strings
+    and other strings.
+    <p>
+    The <a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a>
+    function normally just returns one of the 6 basic JSON data types, but
+    if you pass an extra <tt>true</tt> parameter then it gets smarter.
+    If given a string that looks like an ISO date, it returns "date".
+    For times it returns "time", for datetimes it returns "datetime", and for periods it returns "period".
+    <div class="example">
+      <kbd>typeOf("2025-01-01")</kbd>
+      <samp>"string"</samp>
+      <kbd>typeOf("2025-01-01", true)</kbd>
+      <samp>"date"</samp>
+      This shows that dates are strings, but if you pass an extra
+      <tt>true</tt> then JsonCalc can distinguish date strings from other
+      strings.
+      The same is true for other times, datetimes, and periods.
+    </div>
+    <p>
+    The <a target="_PARENT" href="../index.html?f=explain">explain()</a>
+    function is always sensitive to ISO strings.
+    <div class="example">
+      <kbd>explain([{myDate:"2025-02-14"}])</kbd>
+      <samp>
+<table>
+<tr><th>key</th><th>type</th><th>width</th><th>nullable</th></tr>
+<tr><td>myDate</td><td>date</td><td>10</td><td>false</td></tr>
+</table>
+      </samp>
+      The date string is recognized as such.
+    </div>
+
+    <h2>Built-In Variables</h2>
+    There are some built-in functions for accessing the system clock.
+    These are listed below.
+    <table class="referencelist">
+      <tr><th>Name</th><th>Example</th><th>Meaning</th></tr>
+      <tr><td>now</td><td>1735170374</td><td>Current time in Unix <tt>time_t</tt> format</td></tr>
+      <tr><td>current_date</td><td>"2024-12-25"</td><td>Current date as an ISO-8601 string</td></tr>
+      <tr><td>current_time</td><td>"15:46:14"</td><td>Current time as an ISO-8601 string</td></tr>
+      <tr><td>current_datetime</td><td>"2024-12-25T15:46:14"</td><td>Current datetime as an ISO-8601 string</td></tr>
+      <tr><td>current_timestamp</td><td>"2024-12-25T23:46:14Z"</td><td>Current datetime as in UTC time zone</td></tr>
+      <tr><td>current_tz</td><td>"-08:00"</td><td>Current time zone as a ISO-8601 string</td></tr>
+    </table>
+    <p>
+    The <tt>current_</tt><var>xxxxx</var> variables are mostly meant to mimic
+    similarly-named variables in MySQL.
+    <p>
+    The values of <tt>current_time</tt> and <tt>current_datetime</tt> are in
+    the local time zone, and have no explicit time zone appended to them.
+    If you need to have the time zone explicitly present, you can append
+    the <tt>current_tz</tt> string to them.
+    If you live in a region that's subject to Daylight Savings Time/Summer Time,
+    then the <tt>current_tz</tt> variable will change appropriately.
+    <div class="example">
+      <kbd>current_datetime + current_tz</kbd>
+      <samp>"2024-12-25T15:46:14-08:00"</samp>
+      This shows the current datetime with the time zone explicitly appended.
+    </div>
+
+    <h2>Arithmetic on dates, times, and periods</h2>
+    Normally the <a target="_PARENT" href="../index.html?op=arithmetic">+ and -</a> operators
+    concatenate strings,
+    but if those strings look like a date/time/datetime on the left
+    and a period on the right,
+    then it will add the period to the date/time/datetime, or subtract the
+    period from the date/time/datetime, and return the result as a new
+    ISO date/time/datetime string.
+    <div class="example">
+      <kbd>"2025-02-14" + "P1M"</kbd>
+      <samp>"2025-03-14"</samp>
+      <kbd>"2025-02-14" - "P2W"</kbd>
+      <samp>"2025-01-31"</samp>
+      Adding 1 month, and subtracting 2 weeks.
+      Note that the second example changed both the month and the day.
+    </div>
+    <p>
+    You can also subtract one date from another, and and get an ISO period
+    string as a result.
+    <div class="example">
+      <kbd>"2025-02-14" - "2025-01-31"</kbd>
+      <samp>"P14D"</samp>
+      This reverses the example from the second examle above,
+      showing that the difference between the two dates is 14 days.
+    </div>
+
+    <h2>date(), time(), datetime(), period()</h2>
+    These functions generally return an ISO date, time, datetime, or period
+    string.
+    In their simplest use, you can use them to convert a datetime to a date,
+    for example.
+    <div class="example">
+      <kbd>date("2025-03-30T14:23:14")</kbd>
+      <samp>"2025-03-30"</samp>
+      Convert a datetime to a date.
+    </div>
+    <p>
+    But they're sort of "Swiss army knife" functions.
+    By passing them extra arguments, you can use them to perform other useful
+    manipulations.
+    Most of the rest of this article is about the may ways you can use
+    these functions.
+
+    <h2>Changing Time Zones</h2>
+    ISO time and datetime strings can have a time zone appended to them.
+    <p>
+    If there is no time zone
+    (or, looking at it another way, if the time zone is "")
+    then the time zone is understood to be the local time zone.
+    If your area is subject to Daylight Savings Time/Summer Time, then the
+    time zone logic will be aware of this &mdash; for datetime, the date
+    portion of the datetime will be used to determine whether DST is in effect,
+    and for time strings it will use the current date to make that decision.
+    <p>
+    The UTC time zone is often used in <span title="Application Programming Interface">API</a>s to represent time in a consistent way.
+    This time zone can be represented by a "Z" or "+00:00".
+    <p>
+    Time Zones east of Greenwich (where UTC is the local time) are represented
+    by "+hh:mm" where hh is the number of hours and mm is minutes.  Often the
+    minutes will be ":00".
+    Time Zones west of Greenwich use "-hh:mm".
+    <p>
+    You can convert a time or datetime from one timezone to another by passing
+    the new time zone to <a target="_PARENT" href="../index.html?f=time">time()</a>
+    or <a target="_PARENT" href="../index.html?f=datetime">datetime()</a> as an
+    extra parameter.
+    (Every other operation you can do on a time or datetime preserves whatever
+    timezone it already has.)
+    <div class="example">
+      <kbd>"14:23:00".time("-05:00")</kbd>
+      <samp>"17:23:00-05:00"</samp>
+      Convert 14:23 from the implied local time zone
+      (which in my case is "-08:00") to the "-05:00" time zone.
+      This adds 3 hours.
+    </div>
+    <div class="example">
+      <kbd>"2025-02-14T07:13:00+00:00".datetime("")</kbd>
+      <samp>"2025-02-13T23:13:00"</samp>
+      Convert a datetime from UTC to the local time zone.
+    </div>
+
+    <h2>Access a Single Number</h2>
+    You can use the functions to extract or alter a single unit number within the
+    date/time/datetime/period.
+    The first parameter is the value to be examined or altered, as usual.
+    Other parameters are the unit name to be examined, and optionally a new
+    number value for that unit.
+    <p>
+    The unit name is represented by a string and can be one of
+    "years", "months", "days", "hours", "minutes", or "seconds"
+    and may be abbreviated &mdash; most of them to just the first letter.
+    For months use "mo" and for minutes use "mi".
+    If you just say "m" then JsonCalc will attempt to guess which of those
+    two units you wanted.
+    <p>
+    Passing just a unit name (without a replacement number value for it)
+    will cause the functions to return that unit as a number.
+    <div class="example">
+      <kbd>"14:23:00".time("mi")</kbd>
+      <samp>23</samp>
+      Extract the minute number from a time string.
+    </div>
+    <p>
+    Passing a unit name with a number will change that unit in the
+    date/time/datetime/period and return the result.
+    The order of these parameters doesn't matter.
+    You can pass multple name/value pairs to change multiple units.
+    <div class="example">
+      <kbd>"14:23:00".time("h", 12)</kbd>
+      <samp>"12:23:00"</samp>
+      <kbd>"14:23:00".time(3,"m",17,"s")</kbd>
+      <samp>"14:03:17"</samp>
+      The first example changes the hour to 12.
+      The second example changes the minute and second, and also demonstrates
+      that the value can come before the name, if that's more convenient.
+    </div>
+    <p>
+    This trick also works on periods.
+    Retrieving a single field from a period is different though because
+    all larger unit fields will be folded into the requested one.
+    <div class="example">
+      <kbd>period(3,"days")</kbd>
+      <samp>"P3D"</samp>
+      <kbd>"PT1H30M".period("mi")</kbd>
+      <samp>90</samp>
+      The first example generates an ISO period string representing 3 days.
+      The second example shows that larger units are folded into the requested
+      unit, so we get 90 minutes back instead of 30.
+    </div>
+
+    <h2>Splitting Into Objects</h2>
+    Dates, times, datetimes, and periods can also be represented by an object
+    instead of a string.
+    The object has members named <tt>year, month, day, hour, minute</tt> and <tt>second</tt>.
+    Some of those fields may be missing, e.g. the time fields for a date.
+    Some other fields may be added, such as tzminutes for the time zone.
+    <p>
+    You can pass the objects as the first argument to the
+    <a target="_PARENT" href="../index.html?f=date">date()</a>,
+    <a target="_PARENT" href="../index.html?f=time">time()</a>,
+    <a target="_PARENT" href="../index.html?f=datetime">datetime()</a>, and
+    <a target="_PARENT" href="../index.html?f=period">period()</a>
+    functions, and they'll be used the same as ISO strings.
+    <div class="example">
+      <kbd>{year:2025, month:4, day:15}.date()</kbd>
+      <samp>"2025-04-15"</samp>
+    </div>
+    <p>
+    Conversely,
+    you can also pass those functions an extra <tt>true</tt> parameter to have
+    the value returned as an object instead of a string.
+    <div class="example">
+      <kbd>"2025-04-15".date(true)</kbd>
+      <samp>{"year":2025,"month":4,"day":15}</samp>
+      This splits the date's unit fields out as the members of an object.
+    </div>
+    <p>
+    The main advantage of objects is that it's easy to extract or modify
+    the fields.
+    The main disadvantages are that they aren't standard like the strings are,
+    and that you can't do date arithmetic on them like you can with strings.
+
+    <h2>Using Unix time_t Values</h2>
+    If the first parameter to 
+    <a target="_PARENT" href="../index.html?f=date">date()</a>,
+    <a target="_PARENT" href="../index.html?f=time">time()</a>, or
+    <a target="_PARENT" href="../index.html?f=datetime">datetime()</a>
+    is a number, then it will be interpreted as the number of seconds
+    since the start of 1970.
+    This is the Unix standard <tt>time_t</tt> format,
+    and is used for file access timestamps and the like.
+    JsonCalc's <tt>now</tt> variable returns a <tt>time_t</tt> value.
+    <div class="example">
+      <kbd>now.date(true)</kbd>
+      <samp>{"year":2024,"month":12,"day":25}</samp>
+      Interpret the current timestamp as a date, and return it as an object.
+    </div>
+    <p>
+    The functions can also return a <tt>time_t</tt> number, if you also pass
+    "time_t" (or abbreviated as "t") to the function.
+    <div class="example">
+      <kbd>"2024-12-25".date("t")</kbd>
+      <samp>1735113600</samp>
+      Convert a date to a Unix time_t value.
+      The conversion is sensitive to your time zone, so your system might
+      give a slightly different answer than mine.
+    </div>
+    <p>
+    The <a target="_PARENT" href="../index.html?f=period">period()</a>
+    function treats "time_t" as a synonym for "second".
+    Since the <tt>time_t</tt> measures time in seconds, this actually works
+    pretty well.
+    <div class="example">
+      <kbd>90.period()</kbd>
+      <samp>"PT90S"</samp>
+      <kbd>"PT5M".period("t")</kbd>
+      <samp>300</samp>
+      The first example returns an ISO period string corresponding to 90 seconds.
+      Note that it doesn't bother to normalize that out to "PT1M30S".
+      The second example converts 5 minutes into the number of seconds.
+    </div>
+
+    <h2>Parsing Other Date/Time Formats</h2>
+    JsonCalc is case-insensitive when parsing periods.
+    The "T" separateing date from time in a datetime can also be lowercase "t".
+    <p>
+    JsonCalc can also parse RFC 3335 datetimes,
+    which look like ISO 8601 datetimes except the "T" is replaced with a space.
+    This datetime format is used by MySQL.
+    It can also parse RFC 5322 datetimes, which look like "Wed, 25 Dec 2024 18:10:21 -0800" and are used in email headers.
+    It can alse parse dates in "MM/DD/YYYY" format, and times with an "AM" or "PM" suffix, both of which are common in the US.
+    <p>
+    Only the
+    <a target="_PARENT" href="../index.html?f=date">date()</a>,
+    <a target="_PARENT" href="../index.html?f=time">time()</a>, and
+    <a target="_PARENT" href="../index.html?f=dateTime">dateTime()</a>
+    functions support those non-ISO 8601 formats though.
+    The testing functions such as
+    <a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a>
+    won't recognize them, and you can't to arithmetic on them like you can
+    with ISO 8601 strings.
+    So use these functions to convert to ISO 8601, then perform any necessary
+    computations on the ISO 8601 strings, and maybe convert them back to
+    some other format afterward.
+
+    <h2>Generating Other Date/Time Formats</h2>
+    When generating a datetime string, JsonCalc will always use an ISO 8601
+    string format by default.
+    <p>
+    You can generate a string value in a locale-specific format by passing
+    the word "locale" (which may be abbreviated to "l") as an extra parameter.
+    Alternatively you can also pass any format string compatible with
+    the C standard library's <tt>strftime()</tt> function.
+    (Run "man 3 strftime" in Linux.)
+    If the resulting string is all digits,
+    then it will be returned as a number instead of a string.
+    For example, "%w" will return the day of the week as the number of days
+    since Sunday.
+    <div class="example">
+      <kbd>datetime(now, "locale")</kbd>
+      <samp>"Wed 25 Dec 2024 07:56:12 PM PST"</samp>
+      Convert the current date and time
+      (here given in binary via the <tt>now</tt> variable)
+      to a format that somebody thinks is preferred in this locale.
+    </div>
+    <div class="example">
+      <kbd>date(now, "%w")</kbd>
+      <samp>3</samp>
+      <kbd>date(now, "%Y.%3j")</kbd>
+      <samp>"2024.360"</samp>
+      The first example returns the number 3, indicating that today is
+      Wednesday.
+      The second example uses two <tt>%</tt> tokens to combine the year and
+      the julien date (days into the year), with the latter being padded
+      to a full 3 digits.
+    </div>
+    <p>
+    If you need something else, you can convert the datetime to an object and
+    then access the individual unit members.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=arithmetic">+ and -</a></td><td>Perform arithmetic on dates/times/datetimes and periods.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isDate">isDate()</a></td><td>Test whether a string is a date</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isTime">isTime()</a></td><td>Test whether a string is a time</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a></td><td>Test whether a string is a datetime</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a></td><td>Test whether a string is a period</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=date">date()</a></td><td>Manipulate a date</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=time">time()</a></td><td>Manipulate a time</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=dateTime">dateTime()</a></td><td>Manipulate a datetime</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=period">period()</a></td><td>Manipulate a period</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

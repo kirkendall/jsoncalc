@@ -280,7 +280,7 @@ static void parsetz(const char *str, jsondatetime_t *dt)
 	dt->localtz = 1;
 }
 
-/* Set the tzminutes for the local timezone of a given date.  (This takes a
+/* Set the tzminutes for the local timezone of a given date.  (This takes
  * some time, and usually when dealing with local timezones we don't care
  * about how far east/west of Greenwich we are.
  */
@@ -305,8 +305,8 @@ static void setlocaltz(jsondatetime_t *dt)
 	(void)gmtime_r(&when, &tmutc);
 
 	/* Find the difference, in hours and minutes */
-	hours = tmutc.tm_hour - tmlocal.tm_hour;
-	minutes = tmutc.tm_min - tmlocal.tm_min;
+	hours = tmlocal.tm_hour - tmutc.tm_hour;
+	minutes = tmlocal.tm_min - tmutc.tm_min;
 
 	/* Hours should be in the range [-12,12].  If outside that range,
 	 * that probably means dates changed.  Tweak the hour.
@@ -357,20 +357,40 @@ static time_t dtbinary(jsondatetime_t *dt)
 	return mktime(&tm);
 }
 
-/* Parse an ISO time string, with optional timezone */
+/* Parse an ISO time string, with optional timezone.  Return 0 on success or
+ * some other value on errors.
+ */
 static int parsetime(const char *str, jsondatetime_t *dt)
 {
 	int fields;
+	char	ampm[3];
 
 	/* Parse the date and (if present) time */
 	memset(dt, 0, sizeof *dt);
-	fields = sscanf(str, "%2d:%2d:%2d",
-		&dt->hour, &dt->minute, &dt->second);
+	*ampm = '\0';
+	fields = sscanf(str, "%2d:%2d:%2d%2[AaPpMm]",
+		&dt->hour, &dt->minute, &dt->second, ampm);
+	if (fields == 2) /* got hour and minute but not seconds, need am/pm */
+		fields = sscanf(str, "%2d:%2d%2[AaPpMm]",
+			&dt->hour, &dt->minute, ampm);
+	if (fields == 1) /* got hour but not minute, need am/pm */
+		fields = sscanf(str, "%d%2[AaPpMm]",
+			&dt->hour, ampm);
 	if (fields < 2)
-		return 0;
+		return 1;
+
+	/* If we got an am/pm indicator, then tweak the hour accordingly */
+	if (*ampm == 'A' || *ampm == 'a') {
+		if (dt->hour == 12)
+			dt->hour = 0;
+	} else if (*ampm == 'P' || *ampm == 'p') {
+		if (dt->hour < 12)
+			dt->hour += 12;
+	}
 
 	/* Parse the timezone */
 	parsetz(str, dt);
+	return 0;
 }
 
 /* Parse a date or datetime, including the timezone (if any).  Returns 0 on
@@ -379,14 +399,65 @@ static int parsetime(const char *str, jsondatetime_t *dt)
 static int parsedatetime(const char *str, jsondatetime_t *dt)
 {
 	int fields;
+	jsondatetime_t jt;
+	char	mon[4], sign[2];
+	int	tzhour, tzminute;
 
 	/* Parse the date and (if present) time */
 	memset(dt, 0, sizeof *dt);
-	fields = sscanf(str, "%4d-%2d-%2dT%2d:%2d:%2d",
+	fields = sscanf(str, "%4d-%2d-%2d%*[ Tt]%2d:%2d:%2d",
 		&dt->year, &dt->month, &dt->day,
 		&dt->hour, &dt->minute, &dt->second);
-	if (fields != 6 && fields != 5 && fields != 3)
+	if (fields != 6 && fields != 5 && fields != 3) {
+		/* If no date, try alternate date formats */
+		if (fields < 3) {
+			/* US-style "MM/DD/YYYY" or "MM/DD/YY" */
+			if (sscanf(str, "%d/%d/%d", &dt->month, &dt->day, &dt->year) == 3
+			    && dt->month >= 1 &&  dt->month <= 12
+			    && dt->day >= 1 && dt->day <= 31) {
+				if (dt->year < 100)
+					dt->year += 2000;
+				else if (dt->year < 1970)
+					return 1;
+
+				/* Move "str" past the date */
+				while (isdigit(*str) || *str == '/')
+					str++;
+				while (isspace(*str))
+					str++;
+
+				/* Try to parse a time */
+				if (!parsetime(str, &jt)) {
+					jt.year = dt->year;
+					jt.month = dt->month;
+					jt.day = dt->day;
+					*dt = jt;
+				}
+				return 0;
+			}
+
+			/* RFC 5322 format, (used in email for example) */
+			if (sscanf(str, "%*[A-Za-z], %d %3[A-Za-z] %4d %2d:%2d:%2d %[-+]%2d%2d",
+			    &dt->day, mon, &dt->year,
+			    &dt->hour, &dt->minute, &dt->second,
+			    sign, &tzhour, &tzminute) == 9) {
+				/* Convert month to a number */
+				const char *names = "xxxJanFebMarAprMayJunJulAugSepOctNovDec";
+				for (dt->month = 1; strncmp(names + 3 * dt->month, mon, 3); dt->month++)
+					if (dt->month == 12)
+						return 1; /* bad month */
+
+				/* Convert time zone */
+				tzminute += 60 * tzhour;
+
+				if (*sign == '-')
+					tzminute = -tzminute;
+				dt->tz = tzminute;
+				return 0;
+			}
+		}
 		return 1;
+	}
 
 	/* Parse the timezone */
 	parsetz(str, dt);
@@ -563,7 +634,7 @@ static int dtzhelper(char *result, const char *str, const char *tz, const char *
 
 		/* If different, then convert */
 		if (newtz.tz != dt.tz) {
-			dt.minute += (dt.tz - newtz.tz);
+			dt.minute += (newtz.tz - dt.tz);
 			normalize(&dt);
 			dt.tz = newtz.tz;
 			dt.localtz = newtz.localtz;
@@ -716,5 +787,349 @@ int json_datetime_diff(char *result, const char *str1, const char *str2)
 		sprintf(result, "%s%ldS", neg ? "-" : "", (long)diff);
 	}
 
+
 	return 0;
+}
+
+/*****************************************************************************/
+
+/* Return a pointer to the named unit within a jsondatetime_t */
+static int *dtunit(jsondatetime_t *jdt, char *unit, int didhour, int asdate)
+{
+	switch (tolower(*unit)) {
+	case 'y':
+		return &jdt->year;
+	case 'm':
+		/* Could be month or minute.  If the second
+		 * letter nails it down, great!  Otherwise we
+		 * need to guess.
+		 */
+		if (tolower(unit[1] == 'o'))
+			return &jdt->month;
+		else if (tolower(unit[1] == 'i'))
+			return &jdt->minute;
+		else if (didhour || !asdate)
+			return &jdt->minute;
+		else
+			return &jdt->month;
+	case 'd':
+		return &jdt->day;
+	case 'h':
+		return &jdt->hour;
+	case 's':
+		return &jdt->second;
+	}
+	return  NULL;
+}
+
+/* If an object contains a member with a given key, and its value is a number,
+ * then return the value as an int.  Otherwise return 0.
+ */
+static int intfield(json_t *obj, char *key)
+{
+	json_t *member = json_by_key(obj, key);
+	if (!member || member->type != JSON_NUMBER)
+		return 0;
+	return json_int(member);
+}
+
+/* This implements most of the logic for the date(), time(), datetime(),
+ * and period() functions.
+ */
+json_t *json_datetime_fn(json_t *args, char *typename)
+{
+	json_t		*scan;
+	jsondatetime_t	jdt, newtz;
+	time_t		t;
+	struct tm	tmlocal;
+	int		num, *unitptr;
+	int		havenum = 0;
+	char		*unit = NULL;
+	int		didhour = 0;
+	int		asobject = 0;
+	int		astimet = 0;
+	int		asdate = 0;
+	int		astime = 0;
+	int		aslocale = 0;
+	char		*localefmt = NULL;
+	char		buf[100], *s;
+
+	/* Decode asdate and astime from typename */
+	if (*typename == 'd')
+		asdate = 1;
+	if (strchr(typename, 'm'))
+		astime = 1;
+
+	/* Defend against bad calls */
+	if (!args || args->type != JSON_ARRAY || !args->first)
+		return json_error_null(0, "Bad args to json_datetime()");
+
+	/* First arg is a string to parse, or an object to dissect, or a number
+	 * to use as a time_t value or start of the first num/unit pair.
+	 * Convert to a jsondatetime_t.
+	 */
+	memset(&jdt, 0, sizeof jdt);
+	switch (args->first->type) {
+	case JSON_STRING:
+		if (!asdate && !astime) {
+			if (parseperiod(args->first->text, &jdt))
+				return json_error_null(0, "Invalid period");
+		} else {
+			if (parsetime(args->first->text, &jdt)
+			 && parsedatetime(args->first->text, &jdt))
+				return json_error_null(0, "Invalid date/time");
+		}
+		break;
+	case JSON_OBJECT:
+		jdt.year = intfield(args->first, "year");
+		jdt.month = intfield(args->first, "month");
+		jdt.day = intfield(args->first, "day");
+		jdt.hour = intfield(args->first, "hour");
+		jdt.minute = intfield(args->first, "minute");
+		jdt.second = intfield(args->first, "second");
+		jdt.tz = intfield(args->first, "tz");
+		jdt.localtz = json_is_true(json_by_key(args->first, "localtz"));
+		jdt.z = json_is_true(json_by_key(args->first, "z"));
+		break;
+	case JSON_NUMBER:
+		t = json_int(args->first);
+		if (!asdate && !astime) {
+			/* For periods, an initial date should be paired with
+			 * a unit to be named later.  (Or seconds by default).
+			 */
+			num = t;
+			havenum = 1;
+		} else {
+			/* Otherwise, convert to a local time */
+			localtime_r(&t, &tmlocal);
+			jdt.year = tmlocal.tm_year + 1900;
+			jdt.month = tmlocal.tm_mon + 1;
+			jdt.day = tmlocal.tm_mday;
+			jdt.hour = tmlocal.tm_hour;
+			jdt.minute = tmlocal.tm_min;
+			jdt.second = tmlocal.tm_sec;
+			jdt.localtz = 1;
+		}
+		break;
+	default:
+		return json_error_null(0, "%s must be a string or object or \"time_t\" number", typename);
+	}
+
+	/* For non-periods, if year is 0 then use local date. */
+	if ((asdate || astime) && jdt.year == 0) {
+		time(&t);
+		localtime_r(&t, &tmlocal);
+		jdt.year = tmlocal.tm_year + 1900;
+		jdt.month = tmlocal.tm_mon + 1;
+		jdt.day = tmlocal.tm_mday;
+	}
+
+	/* Normalize date/time */
+	if (asdate || astime)
+		normalize(&jdt);
+
+	/* Process any other arguments. */
+	for (scan = args->first->next; scan; scan = scan->next) {
+		if (scan->type == JSON_NUMBER) {
+			/* If we already had a number, interpret it as seconds*/
+			if (havenum)
+				jdt.second = num;
+
+			/* Remember the new number */
+			num = json_int(scan);
+			havenum = 1;
+		} else if (scan->type == JSON_STRING && tolower(*scan->text) == 't') {
+			astimet = 1;
+		} else if (scan->type == JSON_STRING && tolower(*scan->text) == 'l') {
+			aslocale = 1;
+		} else if (scan->type == JSON_STRING && strchr(scan->text, '%')) {
+			aslocale = 1;
+			localefmt = scan->text;
+		} else if (scan->type == JSON_STRING
+		    && (asdate || astime)
+		    && (!*scan->text || strchr("Zz+-", *scan->text))) {
+			/* Parse the new timezone */
+			newtz = jdt;
+			parsetz(scan->text, &newtz);
+
+			/* If one is local and one isn't, then fill in tz as local */
+			if (newtz.localtz && !jdt.localtz)
+				setlocaltz(&newtz);
+			if (!newtz.localtz && jdt.localtz)
+				setlocaltz(&jdt);
+
+			/* If different, then convert */
+			if (newtz.tz != jdt.tz) {
+				jdt.minute += (newtz.tz - jdt.tz);
+				normalize(&jdt);
+				jdt.tz = newtz.tz;
+				jdt.localtz = newtz.localtz;
+				jdt.z = newtz.z;
+			}
+		} else if (scan->type == JSON_STRING) {
+			/* It had better be a unit label */
+			unit = scan->text;
+		} else if (json_is_true(scan)) {
+			asobject = 1;
+		}
+
+		/* If we have a number and a unit, then adjust the unit */
+		if (havenum && unit) {
+			unitptr = dtunit(&jdt, unit, didhour, asdate);
+			if (!unitptr)
+				return json_error_null(0, "Unrecognized time unit \"%s\"", unit);
+			*unitptr = num;
+			if (unitptr == &jdt.hour)
+				didhour = 1;
+
+			/* Reset for the next num/unit pair */
+			havenum = 0;
+			unit = NULL;
+		}
+	}
+
+	/* If we have a leftover number for period, use it as seconds.  For
+	 * date/time/datetime, it's an error.
+	 */
+	if (havenum) {
+		if (asdate || astime)
+			return json_error_null(0, "Extra number to %s()", typename);
+		jdt.second = num;
+	}
+
+	/* Normalize date once again */
+	if (asdate || astime)
+		normalize(&jdt);
+
+	/* For periods, "t" returns the duration in seconds, same as "s" */
+	if (astimet && !asdate && !astime)
+		unit = "s";
+
+	/* Return the result in the proper format */
+	if (unit) {
+		/* Find the field */
+		unitptr = dtunit(&jdt, unit, 0, asdate);
+		if (!unitptr)
+			return json_error_null(0, "Unrecognized time unit \"%s\"", unit);
+		if (!asdate && !astime) {
+			/* For period, fold any larger units into the requested
+			 * one.  This requires approximations for lenghts of
+			 * months and years.
+			 */
+			if (unitptr != &jdt.year)
+				jdt.month += 12 * jdt.year;
+			if (unitptr != &jdt.month)
+				jdt.day += 30 * jdt.month;
+			if (unitptr != &jdt.day)
+				jdt.hour += 24 * jdt.day;
+			if (unitptr != &jdt.hour)
+				jdt.minute += 60 * jdt.hour;
+			if (unitptr != &jdt.minute)
+				jdt.second += 60 * jdt.minute;
+		}
+
+		/* Just return the requested value */
+		return json_from_int(*unitptr);
+	} else if (asobject) {
+		/* Return as an object */
+		scan = json_object();
+		if (asdate || !astime) {
+			json_append(scan, json_key("year", json_from_int(jdt.year)));
+			json_append(scan, json_key("month", json_from_int(jdt.month)));
+			json_append(scan, json_key("day", json_from_int(jdt.day)));
+		}
+		if (astime || !asdate) {
+			json_append(scan, json_key("hour", json_from_int(jdt.hour)));
+			json_append(scan, json_key("minute", json_from_int(jdt.minute)));
+			json_append(scan, json_key("second", json_from_int(jdt.second)));
+
+			/* Timezone is skipped for period */
+			if (astime) {
+				/* If localtime and tz = 0, that might be
+				 * wrong.  Best to check.
+				 */
+				if (jdt.localtz && jdt.tz == 0)
+					setlocaltz(&jdt);
+
+				/* Append timezone info */
+				json_append(scan, json_key("tz", json_from_int(jdt.tz)));
+				json_append(scan, json_key("localtz", json_bool(jdt.localtz)));
+				json_append(scan, json_key("z", json_bool(jdt.z)));
+			}
+		}
+		return scan;
+	} else if (astimet) {
+		/* Return as time_t number */
+		t = dtbinary(&jdt);
+		return json_from_int((int)t);
+	} else if (aslocale) {
+		/* Start by converting to binary, and then back struct tm.
+		 * We can't just stuff jdt values into the struct tm because
+		 * we also need the day of the week.
+		 */
+		t = dtbinary(&jdt);
+		localtime_r(&t, &tmlocal);
+
+		/* Choose a format based on type if we don't have one already */
+		if (!localefmt) {
+			if (asdate && astime)
+				localefmt = "%c";
+			else if (asdate)
+				localefmt = "%x";
+			else if (astime)
+				localefmt = "%X";
+		}
+
+		/* Generate the string in the chosen format */
+		strftime(buf, sizeof buf, localefmt, &tmlocal);
+
+		/* If all digits then return it as a number.  Otherwise
+		 * return it as a string. */
+		for (s = buf; isdigit(*s); s++) {
+		}
+		if (*buf && !*s)
+			return json_from_int(atoi(buf));
+		return json_string(buf, -1);
+	} else if (!asdate && !astime) {
+		/* Return as an ISO Period string */
+		s = buf;
+		*s++ = 'P';
+		if (jdt.year) {
+			sprintf(s, "%dY", jdt.year);
+			s += strlen(s);
+		}
+		if (jdt.month) {
+			sprintf(s, "%dM", jdt.month);
+			s += strlen(s);
+		}
+		if (jdt.day) {
+			sprintf(s, "%dD", jdt.day);
+			s += strlen(s);
+		}
+		if (jdt.hour || jdt.minute || jdt.second)
+			*s++ = 'T';
+		if (jdt.hour) {
+			sprintf(s, "%dH", jdt.hour);
+			s += strlen(s);
+		}
+		if (jdt.minute) {
+			sprintf(s, "%dM", jdt.minute);
+			s += strlen(s);
+		}
+		if (jdt.second) {
+			sprintf(s, "%dS", jdt.second);
+			s += strlen(s);
+		}
+		return json_string(buf, -1);
+	} else {
+		/* Return as an ISO date/time/datetime string */
+		if (asdate && astime)
+			s = "DTZ";
+		else if (asdate)
+			s = "D";
+		else
+			s = "TZ";
+		datetimestr(buf, &jdt, s);
+		return json_string(buf, -1);
+	}
 }

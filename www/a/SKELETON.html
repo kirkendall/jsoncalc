@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>subj</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc subj">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, article, subj">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>subj</h1>
+    <h4 class="timestamp">YYYY-MM-DD</h4>
+    <center>
+    <blockquote class="abstract">
+      Summarize the article here.  Write this last!
+    </blockquote>
+
+    Big text here. Replace subj with title. Edit down the keywords above.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

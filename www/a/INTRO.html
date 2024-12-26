@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JsonCalc Articles</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc function summary">
+    <meta name="keywords" content="jsoncalc, function reference">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	// Called when a user clicks on an article
+	function articleClicked()
+	{
+	    var title = $(this).data("title");
+	    var url = "../index.html?a="+encodeURIComponent(title);
+	    window.parent.location.replace(url);
+	}
+
+	// Initialization
+	$(document).ready(function() {
+	    // When an article is clicked, load it
+	    $("article[data-title]").on("click", articleClicked);
+
+	    // Enable click-to-copy on examples
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>JsonCalc Articles</h1>
+
+    These either announce news, or provide in-depth explanations of related
+    groups of JsonCalc features.
+
+<article data-title="Dates_and_Times">
+<span class="timestamp">2024-12-22</span>
+<h3>Dates and Times</h3>
+      Dates and times are stored as ISO-8601 strings.
+      You can perform arithmetic on them.
+      A small set of versatile functions can alter them in other ways.
+</article>
+  </body>
+</html>

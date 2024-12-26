@@ -220,8 +220,8 @@ static json_t *stdcurrent(char *key)
 			 * UTC and local time.  Start by assuming date is the
 			 * same.
 			 */
-			hours = utctm.tm_hour - localtm.tm_hour;
-			minutes = utctm.tm_min - localtm.tm_min;
+			hours = localtm.tm_hour - utctm.tm_hour;
+			minutes = localtm.tm_min - utctm.tm_min;
 
 			/* If date is actually different, adjust hours */
 			if (utctm.tm_mday < localtm.tm_mday)

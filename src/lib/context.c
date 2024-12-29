@@ -213,7 +213,7 @@ static json_t *stdcurrent(char *key)
 				utctm.tm_hour,
 				utctm.tm_min,
 				utctm.tm_sec);
-		} else /* current_timezone */ {
+		} else /* current_tz */ {
 			int hours, minutes;
 
 			/* Find the difference in hours and minutes between
@@ -223,11 +223,14 @@ static json_t *stdcurrent(char *key)
 			hours = localtm.tm_hour - utctm.tm_hour;
 			minutes = localtm.tm_min - utctm.tm_min;
 
-			/* If date is actually different, adjust hours */
-			if (utctm.tm_mday < localtm.tm_mday)
-				hours -= 24;
-			else if (utctm.tm_mday > localtm.tm_mday)
+			/* Time zone should be within +/- 12 hours.  If it's
+			 * outside that range, it's probably due to shifting
+			 * dates.  Tweak it.
+			 */
+			if (hours < -12)
 				hours += 24;
+			else if (hours > 12)
+				hours -= 24;
 
 			/* We want minutes to be the same sign as hours.
 			 * If different, adjust hours and minutes.

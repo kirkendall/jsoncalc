@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>isInteger</title>
+    <title>isPeriod</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc isInteger - Test for Integer">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, isInteger">
+    <meta name="description" content="jsoncalc isPeriod - Test for Period">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, isPeriod">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script src="../clipboard.js"></script>
@@ -19,21 +19,25 @@
     </script>
   </head>
   <body>
-    <h1>isInteger - Test for Integer</h1>
+    <h1>isPeriod - Test for Period</h1>
     <dl>
-      <dt>isInteger(<var>arg</var>)
+      <dt>isPeriod(<var>arg</var>)
       <dd>
-      Return <tt>true</tt> is <var>arg</var> is an integer, else return <tt>false</tt>.
+      Return <tt>true</tt> is <var>arg</var> is an ISO-8601 period string, else return <tt>false</tt>.
+      Period strings look like "P<var>n</var>Y<var>n</var>M<var>n</var>W<var>n</var>DT<var>n</var>H<var>n</var>M<var>n</var>S",
+      where <var>n</var> is a number and their following letter indicates
+      the time unit: Years, Months, Weeks, Days, Hours, Minutes, or Seconds.
+      If a number is 0 then it and its following letter are omitted.
+      The "T" is required before hours, minutes or seconds, but can be omitted
+      if all of those are zero/omitted.
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>isInteger(5)</kbd>
+	<kbd>isPeriod("P3D")</kbd>
 	<samp>true</samp>
-	<kbd>isInteger(5.0000001)</kbd>
-	<samp>false</samp>
-        5 is an integer, 5.0000001 is not.
+        "P3" is indeed a valid period string, representing a period of 3 days.
       </div>
 
     </details>
@@ -44,13 +48,13 @@
         <tr><td><a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a></td><td>Return a string describing the argument's type</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isArray">isArray()</a></td><td>Test whether the argument is an array</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isObject">isObject()</a></td><td>Test whether the argument is an object</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isNumber">isNumber()</a></td><td>Test whether the argument is a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isInteger">isInteger()</a></td><td>Test whether the argument is an integer</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isNaN">isNaN()</a></td><td>Test whether the argument is not a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isDate">isDate()</a></td><td>Test whether the argument is a date string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isTime">isTime()</a></td><td>Test whether the argument is a time string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a></td><td>Test whether the argument is a dateTime string</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a></td><td>Test whether the argument is a period string</td></tr>
       </table>
     </details>
 

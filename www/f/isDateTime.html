@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>isInteger</title>
+    <title>isDateTime</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc isInteger - Test for Integer">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, isInteger">
+    <meta name="description" content="jsoncalc isDateTime - Test for DateTime">
+    <meta name="keywords" content="string, datetime, jsoncalc, function reference, isDateTime">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script src="../clipboard.js"></script>
@@ -19,21 +19,27 @@
     </script>
   </head>
   <body>
-    <h1>isInteger - Test for Integer</h1>
+    <h1>isDateTime - Test for DateTime</h1>
     <dl>
-      <dt>isInteger(<var>arg</var>)
+      <dt>isDateTime(<var>arg</var>)
       <dd>
-      Return <tt>true</tt> is <var>arg</var> is an integer, else return <tt>false</tt>.
+      Return <tt>true</tt> is <var>arg</var> is an ISO-8601 dateTime string, else return <tt>false</tt>.
+      DateTime strings look like "<var>YYYY-MM-DD</var>T<var>hh:mm:ss</var>",
+      possibly with a time zone appended.
+      Time zones can be "", "Z", or "+<var>hh:mm</var>".
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>isInteger(5)</kbd>
-	<samp>true</samp>
-	<kbd>isInteger(5.0000001)</kbd>
+	<kbd>isDateTime(current_date)</kbd>
 	<samp>false</samp>
-        5 is an integer, 5.0000001 is not.
+	<kbd>isDateTime(current_datetime)</kbd>
+	<samp>true</samp>
+        <tt>current_date</tt> is a built-in variable that always returns the
+        current date, and <tt>current_datetime</tt> always returns the current
+        dateTime.
+        <tt>current_date</tt> is not a dateTime.
       </div>
 
     </details>
@@ -44,12 +50,12 @@
         <tr><td><a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a></td><td>Return a string describing the argument's type</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isArray">isArray()</a></td><td>Test whether the argument is an array</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isObject">isObject()</a></td><td>Test whether the argument is an object</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isNumber">isNumber()</a></td><td>Test whether the argument is a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isInteger">isInteger()</a></td><td>Test whether the argument is an integer</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isNaN">isNaN()</a></td><td>Test whether the argument is not a number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isString">isString()</a></td><td>Test whether the argument is a string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isDate">isDate()</a></td><td>Test whether the argument is a date string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isTime">isTime()</a></td><td>Test whether the argument is a time string</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a></td><td>Test whether the argument is a dateTime string</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a></td><td>Test whether the argument is a period string</td></tr>
       </table>
     </details>

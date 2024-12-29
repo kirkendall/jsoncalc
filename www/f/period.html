@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>period</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc period - Transform a period">
+    <meta name="keywords" content="string, number, object, datetime, jsoncalc, function reference, period">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>period - Transform a period</h1>
+    <dl>
+      <dt>period(<var>str</var>, <var>args</var>)
+      <br/>period(<var>obj</var>, <var>args</var>)
+      <br/>period(<var>args</var>)
+      <dd>
+      This returns a period.
+      <p>
+      Normally periods are represented as strings in ISO-8601
+      "P<var>n</var>Y<var>n</var>M<var>n</var>W<var>n</var>DT<var>n</var>H<var>n</var>M<var>n</var>S" format.
+      Periods can also be represented by an object containing
+      "year", "month", "day", "hour", "minute", and "second" members.
+      The first argument can be a period in any of those formats,
+      or a number to be combined with a field name as described below.
+      <p>
+      Any additional arguments can transform the period in useful ways.
+      You can pass any mix of the following, in pretty much any order:
+      <p>
+      <table class="referencelist">
+        <tr><th>Argument Value</th><th>What it does</th></tr>
+        <tr><td><tt>true</tt></td><td>Return the period as an object.</td></tr>
+        <tr><td>"year" or "y",<br/>"month" or "mo",<br/>"day" or "d",<br/>"hour"or "h",<br/>"minute" or "mi",<br/>"second" or "s"</td><td>Return just the given field of the period as a number, or if used with a <var>number</var> argument then change that field in the period.  You may also pluralize the field names by appending "s".</td></tr>
+        <tr><td><var>number</var></td><td>With one of the field names, change a field in the period to <var>number</var>. If no field name is given, "second" is assumed.</td></tr>
+      </table>
+      <p>
+      When changing time zones, the hour (and possibly other fields) will change
+      so that the returned value represents the same point in time.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>period(3, "days")</kbd>
+	<samp>"P3D"</samp>
+	<kbd>period(90, "minutes")</kbd>
+	<samp>"PT90M"</samp>
+	<kbd>period(1, "hour", 30, "minutes")</kbd>
+	<samp>"PT1H30M"</samp>
+	Here we're generating periods from a number and a field name.
+	Note that the last two represent the same amount of time, but
+	show it in different ways.
+      </div>
+
+      <div class="example">
+	<kbd>period("P3D", true)</kbd>
+	<samp>{<br/>
+	&nbsp; "year":0,<br/>
+	&nbsp; "month":0,<br/>
+	&nbsp; "day":3,<br/>
+	&nbsp; "hour":0,<br/>
+	&nbsp; "minute":0,<br/>
+	&nbsp; "second":0<br/>
+	}</samp>
+	Convert the period to an object.
+      </div>
+
+      <div class="example">
+	<kbd>"P3D".period("hours")</kbd>
+	<samp>72</samp>
+	<kbd>"P3D".period(2, "hours")</kbd>
+	<samp>"P3DT2H"</samp>
+	The first example returns the 3-day period's duration in hours.
+	Note that the larger time units get folded into the requested one.
+	The second example sets the "hour" field of that duration to 2.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>Periods are not "normalized" after a field is changed.
+	    You can set any field to a large positive or negative number
+	    without having other fields adjusted to fit around it.
+	    This is different from dates, which are normalized.
+	    Periods can't be normalized because date/time/period
+	    computation is messy, but keeping the fields separate makes
+	    things a bit cleaner.
+	    <div class="example">
+	      <kbd>"2024-12-28" + period(45,"days")</kbd>
+	      <samp>"2025-02-11"</samp>
+	      <kbd>"2024-12-28" + period(1,"month")</kbd>
+	      <samp>"2025-01-28"</samp>
+	      The first example adds 45 days, and the second example adds 1 month.
+	      The second period doesn't need to "know" that December has 31
+	      days because it isn't doing day calculations,
+	      it's doing month calculations.
+	      If we tried to normalize the first period to something like
+	      "1 month and 15 days" then we'd run into problems.
+	    </div>
+
+	<li>Despite the "no normalizing of periods" rule, when you extract one
+	    field from a period, it does fold larger units into the requested
+	    one.  This is a form of normalization.  It seems like a reasonable
+	    compromise.  The only failing is that it assumes all months are
+	    30 days, and all days are 24 hours.  Periods expressed in terms
+	    of shorter units work fine.
+	    <div class="example">
+	      <kbd>"PT1H30M".period("minutes") == "PT90M".period("minutes")</kbd>
+	      <samp>true</samp>
+	      Here we can see that 1 hour and 30 minutes is the same as 90 minutes.
+	    </div>
+
+	<li>ISO-8601 periods can also specify weeks.
+	    For example, "P2W" represents a period of 2 weeks.
+	    JsonCalc converts this to 14 days.
+
+	<li>When passing field names, you can also use "time_t" as a synonym
+	    for "seconds".  Since Unix's <tt>time_t</tt> data type measures
+	    time in seconds, this works pretty well.
+
+	<li>If you give "m" as the field name, then JsonCalc will try to
+	    guess whether you meant "month" or "minute".
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=date">date()</td><td>Transform a date</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=time">time()</td><td>Transform a time</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=dateTime">dateTime()</td><td>Transform a dateTime</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=arithmetic">+ and -</td><td>Operators that can add/subtract dates and periods.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

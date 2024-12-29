@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>date</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc date - Transform a date">
+    <meta name="keywords" content="string, number, object, datetime, jsoncalc, function reference, date">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>date - Transform a date</h1>
+    <dl>
+      <dt>date(<var>str</var>, <var>args</var>)
+      <br/>date(<var>obj</var>, <var>args</var>)
+      <br/>date(<var>num</var>, <var>args</var>)
+      <dd>
+      This returns a date.
+      <p>
+      Normally dates are represented as strings in ISO-8601 "<var>YYYY-MM-DD</var>" format.
+      Dates can also be represented by an object containing "year", "month",
+      and "day" members, or by a Unix <tt>time_t</tt> number.
+      The first argument can be a date in any of those formats,
+      or a dateTime (from which only the date will be used).
+      <p>
+      Any additional arguments can transform the date in useful ways.
+      You can pass any mix of the following, in pretty much any order:
+      <p>
+      <table class="referencelist">
+        <tr><th>Argument Value</th><th>What it does</th></tr>
+        <tr><td><tt>true</tt></td><td>Return the date as an object.</td></tr>
+        <tr><td>"time_t" or "t"</td><td>Return the date as a <tt>time_t</tt> number</td></tr>
+        <tr><td>"locale" or "l"</td><td>Return the date in the locale's preferred format</td></tr>
+        <tr><td>"year" or "y",<br/>"month" or "mo",<br/>"day" or "d"</td><td>Return just the given field of the date as a number, or if used with a <var>number</var> argument then change that field in the date.</td></tr>
+        <tr><td><var>number</var></td><td>With one of the field names, change a field in the date to <var>number</var></td></tr>
+        <tr><td>"%w", etc</td><td>Format the dateTime like C's strftime() function. This gives you ways to derive the weekday, julian date, locale month name, and more.</td></tr>
+      </table>
+      <p>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>date(now)</kbd>
+	<samp>"2024-12-27"</samp>
+        The <tt>now</tt> variable is the current time as a Unix
+        <tt>time_t</tt> number.  The date is returned in the default format.
+      </div>
+
+      <div class="example">
+	<kbd>date(now, true)</kbd>
+	<samp>{"year":2024,"month":12,"day":27}</samp>
+	This is the same, except that we passed an additional <tt>true</tt> 
+	argument so the value is returned as an object.
+      </div>
+
+      <div class="example">
+	<kbd>date(now, "locale")</kbd>
+	<samp>"12/27/2024"</samp>
+        This time we returned the date in the locale's preferred format.
+      </div>
+
+      <div class="example">
+	<kbd>date(now, "year")</kbd>
+	<samp>2024</samp>
+	<kbd>date(now, "year", 2025)</kbd>
+	<samp>"12/27/2025"</samp>
+	The first example here just returns the year.  Note that it is returned
+	as a number, not a string.  In the second example, we change the year
+	to 2025 and get the whole date returned in the default ISO-8601 string
+	format.
+      </div>
+
+      <div class="example">
+	<kbd>"2024-12-28".date("%V")</kbd>
+	<samp>52</samp>
+	Here we're using a formatting string for C's <tt>strftime()</tt>
+	function.
+	"%V" returns the week number within the year.
+	The date is near the end of the year, so the week number is 52.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>date()</tt> function can also parse a few non-ISO-8601 date
+            formats.  The list of supported formats is likely to vary over time,
+            and possibly by locale.  You can try passing an alternative date
+            format and see what happens, but don't depend on it too much.
+            This was implemented more for the
+            "JsonCalc as an interactive data exploration tool" and less for
+            "JsonCalc as a batch scripting language".
+
+	<li>Dates are "normalized" after a field is changed, to make the
+	    resulting date be valid.
+	    <div class="example">
+	      <kbd>"2024-02-29".date("year", 2025)</kbd>
+	      <samp>"2025-03-01"</samp>
+	      <kbd>"2024-02-29".date("day", 0)</kbd>
+	      <samp>"2025-01-31"</samp>
+	      In the first example, 2025 is not a leap year so "2025-02-29"
+	      is not a valid date and hence gets bumped to "2025-03-01".
+	      In the second example, setting the day to 0 gets moved to the
+	      last day of the preceding month.
+	    </div>
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=dateTime">dateTime()</td><td>Transform a dateTime</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=time">time()</td><td>Transform a time</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=period">period()</td><td>Transform a period</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

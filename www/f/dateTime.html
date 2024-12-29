@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>dateTime</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc dateTime - Transform a dateTime">
+    <meta name="keywords" content="string, number, object, datetime, jsoncalc, function reference, dateTime">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>dateTime - Transform a dateTime</h1>
+    <dl>
+      <dt>dateTime(<var>str</var>, <var>args</var>)
+      <br/>dateTime(<var>obj</var>, <var>args</var>)
+      <br/>dateTime(<var>num</var>, <var>args</var>)
+      <dd>
+      This returns a dateTime.
+      <p>
+      Normally dateTimes are represented as strings in ISO-8601
+      "<var>YYYY-MM-DD</var>T<var>hh:mm:ss+hh:mm</var>" format.
+      If the time zone is missing, then the local time zone is assumed.
+      If Daylight Saving Time/Summer Time applies in your area then that
+      will affect time zone calculations.
+      DateTimes can also be represented by an object containing
+      "year", "month", "day", "hour", "minute", "second", "tz", "localtz", and "z" members, or by a Unix <tt>time_t</tt> number.
+      The first argument can be a dateTime in any of those formats,
+      or a date (which assumes 00:00:00 for the time),
+      or a time (which assumed the current date as its date).
+      <p>
+      Any additional arguments can transform the dateTime in useful ways.
+      You can pass any mix of the following, in pretty much any order:
+      <p>
+      <table class="referencelist">
+        <tr><th>Argument Value</th><th>What it does</th></tr>
+        <tr><td><tt>true</tt></td><td>Return the dateTime as an object.</td></tr>
+        <tr><td>"time_t" or "t"</td><td>Return the dateTime as a <tt>time_t</tt> number</td></tr>
+        <tr><td>"locale" or "l"</td><td>Return the dateTime in the locale's preferred format</td></tr>
+        <tr><td>"year" or "y",<br/>"month" or "mo",<br/>"day" or "d",<br/>"hour"or "h",<br/>"minute" or "mi",<br/>"second" or "s"</td><td>Return just the given field of the dateTime as a number, or if used with a <var>number</var> argument then change that field in the dateTime.</td></tr>
+        <tr><td><var>number</var></td><td>With one of the field names, change a field in the dateTime to <var>number</var></td></tr>
+        <tr><td>"" or "Z" or "+<var>hh:mm</var>"</td><td>Change the time zone of the returned dateTime.</td></tr>
+        <tr><td>"%w", etc</td><td>Format the dateTime like C's strftime() function. This gives you ways to derive the weekday, julian date, locale month name, and more.</td></tr>
+      </table>
+      <p>
+      When changing time zones, the hour (and possibly other fields) will change
+      so that the returned value represents the same point in time.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>dateTime(now)</kbd>
+	<samp>"2024-12-27T17:57:23"</samp>
+        The <tt>now</tt> variable is the current time as a Unix
+        <tt>time_t</tt> number.  The dateTime is returned in the default format.
+      </div>
+
+      <div class="example">
+	<kbd>dateTime(now, true)</kbd>
+	<samp>{<br/>
+	&nbsp; "year":2024,<br/>
+	&nbsp; "month":12,<br/>
+	&nbsp; "day":27,<br/>
+	&nbsp; "hour":18,<br/>
+	&nbsp; "minute":3,<br/>
+	&nbsp; "second":17,<br/>
+	&nbsp; "tz":-480,<br/>
+	&nbsp; "localtz":true<br/>
+	&nbsp; "z":false<br/>
+	}</samp>
+	This is the same, except that we passed an additional <tt>true</tt> 
+	argument so the value is returned as an object.
+	The value of "tz" is the number of minutes east of UTC.
+	"z" would be true in the UTC time zone if the string format should
+	use "Z" as the time zone instead of "+00:00".
+      </div>
+
+      <div class="example">
+	<kbd>dateTime(now, "locale")</kbd>
+	<samp>"Sat 28 Dec 2024 06:07:52 PM PST"</samp>
+        This time we returned the dateTime in the locale's preferred format.
+      </div>
+
+      <div class="example">
+	<kbd>dateTime(now, "year")</kbd>
+	<samp>2024</samp>
+	<kbd>dateTime(now, "year", 2025)</kbd>
+	<samp>"2025-12-27T18:08:37"</samp>
+	The first example here just returns the year.  Note that it is returned
+	as a number, not a string.  In the second example, we change the year
+	to 2025 and get the whole dateTime returned in the default ISO-8601
+	string format.
+      </div>
+
+      <div class="example">
+	<kbd>"2025-12-27T18:08:37".dateTime("Z")</kbd>
+	<samp>"2025-12-28T02:08:37Z"</samp>
+	<kbd>"2025-12-28T02:08:37Z".dateTime("")</kbd>
+	<samp>"2025-12-27T18:08:37"</samp>
+	First we convert a dateTime to the UTC time zone with "Z", and then we
+	convert the UTC dateTime back to the local timezone with "".
+	Note that the date changed for UTC.
+      </div>
+
+      <div class="example">
+	<kbd>"2025-12-27T18:08:37".dateTime("%w")</kbd>
+	<samp>6</samp>
+        The "%f" formatting string is passed to C's strftime() function to
+        return the day of the week as a number.
+        Here it's returning 6 indicating that the date is a Saturday.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>DateTimes are "normalized" after a field is changed, to bring all
+	    of the fields into their valid ranges.
+	    <div class="example">
+	      <kbd>"2024-12-28T18:24:13".dateTime("hour",24)</kbd>
+	      <samp>"2024-12-29T00:24:13"</samp>
+	      <kbd>"2024-12-28T18:24:13".dateTime("hour",-1)</kbd>
+	      <samp>"2024-12-27T23:24:13"</samp>
+	      Hours can range from 0 to 23.  Setting the hour to 24 makes it
+	      be the first hour of the following day.  Setting it to -1 makes
+	      it be the last hour of the preceding day.
+	    </div>
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=date">date()</td><td>Transform a date</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=time">time()</td><td>Transform a time</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=period">period()</td><td>Transform a period</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

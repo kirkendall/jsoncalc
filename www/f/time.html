@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>time</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc time - Transform a time">
+    <meta name="keywords" content="string, number, object, datetime, jsoncalc, function reference, time">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>time - Transform a time</h1>
+    <dl>
+      <dt>time(<var>str</var>, <var>args</var>)
+      <br/>time(<var>obj</var>, <var>args</var>)
+      <br/>time(<var>num</var>, <var>args</var>)
+      <dd>
+      This returns a time.
+      <p>
+      Normally times are represented as strings in ISO-8601
+      "<var>hh:mm:ss+hh:mm</var>" format.
+      If the time zone is missing, then the local time zone is assumed.
+      If Daylight Saving Time/Summer Time applies in your area then the
+      current date is used to decide whether to switch.
+      Times can also be represented by an object containing
+      "hour", "minute", "second", "tz", "localtz", and "z" members,
+      or by a Unix <tt>time_t</tt> number.
+      The first argument can be a time in any of those formats,
+      or a dateTime (from which only the time portion is used).
+      <p>
+      Any additional arguments can transform the time in useful ways.
+      You can pass any mix of the following, in pretty much any order:
+      <p>
+      <table class="referencelist">
+        <tr><th>Argument Value</th><th>What it does</th></tr>
+        <tr><td><tt>true</tt></td><td>Return the time as an object.</td></tr>
+        <tr><td>"time_t" or "t"</td><td>Return the time as a <tt>time_t</tt> number</td></tr>
+        <tr><td>"locale" or "l"</td><td>Return the time in the locale's preferred format</td></tr>
+        <tr><td>"hour"or "h",<br/>"minute" or "mi",<br/>"second" or "s"</td><td>Return just the given field of the time as a number, or if used with a <var>number</var> argument then change that field in the time.</td></tr>
+        <tr><td><var>number</var></td><td>With one of the field names, change a field in the time to <var>number</var></td></tr>
+        <tr><td>"" or "Z" or "+<var>hh:mm</var>"</td><td>Change the time zone of the returned time.</td></tr>
+        <tr><td>"%r", etc</td><td>Format the time like C's strftime() function. This gives you ways to derive the AM/PM status and other things</td></tr>
+      </table>
+      <p>
+      When changing time zones, the hour (and possibly other fields) will change
+      so that the returned value represents the same point in time.
+      This could cause the date to change, but since <tt>time()</tt> doesn't
+      return dates, this can get confusing.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>time(now)</kbd>
+	<samp>"17:35:12"</samp>
+        The <tt>now</tt> variable is the current time as a Unix
+        <tt>time_t</tt> number.  The time is returned in the default format.
+      </div>
+
+      <div class="example">
+	<kbd>time(now, true)</kbd>
+	<samp>{<br/>
+	&nbsp; "hour":18,<br/>
+	&nbsp; "minute":35,<br/>
+	&nbsp; "second":43,<br/>
+	&nbsp; "tz":-480,<br/>
+	&nbsp; "localtz":true<br/>
+	&nbsp; "z":false<br/>
+	}</samp>
+	This is the same, except that we passed an additional <tt>true</tt> 
+	argument so the value is returned as an object.
+	The value of "tz" is the number of minutes east of UTC.
+	"z" would be true in the UTC time zone if the string format should
+	use "Z" as the time zone instead of "+00:00".
+      </div>
+
+      <div class="example">
+	<kbd>time(now, "locale")</kbd>
+	<samp>"06:36:24 PM"</samp>
+        This returns the time in the locale's preferred format.
+      </div>
+
+      <div class="example">
+	<kbd>time(now, "hour")</kbd>
+	<samp>18</samp>
+	<kbd>time("18:37:44", "minute", 7)</kbd>
+	<samp>"18:07:44"</samp>
+	The first example here just returns the hour.  Note that it is returned
+	as a number, not a string.  In the second example, we change the minute
+	to 7 and get the whole time returned in the default ISO-8601
+	string format.
+      </div>
+
+      <div class="example">
+	<kbd>"18:38:37".time("Z")</kbd>
+	<samp>"02:38:37Z"</samp>
+	<kbd>"02:38:37Z".time("")</kbd>
+	<samp>"18:38:37"</samp>
+	First we convert a time to the UTC time zone with "Z", and then we
+	convert the UTC time back to the local timezone with "".
+	Note that the date changed for UTC, but we don't see that in the
+	<tt>time()</tt> result.
+      </div>
+
+      <div class="example">
+	<kbd>"18:38:37".time("%I:%M%p")</kbd>
+	<samp>"02:38PM"</samp>
+	This uses a moderately complex strftime() formatting string to generate
+	the time in a 12-hour format.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>Times are "normalized" after a field is changed, to bring all
+	    of the fields into their valid ranges.
+	    <div class="example">
+	      <kbd>"00:24:13".time("hour",24)</kbd>
+	      <samp>"00:24:13"</samp>
+	      Hours can range from 0 to 23.  Setting the hour to 24 makes it
+	      be the first hour of the following day, but we don't see the
+	      date in the <tt>time()</tt> result.
+	    </div>
+
+	<li>C has a <tt>time()</tt> function which is entirely different.
+	    C's <tt>time()</tt> returns the current time as a <tt>time_t</tt> number.
+	    JsonCalc's <tt>now</tt> variable does that.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=date">date()</td><td>Transform a date</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=dateTime">dateTime()</td><td>Transform a dateTime</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=period">period()</td><td>Transform a period</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -23,5 +23,5 @@ int main(int argc, char **argv)
 	}
 	json_cmd_free(js);
 	json_context_free(context);
+	return 0;
 }
-

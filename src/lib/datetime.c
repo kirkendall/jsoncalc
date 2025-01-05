@@ -1062,34 +1062,6 @@ json_t *json_datetime_fn(json_t *args, char *typename)
 		/* Return as time_t number */
 		t = dtbinary(&jdt);
 		return json_from_int((int)t);
-	} else if (aslocale) {
-		/* Start by converting to binary, and then back struct tm.
-		 * We can't just stuff jdt values into the struct tm because
-		 * we also need the day of the week.
-		 */
-		t = dtbinary(&jdt);
-		localtime_r(&t, &tmlocal);
-
-		/* Choose a format based on type if we don't have one already */
-		if (!localefmt) {
-			if (asdate && astime)
-				localefmt = "%c";
-			else if (asdate)
-				localefmt = "%x";
-			else if (astime)
-				localefmt = "%X";
-		}
-
-		/* Generate the string in the chosen format */
-		strftime(buf, sizeof buf, localefmt, &tmlocal);
-
-		/* If all digits then return it as a number.  Otherwise
-		 * return it as a string. */
-		for (s = buf; isdigit(*s); s++) {
-		}
-		if (*buf && !*s)
-			return json_from_int(atoi(buf));
-		return json_string(buf, -1);
 	} else if (!asdate && !astime) {
 		/* Return as an ISO Period string */
 		s = buf;
@@ -1120,6 +1092,34 @@ json_t *json_datetime_fn(json_t *args, char *typename)
 			sprintf(s, "%dS", jdt.second);
 			s += strlen(s);
 		}
+		return json_string(buf, -1);
+	} else if (aslocale) {
+		/* Start by converting to binary, and then back struct tm.
+		 * We can't just stuff jdt values into the struct tm because
+		 * we also need the day of the week.
+		 */
+		t = dtbinary(&jdt);
+		localtime_r(&t, &tmlocal);
+
+		/* Choose a format based on type if we don't have one already */
+		if (!localefmt) {
+			if (asdate && astime)
+				localefmt = "%c";
+			else if (asdate)
+				localefmt = "%x";
+			else if (astime)
+				localefmt = "%X";
+		}
+
+		/* Generate the string in the chosen format */
+		strftime(buf, sizeof buf, localefmt, &tmlocal);
+
+		/* If all digits then return it as a number.  Otherwise
+		 * return it as a string. */
+		for (s = buf; isdigit(*s); s++) {
+		}
+		if (*buf && !*s)
+			return json_from_int(atoi(buf));
 		return json_string(buf, -1);
 	} else {
 		/* Return as an ISO date/time/datetime string */

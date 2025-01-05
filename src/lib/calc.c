@@ -897,16 +897,11 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				/* Both are strings, or at least stringy */
 				leftstr = left->text;
 				rightstr = right->text;
-				result = json_string(left->text, strlen(left->text) + strlen(right->text));
-				strcat(result->text, right->text);
 			} else if (left->type != JSON_STRING) {
 				/* Left operand needs to be converted */
 				str = json_serialize(left, NULL);
 				leftstr = str;
 				rightstr = right->text;
-				result = json_string(str, strlen(str) + strlen(right->text));
-				strcat(result->text, right->text);
-				free(str);
 			} else { /* Right is not stringy */
 				/* Right operand needs to be converted */
 				str = json_serialize(right, NULL);

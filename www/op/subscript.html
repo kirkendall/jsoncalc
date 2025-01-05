@@ -28,6 +28,9 @@
     Subscripting is mostly for extracting a single element from an array.
     Usually you'll select the element by supplying its index number.
     Subscript numbers start at 0.
+    You can also use negative subscripts to select an element relative to
+    the end of the array; for example <tt>arr[-1]</tt> would be the last
+    element of array <tt>arr</tt>.
     <p>
     If the left argument is a table (array of objects), then you can 
     also use the <tt>[</tt><var>key</var><tt>:</tt><var>value</var><tt>]</tt>
@@ -46,9 +49,13 @@
       <div class="example">
 	<kbd>(1..100)[58]</kbd>
 	<samp>59</samp>
+	<kbd>(1..100)[-2]</kbd>
+	<samp>99</samp>
 	<tt>(1..100)</tt> is an array of integers from 1 to 100.
 	<tt>[58]</tt> finds the 59'th element, since subscript numbers start
 	at 0.
+	The second statement uses a negative index to find the second-from-last
+	element of the array, which has the value <tt>99</tt>.
       </div>
 
       <div class="example">

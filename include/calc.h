@@ -132,7 +132,7 @@ typedef enum {
 	JSON_CONTEXT_THIS = 16, /* Context can be "this" or "that" */
         JSON_CONTEXT_ARGS = 32, /* Function arguments and local vars/consts */
         JSON_CONTEXT_NOCACHE = 64, /* try autoload() before *data */
-        JSON_CONTEXT_UPDATE = 128 /* Data has been modified (set via context->modified() function */
+        JSON_CONTEXT_MODIFIED = 128 /* Data has been modified (set via context->modified() function */
 } jsoncontextflags_t;
 
 /* This is used to track context (the stack of variable definitions).  */
@@ -250,7 +250,7 @@ jsoncontext_t *json_context_free(jsoncontext_t *context);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);
 jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags);
 jsoncontext_t *json_context_std(json_t *data);
-json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurrent);
+json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent);
 jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t *args);
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);

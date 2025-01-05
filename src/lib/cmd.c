@@ -1788,40 +1788,38 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* If it's a number, then select a file by index */
 		if (result->type == JSON_NUMBER) {
 			current = json_int(result);
-			files = json_context_file(*refcontext, NULL, &current);
+			files = json_context_file(*refcontext, NULL, 0, &current);
 			json_free(result);
 		} else if (result->type == JSON_STRING) {
-			files = json_context_file(*refcontext, result->text, &current);
+			files = json_context_file(*refcontext, result->text, 0, &current);
 			json_free(result);
 		} else {
 			json_free(result);
 			return json_cmd_error(cmd->filename, cmd->lineno, 1, "file expressions should return a number or string.");
 		}
 	} else if (!cmd->key) {
-		/* "file" with no args -- List all files */
-		files = json_context_file(*refcontext, NULL, &current);
-		all = 1;
+		/* "file" with no args -- display the current filename */
+		files = json_context_file(*refcontext, NULL, 0, &current);
 	} else if (!strcmp(cmd->key, "+")) {
 		/* "file +" -- Move to the next file in the list */
 		current = JSON_CONTEXT_FILE_NEXT;
-		files = json_context_file(*refcontext, NULL, &current);
+		files = json_context_file(*refcontext, NULL, 0, &current);
 	} else if (!strcmp(cmd->key, "-")) {
 		/* "file -" -- Move to the previous file in the list */
 		current = JSON_CONTEXT_FILE_PREVIOUS;
-		files = json_context_file(*refcontext, NULL, &current);
+		files = json_context_file(*refcontext, NULL, 0, &current);
 	} else {
 		/* "file filename" -- Move to the named file */
-		files = json_context_file(*refcontext, cmd->key, &current);
+		files = json_context_file(*refcontext, cmd->key, 0, &current);
 	}
 
-	/* If supposed to show all then output the whole files list.
-	 * Otherwise output just the name of the current file.  Note that
-	 * we never need to free "files" because it'll be freed when the
-	 * context is freed.
-	 */
-	if (!all)
-		files = json_by_index(files, current);
-	json_print(files, NULL);
+	/* After all that, display the current file's name */
+	files = json_by_index(files, current);
+	files = json_by_key(files, "filename");
+	if (!files || files->type != JSON_STRING)
+		puts("(no files)");
+	else
+		puts(files->text);
 
 	/* Return success always */
 	return NULL;

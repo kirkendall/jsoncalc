@@ -5,23 +5,22 @@
 #include "jsoncalc.h"
 
 
-void batch(jsoncontext_t **contextref, jsoncmd_t *initcmds)
+void batch(jsoncontext_t **refcontext, jsoncmd_t *initcmds)
 {
 	jsoncmdout_t *result;
 	json_t	*files;
 	int	i;
 
-	/* Fetch the list of filenames, and start on the first one */
-	files = json_context_file(*contextref, NULL, NULL);
+	/* Fetch the list of filenames */
+	files = json_context_file(*refcontext, NULL, 0, NULL);
 
 	/* For each file... */
 	for (i = 0; i < json_length(files); i++) {
 
 		/* Load the next file */
-		json_context_file(*contextref, NULL, &i);
+		json_context_file(*refcontext, NULL, 0, &i);
 
 		/* Run the initcmds on it */
-		result = json_cmd_run(initcmds, contextref);
-		free(result);
+		run(initcmds, refcontext);
 	}
 }

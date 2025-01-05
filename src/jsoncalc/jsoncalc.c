@@ -26,8 +26,14 @@ int interactive = 0;
 /* -ccmd or -ffile -- Suggest batch mode if not forced interactive */
 int maybe_batch = 0;
 
-/* -r -- inhibit the readline library? */
+/* -r -- Inhibit the readline library? */
 int inhibit_readline = 0;
+
+/* -s -- Safer -- Limit file access to named files, and inhibit shell access */
+int safer = 0;
+
+/* -u -- Update -- Allow files named on the command line to be rewritten */
+int allow_update = 0;
 
 /* -D -- This is a directory to check for autoload */
 char *autoload_dir = NULL;
@@ -302,7 +308,7 @@ int main(int argc, char **argv)
 		usage(NULL, NULL);
 	}
 	interactive = 0;
-	while ((opt = getopt(argc, argv, "c:f:irl:uD:O:C:J:U")) >= 0) {
+	while ((opt = getopt(argc, argv, "c:f:irsl:uD:O:C:J:U")) >= 0) {
 		switch (opt) {
 		case 'c':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
@@ -318,10 +324,15 @@ int main(int argc, char **argv)
 		case 'r':
 			inhibit_readline = 1;
 			break;
+		case 's':
+			safer = 1;
+			break;
 		case 'l':
-		case 'u':
 			fprintf(stderr, "Not implemented yet\n");
 			abort();
+			break;
+		case 'u':
+			allow_update = 1;
 			break;
 		case 'D':
 			autoload_dir = optarg;
@@ -396,7 +407,7 @@ int main(int argc, char **argv)
 		/* If it ends with ".json", load it as a file */
 		len = strlen(argv[i]);
 		if (len > 5 && !strcmp(argv[i] + len - 5, ".json")) {
-			json_context_file(context, argv[i], NULL);
+			json_context_file(context, argv[i], allow_update, NULL);
 			anyfiles = 1;
 		} else {
 			/* In a name=value string, separate the name from the value */
@@ -417,6 +428,9 @@ int main(int argc, char **argv)
 			json_append(args, json_key(argv[i], tmp));
 		}
 	}
+
+	/* Start on the first file named on the command line, if any */
+	json_context_file(context, NULL, 0, NULL);
 
 	/* If -ccmd or -ffile was given but we didn't get any initcmd then
 	 * there was probably an error (already reported) and certainly nothing
@@ -444,10 +458,10 @@ int main(int argc, char **argv)
 	 * then assume "-".
 	 */
 	if (!interactive && !anyfiles)
-		json_context_file(context, "-", NULL);
+		json_context_file(context, "-", 1, NULL);
 
 	/* Start on the first file */
-	json_context_file(context, NULL, 0);
+	json_context_file(context, NULL, 0, NULL);
 
 	/* Do either the batch or interactive thing */
 	if (interactive)

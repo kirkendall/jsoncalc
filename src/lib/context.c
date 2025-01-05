@@ -40,6 +40,12 @@ void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
 }
 
 
+/* This callback is called if the current file's parsed data gets modified */
+static void data_modified(jsoncontext_t *layer, jsoncalc_t *lvalue)
+{
+	layer->flags |= JSON_CONTEXT_MODIFIED;
+}
+
 /* Free a single layer of context.  Also frees the data associated with it,
  * unless context->flags has the JSON_CONTEXT_NOFREE bit set.  Returns the
  * next layer down in the context stack.
@@ -312,7 +318,8 @@ jsoncontext_t *json_context_std(json_t *args)
 	 * the base context is freed or data is assigned a new value,
 	 * we don't want to free it for this context.
 	 */
-	context = json_context(context, data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
+	context = json_context(context, data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE | JSON_CONTEXT_VAR);
+	context->modified = data_modified;
 
 	/* Create a layer above that for the contents of "global", mostly the
 	 * "vars" and "consts" symbols.  Since these will be freed when the
@@ -343,7 +350,7 @@ jsoncontext_t *json_context_std(json_t *args)
  * array, and stuffs the current index into *refcurrent.  You do NOT need to
  * free the returned list since it'll be freed when the context is freed.
  */
-json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurrent)
+json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent)
 {
 	jsoncontext_t *globals, *thiscontext;
 	json_t	*files, *j, *f;
@@ -398,7 +405,8 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 		/* Did we find it? */
 		if (j) {
 			/* Select it as the current file */
-			*refcurrent = i;
+			if (*refcurrent != JSON_CONTEXT_FILE_NEXT)
+				*refcurrent = i;
 		} else {
 			/* Fetch info about the file */
 			if (!strcmp(filename, "-"))
@@ -410,11 +418,11 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 			if (!S_ISREG(st.st_mode) && !S_ISFIFO(st.st_mode))
 				bits = 0; /* can't read or write a non-file */
 			else if (st.st_uid == geteuid())
-				bits = st.st_mode & 0007;
-			else if (st.st_gid = getegid())
+				bits = st.st_mode & 0700;
+			else if (st.st_gid == getegid())
 				bits = st.st_mode & 0070;
 			else
-				bits = st.st_mode & 0700;
+				bits = st.st_mode & 0007;
 			if (i == 0) {
 				localtime_r(&st.st_mtime, &tm);
 				sprintf(isobuf, "%04d-%02d-%02dT%02d:%02d:%02d",
@@ -423,20 +431,20 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int *refcurren
 			} else
 				*isobuf = '\0';
 
-			/* Create the entry entry */
+			/* Create the entry for the "files" array */
 			json_t *entry = json_object();
 			json_append(entry, json_key("filename", json_string(filename, -1)));
 			json_append(entry, json_key("size", json_from_int(bits == 0 ? 0 : st.st_size)));
 			json_append(entry, json_key("mtime", json_string(isobuf, -1)));
-			json_append(entry, json_key("readable", json_bool(bits & 0111)));
-			json_append(entry, json_key("writable", json_bool(bits & 0222)));
-			json_append(entry, json_key("modified", json_bool(0)));
+			json_append(entry, json_key("readable", json_bool(bits & 0444)));
+			json_append(entry, json_key("writable", json_bool(writable && (bits & 0222))));
 
 			/* Add it to the "files" list */
 			json_append(files, entry);
 
 			/* Make it be the current file */
-			*refcurrent = json_length(files) - 1;
+			if (*refcurrent != JSON_CONTEXT_FILE_SAME)
+				*refcurrent = json_length(files) - 1;
 		}
 	}
 
@@ -671,8 +679,14 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 		value = json_context_by_key(context, *refkey, &layer);
 
 		/* If found, celebrate */
-		if (!value)
+		if (!value) {
+			/* NOT FOUND!  Try again without &layer as a way to
+			 * distinguish between const and unknown var
+			 */
+			if (json_context_by_key(context, *refkey, NULL))
+				return JE_CONST;
 			return JE_UNKNOWN_VAR;
+		}
 		if (reflayer)
 			*reflayer = layer;
 		if (refcontainer)

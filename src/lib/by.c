@@ -87,6 +87,15 @@ json_t *json_by_index(json_t *container, int idx)
 		return NULL;
 	}
 
+	/* Defend against negative indexes.  But also try to use them as being
+	 * an index relative to the end of the array.
+	 */
+	if (idx < 0) {
+		idx += json_length(container);
+		if (idx < 0)
+			return NULL;
+	}
+
 	/* Scan for it.  If found, return its value */
 	for (scan = container->first, scanidx = 0; scan; scan = scan->next)
 	{

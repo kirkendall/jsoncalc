@@ -16,7 +16,6 @@ static void maybeQuoteCpy(char *dst, char *str)
 	/* Decide whether quoting is needed */
 	int	mustQuote = 0;
 	char	*tmp;
-	size_t	len;
 
 	if (!isalpha(*str) && *str != '_')
 		mustQuote = 1;

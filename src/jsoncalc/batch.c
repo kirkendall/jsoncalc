@@ -7,7 +7,6 @@
 
 void batch(jsoncontext_t **refcontext, jsoncmd_t *initcmds)
 {
-	jsoncmdout_t *result;
 	json_t	*files;
 	int	i;
 

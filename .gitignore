@@ -15,6 +15,16 @@ www/op/sidebar.html
 www/op/oplist.js
 www/cmd/sidebar.html
 www/old
+Makefile.am
+configure.ac
+src/Makefile.am
+src/plugins/Makefile
+src/plugins/curl/
+src/plugins/mysql/
+src/plugins/sqlite/
+src/plugins/xml/
+src/simple/simple
+
 
 # Big ugly test data
 sampledata/appts.json

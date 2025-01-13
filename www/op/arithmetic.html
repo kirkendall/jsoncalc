@@ -137,6 +137,15 @@
 	    have anything like addition.  However, if you use setMonth() and
 	    setDate() to set a date to November 31 then it'll actually get set
 	    to December 1, just as in the above "messy" example.
+	<li>To concatenate strings, there are also
+	    <a target="_PARENT" href="../index.html?f=concat">concat()</a>
+	    <a target="_PARENT" href="../index.html?f=join">join()</a>
+	    functions which <em>do not</em> attempt to treat ISO-8601
+	    date/time/period strings specially; they just concatenates them.
+	    <tt>concat()</tt> takes any number of strings as arguments and
+	    concatenates them with no delimiters added.
+	    <tt>join()</tt> takes an array of strings and optionally a delimiter
+	    (defaulting to ",").
 	<li>Date/datetime/period arithmetic is stable for small units
 	    (days, hours, minutes, seconds).
 	    The date messiness is worst when you try to add/subtract months
@@ -160,6 +169,7 @@
         <tr><td><a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a></td><td>Determine whether a value is a dateTime string.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=isPeriod">isPeriod()</a></td><td>Determine whether a value is a period string.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=period">period()</a></td><td>Extract a number from a period, or generate a period from a number.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=concat">concat()</a></td><td>Join strings to form on long string.</td></tr>
       </table>
     </details>
 

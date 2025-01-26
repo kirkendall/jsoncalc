@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>heightOf</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc heightOf - Calculate the height of a string">
+    <meta name="keywords" content="string, jsoncalc, function reference, heightOf">
+    <meta name="viewport" content="height=device-height, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>heightOf - Calculate the height of a string</h1>
+    <dl>
+      <dt>heightOf(<var>str</var>)
+      <dd>
+      This returns the height of a string.
+      Usually this is 1, but if the string contains newline characters then
+      it could be higher.
+      If the string ends with a newline character, then that final newline
+      character is ignored.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"typical".heightOf()</kbd>
+	<samp>1</samp>
+        This example shows that heightOf() isn't always the same as length.
+        The \U1f600 emoji is 2 columns wide, nudging the string height up a bit.
+      </div>
+
+      <div class="example">
+	<kbd>"".heightOf()</kbd>
+	<samp>1</samp>
+        Even an empty string has a height of 1.
+      </div>
+
+      <div class="example">
+        <kbd>"Do\nA deer\n".heightOf()</kbd>
+        <samp>2</samp>
+        This string is two lines high.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>Basically the height is 1 plus the number of newline characters,
+            except that if it ends with a newline then that final newline
+            doesn't count.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a></td><td>Return the width of a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=wrap">wrap()</a></td><td>Wrap a string, trying to limit it to a given width.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

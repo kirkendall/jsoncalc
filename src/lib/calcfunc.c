@@ -55,6 +55,7 @@ static json_t *jfn_isPeriod(json_t *args, void *agdata);
 static json_t *jfn_typeOf(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_widthOf(json_t *args, void *agdata);
+static json_t *jfn_heightOf(json_t *args, void *agdata);
 static json_t *jfn_keys(json_t *args, void *agdata);
 static json_t *jfn_trim(json_t *args, void *agdata);
 static json_t *jfn_trimStart(json_t *args, void *agdata);
@@ -140,7 +141,8 @@ static jsonfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "any",		jfn_
 static jsonfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "any,prevtype",	jfn_typeOf};
 static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "any",		jfn_sizeOf};
 static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str",		jfn_widthOf};
-static jsonfunc_t keys_jf        = {&widthOf_jf,     "keys",        "obj",		jfn_keys};
+static jsonfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str",		jfn_heightOf};
+static jsonfunc_t keys_jf        = {&heightOf_jf,    "keys",        "obj",		jfn_keys};
 static jsonfunc_t trim_jf        = {&keys_jf,        "trim",        "str",		jfn_trim};
 static jsonfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str",		jfn_trimStart};
 static jsonfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str",		jfn_trimEnd};
@@ -614,13 +616,51 @@ static json_t *jfn_sizeOf(json_t *args, void *agdata)
  */
 static json_t *jfn_widthOf(json_t *args, void *agdata)
 {
+	char *numstr;
+	int  width;
+
 	switch (args->first->type) {
-	case JSON_STRING:
 	case JSON_NUMBER:
+		/* Is the number in binary format? */
+		if (args->text[0] == 0) {
+			/* Convert from binary to string, and check that */
+			numstr = json_serialize(args, NULL);
+			width = strlen(numstr); /* number width is easy */
+			free(numstr);
+			return json_from_int(width);
+		}
+		/* else number is in text form so fall through... */
+	case JSON_STRING:
 	case JSON_BOOL:
 		return json_from_int(json_mbs_width(json_text(args->first)));
 	default:
 		return NULL;
+	}
+}
+
+/* Return the height of a string.  This is 1 plus the number of newlines,
+ * except that if the string ends with a newline then that one doesn't count.
+ */
+static json_t *jfn_heightOf(json_t *args, void *agdata)
+{
+	int	height;
+	char	*scan;
+
+	switch (args->first->type) {
+	case JSON_NULL:
+	case JSON_BOOL:
+	case JSON_NUMBER:
+	case JSON_OBJECT:
+	case JSON_ARRAY:
+		return json_from_int(1);
+
+	case JSON_STRING:
+		/* Count the newlines plus 1, stopping 1 char before the end. */
+		height = 1;
+		for (scan = args->first->text; *scan && scan[1]; scan++)
+			if (*scan == '\n')
+				height++;
+		return json_from_int(height);
 	}
 }
 

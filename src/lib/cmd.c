@@ -402,10 +402,10 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	return cmd;
 }
 
-/* Parse a statement block, and return it.  If can't be parsed, then issue an
- * error message and return NULL.  Function declarations are not allowed, and
- * should generate an error message.  An empty set of curly braces is allowed,
- * though, and should return a "NO OP" statement.
+/* Parse a statement block, and return it.  If can't be parsed, then store an
+ * error message at *referr and return NULL.  Function declarations are not
+ * allowed, and should generate an error message.  An empty set of curly braces
+ * is allowed, though, and should return a "NO OP" statement.
  */
 jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
 {

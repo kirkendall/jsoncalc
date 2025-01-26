@@ -657,6 +657,19 @@ char *lex(char *str, token_t *token, stack_t *stack)
 		 && (best == JSONOP_INVALID || operators[best].len < operators[op].len))
 			best = op;
 	}
+	if (best == JSONOP_ENDOBJECT) {
+		/* An unmatched } can end an expression, for example if a
+		 * function definition ends with "return expr}".  To the
+		 * expression parser, this use of "}" should be treated
+		 * much like a ";" -- it should be JSONOP_INVALID.
+		 */
+		int i;
+		for (i = stack->sp - 1; i >= 0; i--)
+			if (stack->stack[i]->op == JSONOP_STARTOBJECT)
+				break;
+		if (i < 0)
+			best = JSONOP_INVALID;
+	}
 	if (best != JSONOP_INVALID) {
 		/* Use this operator for this token */
 		token->op = best;

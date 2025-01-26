@@ -26,6 +26,8 @@
       This returns the width of a string.
       This is different from the length because some Unicode characters
       are double-width, some are zero-width.
+      Also, if the string contains newline characters then it will return
+      the width of the widest line.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -39,7 +41,18 @@
         The \U1f600 emoji is 2 columns wide, nudging the string width up a bit.
       </div>
 
+      <div class="example">
+        <kbd>"Do\nA deer\n".widthOf()</kbd>
+        <samp>6</samp>
+        The longest line is 6 columns wide.
+      </div>
+
     </details>
 
+    <detail>
+      <summary>See Also</summary>
+        <tr><td><a target="_PARENT" href="../index.html?f=heightOf">heightOf()</a></td><td>Return the height of a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=wrap">wrap()</a></td><td>Wrap a string, trying to limit it to a given width.</td></tr>
+      </table>
   </body>
 </html>

@@ -1020,36 +1020,59 @@ int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, j
  * The returned json_t is part of the context, so you can assume it'll be
  * freed as part of the context.  You don't need to free it, but you can't
  * modify it either.
+ *
+ * refexpr is usually NULL.  If it is non-NULL, then it should point to a
+ * (char*) variable which will be set to NULL on failure, or a dynamically-
+ * allocated string containing an expression for finding the default table
+ * on success.  The calling function is responsible for freeing the string
+ * when it is no longer needed.
  */
-json_t *json_context_default_table(jsoncontext_t *context)
+json_t *json_context_default_table(jsoncontext_t *context, char **refexpr)
 {
 	json_t	*found;
 
 	/* Defend against NULL */
-	if (!context)
+	if (!context) {
+		if (refexpr)
+			*refexpr = NULL;
 		return NULL;
+	}
 
 	/* If "this" is a table, use it */
 	found = json_context_by_key(context, "this", NULL);
-	if (found && json_is_table(found))
+	if (found && json_is_table(found)) {
+		if (refexpr)
+			*refexpr = strdup("this");
 		return found;
+	}
 
 	/* Locate the current file.  If none, then there is no default table */
 	found = json_context_by_key(context, "data", NULL);
 	if (found) {
 		/* If it's a table, use it */
-		if (json_is_table(found))
+		if (json_is_table(found)) {
+			if (refexpr)
+				*refexpr = strdup("data");
 			return found;
+		}
 
 		/* If it's an object, scan it for a table */
 		if (found->type == JSON_OBJECT) {
 			for (found = found->first; found; found = found->next) {
-				if (json_is_table(found->first))
+				if (json_is_table(found->first)) {
+					if (refexpr) {
+						*refexpr = (char *)malloc(6 + strlen(found->text));
+						strcpy(*refexpr, "data.");
+						strcat(*refexpr, found->text);
+					}
 					return found->first;
+				}
 			}
 		}
 	}
 
 	/* No joy */
+	if (refexpr)
+		*refexpr = NULL;
 	return NULL;
 }

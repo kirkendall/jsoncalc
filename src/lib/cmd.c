@@ -52,6 +52,8 @@ static jsoncmd_t    *return_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsoncmd_t    *void_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t    *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsoncmd_t    *file_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsoncmd_t    *import_parse(jsonsrc_t *src, jsoncmdout_t **referr);
@@ -77,7 +79,8 @@ static jsoncmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run}
 static jsoncmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
 static jsoncmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
 static jsoncmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
-static jsoncmdname_t jcn_file =     {&jcn_void,		"file",		file_parse,	file_run};
+static jsoncmdname_t jcn_explain =  {&jcn_void,		"explain",	explain_parse,	explain_run};
+static jsoncmdname_t jcn_file =     {&jcn_explain,	"file",		file_parse,	file_run};
 static jsoncmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
 static jsoncmdname_t *names = &jcn_import;
 
@@ -1654,27 +1657,28 @@ static jsoncmd_t *void_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Allocate a cmd */
 	start = *src;
 
-	/* The return value is optional */
+	/* The expression is mandatory */
 	json_cmd_parse_whitespace(src);
-	if (*src->str && *src->str != ';' && *src->str != '}') {
-		/* Parse the expression */
-		err = NULL;
-		calc = json_calc_parse(src->str, &end, &err, 0);
-		if (err) {
-			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error - %s", err);
-			if (calc)
-				json_calc_free(calc);
-			return NULL;
-		}
-		if (*end && (*end != ';' && *end != '}')) {
-			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error near %.10s", end);
-			if (calc)
-				json_calc_free(calc);
-			return NULL;
-		}
-		src->str = end;
-
+	if (!*src->str || *src->str == ';' || *src->str == '}') {
+		json_cmd_error(src->filename, jcmdline(src), 1, "The void command requires an expression");
 	}
+
+	/* Parse the expression */
+	err = NULL;
+	calc = json_calc_parse(src->str, &end, &err, 0);
+	if (err) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error - %s", err);
+		if (calc)
+			json_calc_free(calc);
+		return NULL;
+	}
+	if (*end && (*end != ';' && *end != '}')) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error near %.10s", end);
+		if (calc)
+			json_calc_free(calc);
+		return NULL;
+	}
+	src->str = end;
 
 	/* Move past the ';', if there is one */
 	if (*src->str == ';')
@@ -1691,6 +1695,114 @@ static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Evaluate the expression but return NULL */
 	json_free(json_calc(cmd->calc, *refcontext, NULL));
+	return NULL;
+}
+
+static jsoncmd_t *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncalc_t *calc;
+	char	*end, *err;
+	jsoncmd_t *cmd;
+
+	/* Allocate a cmd */
+	cmd = json_cmd(src, &jcn_explain);
+
+	/* Three ways to go: "explain" explains the default table, "explain?"
+	 * says where the default table is located, and "explain expr" explains
+	 * the result of an expression.
+	 */
+	json_cmd_parse_whitespace(src);
+	if (!*src->str || *src->str == ';' || *src->str == '}') {
+		/* Use the default */
+	} else if (*src->str == '?') {
+		/* Use the default, but suppress the actual "explain" table */
+		cmd->var = 1;
+		src->str++;
+		json_cmd_parse_whitespace(src);
+	} else {
+		/* Use an expression */
+		err = NULL;
+		cmd->calc = json_calc_parse(src->str, &end, &err, 0);
+		if (err) {
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error - %s", err);
+			json_cmd_free(cmd);
+			return NULL;
+		}
+		src->str = end;
+	}
+
+	/* Detect cruft after the arguments */
+	if (*src->str && (*src->str != ';' && *src->str != '}')) {
+		*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Syntax error near %.10s", end);
+		json_cmd_free(cmd);
+		return NULL;
+	}
+
+	/* Move past the ';', if there is one */
+	if (*src->str == ';')
+		src->str++;
+	json_cmd_parse_whitespace(src);
+
+	/* Return the command */
+	return cmd;
+}
+
+static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	json_t	*table, *mustfree, *columns;
+	char	*expr;
+
+	/* Is there an expression, explicitly naming a table? */
+	if (!cmd->calc) {
+		/* No, so look for a default table */
+		table = json_context_default_table(*refcontext, &expr);
+		mustfree = NULL;
+
+		/* If no table, say so */
+		if (!table)
+			return json_cmd_error(cmd->filename, cmd->lineno, 1, "No default table");
+	} else {
+		/* Yes, so evaluate it.
+		 *
+		 * NOTE: It'd be nice if we could do this without copying the
+		 * table, since some tables are large.  However, even a huge
+		 * table can be copied in a fraction of a second, and this
+		 * command is really only useful when used interactively.
+		 * For this reason, I'm not going to bother trying to optimize
+		 * this for simple expressions.
+		 */
+		table = json_calc(cmd->calc, *refcontext, NULL);
+		mustfree = table;
+		expr = NULL;
+	}
+
+	/* Detect errors */
+	if (table->type == JSON_NULL && table->text[0])
+		return json_cmd_error(cmd->filename, cmd->lineno, (int)(long)table->first, "%s", table->text);
+	if (!json_is_table(table))
+		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Not a table");
+
+	/* Output the explain results, unless the parameter text was just "?" */
+	columns = NULL;
+	if (!cmd->var) {
+		for (table = table->first; table; table = table->next)
+			columns = json_explain(columns, table, 0);
+		json_print(columns, NULL);
+	}
+
+	/* If we have an expr for the default table, output it */
+	if (expr)
+		puts(expr);
+
+	/* Clean up */
+	if (columns)
+		json_free(columns);
+	if (mustfree)
+		json_free(mustfree);
+	if (expr)
+		free(expr);
+
+	/* Done! */
 	return NULL;
 }
 

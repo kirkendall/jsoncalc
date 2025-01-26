@@ -102,7 +102,6 @@ static struct {
 	{"ENDPAREN",	")",	0,	JCOP_OTHER},
 	{"EQ",		"==",	180,	JCOP_INFIX},
 	{"EQSTRICT",	"===",	180,	JCOP_INFIX},
-	{"EXPLAIN",	"EXP",	1,	JCOP_PREFIX},
 	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	JCOP_OTHER},
 	{"GE",		">=",	190,	JCOP_INFIX},
@@ -327,12 +326,6 @@ void json_calc_dump(jsoncalc_t *calc)
 
 	  case JSONOP_LIMIT:
 		printf(" LIMIT");
-		break;
-
-	  case JSONOP_EXPLAIN:
-		printf(" EXPLAIN");
-		if (calc->RIGHT)
-			json_calc_dump(calc->RIGHT);
 		break;
 
 	  case JSONOP_STARTPAREN:
@@ -600,9 +593,6 @@ char *lex(char *str, token_t *token, stack_t *stack)
 		} else if (token->len == 6 && !strncasecmp(token->full, "select", 6)) {
 			token->len = 6;
 			token->op = JSONOP_SELECT;
-		} else if (token->len == 7 && !strncasecmp(token->full, "explain", 7) && token->full[7] == ' ') {
-			token->len = 7;
-			token->op = JSONOP_EXPLAIN;
 		} else if (jcselecting(stack)) {
 			/* The following SQL keywords are only recognized as
 			 * part of a "select" clause.  This is because some of
@@ -932,7 +922,6 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
-	  case JSONOP_EXPLAIN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 		json_calc_free(jc->LEFT);
@@ -1128,7 +1117,6 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
-	  case JSONOP_EXPLAIN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 	  case JSONOP_EACH:
@@ -1520,8 +1508,7 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 		 && jc->op != JSONOP_FNCALL
 		 && jc->op != JSONOP_REGEX
 		 && ((jc->op != JSONOP_NEGATE
-		   && jc->op != JSONOP_NOT
-		   && jc->op != JSONOP_EXPLAIN)
+		   && jc->op != JSONOP_NOT)
 		  || jc->RIGHT == NULL)
 		 && (operators[jc->op].prec < 0
 		  || jc->LEFT == NULL
@@ -2110,7 +2097,6 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
-	  case JSONOP_EXPLAIN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 		jc->LEFT = parseag(jc->LEFT, ag);

@@ -35,7 +35,6 @@ typedef enum {
 	JSONOP_ENDPAREN,
 	JSONOP_EQ,
 	JSONOP_EQSTRICT,
-	JSONOP_EXPLAIN,
 	JSONOP_FNCALL,
 	JSONOP_FROM,
 	JSONOP_GE,
@@ -256,7 +255,7 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
 json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
 int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, jsoncontextflags_t flags);
-json_t *json_context_default_table(jsoncontext_t *context);
+json_t *json_context_default_table(jsoncontext_t *context, char **refexpr);
 
 /****************************************************************************/
 

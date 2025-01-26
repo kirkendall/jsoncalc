@@ -284,7 +284,7 @@ static json_t *jcsimple(jsoncalc_t *calc, jsoncontext_t *context)
 
 	/* We can choose a default table when SELECT is used without FROM */
 	if (calc->op == JSONOP_FROM)
-		return json_context_default_table(context);
+		return json_context_default_table(context, NULL);
 
 	/* No joy */
 	return NULL;
@@ -789,16 +789,6 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		USE_RIGHT_OPERAND(calc);
 		if (right->type == JSON_NUMBER || right->type == JSON_STRING)
 			result = json_from_double(-json_double(right));
-		break;
-
-	  case JSONOP_EXPLAIN:
-		USE_RIGHT_OPERAND(calc);
-		if (json_is_table(right)) {
-			/* Accumulate statistics about the rows of the table */
-			result = NULL;
-			for (scan = right->first; scan; scan = scan->next)
-				result = json_explain(result, scan, 0);
-		}
 		break;
 
 	  case JSONOP_ADD:

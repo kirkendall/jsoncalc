@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>explain</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc explain - Describe a table's format">
+    <meta name="keywords" content="command, command reference, explain">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../clipboard.js"></script>
+    <script>
+	$(document).ready(function(){
+	    $("div.example kbd").css("cursor", "copy")
+				.attr("title", "Click to copy")
+				.on("click", function(){
+					copyToClipboard(this.innerText);
+				});
+	});
+    </script>
+  </head>
+  <body>
+    <h1>explain - Describe a table's format</h1>
+    <dl>
+      <dt>explain <var>table</var>
+      <br/>explain
+      <br/>explain ?
+      <dd>
+      The <tt>explain</tt> command describes a table.
+      If you don't specify a table via an expression, then it will use the
+      default table and, for an added thrill, tell you where the default table
+      is located.
+      A third option is to pass just an question mark, in which case it'll tell
+      you where the default table is located but not describe it.
+      <p>
+      Tables are arrays of objects.
+      Each element (object) is a row of the table, and each member of the
+      object is a column.
+      The <tt>explain</tt> command collects statistics about the columns
+      across all rows.
+      The statistics kept are:
+      <table class="referenceList">
+        <tr><th>key</th><td>The name of the member/column.</td></tr>
+        <tr><th>type</th><td>The data type.  This is described more in the <a target="_PARENT" href="../index.html?f=typeOf">typeOf()</tt> function's page.</td></tr>
+        <tr><th>width</th><td>Display width of the widest value for this column, expressed as characters.  See the <a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a> function's page for details.</td></tr>
+        <tr><th>nullable</th><td>Whether this column is missing from some rows, or is present with a null value.</td></tr>
+      </table>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>explain emojis</kbd>
+	<samp>
+<table>
+<tr><th>key</th><th>type</th><th>width</th><th>nullable</th></tr>
+<tr><td>emoji</td><td>string</td><td>2</td><td>false</td></tr>
+<tr><td>codepoint</td><td>string</td><td>7</td><td>false</td></tr>
+<tr><td>name</td><td>mixed</td><td>29</td><td>false</td></tr>
+<tr><td>group</td><td>string</td><td>4</td><td>false</td></tr>
+</table>
+</samp>
+        Describe the emojis table.
+        This is part of the same data.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This scans every element of every object in the table.
+            For a large table, this can take some time.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=explain">explain</a></td><td>Function to collect table column statistics.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

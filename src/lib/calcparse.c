@@ -1712,7 +1712,6 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			/* Remove the first name and comma, keep "SG" and "n" */
 			json_calc_free(top[-3]);
 			json_calc_free(top[-2]);
-
 			top[-3] = top[-1];
 			stack->sp -= 2; /* keep "SGn" */
 			continue;

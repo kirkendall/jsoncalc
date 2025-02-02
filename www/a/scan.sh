@@ -13,12 +13,42 @@ do
     fi
 done >> articles$$
 
-# Build the "INTRO.html" file, including sumaries of the 3 newest articles
-sed '/@@@/,$d' INTRO.html.template >INTRO.html
+# Build the "SUMMARY.html" file, including summaries of the 3 newest articles
+sed '/@@@/,$d' SUMMARY.html.template >SUMMARY.html
 sort -r articles$$ | head -3 | while read timestamp filename
 do
     # Start it
-    echo '<article data-title="'${filename/.html/}'">'
+    echo '<article>'
+    a=${filename/.html}
+    a=${a/ /+/g}
+    echo "<a class=\"article\" target=\"_PARENT\" href=\"index.html?a=${filename/.html}\">"
+
+    # Extract the title from the article
+    sed -n 's/ *<title>\(.*\)<\/title>/<h3>\1/p' $filename
+
+    # Output the timestamp
+    echo "<span class=\"timestamp\">$timestamp</span>"
+
+    echo "</h3>";
+
+    # Extract the abstract from the article
+    sed '1,/<blockquote class="abstract">/d;/<\/blockquote>/,$d' $filename
+
+    # Finish it
+    echo "</a>"
+    echo "</article>"
+done >>SUMMARY.html
+sed '1,/@@@/d' SUMMARY.html.template >>SUMMARY.html
+
+# Build the "INTRO.html" file, including summaries of all articles
+sed '/@@@/,$d' INTRO.html.template >INTRO.html
+sort -r articles$$ | while read timestamp filename
+do
+    # Start it
+    echo '<article>'
+    a=${filename/.html}
+    a=${a/ /+/g}
+    echo "<a class=\"article\" target=\"_PARENT\" href=\"../index.html?a=${filename/.html}\">"
 
     # Output the timestamp
     echo "<span class=\"timestamp\">$timestamp</span>"
@@ -30,6 +60,7 @@ do
     sed '1,/<blockquote class="abstract">/d;/<\/blockquote>/,$d' $filename
 
     # Finish it
+    echo "</a>"
     echo "</article>"
 done >>INTRO.html
 sed '1,/@@@/d' INTRO.html.template >>INTRO.html

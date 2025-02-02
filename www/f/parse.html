@@ -6,17 +6,6 @@
     <meta name="description" content="jsoncalc parse - Convert a JSON string to data">
     <meta name="keywords" content="string, array, object, jsoncalc, function reference, parse">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="../clipboard.js"></script>
-    <script>
-	$(document).ready(function(){
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
-	});
-    </script>
   </head>
   <body>
     <h1>parse - Convert a JSON string to data</h1>
@@ -40,7 +29,7 @@
       <div class="example">
 	<kbd>parse("{\"foo\":1,\"north\":true}")</kbd>
 	<samp>{"foo":1,"north":true}</samp>
-	Here we're converting an object to a string.
+	Here we're converting a string to an object.
 	Also, note that we skip the "JSON." &mdash; JsonCalc allows it but
 	doesn't require it.
       </div>

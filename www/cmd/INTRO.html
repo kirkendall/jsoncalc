@@ -6,20 +6,6 @@
     <meta name="description" content="jsoncalc function summary">
     <meta name="keywords" content="jsoncalc, function reference">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="../clipboard.js"></script>
-    <script>
-	// Initialization
-	$(document).ready(function() {
-
-	    // Enable click-to-copy on examples
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
-	});
-    </script>
   </head>
   <body>
     <h1>JsonCalc Commands</h1>
@@ -60,7 +46,6 @@
 <tr><td><a target="_PARENT" href="../index.html?cmd=default"><b>default</b>:</a></td><td>Define the default case for a <b>switch</b> command.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=delete"><b>delete</b> <var>lvalue</var></a></td><td>Delete a variable, or part of a variable.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=edit"><b>edit</b> ...</a></td><td>Invoke an external editor on a function or script.</td></tr>
-<tr><td><a target="_PARENT" href="../index.html?cmd=explain"><b>explain</b> ...</a></td><td>Describe a table.  If no table is specified then the default table is used.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=file"><b>file</b> ...</a></td><td>Move between data files</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=for"><b>for</b> (<b>var</b> <var>name</var> = <var>arr</var>) <var>cmds</var></a></td><td>Execute <var>cmds</var> with <var>name</var> set to each element of array <var>arr</var></td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=function"><b>function</b> <var>name</var> (<var>args</var>) <var>cmds</var></a></td><td>Define a function.</td></tr>

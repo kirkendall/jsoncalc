@@ -6,17 +6,6 @@
     <meta name="description" content="jsoncalc concat - concatenate arrays or strings">
     <meta name="keywords" content="string, array, jsoncalc, function reference, concat">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="../clipboard.js"></script>
-    <script>
-	$(document).ready(function(){
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
-	});
-    </script>
   </head>
   <body>
     <h1>concat - concatenate arrays or stringsOne line summary</h1>
@@ -65,8 +54,13 @@
         <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator.
         Both JavaScript and SQL allow <tt>concat()</tt> to concatenate strings,
         so JsonCalc does too.
+        Also, JsonCalc's <tt>+</tt> operator treats date/time/datetime/period
+        strings specially but <tt>concat()</tt> does not, so that's sometimes
+        useful.
 
-        <li>This is the only built-in way to do array concatenation.
+        <li>You can also append an item to an array variable by using the
+        <a target="_PARENT" href="../index.html?op=assign">[]=</a> appending
+        form of the assignment operator.
 
       </ul>
     </details>
@@ -75,6 +69,7 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?op=arithmetic">+</a></td><td>Discussion of the <tt>+</tt> operator.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=assign">[]=</a></td><td>Append operator</td></tr>
       </table>
     </details>
 

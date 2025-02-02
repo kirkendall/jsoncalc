@@ -6,17 +6,6 @@
     <meta name="description" content="jsoncalc Dates and Times">
     <meta name="keywords" content="string, object, datetime, jsoncalc, article, Dates and Times">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="../clipboard.js"></script>
-    <script>
-	$(document).ready(function(){
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
-	});
-    </script>
   </head>
   <body>
     <h1>Dates and Times</h1>
@@ -44,12 +33,12 @@
       <tr><td>"YYYY-MM-DD"</td><td>Date</td><td>"2025-07-04" is July 4 2025</td></tr>
       <tr><td>"hh:mm:sstz"</td><td>Time</td><td>"12:00:00" is noon in the local timezone<br>"13:30:00Z" is 1:30pm in the UTC time zone</td></tr>
       <tr><td>"YYYY-MM-DDThh:mm:sstz"</td><td>DateTime</td><td>"2008-12-31T23:57:00" is 3 minutes before New Years Day in the local time zone</td></tr>
-      <tr><td>"PnYnMnWnDTnHnMnS"</td><td>Period</td><td>"P3M" is three minutes<br/>"PT3M" is three minutes.</td></tr>
+      <tr><td>"PnYnMnWnDTnHnMnS"</td><td>Period</td><td>"P3M" is three months.<br/>"PT3M" is three minutes.</td></tr>
     </table>
     <p>
     Since they're strings, you can compare them as strings, or use string
     functions such <a target="_PARENT" href="../index.html?f=substr">substr()</a>
-    to pic them apart, and the <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator to assemble them.
+    to pick them apart, and the <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator to assemble them.
     <p>
     But there's so much more!
 

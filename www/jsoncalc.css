@@ -112,6 +112,7 @@ div.example kbd {
 	font-family: monospace;
 	font-weight: bold;
 	margin-left: -5em;
+	user-select: all;
 }
 div.example samp {
 	display: block;
@@ -139,6 +140,13 @@ dt {
 
 .sidebar a {
 	display: block;
+}
+
+#mainpanels article a.article {
+	display: inline;
+	border: none;
+	background: none;
+	white-space: wrap;
 }
 
 div.popup {

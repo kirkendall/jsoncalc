@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Working with Environment Variables</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc Working with Environment Variables">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, article, Working with Environment Variables">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>Working with Environment Variables</h1>
+    <h4 class="timestamp">2025-02-04</h4>
+    <center>
+    <blockquote class="abstract">
+      Environment variables are managed by shells such as bash.
+      JsonCalc is often used in shell scripts, so environment variables
+      can be a useful way to get raw data into a JsonCalc script.
+      Jsoncalc lets you access environment variables using $NAME,
+      $NAME[expr], and getenv(expr).
+    </blockquote>
+    </center>
+
+    JsonCalc can be an effective way to build JSON documents from raw data,
+    but first you need a way to get the raw data into your script.
+    One way to do that is by setting environment variables.
+    <p>
+    Environment variables are managed by shell program such as <em>bash</em>.
+    The syntax varies from one shell to another, but typically you can
+    set a persistent environment variable via an "export" command, or
+    pass any number of temporary environment variables into a program by
+    listing the "<var>name</var>=<var>value</var>" before the program name.
+    If you're using JsonCalc in a shell script, this is often the easiest
+    way to pass values into JsonCalc.
+    <p>
+    Environment variable names are case-sensitive, unlike most of JsonCalc.
+    Usually they're written entirely in uppercase, though they don't have
+    to be.
+    <p>
+    JsonCalc has three ways to access environment variables:  
+    $NAME notation used like a JsonCalc const,
+    $NAME[expr] notation to synthesize the full name by appending the
+    result of the subscript expression, and the
+    <a target="_PARENT" href="../index.html?f=getenv">getenv()</a> function.
+
+    <h2>$NAME</h2>
+    You can use $NAME in any expression, as though $NAME was the name of a
+    const.
+    This makes environment variables super easy to access.
+    If there is no environment variable with the requested <var>NAME</var>,
+    then the "$<var>NAME</var>" expression returns <b>null</b>.
+    <div class="example">
+      <kbd>$PATH</kbd>
+      <samp>"/home/steve/bin:/usr/local/bin:/usr/bin:/bin"</samp>
+      <kbd>$PATH.split(":")</kbd>
+      <samp>["/home/steve/bin","/usr/local/bin","/usr/bin","/bin"]</samp>
+      The first example fetches the $PATH environment variable's value.
+      The second example uses it in an expression.
+    </div>
+
+    <h2>$NAME[expr]</h2>
+    Often you'll want to pass many similar items into a script.
+    Environment variable store strings, not arrays, so the next best thing
+    is to append a number to the name of the environment.
+    For example, you could pass a bunch of part numbers into a JsonCalc
+    script via a series of environment variables named $partno1, $partno2,
+    and so on.
+    JsonCalc's $<var>NAME</var>[<var>expr</var>] notation makes this easy
+    to access.
+    <p>
+    The subscript expression is evaluated first.
+    If the result isn't a string, then it will be converted to a string,
+    and appended to the <var>NAME</var>.
+    In the part number example, this means JsonCalc could access them as
+    <tt>$partno[i]</tt>.
+    <div class="example">
+      <kbd>$partno[1]</kbd>
+      <samp>"10017"</samp>
+      Fetches the value of $partno1.
+      Note that the value is always a string, even though this particular value
+      looks like it could truly be a number.
+      You can convert strings to numbers via the
+      <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
+      and
+      <a target="_PARENT" href="../index.html?f=parseFloat">parseFloat()</a>
+      functions
+    </div>
+    <div class="example">
+      <kbd>1..10 @ $partno[this]</kbd>
+      <samp>["10017","12565-B"]</samp>
+      This collects <tt>$partno1</tt> through <tt>$partno10</tt> into an array.
+      Any missing $partno<var>N</var> variables will be omitted from the array,
+      because those $partno<var>N</var> expressions return <b>null</b> and the
+      <a target="_PARENT" href="../index.html?op=each">@</a> operator omits
+      <b>null</b> from its result array.
+    </div>
+
+    <h2>The getenv() function</h2>
+    The <a target="_PARENT" href="../index.html?f=getenv">getenv()</a>
+    function is passed a name, and returns the value.
+    Both the name and the returned value are strings.
+    If there is no environment value with the requested name,
+    then <b>null</b> is returned.
+    <p>
+    The only advantage of <tt>getenv()</tt> over the $NAME notation is that
+    <tt>getenv()</tt> gives you a way to compute the name.
+    With $NAME, the name is always hardcoded in the script.
+    <div class="example">
+      <kbd>var name="PATH"; getenv(name)</kbd>
+      <samp>"/home/steve/bin:/usr/local/bin:/usr/bin:/bin"</samp>
+      This fetches the value of the $PATH environment variable.
+    </div>
+
+    <h2>Putting It All Together in a Shell Script</h2>
+    Here's a shell script that sets some environment variables, and runs
+    JsonCalc to add their values to a document.
+    <pre>
+    #!/bin/sh
+
+    export partno1=10017
+    export desc1="Shaving Cream"
+    export qty1=2
+    export partno2=12565-B
+    export desc2="Tooth Paste"
+    export qty2=1
+
+    custno=133 pono=2029 jsoncalc -c "
+    {
+       custno: $custno,
+       po: $pono,
+       detail: (1..10 @ $partno[this] ? {partno:$partno[this], desc:$desc[this], qty:parseInt($qty[this]))
+     }"
+    </pre>
+    When run, this should produce output similar to the following:
+    <pre>
+    {
+      "custno":"133",
+      "po":"2029",
+      "detail":[
+        {
+          "partno":"10017",
+          "desc":"Shaving Cream",
+          "qty":2
+	},
+	{
+	  "partno":"12565-B",
+	  "desc":"Tooth Paste",
+	  "qty":1
+	}
+      ]
+    }
+    </pre>
+    <p>
+    First we set some environment variables storing the part information.
+    Then we set a couple more (<tt>custno</tt> and <tt>pono</tt>) as we
+    invoke JsonCalc.
+    We use JsonCalc's "-c cmd" flag to pass the whole JsonCalc script as
+    an argument.
+    The script stuffs the environment variables into an object.
+    The parts are collected in a "detail" member, as an array of objects.
+    The the <a target="_PARENT" href="../index.html?op=each">@</a> expression
+    that builds the array, we loop over 10 possible part slots, and use
+    "$partno[i] ? " to skip over ones that aren't used.
+    For the used slots, we get corresponding
+    <tt>partno</tt>, <tt>desc</tt>, and <tt>qty</tt> values.
+    The <tt>qty</tt> is converted from a string to an integer.
+    Since the expression isn't assigned to a variable,
+    JsonCalc simply outputs it.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=getenv">getenv()</td><td>Fetch an environment variable, given its name</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=parseInt">parseInt()</td><td>Convert a string to an integer number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=parseFloat">parseFloat()</td><td>Convert a string to a floating point number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?lit=environ">$NAME</td><td>Fetch an environment variable as though it was a const</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

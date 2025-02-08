@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Semicolons</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc semicolons">
+    <meta name="keywords" content="jsoncalc, article, semicolons">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>Semicolons</h1>
+    <h4 class="timestamp">2025-02-01</h4>
+    <center>
+    <blockquote class="abstract">
+      A brief discussion of where semicolons are required after statements,
+      where they're optional, and why.
+    </blockquote>
+    </center>
+
+    Most commands are terminated with either a semicolon (";") or a block
+    of code in curly braces ("{...}").
+    The only exceptions are the
+    <a target="_PARENT" href="../index.html?cmd=case">case</a> and
+    <a target="_PARENT" href="../index.html?cmd=default">default</a> commands,
+    which end with a colon (":").
+    <p>
+    But semicolons are optional at the end of a script;
+    Obviously the last command ends there.
+    This is particularly convenient for interactive use,
+    since each line of input is parsed as though it was a separate script file.
+    The context (variables and such) carry forward from one command line entry
+    to the next, but each interactively entered line is parsed as its own
+    separate command sequence.
+    This is why you don't need to place semicolons at the end of command lines.
+    <p>
+    This is also why you can't split long commands across multiple lines
+    interactively.
+    Script files can certainly contain multiple lines, but not interactively
+    entered commands.
+    It seems like a worthy compromise.
+    <p>
+    Semicolons are also optional before the "}" marking the end of a block
+    of code.
+    This one was easy to add, and it makes short functions a tiny bit easier
+    to enter.
+    <div class="example">
+      <kbd>function factorial(n) { return product(2..n) }</kbd>
+      Define a simple factorial function.
+      I could have put a ";" before the "}" but it isn't strictly necessary.
+    </div>
+
+  </body>
+</html>

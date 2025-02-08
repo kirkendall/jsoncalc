@@ -100,6 +100,7 @@ static struct {
 	{"ENDARRAY",	"]",	0,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	JCOP_OTHER},
 	{"ENDPAREN",	")",	0,	JCOP_OTHER},
+	{"ENVIRON",	"$",	169,	JCOP_OTHER},
 	{"EQ",		"==",	180,	JCOP_INFIX},
 	{"EQSTRICT",	"===",	180,	JCOP_INFIX},
 	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
@@ -119,6 +120,7 @@ static struct {
 	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
 	{"LJOIN",	"@<",	117,	JCOP_INFIX},
 	{"LT",		"<",	190,	JCOP_INFIX},
+	{"MAYBEASSIGN",	"=??",	110,	JCOP_INFIX},
 	{"MODULO",	"%",	220,	JCOP_INFIX},
 	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
 	{"NAME",	"NAM",	-1,	JCOP_OTHER},
@@ -270,6 +272,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_BETWEEN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
+	  case JSONOP_MAYBEASSIGN:
 		if (calc->LEFT) {
 			printf("(");
 			json_calc_dump(calc->LEFT);
@@ -336,6 +339,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_ENDOBJECT:
 	  case JSONOP_INVALID:
 	  case JSONOP_REGEX:
+	  case JSONOP_ENVIRON:
 		printf(" %s ", json_calc_op_name(calc->op));
 		break;
 	}
@@ -935,8 +939,10 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
+	  case JSONOP_ENVIRON:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
+	  case JSONOP_MAYBEASSIGN:
 		json_calc_free(jc->LEFT);
 		json_calc_free(jc->RIGHT);
 		break;
@@ -1132,9 +1138,13 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_BETWEEN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
+	  case JSONOP_MAYBEASSIGN:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
 		return jcisag(jc->LEFT) || jcisag(jc->RIGHT);
+
+	  case JSONOP_ENVIRON:
+		return jcisag(jc->RIGHT);
 
 	  case JSONOP_FNCALL:
 		/* If this is an aggregate function, that's our answer */
@@ -1281,7 +1291,6 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	/* If there's a LIMIT number, add a .slice(0,limit) function call */
 	if (sel->limit) {
 		jsoncalc_t *jzero;
-		char	buf[30];
 		token_t	t;
 		t.op = JSONOP_NUMBER;
 		t.full = "0";
@@ -1301,7 +1310,8 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
  *   ]  JSONOP_ENDARRAY
  *   {  JSONOP_STARTOBJECT (object generator)
  *   }  JSONOP_ENDOBJECT
- *   $  JSONOP_SUBSCRIPT (array subscript)
+ *   @  JSONOP_SUBSCRIPT (array subscript)
+ *   $  JSONOP_ENVIRON
  *   ?  JSONOP_QUESTION
  *   :  JSONOP_COLON
  *   &  JSONOP_AND
@@ -1364,8 +1374,13 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 			return FALSE;
 		break;
 
-	  case '$': /* JSONOP_SUBSCRIPT (array subscript) */
+	  case '@': /* JSONOP_SUBSCRIPT (array subscript) */
 		if (jc->op != JSONOP_SUBSCRIPT)
+			return FALSE;
+		break;
+
+	  case '$': /* JSONOP_ENVIRON ($ for environ variable, without name) */
+		if (jc->op != JSONOP_ENVIRON || jc->LEFT)
 			return FALSE;
 		break;
 
@@ -1520,6 +1535,7 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 		 && jc->op != JSONOP_SUBSCRIPT
 		 && jc->op != JSONOP_FNCALL
 		 && jc->op != JSONOP_REGEX
+		 && (jc->op != JSONOP_ENVIRON || jc->LEFT == NULL)
 		 && ((jc->op != JSONOP_NEGATE
 		   && jc->op != JSONOP_NOT)
 		  || jc->RIGHT == NULL)
@@ -1647,6 +1663,23 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		if ((PATTERN("^-x") || PATTERN("+-x")) && PREC(top[-2]->op)) {
 			/* Use x as the parameter */
 			top[-2]->RIGHT = top[-1];
+			stack->sp--;
+			continue;
+		}
+
+		/* The $name thing is like a unary, except that it might have
+		 * a subscript that's handled first.
+		 */
+		if (PATTERN("$n") && (!next || next->op != JSONOP_STARTARRAY)) {
+			/* Make the name be LHS of $ */
+			top[-2]->LEFT = top[-1];
+			stack->sp--;
+			continue;
+		} else if (PATTERN("$@")) {
+			/* Convert the subscript to a $env[n] */
+			json_calc_free(top[-2]);
+			top[-2] = top[-1];
+			top[-2]->op = JSONOP_ENVIRON;
 			stack->sp--;
 			continue;
 		}
@@ -2109,8 +2142,10 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_NESTRICT:
 	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
+	  case JSONOP_ENVIRON:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
+	  case JSONOP_MAYBEASSIGN:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, ag);
 		break;

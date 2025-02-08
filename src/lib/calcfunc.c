@@ -83,8 +83,11 @@ static json_t *jfn_lastIndexOf(json_t *args, void *agdata);
 static json_t *jfn_startsWith(json_t *args, void *agdata);
 static json_t *jfn_endsWith(json_t *args, void *agdata);
 static json_t *jfn_split(json_t *args, void *agdata);
+static json_t *jfn_getenv(json_t *args, void *agdata);
 static json_t *jfn_stringify(json_t *args, void *agdata);
 static json_t *jfn_parse(json_t *args, void *agdata);
+static json_t *jfn_parseInt(json_t *args, void *agdata);
+static json_t *jfn_parseFloat(json_t *args, void *agdata);
 static json_t *jfn_date(json_t *args, void *agdata);
 static json_t *jfn_time(json_t *args, void *agdata);
 static json_t *jfn_dateTime(json_t *args, void *agdata);
@@ -168,14 +171,17 @@ static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "arr|str, sr
 static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "arr|str, srch",	jfn_lastIndexOf};
 static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "str, srch",	jfn_startsWith};
 static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "str, srch",	jfn_endsWith};
-static jsonfunc_t split_jf       = {&endsWith_jf,    "split",       "str, delim, limit",		jfn_split};
-static jsonfunc_t stringify_jf   = {&split_jf,       "stringify",   "data",		jfn_stringify};
+static jsonfunc_t split_jf       = {&endsWith_jf,    "split",       "str, delim, limit",jfn_split};
+static jsonfunc_t getenv_jf      = {&split_jf,       "getenv",      "str",		jfn_getenv};
+static jsonfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data",		jfn_stringify};
 static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str",		jfn_parse};
-static jsonfunc_t date_jf        = {&parse_jf,       "date",        "str",		jfn_date};
+static jsonfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str",		jfn_parseInt};
+static jsonfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str",		jfn_parseFloat};
+static jsonfunc_t date_jf        = {&parseFloat_jf,  "date",        "str",		jfn_date};
 static jsonfunc_t time_jf        = {&date_jf,        "time",        "str, tz",		jfn_time};
 static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "str, tz",		jfn_dateTime};
 static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "str, tz",		jfn_timeZone};
-static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "str|num, unit",		jfn_period};
+static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "str|num, unit",	jfn_period};
 static jsonfunc_t count_jf       = {&period_jf,      "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -661,7 +667,16 @@ static json_t *jfn_heightOf(json_t *args, void *agdata)
 			if (*scan == '\n')
 				height++;
 		return json_from_int(height);
+
+	case JSON_BADTOKEN:
+	case JSON_NEWLINE:
+	case JSON_ENDOBJECT:
+	case JSON_ENDARRAY:
+	case JSON_KEY:
+		/* can't happen */
+		abort();
 	}
+	return json_null(); /* to keep the compiler happy */
 }
 
 /* keys(obj) returns an array of key names, as strings */
@@ -1748,7 +1763,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 	size_t	delimlen;
 	regex_t *regex;
 	regmatch_t matches[10];
-	int	nelems, limit, all;
+	int	nelems, limit, all, regexmatch;
 	json_t	*result;
 	wchar_t	wc;	/* found multibyte char */
 	int	len;	/* length in bytes of a multibyte char */
@@ -1759,8 +1774,14 @@ static json_t *jfn_split(json_t *args, void *agdata)
 		return json_error_null(0, "%s() requires a string as its first parameter", "split");
 	str = args->first->text;
 	djson = args->first->next;
-	if (!djson)
-		return json_error_null(0, "%s() requires a delimiter as its second parameter", "split");
+	if (!djson || (json_is_null(djson) && agdata && !((jsoncalc_t *)agdata)->u.regex.preg)) {
+		/* If no delimiter (not even a regex) then return the string
+		 * as the only member of an array.
+		 */
+		result = json_array();
+		json_append(result, json_string(args->first->text, -1));
+		return result;
+	}
 	regex = NULL;
 	delim = NULL;
 	if (json_is_null(djson) && agdata && ((jsoncalc_t *)agdata)->u.regex.preg)
@@ -1824,7 +1845,9 @@ static json_t *jfn_split(json_t *args, void *agdata)
 				next = &str[len] + delimlen;
 		} else /* regex */ {
 			/* Search for the next match */
-			if (0 == regexec(regex, str, 10, matches, 0)) {
+			regexmatch = (0 == regexec(regex, str, 10, matches, 0));
+
+			if (regexmatch) {
 				/* Found! matches[0] contains overall match */
 				len = matches[0].rm_so;
 				next = &str[matches[0].rm_eo];
@@ -1853,7 +1876,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 		nelems++;
 
 		/* If we're using regexp, there may be subexpressions too */
-		if (regex) {
+		if (regex && regexmatch) {
 			char *tail = next;
 			for (i = 1; (limit == 0 || nelems < limit - all) && i <= 9; i++) {
 				if (matches[i].rm_so >= 0) {
@@ -1867,9 +1890,15 @@ static json_t *jfn_split(json_t *args, void *agdata)
 			 * if "all" is in effect, everything after the last
 			 * subexpression will be included in the last element.
 			 */
-			if (limit > 0 && nelems >= limit - all)
+			if (limit > 0 && nelems >= limit - all) {
 				next = tail;
+				len = 0;
+			}
 		}
+
+		/* If we hit the end, set len to 0 */
+		if (!*next)
+			len = 0;
 	}
 
 	/* If we hit the limit and are doing "all", then copy everything left
@@ -1883,6 +1912,24 @@ static json_t *jfn_split(json_t *args, void *agdata)
 }
 
 
+
+/* Fetch an environment variable */
+static json_t *jfn_getenv(json_t *args, void *agdata)
+{
+	char	*value;
+
+	/* If not given a string parameter, then fail */
+	if (!args->first || args->first->type != JSON_STRING || args->first->next)
+		return json_error_null(1, "getenv() expects a string parameter");
+
+	/* Fetch the value of the environment variable.  If no such variable
+	 * exists, then get NULL.
+	 */
+	value = getenv(args->first->text);
+	if (!value)
+		return json_null();
+	return json_string(value, -1);
+}
 
 /* Convert data to a JSON string */
 static json_t *jfn_stringify(json_t *args, void *agdata)
@@ -1925,6 +1972,51 @@ static json_t *jfn_parse(json_t *args, void *agdata)
 	/* Parse it */
 	return json_parse_string(data->text);
 }
+
+/* Convert a string to an integer */
+static json_t *jfn_parseInt(json_t *args, void *agdata)
+{
+	int	value;
+	if (args->first->type == JSON_STRING
+	 || (args->first->type == JSON_NUMBER && args->first->text[0])) {
+		char	*digits = args->first->text;
+		if (*digits == '0') {
+			int	radix;
+			switch (digits[1]) {
+			case 'x': case 'X': radix = 16;	digits += 2; break;
+			case 'o': case 'O': radix = 8;	digits += 2; break;
+			case 'b': case 'B': radix = 2;	digits += 2; break;
+			default:	    radix = 8;
+			}
+			value = (int)strtol(digits, NULL, radix);
+		} else
+			value = atoi(digits);
+	} else if (args->first->type == JSON_NUMBER && args->first->text[1] == 'i')
+		value = JSON_INT(args->first);
+	else if (args->first->type == JSON_NUMBER /* text[1] == 'f' */)
+		value = (int)JSON_DOUBLE(args->first);
+	else
+		return json_error_null(1, "%s() expects a string", "parseInt");
+
+	return json_from_int(value);
+}
+
+/* Convert a string to a floating point number */
+static json_t *jfn_parseFloat(json_t *args, void *agdata)
+{
+	double	value;
+	if (args->first->type == JSON_STRING
+	 || (args->first->type == JSON_NUMBER && args->first->text[0]))
+		value = atof(args->first->text);
+	else if (args->first->type == JSON_NUMBER && args->first->text[1] == 'i')
+		value = (double)JSON_INT(args->first);
+	else if (args->first->type == JSON_NUMBER /* text[1] == 'f' */)
+		value = JSON_DOUBLE(args->first);
+	else
+		return json_error_null(1, "%s() expects a string", "parseFloat");
+	return json_from_double(value);
+}
+
 
 /* Return an ISO date string */
 static json_t *jfn_date(json_t *args, void *agdata)

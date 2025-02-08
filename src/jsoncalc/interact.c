@@ -24,9 +24,12 @@ static void catchinterupt(int signo)
 /* This is called by readline() when it receives a ^C */
 static void catchRLinterupt()
 {
+	/* Wipe out the partially-entered line */
 	rl_free_line_state();
 	rl_cleanup_after_signal();
 	rl_replace_line("", 0);
+
+	/* Start a new line */
 	puts("");
 	rl_on_new_line();
 	rl_redisplay();
@@ -45,7 +48,7 @@ static char *jcreadline(const char *prompt)
 
 	/* Read a line into a dynamic buffer; */
 	if (!inhibit_readline) {
-		expr = readline("JsonCalc: ");
+		expr = readline(prompt);
 		if (!expr)
 			return NULL;
 		i = strlen(expr);

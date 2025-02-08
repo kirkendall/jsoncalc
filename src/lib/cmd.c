@@ -2075,7 +2075,9 @@ static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* If not an assignment, then it's an output.  Output it! */
-	if (cmd->calc->op != JSONOP_ASSIGN && cmd->calc->op != JSONOP_APPEND)
+	if (cmd->calc->op != JSONOP_ASSIGN
+	 && cmd->calc->op != JSONOP_APPEND
+	 && cmd->calc->op != JSONOP_MAYBEASSIGN)
 		json_print(result, NULL);
 
 	/* Either way, free the result */

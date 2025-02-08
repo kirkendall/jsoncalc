@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>getenv</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc getenv - Fetch the value of an environment variable">
+    <meta name="keywords" content="string, jsoncalc, function reference, getenv">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>getenv - Fetch the value of an environment variable</h1>
+    <dl>
+      <dt>getenv(<var>str</var>)
+      <dd>
+      Fetch the value of an enviroment variable.
+      The <var>str</var> parameter is an expression providing the name of
+      variable to fetch.
+      The name must be a string, and the value will also always be a string
+      unless no such environment variable exists, in which case <b>null</b>
+      is returned.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>getenv("TERM")</kbd>
+	<samp>"xterm"</samp>
+        Fetch the value of the $TERM environment variable.
+      </div>
+
+      <div class="example">
+	<kbd>getenv($PAGER.toUpperCase())</kbd>
+	<samp>"-s1"</samp>
+        First fetch the value of the $PAGER environment variable,
+        which indicates your preferred pager program &mdash; usually either
+        "less" or "more".
+        Both of those programs allow you to store default setting in the
+        environment as uppercase versions of their names, so the above
+        expression should output the default settings for your preferred
+        pager &mdash; either $LESS or $MORE.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The value is always a string.  You can use
+            <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
+            to convert a string to an integer.
+            <div class="example">
+              <kbd>parseInt(getenv("COLUMNS"))</kbd>
+              <samp>80</samp>
+              Fetch the value of $COLUMNS, and convert it to an integer.
+              Many environments set $COLUMNS to the character width of the
+              terminal.
+	    </div>
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?lit=environ">$NAME</a></td><td>Alternative method for accessing environment variables</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a></td><td>Convert a string to an integer number</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=parseFloat">parseFloat()</a></td><td>Convert a string to a floating point number</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

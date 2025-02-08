@@ -11,14 +11,18 @@
     <h1>Assignment operators</h1>
     <table class="opList">
       <tr><td class="left">lvalue</td><td class="op">=</td><td class="right">value</td><td class="opdesc">Assign</td></tr>
+      <tr><td class="left">lvalue</td><td class="op">=??</td><td class="right">value</td><td class="opdesc">Assign, unless the <var>value</var> is <strong>null</strong></td></tr>
       <tr><td class="left">lvalue</td><td class="op">[] =</td><td class="right">value</td><td class="opdesc">Append to an array</td></tr>
     </table>
     The assign and append operators change the values of variables,
     or parts of variables.
     <p>
     An "lvalue" is a subset of expression syntax that starts with a
-    variable name, and may then use a mixture of subscripts and the
-    <a href="dot.html">.<var>key</var></a> operator to identify the
+    variable name, and may then use a mixture of
+    <a target="_PARENT" href="../index.html?op=subscript">subscripts</a>
+    and the
+    <a target="_PARENT" href="../index.html?op=dot">.<var>key</var></a>
+    operator to identify the
     data to be changed.  Subscript values may use complex expressions.
     <p>
     The use of empty brackets is a special notation, used only in conjunction
@@ -56,6 +60,17 @@
       </div>
 
       <div class="example">
+        <kbd>var cust={first:$first,last:$past}; cust.custno=$custno; custno</kbd>
+        <samp>{"first":"John","last":"Smith"}</samp>
+        This builds an object using
+        <a target="_PARENT" href="../index.html?lit=environ">environment variables</a>
+        named "first", "last" and "custno".
+        First creates an object containing the values of "first" and "last".
+        Then it adds "custno" but only if "custno" exists.
+        The sample output assumes first=John last=Smith but custno is unset.
+      </div>
+
+      <div class="example">
 	<kbd>var a = [1,2,3]; a[] = 4; a[] = 5; a</kbd>
 	<samp>[1,2,3,4,5]</samp>
         This is the "append" version of assignment, as indicated by the empty
@@ -85,13 +100,24 @@
 
 	<li>Currently there are no <tt>+=</tt> operators or anything like that.
 	    No <tt>++</tt> or <tt>--</tt> operators either. Just <tt>=</tt>.
+	    I may add those other assignments later, if there's demand.
 
+	<li>The if-not-null assignment operator is <tt>=??</tt> to allude to the
+	    "<a target="_PARENT" href="../index.html?op=coalesce">??</a>"
+	    coalesce operator.
+	    However, using "<tt>??=</tt>" as the operator would have implied
+	    that the assignment should occur if the left hand side is not null
+	    (like "<tt>a = a ?? b</tt>"),
+	    which is totally different from the behavior we want.
+	    We want to assign unless the right had side is null.
+	    So "<tt>??=</tt>" it is.
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=equal">=</a> - Equality 0perators
+      <a target="_PARENT" href="../index.html?op=equal">=</a> - Equality 0perators<br/>
+      <a target="_PARENT" href="../index.html?op=coalesce">??</a> - Coalesce 0perators
     </details>
 
   </body>

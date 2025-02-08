@@ -54,6 +54,10 @@ body a:hover, body a:hover {
 	margin-top: 0;
 }
 
+body.article h2 {
+	background: linear-gradient(179deg, rgba(0,0,0,0.1), transparent, transparent);
+}
+
 #mainpanels a,
 #mainpanels a:visited {
 	border: 3px outset #f0f0f0;
@@ -140,6 +144,9 @@ dt {
 
 .sidebar a {
 	display: block;
+	margin-left: 1.5em;
+	margin-top: 0.33em;
+	text-indent: -1em;
 }
 
 #mainpanels article a.article {

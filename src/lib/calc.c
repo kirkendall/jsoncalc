@@ -478,6 +478,45 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		result = json_copy(json_context_by_key(context, calc->u.text, NULL));
 		break;
 
+	  case JSONOP_ENVIRON:
+		/* Either $name or $name[subscr].  calc->LEFT is always a
+		 * JSONOP_NAME, and calc->RIGHT is NULL or subscript expression.
+		 */
+		assert(calc->LEFT->op == JSONOP_NAME);
+		if (calc->RIGHT) {
+			char	*name, *sub;
+			USE_RIGHT_OPERAND(calc);
+			if (right->type == JSON_STRING
+			 || right->type == JSON_BOOL
+			 || (right->type == JSON_NUMBER && right->text[0])) {
+				name = (char *)malloc(strlen(calc->LEFT->u.text) + strlen(right->text) + 1);
+				strcpy(name, calc->LEFT->u.text);
+				strcat(name, right->text);
+				str = getenv(name);
+				free(name);
+			} else {
+				sub = json_serialize(right, NULL);
+				name = (char *)malloc(strlen(calc->LEFT->u.text) + strlen(sub) + 1);
+				strcpy(name, calc->LEFT->u.text);
+				strcat(name, sub);
+				str = getenv(name);
+				free(name);
+				free(sub);
+			}
+		} else {
+			str = getenv(calc->LEFT->u.text);
+		}
+
+		/* If we found a value, then convert it to a json_t;
+		 * otherwise return a null.
+		 */
+		if (str)
+			result = json_string(str, -1);
+		else
+			result = json_null();
+		str = NULL;
+		break;
+
 	  case JSONOP_ARRAY:
 		/* Append the value of each element into an array. */
 		result = json_array();
@@ -1239,6 +1278,23 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		if (result == NULL) {
 			/* success, so the right value is still used */
 			freeright = NULL;
+		}
+		break;
+
+	  case JSONOP_MAYBEASSIGN:
+		USE_RIGHT_OPERAND(calc);
+
+		/* If the right operand is null, do nothing.  Otherwise... */
+		if (!json_is_null(right)) {
+			/* We always want a copy */
+			if (!freeright)
+				freeright = right = json_copy(right);
+
+			result = json_context_assign(calc->LEFT, right, context);
+			if (result == NULL) {
+				/* success, so the right value is still used */
+				freeright = NULL;
+			}
 		}
 		break;
 

@@ -10,7 +10,8 @@
   <body>
     <h1>split - Split a string into an array of substrings</h1>
     <dl>
-      <dt>split(<var>str</var>, <var>delim</var>)
+      <dt>split(<var>str</var>)
+      <br/>split(<var>str</var>, <var>delim</var>)
       <br/>split(<var>str</var>, <var>delim</var>, <var>limit</var>)
       <br/>split(<var>str</var>, <var>regex</var>)
       <br/>split(<var>str</var>, <var>regex</var>, <var>limit</var>)
@@ -19,6 +20,10 @@
       into an array of substrings,
       using either <var>delim</var> (a string)
       or <var>regex</var> (a regular expression) as the delimiter.
+      <p>
+      If no delimiter is specified, then <var>str</var> is simply wrapped
+      in an array.
+      Honestly, this isn't useful but it is standard.
       <p>
       When using a string delimiter,
       instances of <var>delim</var> are searched for within the string.
@@ -39,7 +44,7 @@
       upper limit on the length of the result array.  If <var>limit</var>
       is positive, then the result array is simply clipped.
       If <var>limit</var> is negative, then its absolute value is used as
-      the maxximum length, and the last entry in the array will include all
+      the maximum length, and the last entry in the array will include all
       remaining text, even if that text contains more text that matches the
       delimiter.
     </dl>
@@ -78,6 +83,14 @@
         but since the value also contains an "=", it gets clipped.
         Using a <var>limit</var> of -2 fixes that,
         because negative limits include all remaining text in the last element.
+      </div>
+
+      <div class="example">
+        <kbd>"simple".split()</kbd>
+        <samp>["simple"]</samp>
+        With no delimiter, <tt>split()</tt> doesn't split.
+        The entire argument string is simply returned as the only element
+        of an array.
       </div>
 
     </details>

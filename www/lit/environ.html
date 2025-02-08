@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Environment Variables</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Environment Variables">
+    <meta name="keywords" content="environment variables">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>Environment Variables</h1>
+    JsonCalc can access environment variables easily, by prefixing its
+    name with a "$".
+    For example, $PATH will fetch the value of the PATH environment variable.
+    <p>
+    Environment variables' values are always strings.
+    Never arrays.
+    If you need an array of values, the simplest way to handle that is to
+    append a subscript to an environment variable's name.
+    For example, you might have $file1, $file2, $file3, and so on.
+    You could access them in JsonCalc using exactly those same names,
+    but you also have the option of using a subscript, such as $file[1].
+    The advantage is that the subscript can be computed; the subscript
+    expression is evaluated, converted to a string, and appended to the
+    given name to produce the full name of the environment variable.
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>$COLUMNS</kbd>
+	<samp>"80"</samp>
+        Fetch the value of the $COLUMNS environment variable.
+        On many systems, this is the character width of the terminal.
+        Note that it is returned as a string, though, so you might want to 
+        use <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
+        to convert it to a number.
+      </div>
+
+      <div class="example">
+        <kbd>1 .. 10 @ $file[this]</kbd>
+        <samp>["foo", "bar", "tmp"]</samp>
+	Collect the values of $file1 through $file10 into an array.
+	Unset values are omitted by the <a target="_PARENT" href="../index.html?op=each">@</a> operator, so we only get three filenames.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Environment variables are usually managed via a shell such as
+            <var>bash</var> in Linux/Unix.
+            Shells usually access variables' values, including those of
+            environment variables, by prefixing the name with $ too.
+
+	<li>The <var>bash</var> shell has its own way of dealing with arrays,
+	    but it doesn't carry over to environment variables.
+	    JsonCalc's subscripting is entirely different from <var>bash</var>'s.
+
+	<li>You can also use <a target="_PARENT" href="../index.html?f=getenv">getenv(expr)</a> to fetch the value of an environment variable.
+	   That can be handy when you want to compute the whole name of the
+	   variable, instead of just the tail end of it.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=each">@</a> - Apply an expression to each member of an array<br/>
+      <a target="_PARENT" href="../index.html?f=getenv">getenv()</a> - Fetch an environment variable's value<br/>
+    </details>
+
+  </body>
+</html>

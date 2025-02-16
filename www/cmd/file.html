@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>file</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc file - Select a JSON file to use">
+    <meta name="keywords" content="command, command reference, file">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>file - Select a JSON file to use</h1>
+    <dl>
+      <dt>file 
+      <br/>file +
+      <br/>file -
+      <br/>file <var>filename</var>
+      <br/>file (<var>expression</var>)
+      <dd>
+      When you invoke the <b>jsoncalc</b> program with multiple JSON files
+      named on the command line, it normally loads them one at a time for
+      processing.
+      The <tt>file</tt> command lets you switch between files.
+      <p>
+      This is mostly for when you're running <b>jsoncalc</b> interactively.
+      In batch mode, it runs the commands you provide via
+      <b>-c</b><var>command</var> or <b>-f</b><var>scriptfile</var>
+      separately on each named file.
+      <p>
+      When <tt>file</tt> is invoked without any parameters, it displays
+      the name of the current file.
+      The whole list is stored in a table named <tt>files</tt>,
+      so running plural <tt>files</tt> will list all files while running
+      singular <tt>file</tt> will tell you the one file you're using now.
+      <p>
+      Running <tt>file</tt> with a <tt>+</tt> or <tt>-</tt> parameter will
+      move forward or backward through the <tt>files</tt> list.
+      <p>
+      You can also select which file to work with by giving its name.
+      The name can be either plain old text
+      such as "<tt>file mydata.json</tt>" to switch to "mydata.json",
+      or an expression in parentheses which returns a string providing the
+      name.
+      If the requested name isn't in the <tt>files</tt> table already,
+      then it will be appended to the table.
+      Either way, the file then becomes the current file.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>file</kbd>
+	<samp>first.json</samp>
+	<kbd>file +</kbd>
+	<samp>second.json</samp>
+        These examples assume you started by running "<tt>jsoncalc first.json second.json third.json</tt>".
+        Running the <tt>file</tt> command without arguments causes the name of
+        the current file to be displayed.
+        Running <tt>file +</tt> moves to the next file, and displays its name.
+      </div>
+
+      <div class="example">
+	<kbd>file fourth.json</kbd>
+	<samp>fourth.json</samp>
+        This loads "fourth.json" as the current file.
+        It is appended to the <tt>files</tt> table as the fourth entry.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The index of the current file within the <tt>files</tt> table
+            can be obtained from a <tt>current_file</tt> variable.
+            It is initially <tt>0</tt> to indicate that you're on the first
+            file.  Running <tt>file +</tt> will increment it.
+
+	<li>The <tt>file</tt> command without parameters displays the name
+	    of the current file, but if you want to use that name in an
+	    expression then you can use <tt>files[current_file].filename</tt>.
+
+	<li>The contents of the current file can be found in a variable
+	    named <tt>data</tt>.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

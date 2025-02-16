@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>function</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc function - Declare a function">
+    <meta name="keywords" content="command, command reference, function">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>function - Declare a function</h1>
+    <dl>
+      <dt>function <var>name</var> (<var>arglist</var>) <var>cmd</var>
+      <dt>function <var>name</var> (<var>arglist</var>) ;
+      <dt>function <var>name</var>
+      <dd>
+      The <tt>function</tt> command lets you define functions.
+      <p>
+      Usually you'll invoke <tt>function</tt> with the name of the function
+      to define, a parenthesized list of parameters, and a <var>cmd</var> to run
+      &mdash; typically a series of commands enclosed in curly braces,
+      but it could also be a single command terminated with a semicolon.
+      This adds a new function, or replaces an existing one.
+      <p>
+      You can also skip the <var>cmd</var>.  This creates the function but
+      doesn't specify a body for it.
+      Invoking the function will do nothing.
+      This version of the <tt>function</tt> command exists mostly because the
+      parser won't let you try to call a function that hasn't been defined,
+      so if you're writing a recursive function you need to define it twice
+      &mdash; once with an empty body just so it exists, and then with the
+      recursive body which is allowed to recursively call itself.
+      <p>
+      Lastly, you can invoke <tt>function</tt> with just the name of a function
+      to get a summary description of the function.
+      This works even for the built-in functions.
+      <p>
+      The <var>arglist</var> can be empty (just parentheses with nothing in them).
+      Generally, though, it is a comma-delimited list of argument names.
+      Each name may be followed by an "=" and an expression that provides a
+      default value.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>function backward(arr) { var out = []; for (arr) out = concat([this], out); return out; }<br/>
+	  backward(1..5)</kbd>
+	<samp>[5,4,3,2,1]</samp>
+        This defines a function that reverses the elements of an array.
+        It's pretty basic &mdash; it just uses a
+        <a target="_PARENT" href="../index.html?cmd=for">for</a>-loop and the
+        <a target="_PARENT" href="../index.html?f=concat">concat()</a> function
+        to insert each element of the argument array to the front of the result
+        array.
+        <p>
+        Please forgive the ugly formatting.  It is presented this way
+        so the entire <tt>function</tt> command is on a single line, which is
+        necessary when you're entering commands into JsonCalc interactively.
+        In script files, you can split it across multiple lines to improve
+        readability.
+      </div>
+
+      <div class="example">
+	<kbd>function backward</kbd>
+	<samp>function backward(arr)</samp>
+	<kbd>function touppercase</kbd>
+	<samp>builtin function toUpperCase(str)</samp>
+	Invoking <tt>function</tt> with a name but no argument list causes
+	JsonCalc to output what it knows about the named function.
+	This works for both user-defined and built-in functions.
+      </div>
+
+      <div class="example">
+	<kbd>function factorial(n);<br/>
+	function factorial(n) { if (n&lt;2) return 1; return n * factorial(n-1);}<br/>
+	factorial(5)</kbd>
+	<samp>120</samp>
+        Here's an example of a recursive function.
+        First we declare the <tt>factorial()</tt> function without a body.
+        The function has to exist before we can use it,
+        even for a self-reference in a recursive function.
+        Once the function exists (albeit in a 
+        <p>
+        Again, please forgive the ugly formatting.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>function</tt> command is unusual in that it is executed
+            immediately when it is parsed, and after that it is omitted from
+            the series of parsed commands.
+            (In practice, this doesn't matter much.)
+
+	<li>You can't use <tt>function</tt> to redefine any of the built-in
+	    functions.
+
+	<li>JavaScript doesn't support "= <var>defaultvalue</var>" in the
+	    <var>arglist</var>.  JsonCalc doesn't support JavaScripts "fill"
+	    operator in arglist.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

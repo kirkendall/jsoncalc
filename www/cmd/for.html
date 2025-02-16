@@ -3,65 +3,43 @@
   <head>
     <title>for</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc for - Iterate over an array">
+    <meta name="description" content="jsoncalc for - Loop over the elements of an array">
     <meta name="keywords" content="command, command reference, for">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>for - Iterate over an array</h1>
+    <h1>for - Loop over the elements of an array</h1>
     <dl>
-      <dt>for (<var>array</var>) <var>cmds</var>
-      <br/>for (<var>key</var> = <var>array</var>) <var>cmds</var>
-      <br/>for (var <var>key</var> = <var>array</var>) <var>cmds</var>
-      <br/>for (<var>key</var> of <var>array</var>) <var>cmds</var>
-      <br/>for (var <var>key</var> of <var>array</var>) <var>cmds</var>
+      <dt>for (<var>array</var>) <var>cmd</var>
+      <bt/>for (<var>variable</var> = <var>array</var>) <var>cmd</var>
+      <bt/>for (<var>variable</var> of <var>array</var>) <var>cmd</var>
+      <bt/>for (var <var>variable</var> = <var>array</var>) <var>cmd</var>
+      <bt/>for (var <var>variable</var> of <var>array</var>) <var>cmd</var>
       <dd>
-      For each element of an array,
-      execute block of code.
+      This executes <var>cmd</var> for each element of <var>array</var>.
       <p>
-      You can supply a key (variable name) that the code can use to access
-      the current element.
-      An "=" or "of" keyword should appear after the key; there is no
-      difference between those two symbols in this context.
-      Preceding the key name with the keyword <tt>var</tt> causes a new
-      variable to be created to hold the element values; otherwise, the
-      variable must already exist.
-      If you don't supply a key (variable) then the code block can still
-      access the element via the <tt>this</tt> keyword.
+      Within <var>cmd</var> the value of the current element is available
+      via the <var>variable</var> named after the "(";
+      if you don't name a variable, then it will be available as "this".
+      The <tt>var</tt> keyword declares a new variable with the new name;
+      if you give a variable name without <tt>var</tt> then it must have
+      already been declared before the <tt>for()...</tt> command.
       <p>
-      Within the code block, you can use the
-      <a target="_PARENT" href="../index.html?cmd=break">break</a>
-      command to prematurely terminate the loop.
-      <p>
-      If you declared the looping variable via <tt>var</tt> <var>key</var>,
-      then the variable will be freed when the loop terminated.
-      If you used a <var>key</var> without the keyword <tt>var</tt> to
-      use an existing variable, then the variable will contain the last
-      element scanned.
-
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>for (1..5) this</kbd>
-	<samp>1<br/>
-	2<br/>
-	3<br/>
-	4<br/>
-	5</samp>
-	This iterates over an array of integers from 1 to 5.
-	For each iteration, <tt>this</tt> is set to the current element's value.
-      </div>
-
-      <div class="example">
-	<kbd>for (var i = 1..5) if (i % 2 == 0) i</kbd>
+	<kbd>for (var i = 1..5) { i * 2; }</kbd>
 	<samp>2<br/>
-	4</samp>
-        This also loops over the integers from 1 to 5, but this time we're
-        using an explicitly named variable to store the current element's value.
-        Also, the code block is more complex &mdash; it tests whether the
-        value is even, and only outputs the even numbers.
+	4<br/>
+	6<br/>
+	8<br/>
+	10</samp>
+        The expression "<tt>1..5</tt>" returns the array <tt>[1,2,3,4,5]</tt>
+        The <tt>for</tt> command loops over that array, setting <tt>i</tt> to
+        each element's value while it executes the body of the loop.
+        The body just outputs <tt>i*2</tt>.
       </div>
 
     </details>
@@ -70,26 +48,40 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>The traditional <tt>for (<var>initialize</var>; <var>test</var>; <var>increment</var>)</tt>
-	    version of the for-loop is not currently supported.
-	    Neither is JavaScript's <tt>for (<var>key</var> in <var>array</var>)</tt> version
-	    to loop over the element subscripts instead of their values.
-	    These may be implemented in a later version of JsonCalc,
-	    but for now I haven't missed them.
+        <li>If you want to loop over a range of integers, consider using
+	    the <a target="_PARENT" href="../index.html?op=dot">i..j</a>
+	    operator.
+	    <div class="example">
+	      <kbd>for (var i = 1 .. 5) i</kbd>
+	      <samp>1
+	        <br/>2
+	        <br/>3
+	        <br/>4
+	        <br/>5
+	      </samp>
+	      The <tt>1..5</tt> expression returns the array
+	      <tt>[1,2,3,4,5]</tt>, so the statement loops over that.
+	    </div>
 
-	<li>The <a target="_PARENT" href="../index.html?op=each">@ and @@</a> operators
-	    also loop over an array, but their right-hand-side is an expression,
-	    not a block of code.
-	    Both have their uses.
+	<li>The "=" and "of" symbols both do exactly the same thing here.
+	    Most C-like languages (other than C itself) use "in" to loop over
+	    the values of an array, but JavaScript uses "in" to loop over the
+	    subscripts of an array instead of the values, which is much more
+	    cumbersome.  JavaScript later added "of" to loop over values as
+	    an afterthought, but it's still weird.  JsonCalc supports "of"
+	    for cross-compatibility, but "=" is more intuitive.
+
+	<li>The traditional <tt>for(</tt><var>initialize;test;increment</var><tt>)</tt>
+	    version of the for-loop is not supported by JsonCalc at this time.
+
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td><a target="_PARENT" href="../index.html?cmd=break">break</a></td><td>Terminate a loop immediately, or end a switch case.</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?cmd=while">while</a></td><td>Loop while a condition is true.</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=each">@ and @@</a></td><td>Apply an expression to each element, and collect the results in a new array.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=while">while()...</a></td><td>Loop until a condition becomes false</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=dot">i..j</a></td><td>Return an array of integers over a given range</td></tr>
       </table>
     </details>
 

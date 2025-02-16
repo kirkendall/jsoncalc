@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>return</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc return - Exit a function, possibly with a value">
+    <meta name="keywords" content="command, command reference, return">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>return - Exit a function, possibly with a value</h1>
+    <dl>
+      <dt>return
+      <br/>return <var>expression</var>
+      <dd>
+      The <tt>return</tt> command exits a function.
+      If you provide an <var>expression</var> then the result of that expression
+      is used as the function's value; otherwise <tt>null</tt> is used.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>return</kbd>
+	<samp>RETURNED A VALUE: null</samp>
+        The <tt>return</tt> command isn't very useful outside of a function body.
+      </div>
+
+      <div class="example">
+	<kbd>function square(x) { return x * x; }</kbd>
+	<kbd>square(7)</kbd>
+	<samp>49</samp>
+        Here we define a function which returns a number multiplied by itself,
+        and then we use that function.
+      </div>
+
+    </details>
+
+  </body>
+</html>

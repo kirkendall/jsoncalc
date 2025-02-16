@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>import</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc import - Load JsonCalc code from another file">
+    <meta name="keywords" content="command, command reference, import">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>import - Load JsonCalc code from another file</h1>
+    <dl>
+      <dt>import <var>filename</var>
+      <br/>import (<var>expression</var>)
+      <dd>
+      Load JsonCalc code from another file.
+      This can be used to split large scripts into multiple files, so you
+      load one script and it uses <tt>import</tt> to load the rest.
+      This can also be handy when running interactively if you decide that
+      a written-but-not-loaded script might be handy for analyzing or
+      converting the data.
+      <p>
+      The <tt>import</tt> command doesn't stop you from loading the same
+      file twice.
+      This is intentional.
+      You might find a bug in a script, edit it in another window to correct
+      the bug, and then use <tt>import</tt> to reload the corrected version.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>import stats.jc</kbd>
+        This reads any variables or functions from stats.jc, so they're
+        available for your script or interactive session.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>I used the name "import" to make this command easier for JavaScript
+            programmers to find, but are significant differences.
+            <ul>
+              <li>JavaScript can't load from files, only from HTTP/HTTPS URLs.
+                  JsonCalc can only load from files.
+	      <li>JavaScript has extra keywords to control which parts of the
+	          external script get loaded.  JsonCalc just loads everything.
+	      <li>JavaScript requires quotes around the external script's name.
+	          JsonCalc doesn't, partly for convenience and partly to make
+	          <tt>import</tt> more closely resemble the
+	          <a target="_PARENT" href="../index.html?cmd=file">file</a>
+	          command for loading data files.
+	    </ul>
+
+	<li>For security reasons, the script file's name can't start with "/"
+	    or contains "../".
+
+	<li>There is also a <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a> command
+	    which loads plugins.
+	    Plugins can be implemented as either
+	    a binary file containing native code, or
+	    a JsonCalc script, or
+	    a mixture of the two.
+	    Since both can load JsonCalc scripts, there is a bit of overlap.
+	    The <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
+	    command is more powerful, but it looks for plugins to load in
+	    separate directories.
+	    Use <tt>import</tt> for your scripts, and
+	    <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a> for 
+	    code contributed by other programmers.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?cmd=file">file</a> &mdash; Load a data file<br/>
+      <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a> &mdash; Load a plugin</br>
+    </details>
+
+  </body>
+</html>

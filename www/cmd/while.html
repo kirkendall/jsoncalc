@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>while</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc while - Loop until a condition becomes false">
+    <meta name="keywords" content="command, command reference, while">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>while - Loop until a condition becomes false</h1>
+    <dl>
+      <dt>while (<var>condition</var>) <var>cmd</var>
+      <dd>
+      This is the standard "while" loop.
+      It evaluates the <var>condition</var>, and
+      if the condition is <tt>true</tt> then it runs <var>cmd</var> and
+      loops to evaluates the condition again.
+      The <cmd> can be either a single command terminated with a semicolon,
+      or a series of comments enclosed in curly braces without a final semicolon.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var x = 1; while ( x &lt;= 4 ) { x; x = x + 1; }</kbd>
+	<samp>1<br/>2<br/>3<br/>4</samp>
+        Variable <tt>x</tt> is initially 1, which is &lt;= 4 so the body of
+        the loop is executed.
+        The body outputs <tt>x</tt> and then increments it.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=if">if()...</td><td>Execute a command conditionally</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=for">for()...</td><td>Loop over the values of an array</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

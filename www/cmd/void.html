@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>void</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc void - Evaluate an expression and discard the result">
+    <meta name="keywords" content="command, command reference, void">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>void - Evaluate an expression and discard the result</h1>
+    <dl>
+      <dt>void <var>expression</var>
+      <dd>
+      It is possible to write functions that have side-effects.
+      If you want to run a function for its side-effect without displaying
+      the returned value, then you can run it as a parameter to a <tt>void</tt>
+      command.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var i = 0;</kbd>
+	<kbd>function incr() i = i + 1;</kbd>
+	<kbd>void incr()</kbd>
+	<kbd>i</kbd>
+	<samp>1</samp>
+	<samp>incr()</samp>
+	<samp>null</samp>
+	<kbd>i</kbd>
+	<samp>2</samp>
+        The <tt>incr()</tt> function increments <tt>i</tt>.
+        The function will also return <tt>null</tt> but we don't care about that.
+        When we invoke it with <tt>void</tt> its return value is discarded,
+        but without <tt>void</tt> the <tt>null</tt> is displayed.
+      </div>
+
+    </details>
+
+  </body>
+</html>

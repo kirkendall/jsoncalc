@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>if</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc if - Conditionally execute a command">
+    <meta name="keywords" content="command, command reference, if">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>if - Conditionally execute a command</h1>
+    <dl>
+      <dt>if (<var>condition</var>) <var>thencmd</var>
+      <br/>if (<var>condition</var>) <var>thencmd</var> else <var>elsecmd</var>
+      <dd>
+      The standard conditional statement, with optional "else" clause.
+      The <var>thencmd</var> and <var>elsecmd</var> can be either a single
+      command followed by a semicolon, or a group of commands enclosed in
+      curly braces without a semicolon.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>if (now % 2 == 0) "even"; else "odd"</kbd>
+	<samp>"even"</samp>
+	The <tt>now</tt> variable is the current timestamp.
+	The condition tests whether it is evenly divisible by 2, and then
+	either runs either <tt>"even"</tt> or <tt>"odd"</tt>, both of which
+	output their string.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?if=while">while()...</td><td>Conditionally repeat a command until a condition is false.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?if=switch">switch(){...}</td><td>Branch based on the resylt of an expression</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

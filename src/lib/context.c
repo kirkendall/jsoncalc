@@ -345,10 +345,11 @@ jsoncontext_t *json_context_std(json_t *args)
 /* Select a new current file, and optionally append a filename to the files
  * array.  The context must have been created by json_context_std() so this
  * function can know where to stuff the file info.  The *refcurrent parameter
- * is either an index into the files array, or -1 to move forward 1, -2 to
- * stay on the same entry, or -3 to move back one entry.  Returns the files
- * array, and stuffs the current index into *refcurrent.  You do NOT need to
- * free the returned list since it'll be freed when the context is freed.
+ * is either an index into the files array, or JSON_CONTEXT_FILE_NEXT to move
+ * forward 1, JSON_CONTEXT_FILE_SAME to stay on the same entry, or
+ * JSON_CONTEXT_FILE_PREVIOUS to move back one entry. Returns the files array,
+ * and stuffs the current index into *refcurrent.  You do NOT need to free
+ * the returned list since it'll be freed when the context is freed.
  */
 json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent)
 {
@@ -391,8 +392,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 
 	/* If given a filename, check for it in the list.  If it's there, then
 	 * set *refcurrent to its index; else add it to the list.  Each file
-	 * gets an object containing the name, a modified flag, potentially
-	 * other info.
+	 * gets an object containing the filename and other useful info.
 	 */
 	if (filename) {
 		/* Scan the files table for this filename */
@@ -405,7 +405,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 		/* Did we find it? */
 		if (j) {
 			/* Select it as the current file */
-			if (*refcurrent != JSON_CONTEXT_FILE_NEXT)
+			if (*refcurrent != JSON_CONTEXT_FILE_SAME)
 				*refcurrent = i;
 		} else {
 			/* Fetch info about the file */
@@ -458,6 +458,11 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 			*refcurrent = current_file + 2 + *refcurrent;
 	} else {
 		current_file = 0;
+	}
+	switch (*refcurrent) {
+	case JSON_CONTEXT_FILE_NEXT:	*refcurrent = current_file + 1; break;
+	case JSON_CONTEXT_FILE_SAME:	*refcurrent = current_file;	break;
+	case JSON_CONTEXT_FILE_PREVIOUS:*refcurrent = current_file - 1; break;
 	}
 
 	/* If "current" is out of range for the "files" array, clip it */

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <ctype.h>
 #include <string.h>
 #include <locale.h>
@@ -1903,6 +1904,7 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			files = json_context_file(*refcontext, NULL, 0, &current);
 			json_free(result);
 		} else if (result->type == JSON_STRING) {
+			current = JSON_CONTEXT_FILE_NEXT;
 			files = json_context_file(*refcontext, result->text, 0, &current);
 			json_free(result);
 		} else {
@@ -1922,6 +1924,7 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		files = json_context_file(*refcontext, NULL, 0, &current);
 	} else {
 		/* "file filename" -- Move to the named file */
+		current = JSON_CONTEXT_FILE_NEXT;
 		files = json_context_file(*refcontext, cmd->key, 0, &current);
 	}
 
@@ -2002,7 +2005,8 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t	*result = NULL;
-	char	*filename, *pathname;
+	char	*filename;
+	FILE	*fp;
 
 	/* Determine what type of "import" invocation this is */
 	if (cmd->calc) {
@@ -2029,33 +2033,41 @@ static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		filename = cmd->key;
 	}
 
-	/* Scan $JSONCALCPATH for the file.  Add a ".jc" extension if the
-	 * requested file doesn't already have an extension.
+	/* For security's sake, make sure the name doesn't start with "/"
+	 * or contain "../"
 	 */
-	pathname = json_file_path(filename, strchr(filename, '.') ? NULL : ".jc");
+	if (filename[0] == '/' || strstr(filename, "../"))
+		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Unsafe file name to import: \"%s\"", filename);
 
-	/* If not found, then return an error */
-	if (!pathname) {
-		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, 1, "Could not locate %s to import", filename);
-		if (result)
-			json_free(result);
-		return err;
-	}
+	/* If the file doesn't exist or is unreadable, fail */
+	if (access(filename, F_OK) < 0)
+		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Import file \"%s\" does not exist", filename);
+	fp = fopen(filename, "r");
+	if (!fp)
+		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Import file \"%s\" is unreadable", filename);
+	fclose(fp);
 
 	/* Load the file. If it contains any code other than function
 	 * definitions, then execute it and forget it.
 	 */
-	jsoncmd_t *code = json_cmd_parse_file(pathname);
+	jsoncmd_t *code = json_cmd_parse_file(filename);
 	if (code) {
 		json_cmd_run(code, refcontext);
 		json_cmd_free(code);
 	}
 
-	/* Free the pathname.  */
-	/* !!! Hey, this isn't still referenced in function definitions, is it? */
-	free(pathname);
-
 	/* Return success always */
+	return NULL;
+}
+
+
+static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+}
+
+static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	/* Plugins are loaded at parse time, not run time */
 	return NULL;
 }
 

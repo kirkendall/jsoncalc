@@ -88,6 +88,7 @@ static json_t *jfn_stringify(json_t *args, void *agdata);
 static json_t *jfn_parse(json_t *args, void *agdata);
 static json_t *jfn_parseInt(json_t *args, void *agdata);
 static json_t *jfn_parseFloat(json_t *args, void *agdata);
+static json_t *jfn_find(json_t *args, void *agdata);
 static json_t *jfn_date(json_t *args, void *agdata);
 static json_t *jfn_time(json_t *args, void *agdata);
 static json_t *jfn_dateTime(json_t *args, void *agdata);
@@ -177,7 +178,8 @@ static jsonfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data",		jfn
 static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str",		jfn_parse};
 static jsonfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str",		jfn_parseInt};
 static jsonfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str",		jfn_parseFloat};
-static jsonfunc_t date_jf        = {&parseFloat_jf,  "date",        "str",		jfn_date};
+static jsonfunc_t find_jf	 = {&parseFloat_jf,  "find", 	    "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true",		jfn_find};
+static jsonfunc_t date_jf        = {&find_jf,	     "date",        "str",		jfn_date};
 static jsonfunc_t time_jf        = {&date_jf,        "time",        "str, tz",		jfn_time};
 static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "str, tz",		jfn_dateTime};
 static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "str, tz",		jfn_timeZone};
@@ -1562,7 +1564,8 @@ static json_t *help_replace(json_t *args, regex_t *preg, int globally)
 /* Replace the first instance of a substring or regular expression */
 static json_t *jfn_replace(json_t *args, void *agdata)
 {
-	jsoncalc_t *regex = (jsoncalc_t *)agdata;
+	jsonfuncextra_t *recon = (jsonfuncextra_t *)agdata;
+	jsoncalc_t *regex = recon->regex;
 	if (regex)
 		return help_replace(args, regex->u.regex.preg, regex->u.regex.global);
 	else
@@ -1572,7 +1575,8 @@ static json_t *jfn_replace(json_t *args, void *agdata)
 /* Replace all instances of a substring or regular expression */
 static json_t *jfn_replaceAll(json_t *args, void *agdata)
 {
-	jsoncalc_t *regex = (jsoncalc_t *)agdata;
+	jsonfuncextra_t *recon = (jsonfuncextra_t *)agdata;
+	jsoncalc_t *regex = recon->regex;
 	if (regex)
 		return help_replace(args, regex->u.regex.preg, 1);
 	else
@@ -1757,6 +1761,7 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 /* Split a string into an array of substrings */
 static json_t *jfn_split(json_t *args, void *agdata)
 {
+	jsonfuncextra_t *recon = (jsonfuncextra_t *)agdata;
 	char	*str, *next;
 	json_t	*djson;
 	char	*delim;
@@ -1774,7 +1779,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 		return json_error_null(0, "%s() requires a string as its first parameter", "split");
 	str = args->first->text;
 	djson = args->first->next;
-	if (!djson || (json_is_null(djson) && agdata && !((jsoncalc_t *)agdata)->u.regex.preg)) {
+	if (!djson || (json_is_null(djson) && (!recon->regex || !(recon->regex->u.regex.preg)))) {
 		/* If no delimiter (not even a regex) then return the string
 		 * as the only member of an array.
 		 */
@@ -1785,7 +1790,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 	regex = NULL;
 	delim = NULL;
 	if (json_is_null(djson) && agdata && ((jsoncalc_t *)agdata)->u.regex.preg)
-		regex = ((jsoncalc_t *)agdata)->u.regex.preg;
+		regex = recon->regex->u.regex.preg;
 	else {
 		if (djson->type != JSON_STRING)
 			return json_error_null(0, "%s() delimiter must be a string or regex", "split");
@@ -2016,6 +2021,89 @@ static json_t *jfn_parseFloat(json_t *args, void *agdata)
 		return json_error_null(1, "%s() expects a string", "parseFloat");
 	return json_from_double(value);
 }
+
+
+/* Do a deep search for a given value */
+static json_t *jfn_find(json_t *args, void *agdata)
+{
+	jsonfuncextra_t *recon = (jsonfuncextra_t *)agdata;
+	regex_t *regex = recon->regex ? recon->regex->u.regex.preg : NULL;
+	json_t	*haystack, *needle, *result, *other;
+	char	*defaulttable, *needkey;
+	int	ignorecase;
+
+	/* If first parameter is an object or array, that's the haystack;
+	 * otherwise it's the default table.
+	 */
+	if (args->first->type == JSON_OBJECT || args->first->type == JSON_ARRAY) {
+		haystack = args->first;
+		needle = args->first->next;
+		defaulttable = NULL;
+	} else {
+		haystack = json_context_default_table(recon->context, &defaulttable);
+		if (!haystack)
+			return json_error_null(0, "No default table");
+		needle = args->first;
+	}
+	if (!needle)
+		return json_error_null(0, "find() needs to know what to search for");
+
+	/* Check for optional args after "needle" */
+	ignorecase = 0;
+	needkey = NULL;
+	for (other = needle->next; other; other = other->next) {
+		if (other->type == JSON_BOOL)
+			ignorecase = json_is_true(other);
+		else if (other->type == JSON_STRING && !needkey)
+			needkey = other->text;
+		else {
+			return json_error_null(0, "find() was passed an unexpexted extra parameter");
+		}
+	}
+
+	/* Search! */
+	if (regex)
+		result = json_find_regex(haystack, regex, needkey);
+	else
+		result = json_find(haystack, needle, ignorecase, needkey);
+
+	/* If we were searching through the default table, then prepend the
+	 * its expression to the "expr" members of the results.  Note that
+	 * since the default table is always an array, "expr" currently
+	 * begins with a subscript, not a member name, so we don't need to
+	 * add a "." between them.
+	 */
+	if (result->type == JSON_ARRAY && defaulttable) {
+		char *buf = NULL;
+		char *expr;
+		size_t	bufsize = 0;
+		size_t	dtlen = strlen(defaulttable);
+		size_t	totlen;
+		for (other = result->first; other; other = other->next) {
+			expr = json_text_by_key(other, "expr");
+			assert(expr && *expr == '[');
+			totlen = dtlen + strlen(expr);
+			if (totlen + 1 > bufsize) {
+				if (buf)
+					free(buf);
+				bufsize = (totlen | 0x1f) + 1;
+				buf = (char *)malloc(bufsize);
+			}
+			strcpy(buf, defaulttable);
+			strcat(buf, expr);
+			json_append(other, json_key("expr", json_string(buf, -1)));
+		}
+		if (buf)
+			free(buf);
+
+	}
+
+	/* Return the result */
+	return result;
+}
+
+/******************************************************************************/
+/* Date/time functions. The real guts are in datetime.c */
 
 
 /* Return an ISO date string */

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>find</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc find - Do a deep search for a value">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, find">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>find - Do a deep search for a value</h1>
+    <dl>
+      <dt>find(<var>haystack</var>, <var>needle</var>)
+      <br/>find(<var>haystack</var>, <var>needle</var>, <var>key</var>)
+      <br/>find(<var>haystack</var>, <var>needle</var>, <var>key</var>, true)
+      <br/>find(<var>haystack</var>, <var>needle</var>, true)
+      <br/>find(<var>needle</var>)
+      <br/>find(<var>needle</var>, <var>key</var>)
+      <br/>find(<var>needle</var>, <var>key</var>, true)
+      <br/>find(<var>needle</var>, true)
+      <dd>
+      This is very handy when you're digging through data, trying to find
+      that special nugget.
+      <p>
+      <tt>find()</tt> does a deep search
+      through an object or array (the "<var>haystack</var>")
+      for a given value (the "<var>needle</var>").
+      If you don't specify a <var>haystack</var> to search through,
+      it'll use the default table &mdash; the same one that the
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a> operator
+      uses without a <tt>FROM</tt> clause.
+      <p>
+      The <var>needle</var> may be a number, string, or
+      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>.
+      If it is a string, the search will be case-sensitive unless you also
+      pass a <tt>true</tt> parameter to make it case-insensitive.
+      If it is a regular expression, then <tt>find()</tt> will look for text
+      matching that regular expression in any string in the data.
+      When <var>needle</var> is a string or regular expression, then it will
+      only match strings; if it is a number then it will only match numbers.
+      <p>
+      You may also pass a <var>key</var> to limit the search.
+      This is a string corresponding to the name of an object member.
+      The value to find must either be the value for an object member with
+      that name, or an element of an array that is the value of that object
+      member.
+      For example, if you wanted to find part#199 in an array of invoices,
+      where each invoice contains an array of parts, then you could pass
+      <tt>"partno"</tt> as the <var>key</var> to prevent <tt>199</tt> from
+      matching other members such as price.
+      <p>
+      The result of the search is a table of matches.
+      The columns of the table are:
+      <table class="referencelist">
+        <tr><th>index</th><td>
+          This is the the array subscript where it was found.
+          If there are nested arrays, this will be the index into the outermost
+          array.
+          If there are no arrays then this member will be omitted.
+        </td></tr>
+
+        <tr><th>key</th><td>
+          If an object member's value is a match, then this will be the
+          key (name) of that member.
+          If the match is an array element, but the array is the value of an
+          object's member, then that member's key (i.e., the array's name)
+          is used here.
+          As usual in JsonCalc, the member name comparison is case-insensitive.
+          If there are no objects then this will be omitted.
+        </td></tr>
+
+        <tr><th>value</th><td>
+          This is a copy of the matching value.
+        </td></tr>
+
+        <tr><th>expr</th><td>
+          This is a string that looks like a JsonCalc (or JavaScript)
+          expression for reaching the match.
+          If you explicitly pass a <var>haystack</var> parameter, then
+          this will be relative to the <var>haystack</var>.
+          If you let the default table be the <var>haystack</var>,
+          then the expression will include the default table's name
+          (usually "this", "data", or something in "data").
+        </td></tr>
+
+      </table>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>test.find("Portland")</kbd>
+	<samp>
+	  <table>
+	  <tr><th>index</th><th>key</th><th>value</th><th>expr</th></tr>
+	  <tr><td>0</td><td>city</td><td>Portland</td><td>cust[0].contact[0].city</td></tr>
+	  <tr><td>3</td><td>city</td><td>Portland</td><td>cust[3].contact[0].city</td></tr>
+	  </table>
+	</samp>
+	<tt>test</tt> is part of the sample data.
+	We're searching for the string "Portland", and find it in two places,
+	both of them in the <tt>cust</tt> table within <tt>test</tt>.
+	The <tt>index</tt> column shows the subscripts into <tt>cust</tt>
+	of the matching strings.
+	The <tt>key</tt> column shows that both were found to be city names.
+	The <tt>value</tt> column is "Portland", which is no surprise.
+	The <tt>expr</tt> column reveals that both matches occurred within
+	the <tt>contact</tt> tables within their respective <tt>cust</tt>
+	objects.
+	Since we explicitly passed <tt>test</tt> has the <var>haystack</var>,
+	these expressions are relative to <tt>test</tt>; we know that
+	<tt>test.cust[0].contact[0].city == "Portland"</tt>.
+      </div>
+
+      <div class="example">
+        <kbd>test.find(3)</kbd>
+	<samp>
+	  <table>
+	  <tr><th>index</th><th>key</th><th>value</th><th>expr</th></tr>
+	  <tr><td>6</td><td>run</td><td>3</td><td>scores[6].run</td></tr>
+	  <tr><td>7</td><td>run</td><td>3</td><td>scores[7].run</td></tr>
+	  <tr><td>8</td><td>run</td><td>3</td><td>scores[8].run</td></tr>
+	  <tr><td></td><td>deepest</td><td>3</td><td>deep.deeper.deepest</td></tr>
+	  </table>
+	</samp>
+	A simple example of searching for a number.
+	The last match didn't involve any arrays,
+	so its <tt>index</tt> member was omitted.
+      </div>
+
+      <div class="example">
+        <kbd>find("Janet")</kbd>
+        <samp>
+	  <table>
+	  <tr><th>index</th><th>key</th><th>value</th><th>expr</th></tr>
+	  <tr><td>1</td><td>first_name</td><td>Janet</td><td>data[1].first_name</td></tr>
+	  </table>
+        </samp>
+        Here's an example using the default table.
+        To get this result, I invoked the <b>jsoncalc</b> program with the
+        name of a *.json file; the contents of that file were thus available
+        as "<tt>data</tt>".  The file contains a JSON array of objects,
+        so the whole <tt>data</tt> is the default table.
+        Note that the <tt>expr</tt> column starts with "data" to indicate this.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>Passing a <tt>true</tt> parameter won't make regular expressions
+	    be case-insensitive.
+	    Instead, do that by appending the letter "i" after the
+	    regular expression's closing "/" character.
+
+        <li>Regular expressions normally look for matching text anywhere
+            within a string value; it doesn't need to exactly match the whole
+            string.
+            If you want to require the regular expression to match the whole
+            string like a string <var>needle</var> would,
+            use the <tt>^</tt> and <tt>$</tt> metacharacters.
+            <div class="example">
+              <kbd>test.find(/^portland$/i)</kbd>
+              <samp>
+		<table>
+		<tr><th>index</th><th>key</th><th>value</th><th>expr</th></tr>
+		<tr><td>0</td><td>city</td><td>Portland</td><td>cust[0].contact[0].city</td></tr>
+		<tr><td>3</td><td>city</td><td>Portland</td><td>cust[3].contact[0].city</td></tr>
+		</table>
+	      </samp>
+	      This searches for "portland" with no extra characters before or
+	      after it.  Because the regular expression is followed by an "i"
+	      flag, the search is case-insensitive.
+            </div>
+
+        <li>In the result table, the <tt>index</tt> and <tt>key</tt> members
+            are not as symetrical as they might appear.
+            <tt>index</tt> is always the outermost array subscript.
+            <tt>key</tt> is always the innermost member name.
+
+	<li>The <tt>expr</tt> result column is meant to be human-readable.
+	    You can copy-and-paste it into command lines easily.
+	    However, there is no convenient way to automatically evaluate
+	    the expression, or pick it apart.
+
+	<li>Here's something related but different:
+	    Subscripting allows you to select an element in an array of objects
+	    by specifying the member's key and value.
+	    For example, if you have an array of purchase orders that each
+	    have a "ponumber" member, then you could search for PO#1234 via
+	    "<tt>po[ponumber:1234]</tt>".
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular expressions</a></td><td>Text pattern matching notation</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

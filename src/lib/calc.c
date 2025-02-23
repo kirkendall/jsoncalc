@@ -173,9 +173,9 @@ static void jcag(jsonag_t *ag, jsoncontext_t *context, void *agdata)
  */
 void *json_calc_ag(jsoncalc_t *calc, void *existingag)
 {
-	/* If passed an existingag, then we're either about to free it or reset it.
-	 * Either way, maybe some functions want us to free up some of allocated data
-	 * for them.
+	/* If passed an existingag, then we're either about to free it or
+	 * reset it.  Either way, maybe some functions want us to free up
+	 * some of allocated data for them.
 	 */
 	if (existingag) {
 		/* There's a list of ag function calls before the data.  Get it.
@@ -457,6 +457,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	int     il,ir;
 	char    *str;
 	void    *localag;
+	jsonfuncextra_t recon;
 
 	/* If interupted then simply return an error null */
 	if (json_interupt)
@@ -644,7 +645,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * need to scan the argument array generator for a
 			 * JSONOP_REGEX... but only for non-aggregate built-ins.
 			 */
-			localag = agdata + calc->u.func.agoffset;
+			recon.context = context;
+			recon.regex = NULL;
 			if (!calc->u.func.jf->agfn && !calc->u.func.jf->user) {
 				tmp = calc->u.func.args;
 				if (tmp->LEFT && tmp->LEFT->op == JSONOP_REGEX)
@@ -654,8 +656,9 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 						tmp = tmp->LEFT;
 						break;
 				}
-				localag = (void *)tmp;
+				recon.regex = (void *)tmp;
 			}
+			localag = (void *)&recon;
 
 			/* Invoke the function. For built-ins, call the
 			 * function directly ("jf->fn").  For user-defined

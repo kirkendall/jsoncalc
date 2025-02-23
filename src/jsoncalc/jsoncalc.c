@@ -262,11 +262,60 @@ void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 	}
 }
 
+/* Try to guess whether a given file is a data file based on its name and
+ * maybe its contents.
+ */
+int isscript(char *filename)
+{
+	char	*ext = strrchr(filename, '.');
+	char	buf[100], *s;
+	FILE	*fp;
+	size_t	nbytes;
+
+	/* If it has a well known filename extension, trust it */
+	if (ext) {
+		if (!strcasecmp(ext, ".json")
+		 || !strcasecmp(ext, ".xml")
+		 || !strcasecmp(ext, ".wsdl")
+		 || !strcasecmp(ext, ".csv"))
+			return 0;
+		if (!strcasecmp(ext, ".jc")
+		 || !strcasecmp(ext, ".jsoncalc")
+		 || !strcasecmp(ext, ".js")) /* I know, but it isn't data */
+			return 1;
+	}
+
+	/* Okay, we'll do it the hard way: Check the first few bytes */
+	fp = fopen(filename, "r");
+	if (fp) {
+		nbytes = fread(buf, 1, sizeof buf - 1, fp);
+		fclose(fp);
+		if (nbytes < 2)
+			return 0; /* too short to be a meaningful script */
+		buf[nbytes] = '\0';
+		if (!strncmp(buf, "#!", 2) || !strncmp(buf, "//", 2))
+			return 1; /* Looks script-ish! */
+
+		/* One last chance for a script: If it starts with a word
+		 * followed by a character other than comma, it's a script.
+		 */
+		if (isalpha(buf[0])) {
+			for (s = buf; isalnum(*s); s++) {
+			}
+			if (*s != ',' && *s)
+				return 1;
+		}
+	}
+
+	/* Okay, we can't say for sure.  Assume data */
+	return 0;
+}
+
 
 /******************************************************************************/
 int main(int argc, char **argv)
 {
-	int	i, len;
+	int	i;
 	json_t	*args;
 	char	*val;
 	int	saveconfig = 0;
@@ -400,13 +449,23 @@ int main(int argc, char **argv)
 		thiscontext->older = autodir(thiscontext->older); 
 	}
 
+	/* If no "-i" was given, then the first argument after options may be
+	 * the name of a script to load and run like "-f".  Or it could be the
+	 * first data file.  Check!
+	 * bytes to see if it looks script-ish.
+	 */
+	if (!interactive && optind < argc && isscript(argv[optind])) {
+		initcmd = json_cmd_append(initcmd, json_cmd_parse_file(argv[optind]), context);
+		maybe_batch = 1;
+		optind++;
+	}
+
 	/* Build an object from any name=value parameters */
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
 
 		/* If it ends with ".json", load it as a file */
-		len = strlen(argv[i]);
-		if (len > 5 && !strcmp(argv[i] + len - 5, ".json")) {
+		if (0 == access(argv[i], F_OK)) {
 			json_context_file(context, argv[i], allow_update, NULL);
 			anyfiles = 1;
 		} else {
@@ -432,11 +491,9 @@ int main(int argc, char **argv)
 	/* Start on the first file named on the command line, if any */
 	json_context_file(context, NULL, 0, NULL);
 
-	/* If -ccmd or -ffile was given but we didn't get any initcmd then
-	 * there was probably an error (already reported) and certainly nothing
-	 * to do unless -i was also given.
+	/* If -ccmd or -ffile resulted in an error (already reported) then quit
 	 */
-	if (maybe_batch && !initcmd && !interactive) {
+	if (initcmd == JSON_CMD_ERROR) {
 		while (context)
 			context = json_context_free(context);
 		exit(2);

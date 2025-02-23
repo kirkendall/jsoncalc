@@ -160,13 +160,14 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 		/* Compile */
 		jc = json_cmd_parse_string(expr);
 		free(expr);
+		if (jc != JSON_CMD_ERROR) {
+			/* Execute */
+			json_interupt = 0;
+			run(jc, contextref);
 
-		/* Execute */
-		json_interupt = 0;
-		run(jc, contextref);
-
-		/* Clean up */
-		json_cmd_free(jc);
+			/* Clean up */
+			json_cmd_free(jc);
+		}
 	}
 
 	/* Leave the cursor on the line after the last, unused prompt */

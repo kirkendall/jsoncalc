@@ -24,6 +24,12 @@
  * functions.  Also json_calc_parse() of course.
  */
 
+/* This array isn't actually store anything; it just provides a distict
+ * value that can be used to recognize when json_cmd_parse() and
+ * json_cmd_parse_string() detect an error.
+ */
+jsoncmd_t JSON_CMD_ERROR[1];
+
 /* Forward declarations for functions that implement the built-in commands */
 static jsoncmd_t    *if_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
@@ -182,6 +188,117 @@ void json_cmd_parse_whitespace(jsonsrc_t *src)
 	} while (isspace(*src->str));
 }
 
+/* Skip past whitespace, comments, and an optional type declaration */
+void json_cmd_parse_whitespace_or_type(jsonsrc_t *src)
+{
+	int	nest;
+	int	quote;
+	int	afterop;
+
+	/* Skip whitespace and some comments */
+	json_cmd_parse_whitespace(src);
+
+	/* If no "?:" or ":" then no type.  We're done. */
+	if (*src->str == '?')
+		src->str++;
+	if (*src->str != ':')
+		return;
+
+	/* Okay, we need to move past the ":" and a type.  Types consist of
+	 * names, literals (including quoted strings), "|" operators,
+	 * curly braces, square brackets, and maybe commas withing the
+	 * brackets/braces.
+	 */
+	nest = quote = 0;
+	afterop = 1;
+	src->str++;
+	for (; *src->str; src->str++) {
+		/* Newline ends comments */
+		if (quote == '/' && *src->str == '\n')
+			quote = '\0';
+
+		/* Letters/numbers always allowed, and reset afterop */
+		if (isalnum(*src->str)) {
+			afterop = 0;
+			continue;
+		}
+
+		/* Whitespace always allowed */
+		if (isspace(*src->str))
+			continue;
+
+		/* A few other characters have special meaning */
+		switch (*src->str) {
+		case '/': /* Comment, if doubled and not in quoted string */
+			if (quote)
+				continue;
+			if (src->str[1] == '/') {
+				quote = '/';
+				src->str++;
+				afterop = 0;
+				continue;
+			}
+			break;
+
+		case '"':
+		case '\'':
+		case '`': /* Start of quote, unless we're already quoting */
+			if (!quote)
+				quote = *src->str;
+			else if (quote == *src->str)
+				quote = 0;
+			afterop = 0;
+			continue;
+
+		case '\\': /* Escape within a quoted string */
+			if (quote == '"' || quote == '\'' ) {
+				if (src->str[1])
+					src->str++;
+				continue;
+			}
+			break;
+
+		case '-':
+		case '+':
+		case '.': /* Parts of numbers, always allowed */
+			continue;
+
+		case '|': /* | operator is allowed */
+			if (nest == 0)
+				afterop = 1;
+			continue;
+
+		case '{':
+		case '[': /* Start a brace/bracket, but only after operator */
+			if (quote)
+				continue;
+			if (!afterop)
+				break;
+			nest++;
+			continue;
+
+		case '}':
+		case ']': /* end a brace/bracket */
+			if (!quote && nest > 0)
+				nest--;
+			continue;
+
+		case ',': /* comma only allowed within brace/bracket */
+			if (nest > 0 || quote)
+				continue;
+			break;
+
+		default:
+			/* Other chars only allowed in strings */
+			if (quote)
+				continue;
+		}
+
+		/* If we get here, then we hit the end of the type */
+		break;
+	}
+}
+
 /* Parse a key (name) and return it as a dynamically-allocated string.
  * Advance src->str past the name and any trailing whitespace.  Returns NULL
  * if not a name.  The "quoteable" parameter should be 1 to allow strings
@@ -299,8 +416,8 @@ jsoncmd_t *json_cmd(jsonsrc_t *src, jsoncmdname_t *name)
 /* Free a statement, and any related statements or data */
 void json_cmd_free(jsoncmd_t *cmd)
 {
-	/* Defend against NULL */
-	if (!cmd)
+	/* Defend against NULL and JSON_CMD_ERROR */
+	if (!cmd || cmd == JSON_CMD_ERROR)
 		return;
 
 	/* Free related data */
@@ -360,7 +477,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Hopefully it is an assignment or an output expression.  Parse it. */
 	end = err = NULL;
 	calc = json_calc_parse(src->str, &end, &err, 1);
-	if (!calc || (*end && *end != ';' && *end != '}')) {
+	if (!calc || err || (*end && *end != ';' && *end != '}')) {
 		if (calc)
 			json_calc_free(calc);
 		if (!err) {
@@ -473,7 +590,7 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 
 			free(result);
 			json_cmd_free(first);
-			return NULL;
+			return JSON_CMD_ERROR;
 		}
 
 		/* It could be NULL, which is *NOT* an error.  That would be
@@ -574,6 +691,8 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	jsoncmdout_t *result = NULL;
 
 	while (cmd && !result) {
+		assert(cmd != JSON_CMD_ERROR);
+
 		/* Maybe output trace info */
 		if (json_debug_flags.trace) {
 			fprintf(stderr, "%s:%d: %s\n", cmd->filename, cmd->lineno, cmd->name->name);
@@ -655,9 +774,21 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 	jsoncmd_t *next, *end;
 	jsoncmdout_t *result;
 
+	/* If "existing" is JSON_CMD_ERROR then just return it unchanged. */
+	if (existing == JSON_CMD_ERROR)
+		return existing;
+
 	/* If "added" is NULL, do nothing */
 	if (!added)
 		return existing;
+
+	/* If "added" is JSON_CMD_ERROR then free the "existing" list (if any)
+	 * and return JSON_CMD_ERROR.
+	 */
+	if (added == JSON_CMD_ERROR) {
+		json_cmd_free(existing);
+		return JSON_CMD_ERROR;
+	}
 
 	/* If "existing" is non-NULL then move to the end of the list */
 	if (existing) {
@@ -1109,7 +1240,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 	jsoncmd_t *first = cmd;
 	char	*end, *err;
 
-	/* Expect a name possibly followed by '=' and an expression */
+	/* Expect a name possibly followed by ":type" and/or "=expr" */
 	for (;;) {
 		cmd->key = json_cmd_parse_key(src, 1);
 		if (!cmd->key) {
@@ -1117,6 +1248,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 			json_cmd_free(first);
 			return NULL;
 		}
+		json_cmd_parse_whitespace_or_type(src);
 		if (*src->str == '=') {
 			err = NULL;
 			src->str++;
@@ -1300,6 +1432,9 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			goto Error;
 		}
 
+		/* Possibly a type declaration */
+		json_cmd_parse_whitespace_or_type(&paren);
+
 		/* If followed by = then use a default */
 		if (*paren.str == '=') {
 			jsoncalc_t *calc;
@@ -1348,6 +1483,9 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		}
 	}
 	free(paren.buf);
+
+	/* Parentheses may be followed by a return type declaration */
+	json_cmd_parse_whitespace_or_type(src);
 
 	/* Body -- if no body, that's okay */
 	if (*src->str == '{')
@@ -1701,7 +1839,6 @@ static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	jsoncalc_t *calc;
 	char	*end, *err;
 	jsoncmd_t *cmd;
 
@@ -1884,7 +2021,6 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t *files;
 	int	current = JSON_CONTEXT_FILE_SAME;
-	int	all = 0;
 
 	/* Determine what type of "file" invocation this is */
 	if (cmd->calc) {
@@ -2063,6 +2199,7 @@ static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
+	return NULL;
 }
 
 static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)

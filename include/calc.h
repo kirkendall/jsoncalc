@@ -146,6 +146,14 @@ typedef struct jsoncontext_s {
 } jsoncontext_t;
 
 
+/* For non-aggregate functions, this is used to pass other information that
+ * they might need.
+ */
+typedef struct {
+	jsoncontext_t *context;
+	jsoncalc_t    *regex; /* The regex_t is at regex->u.regex.preg */
+} jsonfuncextra_t;
+
 
 /* This stores a list of aggregate functions used in a given context.  Each
  * jsoncalc_t node with ->op==JSONOP_AG contains an "ag" pointer that points
@@ -261,6 +269,10 @@ json_t *json_context_default_table(jsoncontext_t *context, char **refexpr);
 
 /****************************************************************************/
 
+/* This value is returned by json_cmd_parse() and json_cmd_parse_string()
+ * if an error is detected.  Note that NULL does *NOT* indicate an error.
+ */
+extern jsoncmd_t JSON_CMD_ERROR[];
 
 void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
 jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...);

@@ -12,10 +12,10 @@
     ],
     "string":"This is a fairly long string, intended to test the behavior of oversized tokens.",
     "cust":[
-        {"name":"Peter","contact":[{"type":"address","street":"123 Elm St","city":"Portand","state":"OR","zip":97266},{"type":"email","address":"pboy@test.org"},{"type":"cell","number":"503-555-1212"}],"joined":"2024-01-02"},
+        {"name":"Peter","contact":[{"type":"address","street":"123 Elm St","city":"Portland","state":"OR","zip":97266},{"type":"email","address":"pboy@test.org"},{"type":"cell","number":"503-555-1212"}],"joined":"2024-01-02"},
         {"name":"Paul","contact":[{"type":"address","street":"123 Elm St","city":"Tigard","state":"OR","zip":97223},{"type":"email","address":"notringo@lp.uk"}],"joined":"2023-10-15"},
         {"name":"Mary","joined":"2022-08-09"},
-        {"name":"Ziggy","contact":[{"type":"address","street":"101 Broadway","appt":204,"city":"Portand","state":"OR","zip":97266},{"type":"cell","number":"503-666-4377"}],"joined":"2023-04-17"}
+        {"name":"Ziggy","contact":[{"type":"address","street":"101 Broadway","appt":204,"city":"Portland","state":"OR","zip":97266},{"type":"cell","number":"503-666-4377"}],"joined":"2023-04-17"}
      ],
      "deep":{"deeper":{"deepest":3,"deeply":"madly"},"dept":"transportation"},
      "contact":{"home":"5035551212","email":"mycontact@sample.com"},

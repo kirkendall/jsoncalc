@@ -2210,6 +2210,10 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 
 /* Parse a calc expression, and return it as a jsonop_t tree.  "str" is the
  * string to parse, and "end" is the end of the string or NULL to end at '\0'.
+ * *refend will be set to the point where parsing stopped, which may be before
+ * the end, e.g. if the string ends with a semicolon or other non-operator.
+ * *referr will be set to an error message in a dynamically-allocated string.
+ * canassign enables parsing "=" as an assignment operator.
  */
 jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassign)
 {
@@ -2253,6 +2257,25 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	/* One last reduce */
 	if (!err)
 		err = reduce(&stack, NULL, token.full + token.len);
+
+	/* If this leaves an operator without operands, complain */
+	switch (operators[stack.stack[0]->op].optype) {
+	case JCOP_OTHER:
+		break;
+	case JCOP_INFIX:
+	case JCOP_RIGHTINFIX:
+		if (!stack.stack[0]->LEFT || !stack.stack[0]->RIGHT)
+			err = "Missing operand";
+		break;
+	case JCOP_PREFIX:
+		if (!stack.stack[0]->RIGHT)
+			err = "Missing operand";
+		break;
+	case JCOP_POSTFIX:
+		if (!stack.stack[0]->LEFT)
+			err = "Missing operand";
+		break;
+	}
 
 	/* If it compiled cleanly, look for aggregate functions */
 	if (stack.sp == 1)

@@ -175,6 +175,10 @@ extern json_t *json_by_key(json_t *container, char *key);
 extern json_t *json_by_deep_key(json_t *container, char *key);
 extern json_t *json_by_index(json_t *container, int idx);
 extern json_t *json_by_expr(json_t *container, char *expr, char **next);
+extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey);
+#ifdef REG_ICASE /* skip this if <regex.h> not included */
+extern json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey);
+#endif
 extern char *json_default_text(char *newdefault);
 extern char *json_text(json_t *json);
 extern double json_double(json_t *json);

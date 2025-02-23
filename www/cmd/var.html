@@ -11,7 +11,9 @@
     <h1>var - Declare one or more variables</h1>
     <dl>
       <dt>var key
+      <br/>var key : type
       <br/>var key = value
+      <br/>var key : type = value
       <dd>
       Declare a variable, and optionally assign its initial value.
       If you don't assign it an initial value, then <tt>null</tt> is used.
@@ -24,18 +26,25 @@
       declares a global variable.
       <tt>var<tt> in a function body declares a variable that is only
       accessible within that function.
+      <p>
+      You may optionally specify a type for the variable
+      in the manner of <tt>TypeScript</tt>,
+      but currently that's ignored.
+      Think of it a comment &mdash; still useful but it won't save you.
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>var i=17</kbd>
+	<kbd>var i: int = 17</kbd>
 	<kbd>i</kbd>
 	<samp>17</samp>
 	<kbd>i = i + 1</kbd>
 	<kbd>i</kbd>
 	<samp>18</samp>
         Declare a variable and then display it, change it, and display it again.
+        The "<tt>: int</tt>" doesn't really do anything,
+        but "<tt>= 17</tt>" initializes it to 17.
       </div>
 
       <div class="example">

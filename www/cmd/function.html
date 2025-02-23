@@ -11,8 +11,10 @@
     <h1>function - Declare a function</h1>
     <dl>
       <dt>function <var>name</var> (<var>arglist</var>) <var>cmd</var>
-      <dt>function <var>name</var> (<var>arglist</var>) ;
-      <dt>function <var>name</var>
+      <br/>function <var>name</var> (<var>arglist</var>) ;
+      <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> <var>cmd</var>
+      <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> ;
+      <br/>function <var>name</var>
       <dd>
       The <tt>function</tt> command lets you define functions.
       <p>
@@ -37,15 +39,21 @@
       <p>
       The <var>arglist</var> can be empty (just parentheses with nothing in them).
       Generally, though, it is a comma-delimited list of argument names.
-      Each name may be followed by an "=" and an expression that provides a
-      default value.
+      Each name may be followed by a "?" to mark it as optional,
+      a ":" followed by a data type, and/or an "=" and an expression
+      that provides a default value.
+      <p>
+      So, yes you can declare argument types and the function's return type,
+      in the manner of <strong>TypeScript</strong>.
+      But the declarations don't actually do anything yet.
+      Think of them as comments &mdash; useful, but they won't save you.
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>function backward(arr) { var out = []; for (arr) out = concat([this], out); return out; }<br/>
-	  backward(1..5)</kbd>
+	<kbd>function backward(arr:array): array { var out=[]; for (arr) out = concat([this], out); return out; }</kbd>
+	<kbd>backward(1..5)</kbd>
 	<samp>[5,4,3,2,1]</samp>
         This defines a function that reverses the elements of an array.
         It's pretty basic &mdash; it just uses a
@@ -58,7 +66,15 @@
         so the entire <tt>function</tt> command is on a single line, which is
         necessary when you're entering commands into JsonCalc interactively.
         In script files, you can split it across multiple lines to improve
-        readability.
+        readability, like this:
+        <pre>
+        function backward(arr : array) : array {
+	    var out = [];
+	    for (arr)
+	        out = concat([this], out);
+	    return out;
+        }
+        </pre>
       </div>
 
       <div class="example">
@@ -80,7 +96,8 @@
         First we declare the <tt>factorial()</tt> function without a body.
         The function has to exist before we can use it,
         even for a self-reference in a recursive function.
-        Once the function exists (albeit in a 
+        Once the function exists (albeit in a do-nothing state)
+        we can use it in the actual recursive definition.
         <p>
         Again, please forgive the ugly formatting.
       </div>
@@ -103,6 +120,9 @@
 	    <var>arglist</var>.  JsonCalc doesn't support JavaScripts "fill"
 	    operator in arglist.
 
+	<li>Although the TypeScript-style type declarations don't do anything
+	    currently, they almost certainly will at some point.
+	    Don't get sloppy with your type declarations.
       </ul>
     </details>
 

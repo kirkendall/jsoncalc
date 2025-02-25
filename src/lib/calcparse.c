@@ -1587,7 +1587,12 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_COLON
 			 && jc->op != JSONOP_ASSIGN
 			 && jc->op != JSONOP_APPEND
-			 && jc->op != JSONOP_COMMA)
+			 && jc->op != JSONOP_COMMA
+			 && jc->op != JSONOP_FROM
+			 && jc->op != JSONOP_WHERE
+			 && jc->op != JSONOP_GROUPBY
+			 && jc->op != JSONOP_ORDERBY
+			 && jc->op != JSONOP_LIMIT)
 				return FALSE;
 			continue;
 		} else if (!jc || !pattern_single(jc, *pat))

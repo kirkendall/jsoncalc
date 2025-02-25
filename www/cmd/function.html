@@ -10,28 +10,27 @@
   <body>
     <h1>function - Declare a function</h1>
     <dl>
-      <dt>function <var>name</var> (<var>arglist</var>) <var>cmd</var>
+      <dt>function <var>name</var> (<var>arglist</var>) { <var>cmds</var> }
       <br/>function <var>name</var> (<var>arglist</var>) ;
-      <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> <var>cmd</var>
+      <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> { <var>cmds</var> }
       <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> ;
       <br/>function <var>name</var>
       <dd>
       The <tt>function</tt> command lets you define functions.
       <p>
       Usually you'll invoke <tt>function</tt> with the name of the function
-      to define, a parenthesized list of parameters, and a <var>cmd</var> to run
-      &mdash; typically a series of commands enclosed in curly braces,
-      but it could also be a single command terminated with a semicolon.
+      to define, a parenthesized list of parameters, and a set of curly braces
+      containing the function's body.
       This adds a new function, or replaces an existing one.
       <p>
-      You can also skip the <var>cmd</var>.  This creates the function but
-      doesn't specify a body for it.
+      You can also skip the {<var>cmd</var>}.
+      This creates the function but doesn't specify a body for it.
       Invoking the function will do nothing.
       This version of the <tt>function</tt> command exists mostly because the
-      parser won't let you try to call a function that hasn't been defined,
+      parser won't let you try to call a function that doesn't exist,
       so if you're writing a recursive function you need to define it twice
-      &mdash; once with an empty body just so it exists, and then with the
-      recursive body which is allowed to recursively call itself.
+      &mdash; once with an empty body just so it exists, and then again with
+      the recursive body which is allowed to recursively call itself.
       <p>
       Lastly, you can invoke <tt>function</tt> with just the name of a function
       to get a summary description of the function.

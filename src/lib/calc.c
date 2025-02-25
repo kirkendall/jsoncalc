@@ -1081,6 +1081,15 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
 
+		/* Arrays and objects can't be compared this way.  They can
+		 * be compared for strict equality, but not this.
+		 */
+		if (left->type == JSON_ARRAY || left->type == JSON_OBJECT
+		 || right->type == JSON_ARRAY || right->type == JSON_OBJECT) {
+			result = json_error_null(0, "Can't compare objects/arrays except via === or !==");
+			break;
+		}
+
 		/* Compare them in an appropriate way */
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 			nl = json_double(left);

@@ -121,6 +121,7 @@ static struct {
 	{"LJOIN",	"@<",	117,	JCOP_INFIX},
 	{"LT",		"<",	190,	JCOP_INFIX},
 	{"MAYBEASSIGN",	"=??",	110,	JCOP_INFIX},
+	{"MAYBEMEMBER",	":??",	121,	JCOP_INFIX},
 	{"MODULO",	"%",	220,	JCOP_INFIX},
 	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
 	{"NAME",	"NAM",	-1,	JCOP_OTHER},
@@ -239,6 +240,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_MAYBEMEMBER:
 	  case JSONOP_AS:
 	  case JSONOP_NEGATE:
 	  case JSONOP_ISNULL:
@@ -903,6 +905,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_MAYBEMEMBER:
 	  case JSONOP_AS:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
@@ -1058,7 +1061,7 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 		jc->LEFT = jc->RIGHT;
 		jc->RIGHT = swapper;
 		jc->op = JSONOP_COLON;
-	} else if (jc->op != JSONOP_COLON) {
+	} else if (jc->op != JSONOP_COLON && jc->op != JSONOP_MAYBEMEMBER) {
 		/* Use the source text as the name */
 		token_t t;
 		t.op = JSONOP_NAME;
@@ -1071,7 +1074,7 @@ static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
 
 		/* Make it a COLON expression */
 		jc = jcleftright(JSONOP_COLON, jcalloc(&t), jc);
-	} /* Else it is already "name:expr" */
+	} /* Else it is already "name:expr" or "name:??expr" */
 
 	return jc;
 }
@@ -1103,6 +1106,7 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_MAYBEMEMBER:
 	  case JSONOP_NJOIN:
 	  case JSONOP_LJOIN:
 	  case JSONOP_RJOIN:
@@ -1313,7 +1317,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
  *   @  JSONOP_SUBSCRIPT (array subscript)
  *   $  JSONOP_ENVIRON
  *   ?  JSONOP_QUESTION
- *   :  JSONOP_COLON
+ *   :  JSONOP_COLON or JSONOP_MAYBEMEMBER
  *   &  JSONOP_AND
  *   b  JSONOP_BETWEEN
  *   i  JSONOP_IN
@@ -1389,8 +1393,8 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 			return FALSE;
 		break;
 
-	  case ':': /* JSONOP_COLON */
-		if (jc->op != JSONOP_COLON)
+	  case ':': /* JSONOP_COLON or JSONOP_MAYBEMEMBER */
+		if (jc->op != JSONOP_COLON && jc->op != JSONOP_MAYBEMEMBER)
 			return FALSE;
 		break;
 
@@ -2040,7 +2044,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			 * convert any strings to names, where unambiguous.
 			 */
 			for (jn = top[-1]; jn; jn = jn->RIGHT) {
-				if (jn->LEFT->op == JSONOP_COLON) {
+				if (jn->LEFT->op == JSONOP_COLON || jn->LEFT->op == JSONOP_MAYBEMEMBER) {
 					/* If left of colon is a string instead
 					 * of a name, fix it
 					 */

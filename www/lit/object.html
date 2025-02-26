@@ -21,6 +21,12 @@
     This is why we're talking about "object generators" instead of
     "object literals".
     <p>
+    JsonCalc also allows you to use ":??" instead of ":" to conditionally
+    add/assign a member only if the value is not null.
+    If you're using a JsonCalc script to assemble data from another source,
+    this makes it easy to add members to the result only if we have a value
+    to stuff into that member.
+    <p>
     Also, you can omit the key and colon, and just write the value.
     When you do this, the source text of the value is used as the key.
     The most common use of this is to copy a variable into an object &mdash;
@@ -47,7 +53,8 @@
       </div>
 
       <div class="example">
-	<kbd>var x=2, y=3;<br/>{x,y,z:0,x-y}</kbd>
+	<kbd>var x=2, y=3;</kbd>
+	<kbd>{x,y,z:0,x-y}</kbd>
 	<samp>{"x":2,"y":3,"z":0,"x-y":-1}</samp>
 	An object with four members.
 	This time, <tt>x</tt> and <tt>y</tt> are set from variables, taking on
@@ -56,6 +63,33 @@
 	In the last one, we're omitting the key-colon again so the source text
 	is used as the key even though it doesn't look like a name.
       </div>
+
+      <div class="example">
+        <kbd>test.cust @ {name, joined, contacts: contact.length}</kbd>
+        <samp><table>
+<tr><th>name</th><th>joined</th><th>contacts</th></tr>
+<tr><td>Peter</td><td>2024-01-02</td><td>3</td></tr>
+<tr><td>Paul</td><td>2023-10-15</td>td>2</td></tr>
+<tr><td>Mary</td><td>2022-08-09</td>td>0</td></tr>
+<tr><td>Ziggy</td><td>2023-04-17</td>td>2</td></tr>
+</table>
+	</samp>
+	This scans <tt>test.cust</tt> (part of the sample data) and builds
+	a new object for each entry, containing just the <tt>name</tt> and
+	<tt>joined</tt> members, plus a count of the contact methods.
+
+
+      <div class="example">
+	<kbd>{x:??x, y:??y, z:??z}</kbd>
+	<samp>{"x":2,"y":3}</samp>
+	Here we're constructing an object from the <tt>x<tt>, <tt>y</tt>,
+	and <tt>z</tt> variables, except that <tt>z</tt> doesn't exist so it
+	is effectively <tt>null</tt>.
+	The use of "<tt>:??</tt>" instead of "<tt>:</tt>" means that
+	<tt>null</tt> values are omitted, so the resulting object contains
+	<tt>x</tt> and <tt>y</tt> members but no <tt>z</tt> member.
+      </div>
+
 
     </details>
 

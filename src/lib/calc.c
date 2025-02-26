@@ -536,7 +536,9 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * right is the value, to evaluate via json_calc()
 			 */
 			tmp = calc->LEFT->LEFT;
-			json_append(result, json_key(tmp->u.text, json_calc(calc->LEFT->RIGHT, context, agdata)));
+			found = json_calc(calc->LEFT->RIGHT, context, agdata);
+			if (calc->LEFT->op != JSONOP_MAYBEMEMBER || !json_is_null(found))
+				json_append(result, json_key(tmp->u.text, found));
 		}
 		for (calc = calc->RIGHT; calc; calc = calc->RIGHT) {
 			/* calc->LEFT is the next name:value.
@@ -544,7 +546,9 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * right is the value, to evaluate via json_calc()
 			 */
 			tmp = calc->LEFT->LEFT;
-			json_append(result, json_key(tmp->u.text, json_calc(calc->LEFT->RIGHT, context, agdata)));
+			found = json_calc(calc->LEFT->RIGHT, context, agdata);
+			if (calc->LEFT->op != JSONOP_MAYBEMEMBER || !json_is_null(found))
+				json_append(result, json_key(tmp->u.text, found));
 		}
 		return result;
 

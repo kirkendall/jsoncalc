@@ -76,6 +76,10 @@
     be sorted by their values in the listed fields.  You may also follow any
     field name in the list with <tt>DESCENDING</tt> or <tt>DESC</tt> to make
     it be sorted in descending order instead of the default ascending order.
+    <p>
+    One limitation of <tt>GROUP BY</tt> and <tt>ORDER BY</tt> is that
+    they can only use elements in the row &mdash; not expressions that derive
+    a value from elements.
 
     <details open>
       <summary>Examples</summary>

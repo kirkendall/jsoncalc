@@ -649,20 +649,23 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * need to scan the argument array generator for a
 			 * JSONOP_REGEX... but only for non-aggregate built-ins.
 			 */
-			recon.context = context;
-			recon.regex = NULL;
+			localag = agdata;
 			if (!calc->u.func.jf->agfn && !calc->u.func.jf->user) {
-				tmp = calc->u.func.args;
-				if (tmp->LEFT && tmp->LEFT->op == JSONOP_REGEX)
-					tmp = tmp->LEFT;
-				else for (tmp = tmp->RIGHT; tmp; tmp = tmp->RIGHT)
-					if (tmp->LEFT->op == JSONOP_REGEX) {
+				recon.context = context;
+				recon.regex = NULL;
+				if (!calc->u.func.jf->user) {
+					tmp = calc->u.func.args;
+					if (tmp->LEFT && tmp->LEFT->op == JSONOP_REGEX)
 						tmp = tmp->LEFT;
-						break;
+					else for (tmp = tmp->RIGHT; tmp; tmp = tmp->RIGHT)
+						if (tmp->LEFT->op == JSONOP_REGEX) {
+							tmp = tmp->LEFT;
+							break;
+					}
+					recon.regex = (void *)tmp;
 				}
-				recon.regex = (void *)tmp;
+				localag = (void *)&recon;
 			}
-			localag = (void *)&recon;
 
 			/* Invoke the function. For built-ins, call the
 			 * function directly ("jf->fn").  For user-defined

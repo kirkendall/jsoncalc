@@ -33,6 +33,7 @@
 /* Several aggregate functions use these to store results */
 typedef struct { int count; double val; } agdata_t;
 typedef struct { json_t *json; char *sval; int count; double dval; } agmaxdata_t;
+typedef struct { char *ag; size_t size;} agjoindata_t;
 
 /* Forward declarations of the built-in non-aggregate functions */
 static json_t *jfn_toUpperCase(json_t *args, void *agdata);
@@ -60,7 +61,6 @@ static json_t *jfn_keys(json_t *args, void *agdata);
 static json_t *jfn_trim(json_t *args, void *agdata);
 static json_t *jfn_trimStart(json_t *args, void *agdata);
 static json_t *jfn_trimEnd(json_t *args, void *agdata);
-static json_t *jfn_join(json_t *args, void *agdata);
 static json_t *jfn_concat(json_t *args, void *agdata);
 static json_t *jfn_orderBy(json_t *args, void *agdata);
 static json_t *jfn_groupBy(json_t *args, void *agdata);
@@ -122,6 +122,8 @@ static json_t *jfn_arrayAgg(json_t *args, void *agdata);
 static void    jag_arrayAgg(json_t *args, void *agdata);
 static json_t *jfn_objectAgg(json_t *args, void *agdata);
 static void    jag_objectAgg(json_t *args, void *agdata);
+static json_t *jfn_join(json_t *args, void *agdata);
+static void    jag_join(json_t *args, void *agdata);
 
 /* A linked list of the built-in functions */
 static jsonfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str",		jfn_toUpperCase};
@@ -150,8 +152,7 @@ static jsonfunc_t keys_jf        = {&heightOf_jf,    "keys",        "obj",		jfn_
 static jsonfunc_t trim_jf        = {&keys_jf,        "trim",        "str",		jfn_trim};
 static jsonfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str",		jfn_trimStart};
 static jsonfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str",		jfn_trimEnd};
-static jsonfunc_t join_jf        = {&trimEnd_jf,     "join",        "arr, delim",	jfn_join};
-static jsonfunc_t concat_jf      = {&join_jf,        "concat",      "arr|str, ...",	jfn_concat};
+static jsonfunc_t concat_jf      = {&trimEnd_jf,     "concat",      "arr|str, ...",	jfn_concat};
 static jsonfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     "tbl, columns",	jfn_orderBy};
 static jsonfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     "tbl, columns",	jfn_groupBy};
 static jsonfunc_t flat_jf        = {&groupBy_jf,     "flat",        "arr, depth",	jfn_flat};
@@ -184,6 +185,7 @@ static jsonfunc_t time_jf        = {&date_jf,        "time",        "str, tz",		
 static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "str, tz",		jfn_dateTime};
 static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "str, tz",		jfn_timeZone};
 static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "str|num, unit",	jfn_period};
+
 static jsonfunc_t count_jf       = {&period_jf,      "count",       "any",		jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "num|str, marker",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -197,7 +199,8 @@ static jsonfunc_t explain_jf     = {&all_jf,         "explain",     "tbl",		jfn_
 static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "any, filename",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
 static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "any",		jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
 static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key, value",	jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
-static jsonfunc_t *funclist      = &objectAgg_jf;
+static jsonfunc_t join_jf        = {&objectAgg_jf,   "join",        "str, delim?",	jfn_join,  jag_join, sizeof(agjoindata_t),	JSONFUNC_FREE};
+static jsonfunc_t *funclist      = &join_jf;
 
 
 /* Register a C function that can be called via json_calc().  The function
@@ -742,52 +745,6 @@ static json_t *jfn_trimStart(json_t *args, void *agdata)
 static json_t *jfn_trimEnd(json_t *args, void *agdata)
 {
 	return help_trim(args, 0, 1, "trimEnd");
-}
-
-/* join(arr, delim) returns a string combining values.  The delim parameter
- * is optional, and defaults to ",".
- */
-static json_t *jfn_join(json_t *args, void *agdata)
-{
-	json_t  *scan;
-	size_t  len, delimlen;
-	char    *delim;
-	json_t  *result;
-
-	/* If first parameter isn't an array, return null */
-	if (args->first->type != JSON_ARRAY)
-		return json_error_null(1, "join() requires an array");
-
-	/* Get the delimiter */
-	if (args->first->next && args->first->next->type == JSON_STRING)
-		delim = args->first->next->text;
-	else
-		delim = ",";
-	delimlen = strlen(delim);
-
-	/* Compute the size of the combined string */
-	for (len = 0, scan = args->first->first; scan; scan = scan->next) {
-		if (scan->type == JSON_STRING) {
-			if (len != 0)
-				len += delimlen;
-			len += strlen(scan->text);
-		}
-	}
-
-	/* Allocate a string */
-	result = json_simple("", len, JSON_STRING);
-
-	/* Loop over the array again, appending strings */
-	for (scan = args->first->first; scan; scan = scan->next) {
-		if (scan->type == JSON_STRING) {
-			if (result->text[0])
-				strcat(result->text, delim);
-			strcat(result->text, scan->text);
-		}
-	}
-
-	/* Return the result */
-	return result;
 }
 
 /* Combine multiple arrays to form one long array, or multiple strings to
@@ -2505,3 +2462,76 @@ static void  jag_objectAgg(json_t *args, void *agdata)
 	*(json_t **)agdata = result;
 }
 
+/* join(str, delim) Concatenate a series of strings into a single big string.
+ * The delim is optional and defaults to ",".
+ */
+static json_t *jfn_join(json_t *args, void *agdata)
+{
+	agjoindata_t *data = (agjoindata_t *)agdata;
+
+	/* Return the accumulated string.  If no string, return "" */
+	if (data->ag)
+		return json_string(data->ag, -1);
+	else
+		return json_string("", 0);
+}
+static void  jag_join(json_t *args, void *agdata)
+{
+	char	*text, *mustfree, *delim;
+	char	buf[40];
+	agjoindata_t *data = (agjoindata_t *)agdata;
+	size_t	newlen;
+
+	/* Get the text.  Skip null, but get text for anything else */
+	mustfree = NULL;
+	switch (args->first->type) {
+	case JSON_NULL:
+		return;
+	case JSON_STRING:
+	case JSON_BOOL:
+		text = args->first->text;
+		break;
+	case JSON_NUMBER:
+		if (*args->first->text)
+			text = args->first->text; /* number in text format */
+		else {
+			if (args->first->text[1] == 'i')
+				sprintf(buf, "%i", JSON_INT(args->first));
+			else
+				sprintf(buf, "%g", JSON_DOUBLE(args->first));
+			text = buf;
+		}
+		break;
+	default:
+		text = mustfree = json_serialize(args->first, NULL);
+	}
+
+	/* First string? */
+	if (data->ag == NULL) {
+		/* The first call always stores a string unchanged */
+		data->size = (strlen(text) | 0xff) + 1;
+		data->ag = (char *)malloc(data->size);
+		strcpy(data->ag, text);
+	} else {
+		/* Get the delimiter, default to "," */
+		if (args->first->next && args->first->next->type == JSON_STRING)
+			delim = args->first->next->text;
+		else
+			delim = ",";
+
+		/* Maybe need to reallocate */
+		newlen = strlen(data->ag) + strlen(delim) + strlen(text);
+		if (newlen + 1 > data->size) {
+			data->size = (newlen | 0x1ff) + 1;
+			data->ag = (char *)realloc(data->ag, data->size);
+		}
+
+		/* Append the delimiter and text */
+		strcat(data->ag, delim);
+		strcat(data->ag, text);
+	}
+
+	/* Clean up */
+	if (mustfree)
+		free(mustfree);
+}

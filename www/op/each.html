@@ -185,8 +185,40 @@
 	    one element for each left operand element.
 	    You might expect it to return just one summary item, but no.
 	    It must return one result element per ungrouped left element in order
-	    for things like the <tt>groupBy("run","overall")</tt> example above
+	    for things ike the <tt>groupBy("run","overall")</tt> example above
 	    to work.
+
+	<li>The eagerness of <tt>@</tt> and <tt>@@</tt> to treat subarrays as
+	    groups can sometimes be a problem.
+	    To prevent them from treating subarrays as groups,
+	    just enclose the whole array in one extra layer of square brackets;
+	    this causes the array to be seen as a group.
+	    <div class="example">
+	      <kbd>[["a",1],["b",2],["c",3]] @ objectAgg(this[0], this[1])</kbd>
+	      <samp>[{},{},{}]</samp>
+	      <kbd>[[["a",1],["b",2],["c",3]]] @ objectAgg(this[0], this[1])</kbd>
+	      <samp>
+<table>
+<tr><th>a</th><th>b</th><th>c</th></tr>
+<tr><td>1</td><td>2</td><td>3</td></tr>
+</table>
+	      </samp>
+	      The first example fails because the subarrays are misinterpretted
+	      as groups; it looks like a 6-element array that was divided into
+	      three groups of 2, and none of those elements is an array so
+	      <tt>this[0]</tt> and <tt>this[1]</tt> are effectively
+	      <tt>null</tt>.  Member keys can't be <tt>null</tt> so no members
+	      get added.
+	      <p>
+	      The second example fixes this by adding an extra set of brackets
+	      around the array.
+	      Now the original <tt>[["a",1],["b",2],["c",3]]</tt> expression
+	      is treated as a group, and the subarrays within it are
+	      simply the three elements of that group.
+	      The <a target="_PARENT" href="../index.html?f=arrayAgg">arrayAgg()</a> function
+	      assembles them into an object, which is returned as the only row
+	      in a 1-row table (because the original data was seen as one group).
+	    </div>
 
       </ul>
     </details>
@@ -194,6 +226,7 @@
     <details>
       <summary>See Also</summary>
       <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> - split a table based on member values.
+      <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> - collect keys and values to form an object.
     </details>
 
   </body>

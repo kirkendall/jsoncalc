@@ -4,7 +4,7 @@
     <title>join</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
     <meta name="description" content="jsoncalc join - Combine an array of strings into a single string">
-    <meta name="keywords" content="string, array, jsoncalc, function reference, join">
+    <meta name="keywords" content="string, array, aggregate, jsoncalc, function reference, join">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -18,6 +18,12 @@
       <p>
       The <var>delim</var> argument is optional.
       If you omit it, "," is used as the default.
+      <p>
+      This is an aggregate function, meaning it accumulates the result over a
+      series of table elements when used with the @ operator, or a
+      <tt>SELECT</tt> clause.
+      You may also pass it an array to have it accumulate results across
+      the elements of an array.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -25,10 +31,56 @@
       <div class="example">
 	<kbd>join(["life", "the universe", "and everything"])</kbd>
 	<samp>"life,the universe,and everything"</samp>
-        This example uses the default delimiter, which is just a comma with no spaces.
+        Here we're applying <tt>join()</tt> to an array of strings.
+        This example uses the default delimiter,
+        which is just a comma with no spaces.
       </div>
 
+      <div class="example">
+        <kbd>test.cust @ join(name)</kbd>
+        <samp>[
+  "Peter,Paul,Mary,Ziggy",
+  "Peter,Paul,Mary,Ziggy",
+  "Peter,Paul,Mary,Ziggy",
+  "Peter,Paul,Mary,Ziggy"
+]</samp>
+	<kbd>[test.cust] @ join(name)</kbd>
+        <samp>["Peter,Paul,Mary,Ziggy"]</samp>
+	<kbd>(test.cust @ join(name)).distinct()</kbd>
+        <samp>["Peter,Paul,Mary,Ziggy"]</samp>
+        The first example here joins the <tt>name</tt> members of each element
+        of the <tt>test.cust</tt> table (which is part of the sample data),
+        however it returns a copy of the combined names for each row.
+        The second and third examples return a single element containing the
+        joined string, by making them be a nested array representing a single
+        group, and by using the <a target="_PARENT" href="../index.html?f=distinct">distinct()</a> function, respectively.
+      </div>
+
+      <div class="example">
+        <kbd>SELECT join(name) AS combined FROM test.cust</kbd>
+        <samp>
+<table>
+<tr><th>combined</th></tr>
+<tr><td>Peter,Paul,Mary,Ziggy</td></tr>
+</table>
+        </samp>
+        Here's an SQL-like example.
+        The result is a table (array of objects instead of simple strings),
+        so by default it is displayed as a table.
+        The use of aggregates in the
+        <a target="_PARENT" href="../index.html?op=select">SELECT</a> clause
+        inplies that it should use DISTINCT.
+      </div>
     </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>JavaScript has an <var>array</var>.<tt>join(</tt><var>delim</var><tt>)</tt>
+            function which joins an array of strings to form a single large string.
+            JsonCalc's <tt>join()</tt> function will behave identically when
+            passed an array of strings.
+            JavaScript does not have aggregate functions.
 
   </body>
 </html>

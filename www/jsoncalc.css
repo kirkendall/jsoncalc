@@ -107,7 +107,7 @@ table.examples td:first-of-type,table.examples td:nth-of-type(2) {
 div.example {
 	background-color: #e0e0e0;
 	margin-top: 0.5em;
-	margin-left: 0.5em;
+	margin-left: 2.5em;
 	margin-right: 0.5em;
 	padding-left: 5em;
 }
@@ -115,14 +115,14 @@ div.example kbd {
 	display: block;
 	font-family: monospace;
 	font-weight: bold;
-	margin-left: -5em;
+	margin-left: -4em;
 	user-select: all;
 }
 div.example samp {
 	display: block;
 	font-family: monospace;
-	font-weight: medium;
-	margin-left: -5em;
+	font-weight: normal;
+	margin-left: -4em;
 }
 div.example samp th {
 	border-bottom: thin solid black;
@@ -133,7 +133,7 @@ div.example samp td:not(:first-of-type), div.example samp th:not(:first-of-type)
 }
 div.example kbd, div.example samp, tt, a[target=_PARENT] {
 	font-family: "Courier New", monospace;
-	font-size: 110%;
+	font-size: 105%;
 }
 tt {
 	white-space: nowrap;

@@ -23,6 +23,12 @@
     The advantage is that the subscript can be computed; the subscript
     expression is evaluated, converted to a string, and appended to the
     given name to produce the full name of the environment variable.
+    <p>
+    Attempting to fetch the value of an environment variable that doesn't
+    exist will return value <tt>null</tt>.
+    The <a target="_PARENT" href="../index.html?op=assign">=??</a> assignment
+    operator and <a target="_PARENT" href="../index.html?op=colon">:??</a>
+    object generator notation are sensitive to <tt>null</tt>.
 
     <details open>
       <summary>Examples</summary>

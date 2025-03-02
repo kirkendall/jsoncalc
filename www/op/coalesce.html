@@ -32,12 +32,24 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>This uses "short circuit" evalulation, meaning the right operand isn't
-            evaluated if the left operand is non-<tt>null</tt>.
+        <li>This uses "short circuit" evalulation, meaning the right operand
+            isn't evaluated if the left operand is non-<tt>null</tt>.
 
 	<li>JavaScript has this too!
 
+	<li>JsonCalc also has an <tt>=??</tt> assignment operator which only
+	    assigns if the new value wouldn't be <tt>null</tt>, and a
+	    <tt>:??</tt> notation in object generators to only add members
+	    if the value would not be <tt>null</tt>.
+	    JavaScript does <em>not</em> have these.
+
       </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?op=assign">=??</a> Conditional assignment<br/>
+      <a target="_PARENT" href="../index.html?op=colon">:??</a> Conditional member in an object generator
     </details>
 
   </body>

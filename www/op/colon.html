@@ -12,9 +12,15 @@
     <table class="opList">
       <tr><td class="left">name</td><td class="op">:</td><td class="right">expr</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
       <tr><td class="left">expr</td><td class="op">AS</td><td class="right">name</td><td class="opdesc">Named member in SELECT or object generator</td></tr>
+      <tr><td class="left">name</td><td class="op">:??</td><td class="right">expr</td><td class="opdesc">Named member in SELECT or object generator, but only if value is not <tt>null</tt></td></tr>
     </table>
     These are used mostly in object generators, to pair a name and a value.
     They can also be used in a SELECT statement, which is where "AS" comes from.
+    <p>
+    The <tt>:??</tt> variant is mostly intended for when you're using
+    JsonCalc to generate a JSON document from other sources.
+    Since undefined expressions return NULL, this gives you an easy way to
+    skip members that have no value.
     <details open>
       <summary>Examples</summary>
 
@@ -28,6 +34,14 @@
 	<kbd>{2+2 as foo}</kbd>
 	<samp>{"foo":4}</samp>
         Same thing, using <tt>AS</tt> instead of <tt>:</tt>.
+      </div>
+
+      <div class="example">
+        <kbd>{foo :?? 1, bar :?? $NOENV, zot :?? "three"}</kbd>
+        <samp>{"foo":1,"zot":"three"}</samp>
+	An example of the <tt>:??</tt> operator.
+	Notice that "bar" was not added because its value would have been
+	<tt>null</tt> assuming there is no <a target="_PARENT" href="../index.html?lit=environ">environment variable</a> named "NOENV".
       </div>
 
       <div class="example">

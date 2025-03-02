@@ -164,7 +164,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			} else if (find->needkey && 0 != json_mbs_casecmp(find->needkey, scan->text)) {
 				/* Wrong key */
 				continue;
-			} else if (scan->first->type == JSON_STRING && find->needle->type == JSON_STRING) {
+			} else if (scan->first->type == JSON_STRING && find->needle && find->needle->type == JSON_STRING) {
 				/* Compare as strings */
 				if (find->ignorecase) {
 					if (0 != json_mbs_casecmp(find->needle->text, scan->first->text))
@@ -298,6 +298,5 @@ json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needke
 /* Do a deep search for a regular expression */
 json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey)
 {
-	json_t *jnull = {JSON_NULL};
-	return find(haystack, &jnull, 0, regex, needkey);
+	return find(haystack, NULL, 0, regex, needkey);
 }

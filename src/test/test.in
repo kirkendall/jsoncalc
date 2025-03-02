@@ -196,5 +196,5 @@ select * from users
 =[{"id":1,"name":"steve"},{"id":2,"name":"rebecca"}]
 select name from users
 =[{"name":"steve"},{"name":"rebecca"}]
-select * from users, actions
+select * from users @= actions
 =[{"id":1,"name":"steve","action":"add"},{"id":1,"name":"steve","action":"change"},{"id":2,"name":"rebecca","action":"delete"}]

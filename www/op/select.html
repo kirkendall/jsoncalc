@@ -17,7 +17,7 @@
     The full syntax is...
     <blockquote>
       SELECT DISTINCT <var>columns</var>
-      FROM <var>table</var>
+      FROM <var>table</var>, <var>nestList</var>
       WHERE <var>condition</var>
       GROUP BY <var>columns</var>
       ORDER BY <var>columns</var>
@@ -40,18 +40,20 @@
     The optional <tt>FROM</tt> <var>table</var> says which table
     (array of objects) to use as the starting point.
     This can be any expression that returns a table,
-    even another <tt>SELECT</tt> clause.
-    Commas in the <var>table</var> expression will be interpreted as
-    "natural join" operations, which elsewhere in <strong>JsonCalc</strong>
-    is represented by the <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
+    even another <tt>SELECT</tt> clause
+    or the natural join of two or more tables via the
+    <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
+    The expression that returns the table may also be followed by a
+    comma-delimited list of names of nested tables to expand via the
+    <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> function.
     If you omit the <tt>FROM</tt> <var>table</var> clause,
     <strong>JsonCalc</strong> will choose a default table as follows:
     <ol>
       <li><tt>this</tt> if it's a table.
-      <li>The contents of the current file named on the command line, if it
-          contains a table.
-      <li>The value of a member if the current file contains an object, and
-	  that value is a table.
+      <li><tt>data</tt> (i.e. the contents of the current file named
+          on the command line) if is a table.
+      <li>A member in <tt>data</tt> if <tt>data</tt> is an object, and
+	  a member of that object is a table.
 	  (If multiple members contain tables, <strong>JsonCalc</strong> will use the first.)
     </ol>
 

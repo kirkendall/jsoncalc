@@ -56,6 +56,7 @@ typedef struct jsonselect_s {
 	jsoncalc_t *select;	/* Selected columns as an object generator, or NULL */
 	int	distinct;
 	jsoncalc_t *from;	/* expression that returns a table, or NULL for first array in context */
+	json_t *unroll;		/* list of field names to unroll, or NULL */
 	jsoncalc_t *where;	/* expression that selects rows, or NULL for all */
 	json_t *groupby;	/* list of field names, or NULL */
 	json_t *orderby;	/* list of field names, or NULL */
@@ -1210,6 +1211,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		}
 	}
 
+	/* Maybe dump some debugging info */
 	if (json_debug_flags.calc) {
 		char *tmp; 
 		printf("jcselect(\n");
@@ -1226,10 +1228,26 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		printf(")\n");
 	}
 
-	/* Was there a FROM clause? */
+	/* Start building the "native" version of the SELECT in variable "jc",
+	 * starting with the table in the FROM clause, or with the default
+	 * table if there was no FROM clause.
+	 */
 	if (sel->from) {
-		/* Yes, use it */
-		jc = sel->from;
+		/* Yes, use it.  If there's also an unroll list, then add an
+		 * unroll() function call around it.
+		 */
+		if (sel->unroll) {
+			/* Make the unroll list be a jsoncalc_t literal */
+			t.op = JSONOP_LITERAL;
+			ja = jcalloc(&t);
+			ja->u.literal = sel->unroll;
+
+			/* Generate an unroll() function call */
+			jc = jcfunc("unroll", sel->from, ja, NULL);
+		} else {
+			/* just the one table */
+			jc = sel->from;
+		}
 	} else {
 		/* No, arrange for us to choose a default at runtime */
 		jc = &selectfrom;
@@ -1728,10 +1746,13 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		} else if (PATTERN("SFx,n") && PREC(JSONOP_COMMA)) {
 			/* Comma in a FROM clause adds to an unroll list */
-			top[-2]->op = JSONOP_NJOIN;
-			top[-2]->LEFT = top[-3];
-			top[-2]->RIGHT = top[-1];
-			top[-3] = top[-2];
+			jc = top[-5];
+			if (!jc->u.select->unroll)
+				jc->u.select->unroll = json_array();
+			json_append(jc->u.select->unroll, json_string(top[-1]->u.text, -1));
+			/* Remove the name and comma, keep "SFx" */
+			json_calc_free(top[-1]);
+			json_calc_free(top[-2]);
 			stack->sp -= 2;
 			continue;
 		} else if (PATTERN("SFx") && PREC(JSONOP_FROM)) {

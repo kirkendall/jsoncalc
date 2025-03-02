@@ -25,9 +25,10 @@
       becomes a problem.  You need a way to combine those fields into a single row.
       That's what <tt>unroll</tt> does.
       <p>
-      You pass it an array, and a list of nested array names, and it returns a
-      larger array where layer info is removed, returning a simple
-      <strong>(but large!)</strong> table that you can generate your report from.
+      You pass it a table (array of objects) and a list of nested table names,
+      and it generates a larger array where layer info is removed,
+      returning a simple <strong>(but large!)</strong> table
+      that you can generate your report from.
     </dl>
     <details open>
       <summary>Examples</summary>

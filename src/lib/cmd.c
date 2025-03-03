@@ -189,11 +189,13 @@ void json_cmd_parse_whitespace(jsonsrc_t *src)
 }
 
 /* Skip past whitespace, comments, and an optional type declaration */
-void json_cmd_parse_whitespace_or_type(jsonsrc_t *src)
+void json_cmd_parse_whitespace_or_type(jsonsrc_t *src, char **refstr)
 {
 	int	nest;
 	int	quote;
 	int	afterop;
+	char	*start;
+	int	len;
 
 	/* Skip whitespace and some comments */
 	json_cmd_parse_whitespace(src);
@@ -201,17 +203,22 @@ void json_cmd_parse_whitespace_or_type(jsonsrc_t *src)
 	/* If no "?:" or ":" then no type.  We're done. */
 	if (*src->str == '?')
 		src->str++;
-	if (*src->str != ':')
+	if (*src->str != ':') {
+		if (refstr)
+			*refstr = NULL;
 		return;
+	}
 
-	/* Okay, we need to move past the ":" and a type.  Types consist of
-	 * names, literals (including quoted strings), "|" operators,
-	 * curly braces, square brackets, and maybe commas withing the
-	 * brackets/braces.
+	/* Skip past the ":" */
+	src->str++;
+	start = src->str;
+
+	/* Skip past the type.  Types consist of names, literals (including
+	 * quoted strings), "|" operators, curly braces, square brackets, and
+	 * maybe commas within the  brackets/braces.
 	 */
 	nest = quote = 0;
 	afterop = 1;
-	src->str++;
 	for (; *src->str; src->str++) {
 		/* Newline ends comments */
 		if (quote == '/' && *src->str == '\n')
@@ -296,6 +303,21 @@ void json_cmd_parse_whitespace_or_type(jsonsrc_t *src)
 
 		/* If we get here, then we hit the end of the type */
 		break;
+	}
+
+	/* If we have a refstr, then store a copy of the text there, with the
+	 * colon and trailing whitespace removed.
+	 */
+	if (refstr) {
+		for (len = src->str - start; len > 0 && isspace(start[len - 1]); len--) {
+		}
+		if (len <= 0)
+			*refstr = NULL;
+		else {
+			*refstr = (char *)malloc(len + 1);
+			strncpy(*refstr, start, len);
+			(*refstr)[len] = '\0';
+		}
 	}
 }
 
@@ -1248,7 +1270,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 			json_cmd_free(first);
 			return NULL;
 		}
-		json_cmd_parse_whitespace_or_type(src);
+		json_cmd_parse_whitespace_or_type(src, NULL);
 		if (*src->str == '=') {
 			err = NULL;
 			src->str++;
@@ -1377,6 +1399,9 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	jsonsrc_t paren; /* Used for scanning parameter source */
 	json_t	*params = NULL;
 	jsoncmd_t *body = NULL;
+	char	*returntype = NULL;;
+
+	paren.buf = NULL;
 
 	/* Function name */
 	fname = json_cmd_parse_key(src, 1);
@@ -1405,14 +1430,16 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			printf("aggregate ");
 		printf("function %s", f->name);
 		if (f->args)
-			printf("(%s)\n", f->args);
+			printf("(%s)", f->args);
 		else {
 			putchar('(');
 			for (params = f->userparams->first; params; params = params->next)
 				printf("%s%s", params->text, params->next ? ", " : "");
 			putchar(')');
-			putchar('\n');
 		}
+		if (f->returntype)
+			printf(":%s", f->returntype);
+		putchar('\n');
 		free(fname);
 		return NULL;
 	}
@@ -1433,7 +1460,7 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		}
 
 		/* Possibly a type declaration */
-		json_cmd_parse_whitespace_or_type(&paren);
+		json_cmd_parse_whitespace_or_type(&paren, NULL);
 
 		/* If followed by = then use a default */
 		if (*paren.str == '=') {
@@ -1482,10 +1509,9 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			json_cmd_parse_whitespace(&paren);
 		}
 	}
-	free(paren.buf);
 
 	/* Parentheses may be followed by a return type declaration */
-	json_cmd_parse_whitespace_or_type(src);
+	json_cmd_parse_whitespace_or_type(src, &returntype);
 
 	/* Body -- if no body, that's okay */
 	if (*src->str == '{')
@@ -1495,13 +1521,14 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		 * just redundantly declaring an already-defined function.
 		 */
 		free(fname);
+		free(returntype);
 		return NULL;
 	} else
 		body = NULL;
 
 	/* Define it! */
 	if (!*referr) {
-		if (json_calc_function_user(fname, params, body)) {
+		if (json_calc_function_user(fname, params, paren.buf, returntype, body)) {
 			/* Tried to redefine a built-in, which isn't allowed. */
 			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Can't redefine built-in function \"%s\"", fname);
 			goto Error;
@@ -1517,8 +1544,12 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 Error:
 	if (fname)
 		free(fname);
+	if (paren.buf)
+		free(paren.buf);
 	if (params)
 		json_free(params);
+	if (returntype)
+		free(returntype);
 	if (body)
 		json_cmd_free(body);
 	return NULL;

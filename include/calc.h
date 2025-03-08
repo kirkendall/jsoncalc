@@ -252,6 +252,7 @@ jsonfunc_t *json_calc_function_by_name(char *name);
 char *json_calc_op_name(jsonop_t op);
 void json_calc_dump(jsoncalc_t *calc);
 jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassign);
+jsoncalc_t *json_calc_list(jsoncalc_t *list, jsoncalc_t *item);
 void json_calc_free(jsoncalc_t *calc);
 void *json_calc_ag(jsoncalc_t *calc, void *agdata);
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata);

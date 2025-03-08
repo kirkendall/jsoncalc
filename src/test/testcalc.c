@@ -108,11 +108,13 @@ void testfile(FILE *in, count_t *counts)
 		/* If result line, and we have a previous result, check it */
 		if (buf[0] == '=' && resultstr) {
 			if (strcmp(resultstr, buf + 1)) {
+				fputs(RED, stdout);
 				if (*section) 
 					puts(section);
 				printf("expr: %s\n", expression);
 				printf("want: %s\n", buf + 1);
 				printf("got:  %s\n", resultstr);
+				fputs(PLAIN, stdout);
 				counts->failed++;
 			}
 			continue;
@@ -184,7 +186,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("%sPassed %d/%d%s, %sfailed %d/%d%s\n", GREEN, counts.tests - counts.failed, counts.tests, PLAIN, RED, counts.failed, counts.tests, PLAIN);
+	printf("%sPassed %d/%d%s", GREEN, counts.tests - counts.failed, counts.tests, PLAIN);
+	if (counts.failed > 0)
+		printf(", %sfailed %d/%d%s", RED, counts.failed, counts.tests, PLAIN);
+	putchar('\n');
         return counts.failed > 0;
 }
 

@@ -869,6 +869,29 @@ static jsoncalc_t *jcfunc(char *name, jsoncalc_t *p1, jsoncalc_t *p2, jsoncalc_t
 	return jc;
 }
 
+/* Build an array generator, one item at a time.  For the first call, "list"
+ * should be NULL; in subsequent calls, it should be the value returned by
+ * the previous call.  This function is used in some command parsers in cmd.c
+ */
+jsoncalc_t *json_calc_list(jsoncalc_t *list, jsoncalc_t *item)
+{
+	jsoncalc_t *tail;
+
+	/* Allocate a JSONOP_ARRAY with "item" on the left */
+	item = jcleftright(JSONOP_ARRAY, item, NULL);
+
+	/* If no list, then just return the JSONOP_ARRAY containing item */
+	if (!list)
+		return item;
+
+	/* Find the tail of the list */
+	for (tail = list; tail->RIGHT; tail = tail->RIGHT) {
+	}
+
+	/* Append the new item to the tail, and return the whole list */
+	tail->RIGHT = item;
+	return list;
+}
 
 /* Free a jsoncalc_t tree that was allocated via json_calc_parse()  ... or
  * ultimately the internal jcalloc() function.
@@ -2000,7 +2023,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 		}
 
 		/* Array generators (must be checked after subscript pattern) */
-		if (PATTERN("^[]") || PATTERN("xi[)")) {
+		if (PATTERN("^[]") || PATTERN("xi[)")) { /*!!!*/
 			/* Empty array generator, convert from STARTARRAY and
 			 * ENDARRAY to just ARRAY
 			 */
@@ -2008,7 +2031,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			top[-2] = jcalloc(&t);
 			stack->sp--;
 			continue;
-		} else if (PATTERN("[x]") || PATTERN("xi[x)")) {
+		} else if (PATTERN("[x]") || PATTERN("xi[x)")) { /*!!!*/
 			/* Non-empty array generator.  All elements are in
 			 * a comma expression in top[-2].  Convert comma to
 			 * array.
@@ -2139,6 +2162,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
+	  case JSONOP_MAYBEMEMBER:
 	  case JSONOP_NJOIN:
 	  case JSONOP_LJOIN:
 	  case JSONOP_RJOIN:
@@ -2299,11 +2323,11 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 		break;
 	case JCOP_PREFIX:
 		if (!stack.stack[0]->RIGHT)
-			err = "Missing operand";
+			err = "Missing operand of unary operator";
 		break;
 	case JCOP_POSTFIX:
 		if (!stack.stack[0]->LEFT)
-			err = "Missing operand";
+			err = "Missing operand of postfix operator";
 		break;
 	}
 

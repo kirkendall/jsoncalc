@@ -359,7 +359,7 @@ static int dumpstack(stack_t *stack, char *format, char *data)
 		return 1;
 
 	/* Print the key */
-	sprintf(buf, format, data);
+	snprintf(buf, sizeof buf, format, data);
 	strcat(buf, ":");
 	printf("%-14s", buf);
 

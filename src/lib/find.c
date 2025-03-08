@@ -64,7 +64,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			if (scan->type == JSON_OBJECT || scan->type == JSON_ARRAY) {
 				/* Append this element's index to expr */
 				wasused = find->used;
-				sprintf(indexstr, "[%d]", i);
+				snprintf(indexstr, sizeof indexstr, "[%d]", i);
 				help_find_cat(find, indexstr);
 				wasindex = find->index;
 				if (find->index == -1)
@@ -123,7 +123,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			 */
 			wasused = find->used;
 			wasindex = find->index;
-			sprintf(indexstr, "[%d]", i);
+			snprintf(indexstr, sizeof indexstr, "[%d]", i);
 			help_find_cat(find, indexstr);
 			if (find->index == -1)
 				find->index = i;

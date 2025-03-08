@@ -118,9 +118,9 @@ int json_grid(json_t *json, jsonformat_t *format)
 			else if (cell->type == JSON_OBJECT)
 				text = "{object}";
 			else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'i')
-				sprintf(text = number, "%d", JSON_INT(cell));
+				snprintf(text = number, sizeof number, "%d", JSON_INT(cell));
 			else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'd')
-				sprintf(text = number, "%.*g", format->digits, JSON_DOUBLE(cell));
+				snprintf(text = number, sizeof number, "%.*g", format->digits, JSON_DOUBLE(cell));
 			else
 				text = cell->text;
 

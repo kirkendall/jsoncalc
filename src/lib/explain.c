@@ -186,9 +186,9 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 			 */
 			if (col->first->type == JSON_NUMBER && !col->first->text[0]) {
 				if (col->first->text[1] == 'i')
-					sprintf(number, "%d", JSON_INT(col->first));
+					snprintf(number, sizeof number, "%d", JSON_INT(col->first));
 				else
-					sprintf(number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
+					snprintf(number, sizeof number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
 				newwidth = strlen(number);
 			} else  {
 				newwidth = json_mbs_width(col->first->text);
@@ -206,9 +206,9 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 			json_append(stats, json_key("type", json_string(newtype, -1)));
 			if (col->first->type == JSON_NUMBER && !col->first->text[0]) {
 				if (col->first->text[1] == 'i')
-					sprintf(number, "%d", JSON_INT(col->first));
+					snprintf(number, sizeof number, "%d", JSON_INT(col->first));
 				else
-					sprintf(number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
+					snprintf(number, sizeof number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
 				newwidth = strlen(number);
 			} else {
 				newwidth = json_mbs_width(col->first->text);

@@ -488,6 +488,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 	json_t  *result;
 	char    *str;
 	int     len;
+	size_t	size;
 	long    n;
 
 	if (args->first->type == JSON_STRING) {
@@ -497,7 +498,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		/* Convert each byte of the string to hex */
 		for (len = 0; str[len]; len++)
-			sprintf(&result->text[2 * len], "%02x", str[len] & 0xff);
+			snprintf(&result->text[2 * len], 2, "%02x", str[len] & 0xff);
 
 		/* Return that */
 		return result;
@@ -512,13 +513,14 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		/* Allocate the return buffer -- probably bigger than we need,
 		 * but not by much.*/
-		result = json_string("", len ? len : n < 0xffffffffff ? 12 : 2 + sizeof(n) * 2);
+		size = len ? len : n < 0xffffffffff ? 12 : 2 + sizeof(n) * 2;
+		result = json_string("", size);
 
 		/* Fill it */
 		if (len == 0)
-			sprintf(result->text, "0x%lx", n);
+			snprintf(result->text, size, "0x%lx", n);
 		else
-			sprintf(result->text, "%0*lx", len, n);
+			snprintf(result->text, size, "%0*lx", len, n);
 
 		return result;
 	}
@@ -811,9 +813,9 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 				continue;
 			else if (scan->type == JSON_NUMBER && !*scan->text) {
 				if (scan->text[1] == 'i')
-					sprintf(build, "%i", JSON_INT(scan));
+					snprintf(build, len, "%i", JSON_INT(scan));
 				else
-					sprintf(build, "%.*g", json_format_default.digits, JSON_DOUBLE(scan));
+					snprintf(build, len, "%.*g", json_format_default.digits, JSON_DOUBLE(scan));
 			} else
 				strcpy(build, scan->text);
 			build += strlen(build);
@@ -1008,7 +1010,7 @@ static json_t *jfn_toFixed(json_t *args, void *agdata)
 
 	num = json_double(args->first);
 	digits = json_int(args->first->next);
-	sprintf(buf, "%.*f", digits, num);
+	snprintf(buf, sizeof buf, "%.*f", digits, num);
 	return json_string(buf, -1);
 }
 
@@ -2510,9 +2512,9 @@ static void  jag_join(json_t *args, void *agdata)
 			text = args->first->text; /* number in text format */
 		else {
 			if (args->first->text[1] == 'i')
-				sprintf(buf, "%i", JSON_INT(args->first));
+				snprintf(buf, sizeof buf, "%i", JSON_INT(args->first));
 			else
-				sprintf(buf, "%g", JSON_DOUBLE(args->first));
+				snprintf(buf, sizeof buf, "%g", JSON_DOUBLE(args->first));
 			text = buf;
 		}
 		break;

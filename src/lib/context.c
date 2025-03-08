@@ -194,17 +194,17 @@ static json_t *stdcurrent(char *key)
 
 		/* Format it as appropriate */
 		if (!strcasecmp(key, "current_date")) {
-			sprintf(buf, "%04d-%02d-%02d",
+			snprintf(buf, sizeof buf, "%04d-%02d-%02d",
 				localtm.tm_year + 1900,
 				localtm.tm_mon + 1,
 				localtm.tm_mday);
 		} else if (!strcasecmp(key, "current_time")) {
-			sprintf(buf, "%02d:%02d:%02d",
+			snprintf(buf, sizeof buf, "%02d:%02d:%02d",
 				localtm.tm_hour,
 				localtm.tm_min,
 				localtm.tm_sec);
 		} else if (!strcasecmp(key, "current_datetime")) {
-			sprintf(buf, "%04d-%02d-%02dT%02d:%02d:%02d",
+			snprintf(buf, sizeof buf, "%04d-%02d-%02dT%02d:%02d:%02d",
 				localtm.tm_year + 1900,
 				localtm.tm_mon + 1,
 				localtm.tm_mday,
@@ -212,7 +212,7 @@ static json_t *stdcurrent(char *key)
 				localtm.tm_min,
 				localtm.tm_sec);
 		} else if (!strcasecmp(key, "current_timestamp")) {
-			sprintf(buf, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+			snprintf(buf, sizeof buf, "%04d-%02d-%02dT%02d:%02d:%02dZ",
 				utctm.tm_year + 1900,
 				utctm.tm_mon + 1,
 				utctm.tm_mday,
@@ -253,9 +253,9 @@ static json_t *stdcurrent(char *key)
 
 			/* Format it */
 			if (hours < 0)
-				sprintf(buf, "-%02d:%02d", -hours, -minutes);
+				snprintf(buf, sizeof buf, "-%02d:%02d", -hours, -minutes);
 			else
-				sprintf(buf, "+%02d:%02d", hours, minutes);
+				snprintf(buf, sizeof buf, "+%02d:%02d", hours, minutes);
 		}
 
 		/* Return it as a string */
@@ -425,7 +425,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 				bits = st.st_mode & 0007;
 			if (i == 0) {
 				localtime_r(&st.st_mtime, &tm);
-				sprintf(isobuf, "%04d-%02d-%02dT%02d:%02d:%02d",
+				snprintf(isobuf, sizeof isobuf, "%04d-%02d-%02dT%02d:%02d:%02d",
 					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 					tm.tm_hour, tm.tm_min, tm.tm_sec);
 			} else

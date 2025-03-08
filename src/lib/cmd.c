@@ -65,6 +65,10 @@ static jsoncmd_t    *file_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 static jsoncmd_t    *import_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t    *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t    *print_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 /* format -Oflags { command } ... or without {command} have a lasting effect */
 /* delete lvalue */
 /* help topic subtopic */
@@ -89,7 +93,9 @@ static jsoncmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run}
 static jsoncmdname_t jcn_explain =  {&jcn_void,		"explain",	explain_parse,	explain_run};
 static jsoncmdname_t jcn_file =     {&jcn_explain,	"file",		file_parse,	file_run};
 static jsoncmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
-static jsoncmdname_t *names = &jcn_import;
+static jsoncmdname_t jcn_plugin =   {&jcn_import,	"plugin",	plugin_parse,	plugin_run};
+static jsoncmdname_t jcn_print =    {&jcn_plugin,	"print",	print_parse,	print_run};
+static jsoncmdname_t *names = &jcn_print;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
@@ -2236,6 +2242,83 @@ static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	/* Plugins are loaded at parse time, not run time */
+	return NULL;
+}
+
+/* Print a value.  If it's a string, print it without quotes or backslashes. */
+static jsoncmd_t *print_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+{
+	jsoncmd_t *cmd;
+	jsonsrc_t start;
+	jsoncalc_t *item, *list;
+	char	*err;
+
+	start = *src;
+	json_cmd_parse_whitespace(src);
+	if (!*src->str || *src->str == ';' || *src->str == '}') {
+		/* "print" with no arguments does nothing */
+		return NULL;
+	}
+
+	/* Parse a comma-delimited list of expressions to output, as an
+	 * array generator expression.
+	 */
+	list = NULL;
+	err = NULL;
+	do {
+		item = json_calc_parse(src->str, &src->str, &err, FALSE);
+		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
+			if (list)
+				json_calc_free(list);
+			*referr = json_cmd_error(start.filename, jcmdline(&start), 1, err ? err : "Syntax error in \"print\" expression");
+			return NULL;
+		}
+		list = json_calc_list(list, item);
+	} while (*src->str++ == ',');
+
+	/* Build the command */
+	cmd = json_cmd(&start, &jcn_print);
+	cmd->calc = list;
+	return cmd;
+}
+
+static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+{
+	json_t	*list, *scan;
+	char	lastchar;
+
+	/* Evaluate the expression list */
+	list = json_calc(cmd->calc, *refcontext, NULL);
+
+	/* If error, then return the error */
+	if (list && list->type == JSON_NULL && *list->text) {
+		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)list->first, "%s", list->text);
+		json_free(list);
+		return err;
+	}
+
+	/* Otherwise output the results, all strung together without any
+	 * added spaces or anything.  For strings, output the string literally.
+	 */
+	lastchar = '\n';
+	for (scan = list->first; scan; scan = scan->next) {
+		if (scan->type == JSON_STRING) {
+			fputs(scan->text, stdout);
+			if (*scan->text)
+				lastchar = scan->text[strlen(scan->text) - 1];
+		} else {
+			char *tmp = json_serialize(scan, NULL);
+			fputs(tmp, stdout);
+			free(tmp);
+			lastchar = 'x'; /* Never empty, never '\n' */
+		}
+	}
+
+	/* If the last character wasn't a newline, remember that. */
+	json_print_incomplete_line = (lastchar != '\n');
+
+	/* Clean up */
+	json_free(list);
 	return NULL;
 }
 

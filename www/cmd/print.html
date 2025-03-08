@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>print</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc print - Output data without formatting it">
+    <meta name="keywords" content="command, command reference, print">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>print - Output data without formatting it</h1>
+    <dl>
+      <dt>print <var>value</var>, ...
+      <dd>
+      Given a comma-delimited list of expressions, this outputs each expression
+      without any modification.
+      In particular, strings are written as raw UTF-8 text,
+      no padding is inserted between items, and no newline is added at the end.
+      Data types other than strings are output pretty much the same as they
+      would be without the <tt>print</tt> command.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>print "\e[34mWow!\e[m\n"</kbd>
+	<samp style="color:#0000ff">Wow!</samp>
+        "\e" is an ASCII escape character, so "\e[34m" is an escape sequence
+        for blue text.
+        After "Wow!", another escape sequence turns off the color, and 
+        "\n" adds a newline since <tt>print</tt> won't add one by itself.
+      </div>
+
+      <div class="example">
+        <kbd>print "The current file uses ", sizeof(data), " bytes of RAM\n"</kbd>
+        <samp>The current file uses 3616 bytes of RAM</samp>
+        An example showing a comma-delimited list of values in a single
+        <tt>print</tt> command.
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This command exists mostly as a convenient way to output strings
+            without quotes or backslash escapes.
+            You could achieve a similar effect via "-Ostring"
+            but <tt>print</tt> is more convenient.
+
+	<li>Although <tt>print</tt> doesn't automatically add a newline,
+	    the interactive "JsonCalc:" prompt does.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

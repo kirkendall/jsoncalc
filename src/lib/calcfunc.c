@@ -286,6 +286,10 @@ static void free_user_functions()
 		free(scan->name);
 		json_cmd_free(scan->user);
 		json_free(scan->userparams);
+		if (scan->args)
+			free(scan->args);
+		if (scan->returntype)
+			free(scan->returntype);
 		free(scan);
 	}
 }

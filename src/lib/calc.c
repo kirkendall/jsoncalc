@@ -247,13 +247,15 @@ void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, js
 	json_context_free(local);
 }
 
+/* These make accessing the left and right operands easier/clearer. */
+#define LEFT  u.param.left
+#define RIGHT u.param.right
+
 /* These two macros fetch the left and right operands.  They always set the
  * "left" and "right" variables.  If the the value is freshly allocated
  * (meaning json_calc() is responsible for freeing it) then they also set
  * the "freeleft" and "freeright" variables.
  */
-#define LEFT  u.param.left
-#define RIGHT u.param.right
 #define USE_LEFT_OPERAND(calc)	if ((left = jcsimple(calc->LEFT, context)) == NULL)\
 		left = freeleft = json_calc(calc->LEFT, context, agdata)
 #define USE_RIGHT_OPERAND(calc)	if ((right = jcsimple(calc->RIGHT, context)) == NULL)\
@@ -649,7 +651,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * need to scan the argument array generator for a
 			 * JSONOP_REGEX... but only for non-aggregate built-ins.
 			 */
-			localag = agdata;
+			localag = (void *)((char *)agdata + calc->u.func.agoffset);
 			if (!calc->u.func.jf->agfn && !calc->u.func.jf->user) {
 				recon.context = context;
 				recon.regex = NULL;
@@ -1351,6 +1353,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:
+	  case JSONOP_MAYBEMEMBER:
 		/* These are only used during parsing, not evaluation */
 		abort();
 	}

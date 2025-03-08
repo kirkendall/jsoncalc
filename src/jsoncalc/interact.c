@@ -167,6 +167,14 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 
 			/* Clean up */
 			json_cmd_free(jc);
+
+			/* If the last line was incomplete, then output a
+			 * newline.  The readline() library depends on this.
+			 */
+			if (json_print_incomplete_line) {
+				putchar('\n');
+				json_print_incomplete_line = 0;
+			}
 		}
 	}
 

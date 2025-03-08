@@ -22,7 +22,7 @@
 
       <div class="example">
 	<kbd>var i = 0;</kbd>
-	<kbd>function incr() i = i + 1;</kbd>
+	<kbd>function incr() { i = i + 1; } </kbd>
 	<kbd>void incr()</kbd>
 	<kbd>i</kbd>
 	<samp>1</samp>
@@ -32,7 +32,8 @@
 	<samp>2</samp>
         The <tt>incr()</tt> function increments <tt>i</tt>.
         The function will also return <tt>null</tt> but we don't care about that.
-        When we invoke it with <tt>void</tt> its return value is discarded,
+        When we invoke it with the <tt>void</tt> command,
+        its return value is discarded,
         but without <tt>void</tt> the <tt>null</tt> is displayed.
       </div>
 

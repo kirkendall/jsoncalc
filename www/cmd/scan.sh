@@ -13,19 +13,19 @@ do
 	*)
 		# Extract info from the file
 		description=$(sed -n 's/.*<meta name="description" content=".* - \([^"]*\)".*/\1/p' $i)
-		functions=$(sed -n 's/.*<meta name="keywords" content=".*, command reference, \([^"]*\)".*/\1/p' $i | tr -d ,)
+		commands=$(sed -n 's/.*<meta name="keywords" content=".*, command reference, \([^"]*\)".*/\1/p' $i | tr -d ,)
 
 		# Output info for each function name
-		for f in $functions
+		for c in $commands
 		do
 			# Generate a JavaScript index
-			echo "{command:\"$f\",src:\"$i\",query:\"${i/.html}\",description:\"$description\",sections:[\"${sections// /\",\"}\"]}," >>cmdlist.js
+			echo "{command:\"$c\",src:\"$i\",query:\"${i/.html}\",description:\"$description\"]}," >>cmdlist.js
 
 			# Generate the INTRO file's list
 			#echo "<tr class=\"$sections\"><td><a href=\"$i\">$f</a></td><td>$description</td></tr>" >>INTRO.html
 
 			# Generate the sidebar's list
-			echo "<a class=\"command\" href=\"../index.html?cmd=$f\" target=\"_PARENT\">$f<a>" >>sidebar.html
+			echo "<a class=\"command\" href=\"../index.html?cmd=$c\" target=\"_PARENT\">$c<a>" >>sidebar.html
 		done
 		;;
 	esac

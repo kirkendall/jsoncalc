@@ -123,40 +123,43 @@
       <ul>
 
         <li><strong>JsonCalc</strong> expressions are case-insensitive.
-            Although the examples here give "SELECT" and related words in
+            Although the examples here give "<tt>SELECT</tt>" and related words in
             uppercase, you can also write them in lowercase.
 
 	<li><strong>JsonCalc</strong> has several other SQL-like features.  The
 	    <a target="_PARENT" href="../index.html?op=equal">=, &lt;&gt;</a>,
-	    <a target="_PARENT" href="../index.html?op=like">LIKE</a>, and
-	    <a target="_PARENT" href="../index.html?op=between">BETWEEN</a>
+	    <a target="_PARENT" href="../index.html?op=like"><tt>LIKE</tt></a>, and
+	    <a target="_PARENT" href="../index.html?op=between"><tt>BETWEEN</tt></a>
 	    operators are present, and are case-insensitive as is customary
 	    in SQL.  The
-	    <a target="_PARENT" href="../index.html?op=bool">AND, OR, and NOT</a>
+	    <a target="_PARENT" href="../index.html?op=bool"><tt>AND</tt>, <tt>OR</tt>, and <tt>NOT</tt></a>
 	    operators are there too.
-	    The <a target="_PARENT" href="../index.html?op=in">IN</a> operator
-	    is also available, but if the right argument is a list of literals
+	    The <a target="_PARENT" href="../index.html?op=in"><tt>IN</tt></a> operator
+	    is also available, but if the right operand is a list of literals
 	    then you must enclose it in JSON-style brackets instead of SQL-style
 	    parentheses.
 
 	<li>Internally, <tt>SELECT</tt> expressions are converted to "native"
             functions and operators. An expression such as
-            <span style="white-space:nowrap">"<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY a</tt>"</span>
+            <span style="white-space:nowrap">"<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY aprime</tt>"</span>
             would become
             <span style="white-space:nowrap">"<tt>(table.groupBy(["e","f"]) @ d>5 ? {aprime:a, b}).orderBy("aprime")</tt>".</span>
 
-	<li>In the FROM clause, the use of a comma to denote natural join is
-	    different from SQL, where it is cross product.  This is mostly
-	    because SQL allows joined tables to have columns with the same
-	    name but different values, while JSON's objects don't.
+	<li>In the <tt>FROM</tt> clause, the use of a comma to denote
+	    <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> is
+	    different from SQL, where it is cross product.
+	    This is because nested JSON tables are usually the most natural
+	    way to represent joined SQL tables.
 
-	<li>If the SELECT clause's <var>columns</var> list contains complex
-	    expressions without an "AS <var>key</var>" to assign it a name,
+	<li>If the <tt>SELECT</tt> clause's <var>columns</var> list contains
+	    complex expressions without an "<tt>AS</tt> <var>key</var>"
+	    to assign it a name,
 	    then the expression's source code is used as the default name.
 	    You can get some wild-looking keys that way, but they work.
 
-	<li>If every column in the SELECT clause's <var>columns</var> list
-	    uses aggregate functions, then there's an implied DISTINCT.
+	<li>If every column in the <tt>SELECT</tt> clause's <var>columns</var>
+	    list uses aggregate functions, then there's an implied
+	    <tt>DISTINCT</tt>.
 	    <div class="example">
 	      <kbd>SELECT count(*) FROM test.scores</kbd>
 	      <samp>

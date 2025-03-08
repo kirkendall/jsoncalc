@@ -50,11 +50,10 @@
         <p>
         <strong>JsonCalc</strong> is a C library for manipulating JSON data,
         and a program that uses that library.  The program is intended to be
-        used for interactively exploring JSON data, or used it in a shell script
-        to generate JSON or convert it to other formats.
+        used for exploring JSON data, or converting it to other formats.
         <p>
         The program can be run interactively or as part of a shell script.
-        It has a rather powerful set of features, using a mixture of JavaScript
+        It has a rather powerful set of features inspired by JavaScript
         and SQL.  There are also some unique added features but mostly it's
         intended to be close enough to JavaScript and SQL that if you're
         familiar with those two languages then you can be productive with

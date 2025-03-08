@@ -498,7 +498,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		/* Convert each byte of the string to hex */
 		for (len = 0; str[len]; len++)
-			snprintf(&result->text[2 * len], 2, "%02x", str[len] & 0xff);
+			snprintf(&result->text[2 * len], 3, "%02x", str[len] & 0xff);
 
 		/* Return that */
 		return result;

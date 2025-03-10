@@ -518,9 +518,9 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		/* Fill it */
 		if (len == 0)
-			snprintf(result->text, size, "0x%lx", n);
+			snprintf(result->text, size + 1, "0x%lx", n);
 		else
-			snprintf(result->text, size, "%0*lx", len, n);
+			snprintf(result->text, size + 1, "%0*lx", len, n);
 
 		return result;
 	}

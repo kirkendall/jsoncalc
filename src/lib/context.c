@@ -894,7 +894,7 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 		json_append(container, json_key(key, rvalue));
 		if (err < 0)
 			free(key);
-	} else {
+	} else if (container->type == JSON_OBJECT) {
 		if (!value)
 			return jxerror(JE_UNKNOWN_SUB, key);
 
@@ -917,6 +917,9 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 		/* Free the old value (but not its siblings) */
 		value->next = NULL;
 		json_free(value);
+	} else {
+		/* Not something that can be assigned */
+		return NULL;
 	}
 
 	/* If this layer has a callback for modifications, call it */

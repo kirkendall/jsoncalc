@@ -17,19 +17,19 @@
       <br/>file (<var>expression</var>)
       <dd>
       When you invoke the <b>jsoncalc</b> program with multiple JSON files
-      named on the command line, it normally loads them one at a time for
+      named on the command line for interactive use, it normally loads them one at a time for
       processing.
       The <tt>file</tt> command lets you switch between files.
       <p>
-      This is mostly for when you're running <b>jsoncalc</b> interactively.
+      This is only useful for when you're running <b>jsoncalc</b> interactively.
       In batch mode, it runs the commands you provide via
       <b>-c</b><var>command</var> or <b>-f</b><var>scriptfile</var>
-      separately on each named file.
+      separately on each named file, without the need for <tt>file</tt>.
       <p>
       When <tt>file</tt> is invoked without any parameters, it displays
       the name of the current file.
       The whole list is stored in a table named <tt>files</tt>,
-      so running plural <tt>files</tt> will list all files while running
+      so running plural <tt>files</tt> will display that table, listing all files; while running
       singular <tt>file</tt> will tell you the one file you're using now.
       <p>
       Running <tt>file</tt> with a <tt>+</tt> or <tt>-</tt> parameter will
@@ -42,7 +42,7 @@
       name.
       If the requested name isn't in the <tt>files</tt> table already,
       then it will be appended to the table.
-      Either way, the file then becomes the current file.
+      Either way, that file then becomes the current file.
     </dl>
     <details open>
       <summary>Examples</summary>

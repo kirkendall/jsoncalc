@@ -56,15 +56,16 @@
 	    </ul>
 
 	<li>For security reasons, the script file's name can't start with "/"
-	    or contains "../".
+	    or contain "../".
 
 	<li>There is also a <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a> command
 	    which loads plugins.
 	    Plugins can be implemented as either
 	    a binary file containing native code, or
-	    a JsonCalc script, or
-	    a mixture of the two.
-	    Since both can load JsonCalc scripts, there is a bit of overlap.
+	    a JsonCalc script, or a mixture of the two.
+	    Since both <tt>import</tt> and
+	    <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
+	    can load JsonCalc scripts, there is a bit of overlap.
 	    The <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
 	    command is more powerful, but it looks for plugins to load in
 	    separate directories.

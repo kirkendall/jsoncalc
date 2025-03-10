@@ -210,7 +210,7 @@ name=Mary run=3 score=40
 	Paul scored 25 in run# 3<br/>
 	Mary scored 40 in run# 3
       </samp>
-      This example shows how the command from the first example could be used
+      This example shows how the command from the previous example could be used
       in a shell script to process records individually.
       The shell reads the lines one at a time into a shell variable named "row".
       It then uses <tt>eval $row</tt> to set shell variables from the record.
@@ -223,55 +223,23 @@ name=Mary run=3 score=40
     arrays appear in the JSON document, without loading them.
     During processing, as you loop over the array it will read the records
     piecemeal.
-    <p>
-    JsonCalc cannot generate XML data.
-
 
     <h2>How can JsonCalc help for uploads?</h2>
     JsonCalc allows you to construct JSON data, either in temporary files or
     in environment variables.
     You can also set JsonCalc variables on its command line, and use the
     values of those variables in the script.
-    <div class="example">
-      <kbd>export customer="{}"<br/>
-      eval $(jsoncalc -vcustomer -cthis.custno=custno custno=12554)<br/>
-      eval $(jsoncalc -vcustomer -cthis.firstname=first first=Steve)<br/>
-      eval $(jsoncalc -vcustomer -cthis.lastname=last last=Kirkendall)<br/>
-      eval $(jsoncalc -vcustomer -cthis.contactok=contact contact=false)<br/>
-      echo $customer</kbd>
-      <samp>{"custno":12445,"firstname":"Steve","lastname":"Kirkendall","contactok":false}</samp>
-      In this example, we're building the JSON data piecemeal in an environment
-      variable.
-      First we use the shell to initialize <tt>customer</tt> to be an empty object.
-      Then we invoke JsonCalc repeatedly to add/update the data.
-      The <tt>-vcustomer</tt> option tells it to read the initial JSON data
-      from the <tt>$customer</tt> enviroment variable, and then before exiting
-      write a shell command for changing the value of that variable.
-      The <tt>custno=12554</tt> argument sets a variable in JsonCalc,
-      and <tt>-cthis.custno=custno</tt> adds it to the object.
-      In the end, we're left with a complete JSON object in the
-      <tt>$customer</tt> environment variable.
-      <p>
-      One important detail here is that when setting variables on the
-      command line, if the value looks like JSON then it is interpreted as
-      JSON; otherwise it it coerced into being a JSON string.
-      In this example, <tt>12554</tt> looks like a JSON number, so it's
-      number, and <tt>false</tt> looks like a JSON boolean, so its boolean.
-      You can see this in the final object.
-    </div>
 
     <div class="example">
-      <kbd>file=/tmp/jsoncalc$$.json<br/>
-      echo "{}">$file<br/>
-      jsoncalc -u -cthis.custno=custno custno=12554 $file<br/>
-      jsoncalc -u -c'this.firstname=first;this.lastname=last' first=Steve last=Kirkendall $file<br/>
-      jsoncalc -u -cthis.contactok=contact contact=false $file<br/>
+      <kbd># These are shell commands, not JsonCalc commands<br/>
+      file=/tmp/jsoncalc$$.json<br/>
+      echo "{}" &gt;$file<br/>
+      jsoncalc -u -c'this.custno=custno' custno=12554 $file<br/>
+      jsoncalc -u -c'this.name=first - last' first=Steve last=Kirkendall $file<br/>
+      jsoncalc -u -c'this.contactok=contact' contact=false $file<br/>
       cat $file</kbd>
-      <samp>{"custno":12445,"firstname":"Steve","lastname":"Kirkendall","contactok":false}</samp>
-      This is the same as the previous example, except that we're building
-      the JSON in a temporary file instead of an environment variable.
-      Also, just for variety, I combined first and last names into a single invocation.
-      <p>
+      <samp>{"custno":12445,"name":"Steve Kirkendall","contactok":false}</samp>
+      In this example, we're building the JSON data piecemeal in a temporary file.
       First we let the shell choose a filename, and initialize the file to an
       empty object.
       Then we invoke JsonCalc repeatedly to add/update the data.
@@ -281,6 +249,13 @@ name=Mary run=3 score=40
       You don't need the shell's <tt>eval $(...)</tt> when using files.
       In the end, we're left with a complete JSON object in the
       <tt>$file</tt> file. 
+      <p>
+      One important detail here is that when setting variables on the
+      command line, if the value looks like JSON then it is interpreted as
+      JSON; otherwise it it coerced into being a JSON string.
+      In this example, <tt>12554</tt> looks like a JSON number, so it's
+      number, and <tt>false</tt> looks like a JSON boolean, so its boolean.
+      You can see this in the final object.
     </div>
 
     <h2>Why run JsonCalc interactively?</h2>
@@ -312,7 +287,7 @@ name=Mary run=3 score=40
     <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
     A full-fledged JavaScript interpreter would be at least 30 times larger
     than JsonCalc, and it wouldn't interface well with shell scripts, or
-    support plugins, or autoload data from directories, or the
+    support plugins, or autoload data from directories, or have the
     <a target="_PARENT" href="index.html?op=each">@</a> operator.
     <p>
     The internal representation of JSON data is likely to be around 5 times
@@ -320,7 +295,7 @@ name=Mary run=3 score=40
     2 times larger to more than 10 times larger, but 5 is a good rule of thumb.
     Bear in mind, though, that large arrays aren't normally read into memory
     all at once.  If you process them to build another large array, that
-    result array will be in memory so that's where you need to be aware of
+    result array <em>will</em> be in memory so that's where you need to be aware of
     bulk.
     <p>
     Speed is hard to gauge because there are so many variables.
@@ -334,7 +309,7 @@ name=Mary run=3 score=40
     The easy way is to define a custom set of functions in JsonCalc's
     scripting language, to do tasks that you find yourself doing often.
     For example, the above customer-building example could be implemented
-    as a function, and then the "-c" option is just <tt>-cbuildCustomer()</tt>.
+    as a function, and then the "-c" option is just <tt>-c'buildCustomer()'</tt>.
     JsonCalc can be configured to load your functions automatically.
     <p>
     The next method is to modify JsonCalc's source code and recompile it.
@@ -358,9 +333,10 @@ name=Mary run=3 score=40
 
     <h2>Where should I look next?</h2>
     Start by digging through the references for the scripting
-    <a href="index.html?op">operators</a>,
-    <a href="index.html?f">functions</a>, and
-    <a href="index.html?cmd">commands</a>.
+    <a target="_PARENT" href="index.html?lit">literals</a>,
+    <a target="_PARENT" href="index.html?op">operators</a>,
+    <a target="_PARENT" href="index.html?f">functions</a>, and
+    <a target="_PARENT" href="index.html?cmd">commands</a>.
     The references are loaded with examples, which should give you some idea
     of what JsonCalc can do.
     Nearly all of these examples are one-liners, which is appropriate for

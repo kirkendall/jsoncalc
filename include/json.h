@@ -110,6 +110,7 @@ extern char json_format_color_end[20];
  */
 typedef struct {
 	int		fd;	/* File descriptor of the open file */
+	int		isfile;	/* Boolean: is this a regular file (not pipe, etc) */
 	size_t		size;	/* Size of the file, in bytes */
 	const char	*base;	/* Contents of the file, as a giant string */
 } jsonfile_t;

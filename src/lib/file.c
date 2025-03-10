@@ -1,4 +1,5 @@
 #include <sys/mman.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ctype.h>
@@ -15,25 +16,50 @@ jsonfile_t *json_file_load(const char *filename)
 	char	*base;
 	jsonfile_t *jf;
 	struct stat st;
+	size_t	size, used, nread;
 
 	/* Open the file */
-	fd = open(filename, O_RDONLY);
+	if (!strcmp(filename, "-"))
+		fd = 0; /* stdin */
+	else
+		fd = open(filename, O_RDONLY);
 	if (fd < 0)
 		return NULL;
 
-	/* Get its size */
+	/* Get its type and size */
 	fstat(fd, &st);
 
-	/* Lock one byte of the file. */
-	lseek(fd, (off_t)getpid(), SEEK_SET);
-	lockf(fd, F_LOCK, (off_t)1);
+	/* Is it a regular file? */
+	if ((st.st_mode & S_IFMT) == S_IFREG) {
+		/* Lock one byte of the file. */
+		lseek(fd, (off_t)getpid(), SEEK_SET);
+		lockf(fd, F_LOCK, (off_t)1);
 
-	/* Map the file into memory */
-	base = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, (off_t)0);
+		/* Map the file into memory */
+		base = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, (off_t)0);
+	} else {
+		/* Read into a dynamically-allocated buffer */
+		size = 4096;
+		base = (char *)malloc(size);
+		for (used = 0; (nread = read(fd, base + used, size - used)) > 0; used += nread) {
+			if (size - (used + nread) < 1024) {
+				size *= 2;
+				base = (char *)realloc(base, size);
+			}
+		}
+
+		/* Got it all.  Trim the excess, rounding up to a multiple of
+		 * 4096 and keeping one extra byte as a '\0'.
+		 */
+		size = ((used + 1) | 0x3ff) + 1;
+		base = (char *)realloc(base, size);
+		st.st_size = size;
+	}
 
 	/* Return the info */
 	jf = (jsonfile_t *)malloc(sizeof *jf);
 	jf->fd = fd;
+	jf->isfile = (st.st_mode & S_IFMT) == S_IFREG;
 	jf->size = st.st_size;
 	jf->base = base;
 	return jf;
@@ -42,11 +68,20 @@ jsonfile_t *json_file_load(const char *filename)
 /* Close a file that was opened via json_file_open_to_read() */
 void json_file_unload(jsonfile_t *jf)
 {
-	/* Unmap the file from memory */
-	munmap((void *)jf->base, jf->size);
+	if (jf->isfile) {
+		/* Unmap the file from memory */
+		munmap((void *)jf->base, jf->size);
+	} else {
+		/* Free the buffer */
+		free((void *)jf->base);
+	}
 
 	/* Close the file.  This will also release the file lock */
-	close(jf->fd);
+	if (jf->fd != 0) /* never close stdin */
+		close(jf->fd);
+
+	/* Free the jf structure */
+	free(jf);
 }
 
 /* Open a file for writing.  This locks the whole file -- that's the only
@@ -60,17 +95,21 @@ FILE *json_file_update(const char *filename)
 	/* Open the file.  Note that we do *NOT* truncate it right away,
 	 * because some other process might still be reading it.
 	 */
-	fd = open(filename, O_WRONLY|O_CREAT, 0666);
-	if (fd < 0)
-		return NULL;
+	if (!strcmp(filename, "-"))
+		fd = dup(1); /* stdout */
+	else {
+		fd = open(filename, O_WRONLY|O_CREAT, 0666);
+		if (fd < 0)
+			return NULL;
 
-	/* Lock the entire file.  If any other writers or readers have
-	 * locked even a single byte, this will wait until they're done.
-	 */
-	lockf(fd, F_LOCK, (off_t)0);
+		/* Lock the entire file.  If any other writers or readers have
+		 * locked even a single byte, this will wait until they're done.
+		 */
+		lockf(fd, F_LOCK, (off_t)0);
 
-	/* Okay now we can truncate the file */
-	ftruncate(fd, (off_t)0);
+		/* Okay now we can truncate the file */
+		ftruncate(fd, (off_t)0);
+	}
 
 	/* Add stdio buffering, and return it */
 	return fdopen(fd, "w");

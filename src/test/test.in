@@ -161,6 +161,10 @@ hex(399425,8)
 =3
 ["q","w","e","r","t","y"].min()
 ="e"
+join(["One","Two","Three"]," ")
+="One Two Three"
+(["One","Two","Three"]@join(this))[0]
+="One,Two,Three"
 nameBits(6, ["one","two","four"], "+")
 ="two+four"
 ["a","b","c"].objectAgg(0)

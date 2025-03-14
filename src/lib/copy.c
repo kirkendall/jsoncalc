@@ -43,9 +43,9 @@ json_t *json_copy(json_t *json)
 		return json_simple(json->text, -1, json->type);
 
 	  case JSON_NUMBER:
-		/* Numbers can be represented internally either as a string of ASCII
-		 * digits copied directly from a JSON document, or in binary.  This
-		 * affects the way we copy it.
+		/* Numbers can be represented internally either as a string of
+		 * ASCII digits copied directly from a JSON document, or in
+		 * binary.  This affects the way we copy it.
 		 */
 		if (json->text[0])
 			return json_number(json->text, -1);

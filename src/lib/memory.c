@@ -121,16 +121,13 @@ json_t *json_simple(const char *str, size_t len, json_type_t type)
 
 	/* String is optional.  If omitted then use "" as a placeholder */
 	if (!str)
-	{
-		str = "";
 		len = 0;
-	}
 	else if (len == (size_t)-1)
 		len = strlen(str);
 
         /* Compute the size, rounding up to a multiple of 32 */
         size = sizeof(json_t) - sizeof json->text + len + 1;
-        size = ((size - 1) | 0x1f) + 1;
+        size = (size | 0x1f) + 1;
 
 	/* Allocate it.  Trust malloc() to be efficient */
         json = (json_t *)malloc(size);
@@ -138,7 +135,8 @@ json_t *json_simple(const char *str, size_t len, json_type_t type)
 	/* Initialize the fields */
 	memset(json, 0, size);
 	json->type = type;
-	strncpy(json->text, str, len);
+	if (str)
+		strncpy(json->text, str, len);
 
 	/* return it */
 	json_debug_count++;
@@ -161,6 +159,24 @@ json_t *json_string(const char *str, size_t len)
 json_t *json_number(const char *str, size_t len)
 {
 	return json_simple(str, len, JSON_NUMBER);
+}
+
+/* Allocate a json_t for a given integer */
+json_t *json_from_int(int i)
+{
+	json_t *json = json_number("", 0);
+	json->text[1] = 'i';
+	JSON_INT(json) = i;
+	return json;
+}
+
+/* Allocate a json_t for a given floating-point number */
+json_t *json_from_double(double f)
+{
+	json_t *json = json_number("", 0);
+	json->text[1] = 'd';
+	JSON_DOUBLE(json) = f;
+	return json;
 }
 
 /* Allocate a json_t for a boolean value. */
@@ -203,24 +219,6 @@ json_t *json_error_null(int code, char *fmt, ...)
 	result = json_simple(buf, len, JSON_NULL);
 	free(bigbuf);
 	return result;
-}
-
-/* Allocate a json_t for a given integer */
-json_t *json_from_int(int i)
-{
-	json_t *json = json_number("", 0);
-	json->text[1] = 'i';
-	JSON_INT(json) = i;
-	return json;
-}
-
-/* Allocate a json_t for a given floating-point number */
-json_t *json_from_double(double f)
-{
-	json_t *json = json_number("", 0);
-	json->text[1] = 'd';
-	JSON_DOUBLE(json) = f;
-	return json;
 }
 
 /* Allocate a json_t for a key.  If value is non-NULL, then it will be used
@@ -381,6 +379,25 @@ json_t *json_debug_number(const char *file, int line, const char *str, size_t le
 	return json_debug_simple(file, line, str, len, JSON_NUMBER);
 }
 
+/* Allocate a json_t for a given integer */
+json_t *json_debug_from_int(const char *file, int line, int i)
+{
+	json_t	*json = json_debug_number(file, line, "", 0);
+	json->text[1] = 'i';
+	JSON_INT(json) = i;
+	return json;
+}
+
+/* Allocate a json_t for a given floating-point number */
+json_t *json_debug_from_double(const char *file, int line, double f)
+{
+	json_t	*json = json_debug_number(file, line, "", 0);
+	json->text[1] = 'd';
+	JSON_DOUBLE(json) = f;
+	return json;
+}
+
+
 /* Allocate a json_t for a given boolean */
 json_t *json_debug_bool(const char *file, int line, int boolean)
 {
@@ -396,7 +413,7 @@ json_t *json_debug_null(const char *file, int line)
 	return json_debug_simple(file, line, "", 0, JSON_NULL);
 }
 
-/* Allocate a json_t for a given boolean */
+/* Allocate a json_t for a given error */
 json_t *json_debug_error_null(const char *file, int line, char *fmt, ...)
 {
 	char	buf[200], *bigbuf;
@@ -421,25 +438,6 @@ json_t *json_debug_error_null(const char *file, int line, char *fmt, ...)
 	result = json_debug_simple(file, line, buf, len - 1, JSON_NULL);
 	free(bigbuf);
 	return result;
-}
-
-
-/* Allocate a json_t for a given integer */
-json_t *json_debug_from_int(const char *file, int line, int i)
-{
-	json_t	*json = json_debug_number(file, line, "", 0);
-	json->text[1] = 'i';
-	JSON_INT(json) = i;
-	return json;
-}
-
-/* Allocate a json_t for a given floating-point number */
-json_t *json_debug_from_double(const char *file, int line, double f)
-{
-	json_t	*json = json_debug_number(file, line, "", 0);
-	json->text[1] = 'd';
-	JSON_DOUBLE(json) = f;
-	return json;
 }
 
 /* Allocate a json_t for a key.  If value is non-NULL, then it will be used

@@ -18,9 +18,13 @@ size_t json_mbs_len(const char *s)
         wchar_t wc;
         int     in;
         size_t  len;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
         for (len = 0; *s; len++) {
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 s += in;
         }
         return len;
@@ -36,8 +40,14 @@ int json_mbs_width(const char *s)
         wchar_t wc;
         int     in;
         int     charwidth, linewidth, width;
+        mbstate_t state;
 
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
+
+	/* For each character... */
         for (width = linewidth = 0; *s; ) {
+		/* Handle newline specially */
 		if (*s == '\n') {
 			if (linewidth > width)
 				width = linewidth;
@@ -45,8 +55,14 @@ int json_mbs_width(const char *s)
 			s++;
 			continue;
 		}
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+
+		/* Convert the next UTF-8 character to a wc */
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
+                if (in <= 0) /* Invalid UTF-8 coding */
+			break;
                 s += in;
+
+		/* Add the character's width to the string width */
                 charwidth = wcwidth(wc);
                 if (charwidth > 0)
 			linewidth += charwidth;
@@ -67,10 +83,14 @@ const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
         wchar_t wc;
         int     in;
         const char    *sptr;
+        mbstate_t state;
+
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
 
         /* Find the start */
         for (; start > 0 && *s; start--) {
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 s += in;
         }
         sptr = s;
@@ -78,7 +98,7 @@ const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
         /* If there's a reflimit, count characters for it too */
         if (reflimit) {
                 for (start = *reflimit; start > 0 && *s; start--) {
-                        in = mbtowc(&wc, s, MB_CUR_MAX);
+                        in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                         s += in;
                 }
                 *reflimit = (size_t)(s - sptr);
@@ -100,9 +120,13 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
 	size_t	nlen, ccount, foundccount;
 	int	in;
 	const char *found;
+	mbstate_t state;
+
+	/* Initialize the multibyte state */
+	memset(&state, 0, sizeof state);
 
 	/* Get the first character of the needle.  If ignorecase then convert to lower*/
-	in = mbtowc(&nfirst, needle, MB_CUR_MAX);
+	in = mbrtowc(&nfirst, needle, MB_CUR_MAX, &state);
 	if (in < 1)
 		return NULL;
 	if (ignorecase)
@@ -115,7 +139,7 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
 	ccount = foundccount = 0;
 	for (found = NULL; *haystack; haystack += in, ccount++) {
 		/* Check to see if the first character matches */
-		in = mbtowc(&wc, haystack, MB_CUR_MAX);
+		in = mbrtowc(&wc, haystack, MB_CUR_MAX, &state);
 		if (in < 1)
 			return NULL;
 		if (ignorecase)
@@ -182,9 +206,15 @@ void json_mbs_tolower(char *s)
         wchar_t wc;
         int     in;
         char    dummy[MB_CUR_MAX];
+        mbstate_t state;
 
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
+
+        /* For each character ... */
         while (*s) {
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                /* Conver to lowercase, if same size */
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 wc = towlower(wc); 
                 if (in == wctomb(dummy, wc))
                         wctomb(s, wc);
@@ -201,9 +231,15 @@ void json_mbs_toupper(char *s)
         wchar_t wc;
         int     in;
         char    dummy[MB_CUR_MAX];
+        mbstate_t state;
 
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
+
+        /* For each character... */
         while (*s) {
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+		/* Convert to uppercase, if same size */
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 wc = towupper(wc); 
                 if (in == wctomb(dummy, wc))
                         wctomb(s, wc);
@@ -226,6 +262,10 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 	wchar_t	wc;
 	int	in, more, wlen;
 	char	dummy[MB_CUR_MAX];
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
 	/* Make sure the list of exceptions is an array */
 	if (!exceptions || exceptions->type != JSON_ARRAY) {
@@ -255,7 +295,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		}
 
 		/* We've found a word!  Count its length */
-		for (wlen = in; s[wlen] && (more = mbtowc(&wc, s + wlen, MB_CUR_MAX)) && iswctype(wc, alnum); wlen += more) {
+		for (wlen = in; s[wlen] && (more = mbrtowc(&wc, s + wlen, MB_CUR_MAX, &state)) && iswctype(wc, alnum); wlen += more) {
 		}
 
 		/* Check the exception list.  If we're supposed to capitalize
@@ -280,19 +320,19 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		}
 
 		/* Else make first letter uppercase, others lowercase */
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 wc = towupper(wc); 
                 if (in == wctomb(dummy, wc))
                         wctomb(s, wc);
                 s += in;
 
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 while (iswctype(wc, alnum)) {
 			wc = towlower(wc); 
 			if (in == wctomb(dummy, wc))
 				wctomb(s, wc);
 			s += in;
-			in = mbtowc(&wc, s, MB_CUR_MAX);
+			in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
 		}
 	}
 }
@@ -302,10 +342,14 @@ int json_mbs_casecmp(const char *s1, const char *s2)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
         while (*s1 && *s2) {
-                in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
-                in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
+                in1 = mbrtowc(&wc1, s1, MB_CUR_MAX, &state);
+                in2 = mbrtowc(&wc2, s2, MB_CUR_MAX, &state);
                 wc1 = towupper(wc1); 
                 wc2 = towupper(wc2); 
                 if (wc1 < wc2)
@@ -333,10 +377,14 @@ int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
         while (*s1 && *s2 && len > 0) {
-                in1 = mbtowc(&wc1, s1, MB_CUR_MAX);
-                in2 = mbtowc(&wc2, s2, MB_CUR_MAX);
+                in1 = mbrtowc(&wc1, s1, MB_CUR_MAX, &state);
+                in2 = mbrtowc(&wc2, s2, MB_CUR_MAX, &state);
                 wc1 = towupper(wc1); 
                 wc2 = towupper(wc2); 
                 if (wc1 < wc2)
@@ -368,10 +416,14 @@ int json_mbs_abbrcmp(const char *abbr, const char *full)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
 	/* First character must match */
-	in1 = mbtowc(&wc1, abbr, MB_CUR_MAX);
-	in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+	in1 = mbrtowc(&wc1, abbr, MB_CUR_MAX, &state);
+	in2 = mbrtowc(&wc2, full, MB_CUR_MAX, &state);
 	wc1 = towupper(wc1); 
 	wc2 = towupper(wc2); 
 	if (wc1 != wc2)
@@ -385,12 +437,12 @@ int json_mbs_abbrcmp(const char *abbr, const char *full)
 	while (*abbr && *full) {
 		/* Skip lowercase from full, get char after that */
 		do {
-			in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+			in2 = mbrtowc(&wc2, full, MB_CUR_MAX, &state);
 			full += in2;
 		} while (iswlower(wc2));
 
 		/* Get next abbr char */
-		in1 = mbtowc(&wc1, abbr, MB_CUR_MAX);
+		in1 = mbrtowc(&wc1, abbr, MB_CUR_MAX, &state);
 		abbr += in1;
 		wc1 = towupper(wc1);
 
@@ -402,7 +454,7 @@ int json_mbs_abbrcmp(const char *abbr, const char *full)
 	/* Skip any trailing lowercase letters */
 	if (*full) {
 		do {
-			in2 = mbtowc(&wc2, full, MB_CUR_MAX);
+			in2 = mbrtowc(&wc2, full, MB_CUR_MAX, &state);
 			full += in2;
 		} while (iswlower(wc2));
 	}
@@ -425,9 +477,13 @@ const char *json_mbs_ascii(const char *str, char *buf)
 {
 	wchar_t	wc;
 	int	mbsize;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
 	/* Convert the multibyte character to a wchar_t */
-	mbsize = mbtowc(&wc, str, MB_CUR_MAX);
+	mbsize = mbrtowc(&wc, str, MB_CUR_MAX, &state);
 
 	/* Error? */
 	if (mbsize <= 0) {
@@ -559,6 +615,8 @@ size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
         int limit, skipcurly;
         char dummy[MB_CUR_MAX];
 
+
+size=nbytes;
         /* If nbytes is -1 then use strlen to find the true length */
         if (nbytes == (size_t)-1)
                 nbytes = strlen(src);
@@ -724,11 +782,15 @@ int json_mbs_like(const char *text, const char *pattern)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
+        mbstate_t state;
+
+        /* Initialize the multibyte character state */
+        memset(&state, 0, sizeof state);
 
         /* Compare as much literal text as possible.  Also handle '%' */
         while (*text && *pattern && *pattern != '%') {
-                in1 = mbtowc(&wc1, text, MB_CUR_MAX);
-                in2 = mbtowc(&wc2, pattern, MB_CUR_MAX);
+                in1 = mbrtowc(&wc1, text, MB_CUR_MAX, &state);
+                in2 = mbrtowc(&wc2, pattern, MB_CUR_MAX, &state);
                 if (wc2 != '_' && towupper(wc1) != towupper(wc2))
                         return 0;
                 text += in1;
@@ -750,7 +812,7 @@ int json_mbs_like(const char *text, const char *pattern)
         while (*text) {
                 if (json_mbs_like(text, pattern))
                         return 1;
-                text += mbtowc(&wc1, text, MB_CUR_MAX);
+                text += mbrtowc(&wc1, text, MB_CUR_MAX, &state);
         }
 
         /* Nope, never found a match */

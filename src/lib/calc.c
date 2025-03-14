@@ -622,12 +622,15 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				 * element from the array, and any other args
 				 * are used unchanged.
 				 */
-				json_t first = *scan;
-				first.next = left->first->next;
-				found->first = &first;
+				json_t *scannext = scan->next;
+				scan->next = left->first->next;
+				found->first = scan;
 
 				/* Invoke the aggregator */
 				(*jf->agfn)(found, localag);
+
+				/* Restore the scan->next pointer */
+				scan->next = scannext;
 			}
 			found->first = NULL;
 			json_free(found);

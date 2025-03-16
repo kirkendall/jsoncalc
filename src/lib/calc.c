@@ -154,8 +154,16 @@ static void jcag(jsonag_t *ag, jsoncontext_t *context, void *agdata)
 		/* Evaluate its parameters */
 		args = json_calc(ag->ag[i]->u.func.args, context, agdata);
 
-		/* Call the aggregator function */
-		ag->ag[i]->u.func.jf->agfn(args, fnag);
+		/* Aggregate functions can either accumulate data over rows
+		 * of a table *OR* over an array passed as the first argument.
+		 * Here we're accumulating, but if the first argument is an
+		 * array then the accumulated result will be ignored so we
+		 * might as well skip it.
+		 */
+		if (args->first->type != JSON_ARRAY) {
+			/* Call the aggregator function */
+			ag->ag[i]->u.func.jf->agfn(args, fnag);
+		}
 
 		/* Free its parameters */
 		json_free(args);

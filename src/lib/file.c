@@ -9,7 +9,13 @@
 #include <string.h>
 #include "json.h"
 
-/* Open a file for reading.  This also locks one byte, and maps it into memory*/
+/* This can be set to 'o' to make new/unreadable files contain an empty object,
+ * or 'a' to make new/unreadable files contain an empty array.  If left to '\0'
+ * then new/unreadable files will just fail to load.
+ */
+char json_file_new_type = '\0';
+
+/* Open a file for reading.  This also locks one byte and maps it into memory */
 jsonfile_t *json_file_load(const char *filename)
 {
 	int	fd;
@@ -24,7 +30,20 @@ jsonfile_t *json_file_load(const char *filename)
 	else
 		fd = open(filename, O_RDONLY);
 	if (fd < 0)
+	{
+		if (json_file_new_type == 'o' || json_file_new_type == 'a') {
+			jf = (jsonfile_t *)malloc(sizeof(jsonfile_t));
+			jf->fd = -1;
+			jf->isfile = 0;
+			jf->size = 3;
+			if (json_file_new_type == 'o')
+				jf->base = strdup("{}\n");
+			else
+				jf->base = strdup("[]\n");
+			return jf;
+		}
 		return NULL;
+	}
 
 	/* Get its type and size */
 	fstat(fd, &st);

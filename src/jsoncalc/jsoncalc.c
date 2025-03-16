@@ -115,6 +115,8 @@ static void usage(char *fmt, char *data)
 	puts("       -r         Inhibit the use of readline for interactive input.");
 	puts("       -u         Update - Write back any modified *.json files listed in args.");
 	puts("       -s         Safer - Limit shell and file access for security.");
+	puts("       -o         Object - Assume new files should contain an empty object.");
+	puts("       -a         Array - Assume new files should contain an empty array.");
 	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
 	puts("       -d dir     Autoload files from directory \"dir\" (this invocaion only).");
 	puts("       -D dir     Autoload files from directory \"dir\" (persist, via -U).");
@@ -323,6 +325,7 @@ int main(int argc, char **argv)
 	int	anyformat = 0;
 	int	anyfiles = 0;
 	int	opt;
+	int	exitcode = 0;
 
 	/* set the locale */
 	val = setlocale(LC_ALL, "");
@@ -357,7 +360,7 @@ int main(int argc, char **argv)
 		usage(NULL, NULL);
 	}
 	interactive = 0;
-	while ((opt = getopt(argc, argv, "c:f:irsl:uD:O:C:J:U")) >= 0) {
+	while ((opt = getopt(argc, argv, "c:f:irsoal:uD:O:C:J:U")) >= 0) {
 		switch (opt) {
 		case 'c':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
@@ -375,6 +378,12 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			safer = 1;
+			break;
+		case 'o':
+			json_file_new_type = 'o';
+			break;
+		case 'a':
+			json_file_new_type = 'a';
 			break;
 		case 'l':
 			fprintf(stderr, "Not implemented yet\n");
@@ -464,8 +473,16 @@ int main(int argc, char **argv)
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
 
-		/* If it ends with ".json", load it as a file */
-		if (0 == access(argv[i], F_OK)) {
+		/* If it looks like a file, load it as a file */
+		if (strchr(argv[i], '.')
+		 || !strcmp(argv[i], "-")
+		 || 0 == access(argv[i], F_OK)) {
+			/* If it doesn't exist and no -a/-o was given, fail */
+			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && json_file_new_type == '\0'){
+				perror(argv[i]);
+				exitcode = 1;
+				goto CleanExit;
+			}
 			json_context_file(context, argv[i], allow_update, NULL);
 			anyfiles = 1;
 		} else {
@@ -534,8 +551,17 @@ int main(int argc, char **argv)
 	}
 
 	/* Clean up & exit */
+CleanExit:
+	if (allow_update) {
+		/* Switch to previous file to trigger update, if the current
+		 * file was modified.  Switching to the previous file is enough
+		 * to trigger this even if there was no previous file.
+		 */
+		i = JSON_CONTEXT_FILE_PREVIOUS;
+		json_context_file(context, NULL, 0, &i);
+	}
 	while (context)
 		context = json_context_free(context);
 	json_cmd_free(initcmd);
-	return 0;
+	return exitcode;
 }

@@ -123,6 +123,7 @@ typedef struct {
 BEGIN_C
 
 /* Files */
+char json_file_new_type;
 jsonfile_t *json_file_load(const char *filename);
 void json_file_unload(jsonfile_t *jf);
 FILE *json_file_update(const char *filename);

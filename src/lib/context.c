@@ -273,7 +273,7 @@ static json_t *stdcurrent(char *key)
  */
 jsoncontext_t *json_context_std(json_t *args)
 {
-	json_t	*base, *global, *vars, *consts, *data;
+	json_t	*base, *global, *vars, *consts, *thisdata;
 	jsoncontext_t *context;
 	contexthook_t *hook;
 
@@ -291,8 +291,6 @@ jsoncontext_t *json_context_std(json_t *args)
 		json_append(global, json_key("args", args));
 	json_append(global, json_key("files", json_array()));
 	json_append(base, json_key("global", global));
-	data = json_null();
-	json_append(base, json_key("data", data));
 
 	/* Create the base layer of the context */
 	context = json_context(NULL, base, JSON_CONTEXT_GLOBAL);
@@ -313,12 +311,12 @@ jsoncontext_t *json_context_std(json_t *args)
 	for (hook = extralayers; hook; hook = hook->next)
 		context = (*hook->addcontext)(context);
 
-	/* Create a layer to serve as "this", containing the contents of
-	 * the "data" symbol.  Since the data will be freed when
-	 * the base context is freed or data is assigned a new value,
-	 * we don't want to free it for this context.
+	/* Create a layer to serve as "this", containing the "data" variable.
+	 * This should be assignable.
 	 */
-	context = json_context(context, data, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE | JSON_CONTEXT_VAR);
+	thisdata = json_object();
+	json_append(thisdata, json_key("data", json_null()));
+	context = json_context(context, thisdata, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_VAR);
 	context->modified = data_modified;
 
 	/* Create a layer above that for the contents of "global", mostly the
@@ -341,6 +339,52 @@ jsoncontext_t *json_context_std(json_t *args)
 	return context;
 }
 
+/* This adds context layers for a user function call.  "fn" identifies the
+ * function being called, mostly so we can see what arguments it uses.
+ * "args" is an array containing the argument values.
+ *
+ * The context will contain COPIES of the argument values.  Those copies will
+ * be automatically freed when the context layer is freed.
+ */
+jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t *args)
+{
+	json_t	*cargs, *name, *value;
+	json_t	*vars, *consts;
+
+	/* Build an object containing the actual arguments */
+	cargs = json_copy(fn->userparams);
+	for (name = fn->userparams->first, value = args->first;
+	     name && value;
+	     name = name->next, value = value->next) {
+		json_append(cargs, json_key(name->text, json_copy(value)));
+	}
+
+	/* Also "vars" and "consts" to the arguments object */
+	vars = json_object();
+	json_append(cargs, json_key("vars", vars));
+	consts = json_object();
+	json_append(cargs, json_key("consts", consts));
+
+	/* Add an "args" context layer containing those arguments */
+	context = json_context(context, cargs, JSON_CONTEXT_ARGS);
+
+	/* Add a "this" context containing the value of the first arg */
+	if (args->first)
+		context = json_context(context, json_copy(args->first), JSON_CONTEXT_THIS);
+
+	/* Add other layers exposing the contents of "vars" and "consts".
+	 * Since that data will be freed when the "args" layer is freed,
+	 * we don't want to free them when these layers are freed.
+	 */
+	context = json_context(context, consts, JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
+	context = json_context(context, vars, JSON_CONTEXT_VAR | JSON_CONTEXT_NOFREE);
+
+	/* Return the modified context */
+	return context;
+}
+
+
+/******************************************************************************/
 
 /* Select a new current file, and optionally append a filename to the files
  * array.  The context must have been created by json_context_std() so this
@@ -350,6 +394,9 @@ jsoncontext_t *json_context_std(json_t *args)
  * JSON_CONTEXT_FILE_PREVIOUS to move back one entry. Returns the files array,
  * and stuffs the current index into *refcurrent.  You do NOT need to free
  * the returned list since it'll be freed when the context is freed.
+ *
+ * If you switch files, and there was a previous file you're switching from,
+ * and that file is writable, then it'll call json_file_update() on it.
  */
 json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent)
 {
@@ -359,6 +406,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	struct stat st;
 	struct tm tm;
 	char	isobuf[24];
+	FILE	*fp;
 
 
 	/* Defend against empty context */
@@ -371,7 +419,9 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 		*refcurrent = JSON_CONTEXT_FILE_SAME;
 	}
 
-	/* Locate the globals context at the bottom of the context stack */
+	/* Locate the globals context at the bottom of the context stack,
+	 * and also the "this" layer which contains the "data" variable.
+	 */
 	thiscontext = NULL;
 	for (globals = context; globals->older; globals = globals->older) {
 		/* Also look for the global "this" layer, which stores the
@@ -414,8 +464,8 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 			else
 				i = stat(filename, &st);
 			if (i != 0)
-				bits = 0; /* can't read/write what we don't know */
-			if (!S_ISREG(st.st_mode) && !S_ISFIFO(st.st_mode))
+				bits = 0222; /* New so assume writable */
+			else if (!S_ISREG(st.st_mode) && !S_ISFIFO(st.st_mode))
 				bits = 0; /* can't read or write a non-file */
 			else if (st.st_uid == geteuid())
 				bits = st.st_mode & 0700;
@@ -465,11 +515,37 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	case JSON_CONTEXT_FILE_PREVIOUS:*refcurrent = current_file - 1; break;
 	}
 
+	/* If there was a previous file, and it is writable, and modified,
+	 * and we're switching away from it, then write it now.
+	 */
+	if ((thiscontext->flags & JSON_CONTEXT_MODIFIED) != 0
+	 && current_file >= 0
+	 && current_file != *refcurrent
+	 && (j = json_by_index(files, current_file)) != NULL
+	 && json_is_true(json_by_key(j, "writable"))) {
+		char *filename = json_text_by_key(j, "filename");
+		j = json_by_key(thiscontext->data, "data");
+		if (filename && j) {
+			jsonformat_t tweaked = json_format_default;
+			tweaked.table = 'j';
+			tweaked.string = 0;
+			tweaked.elem = 0;
+			tweaked.pretty = 0;
+			tweaked.sh = 0;
+			tweaked.fp = json_file_update(filename);
+			if (tweaked.fp) {
+				json_print(j, &tweaked);
+				fclose(tweaked.fp);
+			}
+		}
+	}
+
 	/* If "current" is out of range for the "files" array, clip it */
 	if (*refcurrent < 0)
 		*refcurrent = 0;
 	else if (*refcurrent >= json_length(files))
 		*refcurrent = json_length(files) - 1;
+
 
 	/* Load the new current file, if the numbers are different or no
 	 * file was loaded before.  Note that we don't need to explicitly
@@ -487,8 +563,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 			if (!data)
 				data = json_error_null(0, "File \"%s\" is unreadable", currentname);
 		}
-		json_append(globals->data, json_key("data", data));
-		thiscontext->data = data;
+		json_append(thiscontext->data, json_key("data", data));
 
 		/* Update "current_file" number */
 		json_append(globals->data, json_key("current_file", json_from_int(*refcurrent)));
@@ -498,50 +573,6 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	return files;
 }
 
-
-/* This adds context layers for a user function call.  "fn" identifies the
- * function being called, mostly so we can see what arguments it uses.
- * "args" is an array containing the argument values.
- *
- * The context will contain COPIES of the argument values.  Those copies will
- * be automatically freed when the context layer is freed.
- */
-jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t *args)
-{
-	json_t	*cargs, *name, *value;
-	json_t	*vars, *consts;
-
-	/* Build an object containing the actual arguments */
-	cargs = json_copy(fn->userparams);
-	for (name = fn->userparams->first, value = args->first;
-	     name && value;
-	     name = name->next, value = value->next) {
-		json_append(cargs, json_key(name->text, json_copy(value)));
-	}
-
-	/* Also "vars" and "consts" to the arguments object */
-	vars = json_object();
-	json_append(cargs, json_key("vars", vars));
-	consts = json_object();
-	json_append(cargs, json_key("consts", consts));
-
-	/* Add an "args" context layer containing those arguments */
-	context = json_context(context, cargs, JSON_CONTEXT_ARGS);
-
-	/* Add a "this" context containing the value of the first arg */
-	if (args->first)
-		context = json_context(context, json_copy(args->first), JSON_CONTEXT_THIS);
-
-	/* Add other layers exposing the contents of "vars" and "consts".
-	 * Since that data will be freed when the "args" layer is freed,
-	 * we don't want to free them when these layers are freed.
-	 */
-	context = json_context(context, consts, JSON_CONTEXT_CONST | JSON_CONTEXT_NOFREE);
-	context = json_context(context, vars, JSON_CONTEXT_VAR | JSON_CONTEXT_NOFREE);
-
-	/* Return the modified context */
-	return context;
-}
 
 
 /******************************************************************************/
@@ -650,7 +681,7 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
  * for assigning or appending to variables.  Return 0 on success, or -1 on
  * success when *refkey needs to be freed, or an error code on failure.
  *
- * That "-1" business is hack.  When assigning to a member of an object,
+ * That "-1" business is a hack.  When assigning to a member of an object,
  * *refkey should identify the member to be assigned.  But when assigning by
  * a subscript ("object[string]" instead of "object.key") then the key is a
  * computed value, and we evaluate/free the subscript before returning, so we
@@ -894,7 +925,7 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 		json_append(container, json_key(key, rvalue));
 		if (err < 0)
 			free(key);
-	} else if (container->type == JSON_OBJECT) {
+	} else if (container->type == JSON_ARRAY) {
 		if (!value)
 			return jxerror(JE_UNKNOWN_SUB, key);
 

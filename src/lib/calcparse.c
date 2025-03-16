@@ -423,9 +423,13 @@ static jsonop_t jcisassign(stack_t *stack)
 		sp -= 2;
 	}
 
-	/* A name can be an lvalue */
-	if (sp == 1 && stack->stack[0]->op == JSONOP_NAME)
+	/* A name can be an lvalue, except for the names "this" and "that" */
+	if (sp == 1 && stack->stack[0]->op == JSONOP_NAME) {
+		if (!strcasecmp(stack->stack[0]->u.text, "this")
+		 || !strcasecmp(stack->stack[0]->u.text, "that"))
+			return JSONOP_ICEQ;
 		goto IsAssign;
+	}
 
 	/* For more complex assignments, the lvalue can be a name followed by
 	 * a series of dot-names and subscripts.  This is complicated slightly
@@ -495,8 +499,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 	token->len = 1;
 
 	/* Numbers */
-	if (isdigit(*str) || (*str == '.' && isdigit(str[1])))
-	{
+	if (isdigit(*str) || (*str == '.' && isdigit(str[1]))) {
 		token->op = JSONOP_NUMBER;
 		if (*str == '0' && strchr("0123456789XxOoBb", str[1])) {
 			int	radix;
@@ -534,8 +537,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 	}
 
 	/* Quoted strings */
-	if (strchr("\"'`", *str))
-	{
+	if (strchr("\"'`", *str)) {
 		token->op = JSONOP_STRING;
 		token->full = str;
 		token->len = 1;
@@ -560,8 +562,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 	}
 
 	/* Names or alphanumeric keywords */
-	if (isalpha(*str) || *str == '_')
-	{
+	if (isalpha(*str) || *str == '_') {
 		token->op = JSONOP_NAME;
 		token->full = str;
 		token->len = 1;

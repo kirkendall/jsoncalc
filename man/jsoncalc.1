@@ -4,144 +4,98 @@ jsoncalc \- JSON calculator and reformatter
 
 .SH SYNOPSIS
 .B jsoncalc
-.RB [ -c
-.I expression
-|
-.B -f
-.I file
-|
-.BR -i ]
-.RB [ -d
-.IR dir ]
-.RB [ -J
-.IR flags ]
-.RB [ -O
-.IR format ]
-.RB [ -C
-.IR name=color ...]
-.RB [ -J
-.IR flags ]
-.RB [ -U ]
-.RB [ -u ]
-.RB [ -v
-.I env
-|
-.IR file.json " ...]"
+.RI [ OPTION ] 
+.RI [ file.jc ]
+.RI [ "name\fB=\fIvalue" ]
+.RI [ file.json ]...
 
 .SH DESCRIPTION
 .B jsoncalc
 is a tool for examining or modifying JSON data.
 It can be run interactively or in batch mode.
 It integrates well with shell scripts.
-.P
-The expression syntax resembles that of JavaScript expressions,
-but with database-like extensions.
-For a full description of the syntax, see the
-.BR json_calc (3)
-man page.
-In short, though, the extensions are:
-.IP \ \(bu 3n
-.IB array @ filter
-and
-.IB array @@ filter
-operators to transform arrays.
-.IP \ \(bu 3n
-A
-.IB table @= table,
-.IB table @< table
-and
-.IB table @> table
-
-database join operators.
-.B @=
-is natural join,
-.B @<
-is left join, and
-.B @>
-is right join.
-A table is simply an array of objects.
-.IP \ \(bu 3n
-.IB table .orderBy( columns )
-and
-.IB table .groupBy( columns )
-functions to organize arrays of objects.
-.IP \ \(bu 3n
-Aggregate functions including
-.IB min( expr ),
-.IB max( expr ),
-.IB avg( expr )
-and
-.IB count( expr ).
-.IP \ \(bu 3n
-A full-featured SQL "SELECT" statement.
-.P
-When used interactively, it uses the GNU readline library to allow
-powerful command line editing, history, and name completion.
 
 .SH OPTIONS
-You may use one of
-.BI -c expression
-or
-.BI -f file
-to invoke it in batch mode.
-Additionally, if you use a
-.BI -O format
-parameter without a
-.B -i
-to force interactive mode, then it will run in batch mode with an implied
-expression of "this", which causes the data to be output without change
-(except for the format).
-If you don't any of those,
-.B jsoncalc
-will start in interactive mode.
-
+The typical
+.B --help
+and
+.B --version
+options are supported.
+Other than that, all options are short.
 .TP
-.BI -c expression
+.BI -c command
 Apply 
-.I expression
+.I command
 to the JSON data.
-The JSON data will typically come from *.json files also given in the command line.
-The results will be written to stdout.
+The JSON data will typically come from *.json files also given in the
+command line.
+Any results will be written to stdout.
+This option can be repeated to supply multiple commands to run.
 
 .TP
 .BI -f file
 Read an expression from a file, and apply it to the JSON data.
 Again, the JSON data will typically come from *.json files named on the command line.
+This option can be repeated to supply multiple script files to load.
+You can also mix it with
+.BI -c command
+if you want.
+.TP
+
+Also, if the first file named after the last option appears to contain a
+JsonCalc script instead of JSON data, then it will be loaded like
+.BI -f file.
 
 .TP
 .B -i
 Force interactive mode.
 Usually interactive mode is implied by the lack of
-.BI -cexpression
-or
-.BI -ffile
-but if you use
-.BI -Oformat
-then it can become unclear.
-The
+.BI -c expression,
+.BI -f file
+or 
+.BI -O format,
+but if you want to use some of those flags then 
 .B -i
 option makes it clear.
 
 .TP
-.BI -v env
-Apply the expression to the JSON data from environment variable
-.RI "$" env
-and write the result to stdout as a shell command to set the
-.RI "$" env
-to a new value.
-Basically this means
-.BI "eval $(jsoncalc -v" env " -c" expr ")"
-transforms the JSON data in
-.RI "$" env.
-Here's an example:
-.nf
-export invoice='{invoiceno:0, custno:0, parts:[]}'
-eval $(jsoncalc -vinvoice='invoiceno=29330'
-eval $(jsoncalc -vinvoice='custno=180'
-eval $(jsoncalc -vinvoice='parts.append({partno:"18650",qty:3,price:4.99})'
-eval $(jsoncalc -vinvoice='parts.append({partno:"cr2032",qty:10,price:.99})'
-.fi
+-u
+This option allows JsonCalc to update any data files named on the command line,
+if their data was changed via assignments.
+This is often used when JsonCalc is constructing JSON documents from other data
+sources such as environment variables or
+.IB name = value
+arguments on the shell command line.
 
+.TP
+.BR -o | -a
+These affect JsonCalc's behavior when trying to load a file that doesn't exist.
+Normally that's an error, but
+.B -o
+and
+.B -a
+cause it to load missing files as empty objects or arrays, respectively.
+This can be handy if you're using JsonCalc to construct a JSON document
+from scratch.
+You'll usually want
+.B -u
+too.
+
+.TP
+.B -r
+Inhibit the use of the GNU readline library for interactive use.
+Commands will be read with the operating system's line buffering, so no there's no
+history or name completion.
+Still, this can be handy if you're running JsonCalc in some unusual contexts
+such as inside a debugger.
+
+.TP
+-s
+This selects "safer" mode, which inhibits writing to files not named on the
+command line, and warns if a plugin might do dangerous things.
+JsonCalc is offered without any guarantee though, so don't blame me if
+.B -s
+lets you down.
 
 .TP
 .BI -d dir
@@ -150,6 +104,12 @@ a request to load
 .IR dir / name .json
 as variable
 .IR name .
+For example, if you invoke JsonCalc with
+.BI -d foo
+and then use the name "bar" in an expression,
+JsonCalc will load foo/bar.json into the "bar" variable.
+This happens on demand; it doesn't proactively load all files in the "foo"
+directory into variables.
 
 .TP
 .BI -J flags
@@ -181,9 +141,7 @@ This controls the colors used for
 .B -U
 This causes the output format and debugging settings to be stored in
 a configuration file.
-.TP
-.B -u
-This causes any modified JSON files to be overwritten.
+
 .P
 When running interactively, you can also enter
 .BI -O format,
@@ -254,6 +212,52 @@ If you expect the output to be a single object then you can use
     echo score=$score
 .fi
 
+.SH "EXPRESSION SYNTAX"
+The expression syntax resembles that of JavaScript expressions,
+but with database-like extensions.
+For a full description of the syntax, see the
+.BR json_calc (3)
+man page.
+In short, though, the extensions are:
+.IP \ \(bu 3n
+.IB array @ filter
+and
+.IB array @@ filter
+operators to transform arrays.
+.IP \ \(bu 3n
+A
+.IB table @= table,
+.IB table @< table
+and
+.IB table @> table
+
+database join operators.
+.B @=
+is natural join,
+.B @<
+is left join, and
+.B @>
+is right join.
+A table is simply an array of objects.
+.IP \ \(bu 3n
+.IB table .orderBy( columns )
+and
+.IB table .groupBy( columns )
+functions to organize arrays of objects.
+.IP \ \(bu 3n
+Aggregate functions including
+.IB min( expr ),
+.IB max( expr ),
+.IB avg( expr )
+and
+.IB count( expr ).
+.IP \ \(bu 3n
+A full-featured SQL "SELECT" statement.
+.P
+JsonCalc also implements many JavaScript operators, functions, and commands.
+It does not support classes though, or functions that alter data such as
+.BR array .splice().
+
 .SH "INVOCATION EXAMPLES"
 .TP
 jsoncalc
@@ -266,8 +270,8 @@ It makes a decent calculator.
 jsoncalc file.json
 Start
 .B jsoncalc
-interactively using the contents of file.json as "this".
-If it's an object, you can access members simply by giving their names.
+interactively using the contents of file.json as variable
+.I data.
 
 .TP
 jsoncalc -d.
@@ -335,8 +339,8 @@ test.scores@run==1
 Only output rows for run 1.
 The @ and @@ operators take an array as the left operand and an expression
 on the right to filter the array.
-If the expression returns a boolean value, then the element is deleted or
-deleted.
+If the expression returns a boolean value, then the element is omitted or
+kept.
 
 .TP
 test.scores@{run,score}
@@ -351,10 +355,11 @@ then it is used instead of the array's element.
 test.scores.groupBy("run")@{run,avgScore:avg(score)}
 This groups the records by score, and then computes the average score
 within each group.
-.BR avg (x)
+.BI avg( x )
 is an aggregate function, meaning it first accumulates data across all rows
 of the data (or all in the group, in this case) and goes back and makes the
 cumulative result available when evaluating each row.
+The @ operator only adds one row per group.
 
 .TP
 test.scores.groupBy("run","total")@{run,avgScore:avg(score)}
@@ -364,9 +369,7 @@ an extra row to be added for showing the overall average.
 .TP
 "select run, avg(score) from test.scores group by run"
 This uses an SQL "SELECT" command to extract basically the same information.
-Note that SQL will choose a default name for a computed column, while
-.BR jsoncalc "'s"
-{...} object generator does not.
+Note that SQL will choose a default name for a computed column.
 Internally, the SQL "SELECT" is translated to
 .B jsoncalc "'s"
 native expression syntax so it's about as efficient either way.
@@ -402,7 +405,46 @@ program handles emoji well.
 
 
 .SH FILES
+
+.TP
+~/.config/jsoncalc/
+This directory stores JsonCalc's configuration.
+It may also store temporary files such as caches and logs.
+
+.TP
+.IR PATH /lib plugin-version .so
+Where
+.I PATH
+is a directory name from $JSONCALCPATH,
+this is where a binary plugin may be found.
+
+.TP
+.IR PATH /plugin-version .jc
+Where
+.I PATH
+is a directory name from $JSONCALCPATH,
+this is where a script plugin may be found.
+
 .SH ENVIRONMENT
+
+.TP
+$HOME
+This is used to find the
+.I ~/.config/jsoncalc
+directory.
+
+.TP
+$JSONCALCPATH
+This is a list of directories where JsonCalc's supporting files might be
+found.
+The default value is derived from $LDLIBRARYPATH.
+
+.TP
+$LDLIBRARYPATH
+This is a standard environment variable, used to locate library files.
+JsonCalc's plugins are implemented as shared libraries, so if it can't
+find a requested library in $JSONCALCPATH then it will 
+
 .SH "SEE ALSO"
 .BR json_calc (3),
 .BR bash (1),

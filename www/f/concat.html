@@ -50,6 +50,17 @@
       <summary>Notes</summary>
       <ul>
 
+	<li>This function is common in SQL.
+
+        <li><tt>concat()</tt> differs from the
+        <a target="_PARENT" href="../index.html?f=join">join()</tt> function
+        in that <tt>concat()</tt> expects all strings to join to be given as
+        separate arguments, while <tt>join()</tt> expects either an array of
+        strings, or
+        (with <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
+        <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators)
+        single strings that are aggregated across rows of a table.
+
         <li>String concatenation can also be done via the
         <a target="_PARENT" href="../index.html?op=arithmetic">+</a> operator.
         Both JavaScript and SQL allow <tt>concat()</tt> to concatenate strings,
@@ -68,6 +79,7 @@
     <details>
       <summary>See Also</summary>
       <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=join">join()</a></td><td>Aggregate string concatenation function.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=arithmetic">+</a></td><td>Discussion of the <tt>+</tt> operator.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=assign">[]=</a></td><td>Append operator</td></tr>
       </table>

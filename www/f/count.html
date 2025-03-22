@@ -11,16 +11,19 @@
     <h1>count - Count items</h1>
     <dl>
       <dt>count(<var>arg</var>)
+      <br/>count(*)
       <dd>
-      Return a count of instances where <var>arg</var> is not <tt>null</tt>,
-      <tt>false</tt>, <tt>0</tt>, or an empty string or object.
-      You may also use an asterisk in place of <var>arg</var> to count all instances
-      unconditionally.
+      Return a count of instances where <var>arg</var> is not
+      <tt>null</tt> or <tt>false</tt>.
+      You may also use an asterisk in place of <var>arg</var>
+      to count all instances unconditionally.
       <p>
-      This is an aggregate function, meaning it accumulates the count over a series
-      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
-      You may also pass it an array to have it accumulate results across the elements
-      of that array.
+      This is an aggregate function, meaning it accumulates the count over a
+      series of table elements when used with the
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
+      <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators.
+      You may also pass it an array to have it accumulate results across the
+      elements of that array.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -29,7 +32,17 @@
 	<kbd>count([false, false, true, true, false])</kbd>
 	<samp>2</samp>
         Here we're applying it to an array.
-        It's returning the number of <tt>true</tt> elements.
+        Only 2 of the items are not <tt>null</tt> or <tt>false</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>[false, false, true, true, false] @ count(this)</kbd>
+	<samp>[2,2,2,2,2]</samp>
+        Here we're using it with the <tt>@</tt> operator.
+	The count is repeated 5 times because <tt>@</tt> is an array filter,
+	which is converting each <tt>true/false</tt> to the count.
+	You could wrap the whole expression in parentheses and add <tt>[0]</tt>
+	to get just the first copy of the count.
       </div>
 
       <div class="example">
@@ -56,9 +69,36 @@
             counts all instances.
             This is effectively the same as <tt>count(true)</tt>.
 
+	<li>SQL's <tt>COUNT()</tt> aggregate function is slightly different though.
+	    It only excludes <tt>NULL</tt>;
+	    <tt>FALSE</tt> values will be included in the tally.
+	    I chose to make JsonCalc be incompatible so you could use
+	    conditional expressions in the <tt>count()</tt> argument.
+	    <div class="example">
+	      <kbd>[this.scores] @ count(score &lt; 30)</kbd>
+	      <samp>[4]</samp>
+	      This scans <tt>test.scores</tt> (part of the sample data) for
+	      rows with a score less than 30.
+	      We wrapped <tt>[test.scores]</tt> in brackets so the
+	      <a target="_PARENT" href="../index.html?op=each">@</a> operator
+	      would treat it as one group instead of 9 separate rows.
+	      <p>
+	      By the way, you might be tempted to use an expression like
+	      <tt>count(score &lt; avg(score))</tt> to count rows with a
+	      below average score, but that won't work because
+	      <a target="_PARENT" href="../index.html?f=avg">avg()</a>
+	      doesn't return a value until the end of the group or array,
+	      but the argument to <tt>count()</tt> would need it for each row.  
+	      To make this work, you'd need to generate the average first,
+	      in a separate expression.
+	      <kbd>var avg = (test.scores @ avg(score))[0];</kbd>
+	      <kbd>[this.scores] @ count(score &lt; avg)</kbd>
+	      <samp>[4]</samp>
+	    </div>
+
         <li>If all you want to do is check the size of an array,
             <kbd>array.length</kbd> will be much faster than
-            <kbd>array.count()</kbd>.
+            <kbd>array.count(*)</kbd>.
             Function calls aren't very efficient.
             Arguments are passed by value, so <tt>array.count()</tt>
             acts on a copy of the array, while <tt>array.length</tt>

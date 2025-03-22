@@ -1126,6 +1126,10 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 	 && args->first->next->next->type == JSON_STRING)
 		delim = args->first->next->next->text;
 
+	/* If the bits value is negative, use all-1's */
+	if (inbits < 0)
+		inbits = ~0;
+
 	/* Start with an empty object */
 	result = json_object();
 
@@ -2122,8 +2126,11 @@ static json_t *jfn_count(json_t *args, void *agdata)
 }
 static void jag_count(json_t *args, void *agdata)
 {
-	if (json_is_true(args->first))
-		(*(int *)agdata)++;
+	if (json_is_null(args->first))
+		return;
+	if (args->first->type != JSON_BOOL || *args->first->text != 't')
+		return;
+	(*(int *)agdata)++;
 }
 
 /* rowNumber(arg) returns a different value for each element in the group */

@@ -87,6 +87,17 @@
 	  <div class="calc">nameBits(13, ["bold","italic",["sub","super","base"]]).bold ? "heavy" : "light"</div>
 	  <div class="result">"heavy"</div>
         </div>
+
+        <li>Passing a negative number will always return all of the bits,
+	regardless of the computer's internal representation for negative
+	numbers.
+	<div class="example">
+	  <kbd>nameBits(-1, ["A","B","C",["d","e","f","g","h"],"I","J"])</kbd>
+	  <samp>{"A":1,"B":2,"C":4,"I":64,"J":128}</samp>
+	  The lowercase letters are missing in this result because
+	  no bitpattern was provided for all-1's in the subarray.
+	</div>
+
       </ul>
     </details>
   </body>

@@ -23,8 +23,9 @@ int show_expression = 0;
 void usage()
 {
         puts("jsontest [flags] [file...]");
-        puts("Flags: -m   Check for evidence of memory leaks during each test.");
-        puts("       -e   Write each test to stderr before running it. Helps for core dumps.");
+        puts("Flags: -m      Check for evidence of memory leaks during each test.");
+        puts("       -e      Write each test to stderr before running. Helps for core dumps.");
+        puts("       -Jflags Debug: +/-/= a:abort c:json_calc_parse e:json_by_expr t:trace");
         puts("This reads a series of tests from a file, and writes any inconsistencies to");
         puts("stdout. Input lines starting with # are section headers. Lines starting with");
         puts("name= define data to be used in tests later in the file. Lines that don't");
@@ -160,11 +161,12 @@ int main(int argc, char **argv)
         json_format(NULL, "ascii");
 
         /* Parse command-line flags */
-        while ((ch = getopt(argc, argv, "me")) >= 0)
+        while ((ch = getopt(argc, argv, "meJ:")) >= 0)
         {
 		switch (ch) {
 		  case 'm': test_memleaks = 1;	break;
 		  case 'e': show_expression = 1;break;
+		  case 'J': json_debug(optarg);	break;
 		  default:
 			usage();
 		}

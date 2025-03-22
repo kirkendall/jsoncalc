@@ -3,6 +3,7 @@ INC=../../include
 CFLAGS=-DJSON_DEBUG_MEMORY -I$(INC)
 LDFLAGS=-L$(LIB)
 LDLIBS=	-ljson
+CC=gcc -g
 
 all: testcalc.out
 

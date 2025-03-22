@@ -71,84 +71,85 @@ typedef struct jsonselect_s {
  */
 static struct {
 	char symbol[11];/* Derived form the JSONOP_xxxx enumerated value */
-	char text[5];   /* text form of the operator */
-	short prec;     /* precedence of the operator (higher is done first) */
+	char text[5];   /* Text form of the operator */
+	short prec;     /* Precedence of the operator (higher is done first) */
+	short noexpr;	/* "1" if token can't be in valid expressions */
 	jcoptype_t optype;/* token type */
 	size_t len;     /* text length (computed at runtime) */
 } operators[] = {
-	{"ADD",		"+",	210,	JCOP_INFIX},
-	{"AG",		"AG",	-1,	JCOP_OTHER},
-	{"AND",		"&&",	140,	JCOP_INFIX},
-	{"APPEND",	"A[]",	110,	JCOP_INFIX},
-	{"ARRAY",	"ARR",	-1,	JCOP_OTHER},
-	{"AS",		"AS",	121,	JCOP_INFIX},
-	{"ASSIGN",	"ASGN",	110,	JCOP_INFIX},
-	{"BETWEEN",	"BTWN",	121,	JCOP_INFIX},
-	{"BITAND",	"&",	160,	JCOP_INFIX},
-	{"BITNOT",	"~",	240,	JCOP_PREFIX},
-	{"BITOR",	"|",	150,	JCOP_INFIX},
-	{"BITXOR",	"^",	160,	JCOP_INFIX},
-	{"BOOLEAN",	"BOO",	-1,	JCOP_OTHER},
-	{"COALESCE",	"??",	130,	JCOP_INFIX},
-	{"COLON",	":",	121,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
-	{"COMMA",	",",	110,	JCOP_INFIX},
-	{"DESCENDING",	"DES",	3,	JCOP_POSTFIX},
-	{"DISTINCT",	"DIS",	2,	JCOP_OTHER},
-	{"DIVIDE",	"/",	220,	JCOP_INFIX},
-	{"DOT",		".",	270,	JCOP_INFIX},
-	{"EACH",	"@@",	115,	JCOP_INFIX}, /*!!!*/
-	{"ELIPSIS",	"..",	270,	JCOP_INFIX}, /*!!!*/
-	{"ENDARRAY",	"]",	0,	JCOP_OTHER},
-	{"ENDOBJECT",	"}",	0,	JCOP_OTHER},
-	{"ENDPAREN",	")",	0,	JCOP_OTHER},
-	{"ENVIRON",	"$",	169,	JCOP_OTHER},
-	{"EQ",		"==",	180,	JCOP_INFIX},
-	{"EQSTRICT",	"===",	180,	JCOP_INFIX},
-	{"FNCALL",	"F",	170,	JCOP_OTHER}, /* function call */
-	{"FROM",	"FRO",	2,	JCOP_OTHER},
-	{"GE",		">=",	190,	JCOP_INFIX},
-	{"GROUP",	"@",	115,	JCOP_INFIX},	/*!!!*/
-	{"GROUPBY",	"GRO",	2,	JCOP_OTHER},
-	{"GT",		">",	190,	JCOP_INFIX},
-	{"ICEQ",	"=",	180,	JCOP_INFIX},
-	{"ICNE",	"<>",	180,	JCOP_INFIX},
-	{"IN",		"IN",	175,	JCOP_INFIX},
-	{"ISNOTNULL",	"N!",	117,	JCOP_POSTFIX}, /* postfix operator */
-	{"ISNULL",	"N=",	117,	JCOP_POSTFIX}, /* postfix operator */
-	{"LE",		"<=",	190,	JCOP_INFIX},
-	{"LIKE",	"LIK",	180,	JCOP_INFIX},
-	{"LIMIT",	"LIM",	2,	JCOP_OTHER},
-	{"LITERAL",	"LIT",	-1,	JCOP_OTHER},
-	{"LJOIN",	"@<",	117,	JCOP_INFIX},
-	{"LT",		"<",	190,	JCOP_INFIX},
-	{"MAYBEASSIGN",	"=??",	110,	JCOP_INFIX},
-	{"MAYBEMEMBER",	":??",	121,	JCOP_INFIX},
-	{"MODULO",	"%",	220,	JCOP_INFIX},
-	{"MULTIPLY",	"*",	220,	JCOP_INFIX},
-	{"NAME",	"NAM",	-1,	JCOP_OTHER},
-	{"NE",		"!=",	180,	JCOP_INFIX},
-	{"NEGATE",	"U-",	240,	JCOP_PREFIX},
-	{"NESTRICT",	"!==",	180,	JCOP_INFIX},
-	{"NJOIN",	"@=",	117,	JCOP_INFIX},
-	{"NOT",		"!",	240,	JCOP_PREFIX},
-	{"NOTLIKE",	"NLK",	180,	JCOP_INFIX},
-	{"NULL",	"NUL",	-1,	JCOP_OTHER},
-	{"NUMBER",	"NUM",	-1,	JCOP_OTHER},
-	{"OBJECT",	"OBJ",	-1,	JCOP_OTHER},
-	{"OR",		"||",	130,	JCOP_INFIX},
-	{"ORDERBY",	"ORD",	2,	JCOP_OTHER},
-	{"QUESTION",	"?",	121,	JCOP_RIGHTINFIX}, /* right-to-left associative */
-	{"REGEX",	"REG",	-1,	JCOP_OTHER},
-	{"RJOIN",	"@>",	117,	JCOP_INFIX},
-	{"SELECT",	"SEL",	1,	JCOP_OTHER},
-	{"STARTARRAY",	"[",	260,	JCOP_OTHER},
-	{"STARTOBJECT",	"{",	260,	JCOP_OTHER},
-	{"STARTPAREN",	"(",	260,	JCOP_OTHER},
-	{"STRING",	"STR",	-1,	JCOP_OTHER},
-	{"SUBSCRIPT",	"S[",	170,	JCOP_OTHER},
-	{"SUBTRACT",	"-",	210,	JCOP_INFIX}, /* or JSONOP_NEGATE */
-	{"WHERE",	"WHE",	2,	JCOP_OTHER},
-	{"INVALID",	"XXX",	666,	JCOP_OTHER}
+	{"ADD",		"+",	210,	0,	JCOP_INFIX},
+	{"AG",		"AG",	-1,	1,	JCOP_OTHER},
+	{"AND",		"&&",	140,	0,	JCOP_INFIX},
+	{"APPEND",	"A[]",	110,	0,	JCOP_INFIX},
+	{"ARRAY",	"ARR",	-1,	0,	JCOP_OTHER},
+	{"AS",		"AS",	121,	1,	JCOP_INFIX},
+	{"ASSIGN",	"ASGN",	110,	0,	JCOP_INFIX},
+	{"BETWEEN",	"BTWN",	121,	0,	JCOP_INFIX},
+	{"BITAND",	"&",	160,	0,	JCOP_INFIX},
+	{"BITNOT",	"~",	240,	0,	JCOP_PREFIX},
+	{"BITOR",	"|",	150,	0,	JCOP_INFIX},
+	{"BITXOR",	"^",	160,	0,	JCOP_INFIX},
+	{"BOOLEAN",	"BOO",	-1,	0,	JCOP_OTHER},
+	{"COALESCE",	"??",	130,	0,	JCOP_INFIX},
+	{"COLON",	":",	121,	0,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
+	{"COMMA",	",",	110,	0,	JCOP_INFIX},
+	{"DESCENDING",	"DES",	3,	1,	JCOP_POSTFIX},
+	{"DISTINCT",	"DIS",	2,	1,	JCOP_OTHER},
+	{"DIVIDE",	"/",	220,	0,	JCOP_INFIX},
+	{"DOT",		".",	270,	0,	JCOP_INFIX},
+	{"EACH",	"@@",	115,	0,	JCOP_INFIX}, /*!!!*/
+	{"ELIPSIS",	"..",	270,	0,	JCOP_INFIX}, /*!!!*/
+	{"ENDARRAY",	"]",	0,	1,	JCOP_OTHER},
+	{"ENDOBJECT",	"}",	0,	1,	JCOP_OTHER},
+	{"ENDPAREN",	")",	0,	1,	JCOP_OTHER},
+	{"ENVIRON",	"$",	169,	0,	JCOP_OTHER},
+	{"EQ",		"==",	180,	0,	JCOP_INFIX},
+	{"EQSTRICT",	"===",	180,	0,	JCOP_INFIX},
+	{"FNCALL",	"F",	170,	0,	JCOP_OTHER}, /* function call */
+	{"FROM",	"FRO",	2,	0,	JCOP_OTHER},
+	{"GE",		">=",	190,	0,	JCOP_INFIX},
+	{"GROUP",	"@",	115,	0,	JCOP_INFIX},	/*!!!*/
+	{"GROUPBY",	"GRO",	2,	1,	JCOP_OTHER},
+	{"GT",		">",	190,	0,	JCOP_INFIX},
+	{"ICEQ",	"=",	180,	0,	JCOP_INFIX},
+	{"ICNE",	"<>",	180,	0,	JCOP_INFIX},
+	{"IN",		"IN",	175,	0,	JCOP_INFIX},
+	{"ISNOTNULL",	"N!",	117,	0,	JCOP_POSTFIX}, /* postfix operator */
+	{"ISNULL",	"N=",	117,	0,	JCOP_POSTFIX}, /* postfix operator */
+	{"LE",		"<=",	190,	0,	JCOP_INFIX},
+	{"LIKE",	"LIK",	180,	0,	JCOP_INFIX},
+	{"LIMIT",	"LIM",	2,	1,	JCOP_OTHER},
+	{"LITERAL",	"LIT",	-1,	0,	JCOP_OTHER},
+	{"LJOIN",	"@<",	117,	0,	JCOP_INFIX},
+	{"LT",		"<",	190,	0,	JCOP_INFIX},
+	{"MAYBEASSIGN",	"=??",	110,	0,	JCOP_INFIX},
+	{"MAYBEMEMBER",	":??",	121,	0,	JCOP_INFIX},
+	{"MODULO",	"%",	220,	0,	JCOP_INFIX},
+	{"MULTIPLY",	"*",	220,	0,	JCOP_INFIX},
+	{"NAME",	"NAM",	-1,	0,	JCOP_OTHER},
+	{"NE",		"!=",	180,	0,	JCOP_INFIX},
+	{"NEGATE",	"U-",	240,	0,	JCOP_PREFIX},
+	{"NESTRICT",	"!==",	180,	0,	JCOP_INFIX},
+	{"NJOIN",	"@=",	117,	0,	JCOP_INFIX},
+	{"NOT",		"!",	240,	0,	JCOP_PREFIX},
+	{"NOTLIKE",	"NLK",	180,	0,	JCOP_INFIX},
+	{"NULL",	"NUL",	-1,	0,	JCOP_OTHER},
+	{"NUMBER",	"NUM",	-1,	0,	JCOP_OTHER},
+	{"OBJECT",	"OBJ",	-1,	0,	JCOP_OTHER},
+	{"OR",		"||",	130,	0,	JCOP_INFIX},
+	{"ORDERBY",	"ORD",	2,	1,	JCOP_OTHER},
+	{"QUESTION",	"?",	121,	0,	JCOP_RIGHTINFIX}, /* right-to-left associative */
+	{"REGEX",	"REG",	-1,	0,	JCOP_OTHER},
+	{"RJOIN",	"@>",	117,	0,	JCOP_INFIX},
+	{"SELECT",	"SEL",	1,	1,	JCOP_OTHER},
+	{"STARTARRAY",	"[",	260,	1,	JCOP_OTHER},
+	{"STARTOBJECT",	"{",	260,	1,	JCOP_OTHER},
+	{"STARTPAREN",	"(",	260,	1,	JCOP_OTHER},
+	{"STRING",	"STR",	-1,	0,	JCOP_OTHER},
+	{"SUBSCRIPT",	"S[",	170,	0,	JCOP_OTHER},
+	{"SUBTRACT",	"-",	210,	0,	JCOP_INFIX}, /* or JSONOP_NEGATE */
+	{"WHERE",	"WHE",	2,	1,	JCOP_OTHER},
+	{"INVALID",	"XXX",	666,	1,	JCOP_OTHER}
 };
 
 static int pattern(stack_t *stack, char *want);
@@ -2079,7 +2080,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			continue;
 		} else if (PATTERN("{m}") || PATTERN("{x}")) {
 			/* Non-empty object.  All elements are in a comma
-			 * expression in top[-2].  Convert comma to array.
+			 * expression in top[-2].  Convert comma to object.
 			 */
 			top[-3] = fixcomma(top[-2], JSONOP_OBJECT);
 			stack->sp -= 2;
@@ -2094,11 +2095,13 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 					 * of a name, fix it
 					 */
 					if (JC_IS_STRING(jn->LEFT->LEFT)) {
+						jsoncalc_t *name;
 						t.op = JSONOP_NAME;
 						t.full = jn->LEFT->LEFT->u.literal->text;
 						t.len = strlen(t.full);
+						name = jcalloc(&t);
 						json_calc_free(jn->LEFT->LEFT);
-						jn->LEFT->LEFT = jcalloc(&t);
+						jn->LEFT->LEFT = name;
 					}
 				} else {
 					return "Object generators use a series of name:expr pairs";
@@ -2313,6 +2316,13 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	if (!err)
 		err = reduce(&stack, NULL, token.full + token.len);
 
+	/* Some operators (tokens, really) are only used during parsing.
+	 * If the stack still contains one of those, then we got an
+	 * incomplete parse.
+	 */
+	if (operators[stack.stack[0]->op].noexpr)
+		err = "Syntax error";
+
 	/* If this leaves an operator without operands, complain */
 	switch (operators[stack.stack[0]->op].optype) {
 	case JCOP_OTHER:
@@ -2333,7 +2343,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	}
 
 	/* If it compiled cleanly, look for aggregate functions */
-	if (stack.sp == 1)
+	if (stack.sp == 1 && !err)
 		stack.stack[0] = parseag(stack.stack[0], NULL);
 
 	/* Store the error message (or lack thereof) */
@@ -2368,6 +2378,8 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 
 	/* Clean up any extra stack items */
 	while (stack.sp >= 2)
+		json_calc_free(stack.stack[--stack.sp]);
+	if (stack.sp == 1 && err)
 		json_calc_free(stack.stack[--stack.sp]);
 
 	return stack.sp == 0 ? NULL : stack.stack[0];

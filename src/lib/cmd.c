@@ -1283,7 +1283,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 			cmd->calc = json_calc_parse(src->str, &end, &err, 0);
 			src->str = end;
 			if (err) {
-				json_cmd_error(src->filename, jcmdline(src), 1, "Error in expression (%s)", err);
+				*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Error in expression (%s)", err);
 				json_cmd_free(first);
 				return NULL;
 			}

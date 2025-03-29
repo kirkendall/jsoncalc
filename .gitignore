@@ -27,6 +27,8 @@ src/plugins/sqlite/
 src/plugins/xml/
 src/simple/simple
 
+# Memo to self
+*IDEA
 
 # Big ugly test data
 sampledata/appts.json

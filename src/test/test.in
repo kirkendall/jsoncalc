@@ -142,7 +142,7 @@ concat([1,2],[3,4],[5])
 concat("One","True","Love")
 ="OneTrueLove"
 [null, false, true, 0, 1, "String"].count()
-=5
+=4
 "2025-10-31".date(true)
 ={"year":2025,"month":10,"day":31}
 {"year":2025,"month":10,"day":31}

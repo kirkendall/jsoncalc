@@ -72,7 +72,7 @@ int json_grid(json_t *json, jsonformat_t *format)
 		width = widths[c] = json_int(json_by_key(col, "width"));
 		if ((!strcmp(text, "array") || !strcmp(text, "table")) && width < 7)
 			width = widths[c] = 7;
-		else if ((!strcmp(text, "object") || !strcmp(text, "mixed")) && width < 8)
+		else if ((!strcmp(text, "object") || !strcmp(text, "any")) && width < 8)
 			width = widths[c] = 8;
 
 		/* For nullable columns, if null isn't displayed as "" then make sure

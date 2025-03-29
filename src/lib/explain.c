@@ -77,12 +77,12 @@ char *json_typeof(json_t *json, int extended)
 }
 
 /* Combine oldtype and newtype.  Try to keep the result as specific as
- * possible.  If total chaos, just return "mixed".
+ * possible.  If total chaos, just return "any".
  */
 char *json_mix_types(char *oldtype, char *newtype)
 {
-	/* If typenames are the same, or oldtype is "mixed", it's easy */
-	if (!strcmp(oldtype, newtype) || !strcmp(oldtype, "mixed"))
+	/* If typenames are the same, or oldtype is "any", it's easy */
+	if (!strcmp(oldtype, newtype) || !strcmp(oldtype, "any"))
 		return NULL;
 
 	/* If oldtype is "null" then we have more info now! */
@@ -119,7 +119,7 @@ char *json_mix_types(char *oldtype, char *newtype)
 		return "string";
 
 	/* Chaos */
-	return "mixed";
+	return "any";
 }
 
 /* Collect column info from a single row and merge it into aggregated info. If

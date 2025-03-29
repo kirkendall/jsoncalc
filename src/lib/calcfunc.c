@@ -131,21 +131,21 @@ static jsonfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str:string"
 static jsonfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str:string, exceptions?:string[]",	"string",	jfn_toMixedCase};
 static jsonfunc_t substr_jf      = {&toMixedCase_jf, "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
 static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         "val:string|number, length?:number", "string",	jfn_hex};
-static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    "val:mixed", "string",		jfn_toString};
-static jsonfunc_t String_jf      = {&toString_jf,    "String",      "val:mixed", "string",		jfn_toString};
-static jsonfunc_t isString_jf    = {&String_jf,      "isString",    "val:mixed", "boolean",		jfn_isString};
-static jsonfunc_t isArray_jf     = {&isString_jf,    "isArray",     "val:mixed", "boolean",		jfn_isArray};
-static jsonfunc_t isTable_jf     = {&isArray_jf,     "isTable",     "val:mixed", "boolean",		jfn_isTable};
-static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "val:mixed", "boolean",		jfn_isObject};
-static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "val:mixed", "boolean",		jfn_isNumber};
-static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "val:mixed", "boolean",		jfn_isInteger};
-static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "val:mixed", "boolean",		jfn_isNaN};
-static jsonfunc_t isDate_jf      = {&isNaN_jf,       "isDate",      "val:mixed", "boolean",		jfn_isDate};
-static jsonfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "val:mixed", "boolean",		jfn_isTime};
-static jsonfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "val:mixed", "boolean",		jfn_isDateTime};
-static jsonfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "val:mixed", "boolean",		jfn_isPeriod};
-static jsonfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "val:mixed, prevtype:string|true", "string",	jfn_typeOf};
-static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "val:mixed", "number",		jfn_sizeOf};
+static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    "val:any", "string",		jfn_toString};
+static jsonfunc_t String_jf      = {&toString_jf,    "String",      "val:any", "string",		jfn_toString};
+static jsonfunc_t isString_jf    = {&String_jf,      "isString",    "val:any", "boolean",		jfn_isString};
+static jsonfunc_t isArray_jf     = {&isString_jf,    "isArray",     "val:any", "boolean",		jfn_isArray};
+static jsonfunc_t isTable_jf     = {&isArray_jf,     "isTable",     "val:any", "boolean",		jfn_isTable};
+static jsonfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "val:any", "boolean",		jfn_isObject};
+static jsonfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "val:any", "boolean",		jfn_isNumber};
+static jsonfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "val:any", "boolean",		jfn_isInteger};
+static jsonfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "val:any", "boolean",		jfn_isNaN};
+static jsonfunc_t isDate_jf      = {&isNaN_jf,       "isDate",      "val:any", "boolean",		jfn_isDate};
+static jsonfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "val:any", "boolean",		jfn_isTime};
+static jsonfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "val:any", "boolean",		jfn_isDateTime};
+static jsonfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "val:any", "boolean",		jfn_isPeriod};
+static jsonfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "val:any, prevtype:string|true", "string",	jfn_typeOf};
+static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "val:any", "number",		jfn_sizeOf};
 static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str:string", "number",		jfn_widthOf};
 static jsonfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str:string", "number",		jfn_heightOf};
 static jsonfunc_t keys_jf        = {&heightOf_jf,    "keys",        "obj:object", "string[]",		jfn_keys};
@@ -168,15 +168,15 @@ static jsonfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str:string,
 static jsonfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode","what:number|string|array, ...more", "string",	jfn_fromCharCode};
 static jsonfunc_t replace_jf     = {&fromCharCode_jf,"replace",     "str:string, find:string|regex, replace:string", "string",	jfn_replace};
 static jsonfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str:string, find:string|regex, replace:string", "string",	jfn_replaceAll};
-static jsonfunc_t includes_jf    = {&replaceAll_jf,  "includes",    "subj:string|array, find:string|mixed, ignorecase?:true", "boolean",	jfn_includes};
-static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "subj:string|array, find:string|mixed, ignorecase?:true", "number",	jfn_indexOf};
-static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "subj:string|array, find:string|mixed, ignorecase?:true", "number",	jfn_lastIndexOf};
+static jsonfunc_t includes_jf    = {&replaceAll_jf,  "includes",    "subj:string|array, find:string|regex, ignorecase?:true", "boolean",	jfn_includes};
+static jsonfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_indexOf};
+static jsonfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_lastIndexOf};
 static jsonfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_startsWith};
 static jsonfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_endsWith};
 static jsonfunc_t split_jf       = {&endsWith_jf,    "split",       "str:string, delim:string|regex, limit?:number", "string[]",	jfn_split};
 static jsonfunc_t getenv_jf      = {&split_jf,       "getenv",      "str:string", "string:null",		jfn_getenv};
-static jsonfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data:mixed", "string",		jfn_stringify};
-static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", "mixed",		jfn_parse};
+static jsonfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data:any", "string",		jfn_stringify};
+static jsonfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", "any",		jfn_parse};
 static jsonfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", "number",		jfn_parseInt};
 static jsonfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
 static jsonfunc_t find_jf	 = {&parseFloat_jf,  "find", 	    "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
@@ -186,19 +186,19 @@ static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string
 static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, ...actions", "null",	jfn_timeZone};
 static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, ...actions", "string|object|number",	jfn_period};
 
-static jsonfunc_t count_jf       = {&period_jf,      "count",       "val:mixed|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&period_jf,      "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
-static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:mixed", "number|string|mixed",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
-static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|mixed",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
+static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t avg_jf         = {&max_jf,         "avg",         "num:number", "number",		jfn_avg,   jag_avg, sizeof(agdata_t)};
 static jsonfunc_t sum_jf         = {&avg_jf,         "sum",         "num:number", "number",		jfn_sum,   jag_sum, sizeof(agdata_t)};
 static jsonfunc_t product_jf     = {&sum_jf,         "product",     "num:number", "number",		jfn_product,jag_product, sizeof(agdata_t)};
 static jsonfunc_t any_jf         = {&product_jf,     "any",         "bool:boolean", "boolean",		jfn_any,   jag_any, sizeof(int)};
 static jsonfunc_t all_jf         = {&any_jf,         "all",         "bool:boolean", "boolean",		jfn_all,   jag_all, sizeof(int)};
 static jsonfunc_t explain_jf     = {&all_jf,         "explain",     "tbl:table, depth:?number", "table",		jfn_explain,jag_explain, sizeof(json_t *), JSONFUNC_JSONFREE};
-static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:mixed, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
-static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "data:mixed", "array",		jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
-static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string, value:mixed", "object",	jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:any, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
+static jsonfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "data:any", "array",		jfn_arrayAgg,jag_arrayAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
+static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string, value:any", "object",	jfn_objectAgg,jag_objectAgg, sizeof(json_t *), JSONFUNC_JSONFREE};
 static jsonfunc_t join_jf        = {&objectAgg_jf,   "join",        "str:string, delim?:string", "string",	jfn_join,  jag_join, sizeof(agjoindata_t),	JSONFUNC_FREE};
 static jsonfunc_t *funclist      = &join_jf;
 
@@ -2128,7 +2128,7 @@ static void jag_count(json_t *args, void *agdata)
 {
 	if (json_is_null(args->first))
 		return;
-	if (args->first->type != JSON_BOOL || *args->first->text != 't')
+	if (args->first->type == JSON_BOOL && !json_is_true(args->first))
 		return;
 	(*(int *)agdata)++;
 }

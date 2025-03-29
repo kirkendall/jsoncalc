@@ -360,7 +360,7 @@ int main(int argc, char **argv)
 		usage(NULL, NULL);
 	}
 	interactive = 0;
-	while ((opt = getopt(argc, argv, "c:f:irsoal:uD:O:C:J:U")) >= 0) {
+	while ((opt = getopt(argc, argv, "c:f:irsoal:uD:O:C:J:U?")) >= 0) {
 		switch (opt) {
 		case 'c':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
@@ -431,6 +431,11 @@ int main(int argc, char **argv)
 		case 'U':
 			saveconfig = 1;
 			break;
+		case '?':
+			while (context)
+				context = json_context_free(context);
+			usage(NULL, NULL);
+			exit(0);
 		default:
 			{
 				char optstr[2];
@@ -529,9 +534,9 @@ int main(int argc, char **argv)
 		interactive = 1;
 
 	/* If batch mode and no filenames were named on the command line,
-	 * then assume "-".
+	 * then assume "-", unless stdin is a tty.
 	 */
-	if (!interactive && !anyfiles)
+	if (!interactive && !anyfiles && !isatty(0))
 		json_context_file(context, "-", 1, NULL);
 
 	/* Start on the first file */

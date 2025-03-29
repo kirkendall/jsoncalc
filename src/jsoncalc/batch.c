@@ -13,6 +13,12 @@ void batch(jsoncontext_t **refcontext, jsoncmd_t *initcmds)
 	/* Fetch the list of filenames */
 	files = json_context_file(*refcontext, NULL, 0, NULL);
 
+	/* If no files then just run any -c commands once and exit */
+	if (json_length(files) == 0) {
+		run(initcmds, refcontext);
+		return;
+	}
+
 	/* For each file... */
 	for (i = 0; i < json_length(files); i++) {
 

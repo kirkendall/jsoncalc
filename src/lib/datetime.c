@@ -202,12 +202,9 @@ static int parseperiod(const char *str, jsondatetime_t *dt)
 			sign = 1;
 			infrac = 0;
 			break;
-		case ' ':
-			/* Ignore spaces */
-			break;
 		default:
 			/* Any other character means it's malformed */
-			return 0;
+			return 1;
 		}
 	}
 

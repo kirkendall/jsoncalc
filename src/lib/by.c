@@ -7,7 +7,7 @@
 /* Return the value of a named field within an object or array.  If there
  * is no such element, then return NULL.
  */
-json_t *json_by_key(json_t *container, char *key)
+json_t *json_by_key(const json_t *container, const char *key)
 {
 	json_t *scan;
 

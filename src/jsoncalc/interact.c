@@ -121,42 +121,6 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 		/* Treat all processing of the line as "running */
 		running = 1;
 
-		/* Maybe -Oformat? */
-		if (!strncmp(expr, "-O", 2)) {
-			for (val = expr + 2; *val == ' '; val++) {
-			}
-			if (*val == '?') {
-				format_usage();
-			} else {
-				errmsg = json_format(NULL, val);
-				if (errmsg)
-					puts(errmsg);
-				val = json_format_str(NULL);
-				printf("-O%s\n", val);
-				free(val);
-			}
-			free(expr);
-			continue;
-		}
-
-		/* Maybe -Ccolors? */
-		if (!strncmp(expr, "-C", 2)) {
-			for (val = expr + 2; *val == ' '; val++) {
-			}
-			if (*val == '?') {
-				color_usage();
-			} else {
-				errmsg = json_format_color(val);
-				if (errmsg)
-					puts(errmsg);
-				val = json_format_color_str();
-				printf("-C%s\n", val);
-				free(val);
-			}
-			free(expr);
-			continue;
-		}
-
 		/* Compile */
 		jc = json_cmd_parse_string(expr);
 		free(expr);

@@ -19,6 +19,7 @@
 /* getopt() variables not declared in <unistd.h> */
 extern char *optarg;
 extern int optind, opterr, optopt;
+#define OPTFLAGS "c:f:irsoal:uD:O:J:U?"
 
 /* -i -- Force interactive mode */
 int interactive = 0;
@@ -70,18 +71,6 @@ void format_usage()
 	printf("  -Odigits=%-4dPrecision when converting numbers to strings.\n", json_format_default.digits);
 }
 
-/* Output a color usage statement */
-void color_usage()
-{
-	char	*colors;
-	puts("The -Ccolors option sets the colors used when -Ocolor is set.  The \"colors\"");
-	puts("string is a series of name=value pairs, where the name is a color role");
-	puts("(one of result, head, delim, error, or debug) and the value is a description");
-	puts("of the color such as \"bold underlined blue on white\"");
-	colors = json_format_color_str();
-	printf("-C%s\n", colors);
-	free(colors);
-}
 
 /* Output a debugging flag usage message */
 void debug_usage()
@@ -120,8 +109,7 @@ static void usage(char *fmt, char *data)
 	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
 	puts("       -d dir     Autoload files from directory \"dir\" (this invocaion only).");
 	puts("       -D dir     Autoload files from directory \"dir\" (persist, via -U).");
-	puts("       -O format  Adjusts the output format. Use -O? for more info.");
-	puts("       -C colors  Adjusts colors for ANSI terminals. Use -C? for more info.");
+	puts("       -O options Adjusts the configuration, including output format.");
 	puts("       -J flags   Debug: t=token, f=file, b=buffer, a=abort, e=expr, c=calc");
 	puts("       -U         Save -O, -C, -D, -J flags as default config");
 	puts("This program manipulates JSON data. Without one of -ccalc or -ffile,");
@@ -250,14 +238,16 @@ void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 			json_print(result->ret, NULL);
 			json_free(result->ret);
 		} else {
-			fputs(json_format_color_error, stderr);
+			if (*json_format_default.escerror)
+				fputs(json_format_default.escerror, stderr);
 			if (result->filename)
 				fprintf(stderr, "%s:%d: %s\n", result->filename, result->lineno, result->text);
 			else if (result->lineno)
 				fprintf(stderr, "Line %d: %s\n", result->lineno, result->text);
 			else
 				fprintf(stderr, "%s\n", result->text);
-			fputs(json_format_color_end, stderr);
+			if (*json_format_default.escerror)
+				fputs(json_format_color_end, stderr);
 			putc('\n', stderr);
 		}
 		free(result);
@@ -318,11 +308,10 @@ int isscript(char *filename)
 int main(int argc, char **argv)
 {
 	int	i;
-	json_t	*args;
-	char	*val;
+	json_t	*args, *section, *err;
+	char	*val, *plugin;
 	int	saveconfig = 0;
-	char	*errmsg;
-	int	anyformat = 0;
+	int	anyoption = 0;
 	int	anyfiles = 0;
 	int	opt;
 	int	exitcode = 0;
@@ -334,18 +323,18 @@ int main(int argc, char **argv)
 
 	/* Detect "--version" */
 	if (argc >= 2 && !strcmp(argv[1], "--version")) {
-		printf("jsoncalc %s\n", JCVERSION);
-		printf("Copyright %s\n", JCCOPYRIGHT);
+		printf("jsoncalc %s\n", JSON_VERSION);
+		printf("Copyright %s\n", JSON_COPYRIGHT);
 		puts("Freely redistributable under the terms of the");
 		puts("GNU General Public License v3 or later.");
 		return 0;
 	}
 
-	/* Start with default formatting */
-	json_format(NULL, "");
+	/* Try to load the config.  If not found, use built-in defaults. */
+	json_config_load("jsoncalc");
 
-	/* Try to load the config */
-	load_config();
+	/* Set the formatting from the config */
+	json_format_set(NULL, NULL);
 
 	/* Create an object that will old any name=value parameters, and
 	 * start a context.
@@ -360,7 +349,7 @@ int main(int argc, char **argv)
 		usage(NULL, NULL);
 	}
 	interactive = 0;
-	while ((opt = getopt(argc, argv, "c:f:irsoal:uD:O:C:J:U?")) >= 0) {
+	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
 			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
@@ -386,8 +375,58 @@ int main(int argc, char **argv)
 			json_file_new_type = 'a';
 			break;
 		case 'l':
-			fprintf(stderr, "Not implemented yet\n");
-			abort();
+			/* Make a copy of the -lplugin,options string */
+			plugin = strdup(optarg);
+
+			/* Separate the name from the options */
+			val = strchr(optarg, ',');
+			if (val)
+				*val++ = '\0';
+
+			/* Load the plugin */
+#if 0
+			if (!json_plugin_load(plugin)) {
+				fprintf(stderr, "Failed to load -l%s\n", plugin);
+				return 1;
+			}
+#endif
+
+			/* If there are options, process them now */
+			if (val)
+			{ 
+				/* Remove the version number, if any */
+				char *version;
+				version = strchr(plugin, '.');
+				if (version)
+					*version = '\0';
+
+				/* Find the json_config.plugin.{plugin} section.
+				 * If it doesn't exist, then fail.
+				 */
+				section = json_by_key(json_config, "plugin");
+				if (section)
+					section = json_by_key(section, plugin);
+				if (!section) {
+					fprintf(stderr, "The -l%s plugin doesn't use option\n");
+					while (context)
+						context = json_context_free(context);
+					return 1;
+				}
+
+				/* Parse the options.  Watch for errors */
+				err = json_config_parse(section, val, NULL);
+				if (err) {
+					format_usage();
+					while (context)
+						context = json_context_free(context);
+					if (err) {
+						puts(err->text);
+						json_free(err);
+						return 1;
+					}
+					return 0;
+				}
+			}
 			break;
 		case 'u':
 			allow_update = 1;
@@ -396,29 +435,17 @@ int main(int argc, char **argv)
 			autoload_dir = optarg;
 			break;
 		case 'O':
-			if (*optarg == '?' || (errmsg = json_format(NULL, optarg)) != NULL) {
-				while (context)
-					context = json_context_free(context);
+			/* Handle "-O?" here, but anything else is saved until
+			 * after we know whether this invocation is interactive
+			 * or batch mode.
+			 */
+			if (*optarg == '?') {
 				format_usage();
-				if (*optarg != '?') {
-					puts(errmsg);
-					return 1;
-				}
-				return 0;
-			}
-			anyformat = 1;
-			break;
-		case 'C':
-			if (*optarg == '?' || (errmsg = json_format_color(optarg)) != NULL) {
 				while (context)
 					context = json_context_free(context);
-				color_usage();
-				if (*optarg != '?') {
-					puts(errmsg);
-					return 1;
-				}
 				return 0;
 			}
+			anyoption = 1;
 			break;
 		case 'J':
 			if (*optarg == '?' || json_debug(optarg)) {
@@ -526,12 +553,40 @@ int main(int argc, char **argv)
 	 * specify an output format, then assume -cthis so any data will be
 	 * output in the requested format.
 	 */
-	if (!initcmd && !interactive && anyformat)
+	if (!initcmd && !interactive && anyoption)
 		initcmd = json_cmd_parse_string("this");
 
 	/* If still no initcmd then assume interactive even without -i */
 	if (!initcmd)
 		interactive = 1;
+
+	/* Now that we definitively know whether this will be interactive or
+	 * batch, we can process process any -Ooptions
+	 */
+	optind = 1;
+	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
+		if (opt != 'O')
+			continue;
+
+		/* Choose whether to use batch or interactive */
+		val = interactive ? "interactive" : "batch";
+		json_append(json_system, json_key("runmode", json_string(val, -1)));
+		section = json_by_key(json_config, val);
+
+		/* Parse the option string.  Watch for errors. */
+		err = json_config_parse(section, optarg, NULL);
+		if (err) {
+			format_usage();
+			while (context)
+				context = json_context_free(context);
+			if (err) {
+				puts(err->text);
+				json_free(err);
+				return 1;
+			}
+			return 0;
+		}
+	}
 
 	/* If batch mode and no filenames were named on the command line,
 	 * then assume "-", unless stdin is a tty.
@@ -549,11 +604,8 @@ int main(int argc, char **argv)
 		batch(&context, initcmd);
 
 	/* If supposed to write the config, do that */
-	if (saveconfig) {
-		val = save_config();
-		if (val)
-			printf("Configuration written to %s\n", val);
-	}
+	if (saveconfig)
+		json_config_save("jsoncalc");
 
 	/* Clean up & exit */
 CleanExit:

@@ -81,6 +81,11 @@ typedef struct {
 	char	quick;	/* Output tables piecemeal.  Use first row for names */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
+	char	escresult[20]; /* coloring of result */
+	char	escgridhead[20]; /* coloring of grid headings */
+	char	escgridline[20]; /* coloring of grid lines between columns */
+	char	escerror[20]; /* coloring of errors */
+	char	escdebug[20]; /* coloring of debugging output */
 	FILE	*fp;	/* where to write to */
 } jsonformat_t;
 
@@ -97,11 +102,6 @@ typedef struct {
 
 extern json_debug_t json_debug_flags;
 extern jsonformat_t json_format_default;
-extern char json_format_color_result[20];
-extern char json_format_color_head[20];
-extern char json_format_color_delim[20];
-extern char json_format_color_error[20];
-extern char json_format_color_debug[20];
 extern char json_format_color_end[20];
 
 /* This represents a file that is open for reading JSON data.  The file is
@@ -115,7 +115,7 @@ typedef struct {
 	const char	*base;	/* Contents of the file, as a giant string */
 } jsonfile_t;
 
-/* This is the default path, used with $JSONCALCPATH is unset */
+/* This is the default path, used when $JSONCALCPATH is unset */
 #define JSON_PATH_DEFAULT	"~/.config/jsoncalc:/usr/share/jsoncalc:/var/lib/jsoncalc"
 
 #define JSON_PATH_DELIM		":"
@@ -151,6 +151,7 @@ extern size_t json_sizeof(json_t *json);
 extern char *json_typeof(json_t *json, int extended);
 extern char *json_mix_types(char *oldtype, char *newtype);
 extern void json_sort(json_t *array, json_t *orderby);
+extern json_t *json_copy_filter(json_t *json, int (*filter)(json_t *));
 extern json_t *json_copy(json_t *json);
 extern json_t *json_array_flat(json_t *array, int depth);
 extern json_t *json_unroll(json_t *table, json_t *nestlist);
@@ -167,13 +168,10 @@ extern char *json_serialize(json_t *json, jsonformat_t *format);
 extern int json_print_incomplete_line;
 extern void json_print(json_t *json, jsonformat_t *format);
 extern int json_grid(json_t *json, jsonformat_t *format);
-extern char *json_format(jsonformat_t *format, char *str);
-extern char *json_format_str(jsonformat_t *format);
-extern char *json_format_color(char *str);
-extern char *json_format_color_str(void);
+extern void json_format_set(jsonformat_t *format, json_t *config);
 
 /* Accessing */
-extern json_t *json_by_key(json_t *container, char *key);
+extern json_t *json_by_key(const json_t *container, const char *key);
 extern json_t *json_by_deep_key(json_t *container, char *key);
 extern json_t *json_by_index(json_t *container, int idx);
 extern json_t *json_by_expr(json_t *container, char *expr, char **next);
@@ -237,6 +235,7 @@ extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 #define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
 #endif
 
+/* Multibyte character strings */
 size_t json_mbs_len(const char *s);
 int json_mbs_width(const char *s);
 int json_mbs_cmp(const char *s1, const char *s2);
@@ -254,6 +253,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, jsonfo
 size_t json_mbs_unescape(char *dst, const char *src, size_t len);
 int json_mbs_like(const char *text, const char *pattern);
 
+/* Dates and times */
 int json_str_date(const char *str);
 int json_str_time(const char *str);
 int json_str_datetime(const char *str);
@@ -265,5 +265,17 @@ int json_datetime_add(char *result, const char *str, const char *period);
 int json_datetime_subtract(char *result, const char *str, const char *period);
 int json_datetime_diff(char *result, const char *str1, const char *str2);
 json_t *json_datetime_fn(json_t *args, char *type);
+
+/* Configuration data */
+json_t *json_config, *json_system;
+void json_config_load(const char *name);
+void json_config_save(const char *name);
+json_t *json_config_get(const char *section, const char *key);
+void json_config_set(const char *section, const char *key, json_t *value);
+json_t *json_config_parse(json_t *config, const char *settings, const char **refend);
+#define json_config_get_int(section, key) json_int(json_config_get(section, key))
+#define json_config_get_double(section, key) json_double(json_config_get(section, key))
+#define json_config_get_text(section, key) json_text(json_config_get(section, key))
+
 
 END_C

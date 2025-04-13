@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>set</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc set - Adjust configuration settings">
+    <meta name="keywords" content="command, command reference, set">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>set - Adjust configuration settings</h1>
+    <dl>
+      <dt>set <var>name</var>=<var>value</var>, ...
+      <br/>set <var>name</var>, ...
+      <br/>set no</var>name</var>, ...
+      <dd>
+      This allows you modify the settings interactively.
+      <p>
+      The settings are always available via a global <tt>config</tt> const.
+      You aren't allowed to modify <tt>config</tt> directly because rules
+      must be enforced &mdash; You can't create new options or set a boolean
+      to "maybe", for example.
+      The <tt>set</tt> command lets you modify config in a controlled manner.
+      <p>
+      The arguments are basically comma-delimit list of changes.
+      You don't need to quote the new values of string option, unless you
+      want to include whitespace or other funky characters.
+      For booleans, you can set them to <tt>true</tt> just by giving their name
+      without any "=value", and you can set them to <tt>false</tt> by giving
+      their name with a "no" prefix.
+      <p>
+      Also, some options are strings that have a list of allowed (or at least
+      preferred) values.
+      For those options, you can set them just by giving the value without
+      a "name=".
+      The "table" option is an example of this.
+      You can set "table" to "csv" just by running "<tt>set csv</tt>".
+      <p>
+      Some options are complex objects.
+      The text attributes such as <tt>gridhead</tt> are examples of this.
+      For these options, you can give a space-delimited list of settings.
+      For example, "<tt>set gridhead=underlined cyan</tt>" will set the
+      <tt>config.gridhead.underlined</tt> boolean option to <tt>true</tt>,
+      and the <tt>config.gridhead.fg</tt> string option to "cyan" because
+      "cyan" appears in the list of values for "fg".
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>set gridhead=underlined bold cyan, gridline=bold cyan</kbd>
+	<kbd>config.gridhead.fg</kbd>
+	<samp>"cyan"</samp>
+        Here we're invoking set with two option changes.
+        The first is a space-delimited list of changes for
+        <tt>config.gridhead</tt> (which is an object) to set the
+        <tt>underlined</tt> and <tt>bold</tt> boolean members to <tt>true</tt>,
+        and the <tt>fg</tt> string member to "cyan".
+        JsonCalc knows that "cyan" is a setting for <tt>fg</tt> because
+        it appears in the list of preferred values for <tt>fg</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The "-O<var>options</var>" command line flag uses the same syntax
+            as the <tt>set</tt> command's arguments.
+
+        <li>Name completion (the &lt;Tab&gt; key) works differently for the
+            <tt>set</tt> command.
+            You don't need to fully type out "underlined" in the above example.
+
+	<li>To examine options, use the global constant <tt>config</tt>.
+
+	<li>Some output formatting options are stored separately for batch
+	    mode versus interactive mode.
+	    This was done so the batch scripts will behave the same for all
+	    users, even if you change your interactive preferences.
+	    The <tt>set</tt> command will change the interactive preferences.
+	    For batch scripts, use the -O flag.
+	    There's also a global constant <tt>runmode</tt> which indicates
+	    which JsonCalc is currently using.
+	    <div class="example">
+	      <kbd>runmode</kbd>
+	      <samp>"interactive"</samp>
+	      <kbd>config[runmode].table</kbd>
+	      <samp>"grid"</samp>
+	      This shows that JsonCalc, in its current run mode, will use
+	      the "grid" style when printing tables.
+	    </div>
+
+      </ul>
+    </details>
+
+  </body>
+</html>

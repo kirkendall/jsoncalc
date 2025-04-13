@@ -254,6 +254,9 @@ static void memory_check_leaks(void)
         int     i;
         if (!memory_tracker)
 		return;
+#ifdef JSON_DEBUG_MEMORY
+	json_debug_free(__FILE__, __LINE__, json_system);
+#endif
         for (i = 0; i < 4096; i++)
                 if (memory_tracker[i].count > 0)
                         fprintf(stderr, "%s:%d: Leaked %d json_t's\n", memory_tracker[i].file, memory_tracker[i].line, memory_tracker[i].count);

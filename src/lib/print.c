@@ -325,7 +325,7 @@ void json_print(json_t *json, jsonformat_t *format)
 	if (tweaked.error && json->type == JSON_NULL && *json->text) {
 		if (tweaked.color && isatty(fileno(stderr)))
 			fprintf(stderr, "%s%s%s\n",
-				json_format_color_error,
+				tweaked.escerror,
 				json->text,
 				json_format_color_end);
 		else

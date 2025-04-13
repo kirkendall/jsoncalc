@@ -13,15 +13,21 @@
  * then its contents are deep-copied too.  The returned object will be identical
  * to the "json" object, but altering one will have no effect on the other.
  */
-json_t *json_copy(json_t *json)
+json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 {
 	json_t *copy;
 	json_t *tail = NULL;
 	json_t *scan;
+	json_t *sub;
 
 	/* Defend against NULL */
 	if (!json)
 		return NULL;
+
+	/* If there's a test, apply it to this item */
+	if (test && !test(json)) {
+		return NULL;
+	}
 
 	/* The top node's copy method depends on its type */
 	switch (json->type)
@@ -63,14 +69,23 @@ json_t *json_copy(json_t *json)
 	 */
 	for (tail = NULL, scan = json->first; scan; scan = scan->next)
 	{
+		sub = json_copy_filter(scan, test);
+		if (!sub)
+			continue;
 		if (tail)
 		{
-			tail->next = json_copy(scan);
+			tail->next = sub;
 			tail = tail->next;
-		} else
-			tail = copy->first = json_copy(scan);
+		} else {
+			tail = copy->first = sub;
+		}
 	}
 
 	/* Return the whole array or object */
 	return copy;
+}
+
+json_t *json_copy(json_t *json)
+{
+	return json_copy_filter(json, NULL);
 }

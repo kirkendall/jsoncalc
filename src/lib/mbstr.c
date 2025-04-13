@@ -723,13 +723,13 @@ size=nbytes;
                          */
 			if (wc >= 0xd800
 		 	 && wc < 0xdc00
-			 && src[0] == '\\'
-			 && src[1] == 'u'
-			 && (src[2] == 'd' || src[2] == 'D')
-			 && strchr("cdefCDEF", src[3])) {
+			 && src[1] == '\\'
+			 && src[2] == 'u'
+			 && (src[3] == 'd' || src[3] == 'D')
+			 && strchr("cdefCDEF", src[4])) {
 				/* Decode the second surrogate pair */
 				wchar_t	wc2 = 0;
-				src++;
+				src += 2;
 				limit = 4;
 				while (limit > 0) {
 					limit--;
@@ -759,6 +759,7 @@ size=nbytes;
                                 if (mbsize > 0)
                                         dst += mbsize;
                                 else {
+abort();
                                         *dst++ = '?';
                                         mbsize = 1;
                                 }

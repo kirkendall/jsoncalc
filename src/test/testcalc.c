@@ -158,7 +158,9 @@ int main(int argc, char **argv)
         setlocale(LC_ALL, "");
 
         /* Use ASCII output, because it's trickier than UTF-8 */
-        json_format(NULL, "ascii");
+        json_config_load("testcalc");
+        json_config_set(NULL, "ascii", json_bool(1));
+        json_format_set(NULL, NULL);
 
         /* Parse command-line flags */
         while ((ch = getopt(argc, argv, "meJ:")) >= 0)

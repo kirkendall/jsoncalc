@@ -137,7 +137,7 @@ void json_sort(json_t *array, json_t *orderby)
 
 			/* Set its value */
 			bucket[b].value = value;
-			if (value->type == JSON_NUMBER)
+			if (value && value->type == JSON_NUMBER)
 				bucket[b].dvalue = dvalue;
 			used++;
 		}

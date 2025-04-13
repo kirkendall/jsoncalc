@@ -136,8 +136,9 @@ FILE *json_file_update(const char *filename)
 
 /* Scan $JSONCALCPATH for a given file.  If found, return its full pathname
  * as a dynamically-allocated string (which the calling function must free).
- * If not found, return NULL.  If "ext" is non-NULL then it'll be appended
- * to filename.
+ * If not found, return NULL.  If "filename" is NULL then just look for a
+ * writable directory in the path.  If "ext" is non-NULL then append it to
+ * the filename.
  */
 char *json_file_path(const char *filename, const char *ext)
 {
@@ -148,8 +149,11 @@ char *json_file_path(const char *filename, const char *ext)
 	char	*strtok_context;/* used internally by strtok_r() */
 	char	*dir;		/* A directory from the path */
 	size_t	needsize;	/* Size of the pathname we're considering */
+	int	first;
 
 	/* If no ext then use "" */
+	if (!filename)
+		filename = "";
 	if (!ext)
 		ext = "";
 
@@ -171,10 +175,11 @@ char *json_file_path(const char *filename, const char *ext)
 	jsoncalcpath = strdup(jsoncalcpath);
 
 	/* For each entry in the path... */
+	first = 1;
 	for (dir = strtok_r(jsoncalcpath, JSON_PATH_DELIM, &strtok_context);
 	     dir;
 	     dir = strtok_r(NULL, JSON_PATH_DELIM, &strtok_context)) {
-		/* Generate the name in this directory.  If the directory
+		/* Generate the filename in this directory.  If the directory
 		 * starts with "~" then use $HOME instead.
 		 */
 		if (*dir == '~')
@@ -196,10 +201,34 @@ char *json_file_path(const char *filename, const char *ext)
 				snprintf(pathname, pathsize, "%s/%s%s", dir, filename, ext);
 		}
 
-		/* If the file exists, then clean up and return pathname */
-		if (access(pathname, F_OK) == 0) {
-			free(jsoncalcpath);
-			return pathname;
+		/* If this is the first entry in the path list, and we're
+		 * looking for a writable directory, and this directory
+		 * doesn't exist, then try to create it.
+		 */
+		if (first && !*filename && access(pathname, W_OK)) {
+			char *slash;
+			for (slash = pathname + 1; *slash; slash++) {
+				if (*slash == '/') {
+					*slash = '\0';
+					mkdir(pathname, 0700);
+					*slash = '/';
+				}
+			}
+		}
+
+		/* Are we looking for a directory or a file? */
+		if (*filename) {
+			/* File -- if this pathname is readable, return it. */
+			if (access(pathname, R_OK) == 0) {
+				free(jsoncalcpath);
+				return pathname;
+			}
+		} else {
+			/* Directory -- if pathname is writable, return it */
+			if (access(pathname, W_OK) == 0) {
+				free(jsoncalcpath);
+				return pathname;
+			}
 		}
 	}
 

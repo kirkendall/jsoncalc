@@ -51,17 +51,17 @@ int json_grid(json_t *json, jsonformat_t *format)
 	/* Decide whether to color the output */
 	hdrpad = '_';
 	strcpy(delim, "|");
-	if (format->color && *json_format_color_head) {
-		fputs(json_format_color_head, format->fp);
+	if (format->color && *format->escgridhead) {
+		fputs(format->escgridhead, format->fp);
 		hdrpad = ' ';
 	}
-	if (format->color && *json_format_color_delim) {
-		strcpy(delim, json_format_color_delim);
+	if (format->color && *format->escgridline) {
+		strcpy(delim, format->escgridline);
 		strcat(delim, "|");
 		strcat(delim, json_format_color_end);
 	}
 
-	/* If any columns' key are wider than their data, expand the column.
+	/* If any column's key is wider than their data, expand the column.
 	 * Also, output the column headings while we're at it.
 	 */
 	for (c = 0, col = explain->first; col; c++, col = col->next) {
@@ -101,7 +101,7 @@ int json_grid(json_t *json, jsonformat_t *format)
 		if (col->next)
 			putc('|', format->fp);
 	}
-	if (format->color && *json_format_color_head)
+	if (format->color && *format->escgridhead)
 		fputs(json_format_color_end, format->fp);
 	putc('\n', format->fp);
 

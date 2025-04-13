@@ -274,8 +274,13 @@ static json_t *stdcurrent(char *key)
 jsoncontext_t *json_context_std(json_t *args)
 {
 	json_t	*base, *global, *vars, *consts, *thisdata;
-	jsoncontext_t *context;
+	jsoncontext_t *context = NULL;
 	contexthook_t *hook;
+
+	/* Start with a layer of system consts.  These are not automatically
+	 * freed, because they could be used by multiple context stacks.
+	 */
+	context = json_context(context, json_system, JSON_CONTEXT_CONST|JSON_CONTEXT_NOFREE);
 
 	/* Generate the data for the base context.  This is an object of the
 	 * form {global:{vars:{},consts:{},args{},files:[],data:null}
@@ -293,11 +298,11 @@ jsoncontext_t *json_context_std(json_t *args)
 	json_append(base, json_key("global", global));
 
 	/* Create the base layer of the context */
-	context = json_context(NULL, base, JSON_CONTEXT_GLOBAL);
+	context = json_context(context, base, JSON_CONTEXT_GLOBAL);
 
 	/* Add a layer that autoloads the time variables.  These should not
 	 * be cached.  Also add dummy versions of all time variables, mostly
-	 * for the benefit of the name completion.
+	 * for the benefit of name completion.
 	 */
 	context->autoload = stdcurrent;
 	context->flags |= JSON_CONTEXT_NOCACHE;
@@ -406,8 +411,6 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	struct stat st;
 	struct tm tm;
 	char	isobuf[24];
-	FILE	*fp;
-
 
 	/* Defend against empty context */
 	if (!context)

@@ -8,9 +8,8 @@
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */
 
-/* This returns strdup(str), unless str contains characters that might confuse
- * the parser such as spaces or punctuation; in those cases, it adds quotes.
- */
+
+/* Copy a string, adding quotes if necessary. */
 static void maybeQuoteCpy(char *dst, char *str)
 {
 	/* Decide whether quoting is needed */
@@ -86,6 +85,100 @@ static char *global_name_generator(const char *text, int state)
 	}
 }
 
+/* This tries to complete the name of a config setting.  A name could be...
+ *   - a key in json_config
+ *   - a key in json_config.interactive
+ *   - the prefix "no" on either of those keys, if boolean
+ *   - an element in a "*-list" array in either of those places
+ * Note that the latter could be something like "on green" but since "green"
+ * is also an possibility, we don't need to be smart about that.
+ */
+static json_t *config_section;
+static char *config_name_generator(const char *text, int state)
+{
+	static size_t len;
+	static json_t *section, *scan, *elem;
+	char	*tmp;
+
+	/* First time? */
+	if (state == 0) {
+		/* Basic initialization */
+		section = config_section; /* usually json_config */
+		scan = section->first;
+		elem = NULL;
+		len = json_mbs_len(text);
+
+		/* If there's already a name=... then look for that exact name.
+		 * If its value is a section, then use that section instead of
+		 * json_config or json_config.interactive.
+		 */
+
+	}
+
+	/* If scan is NULL and section is json_config, then move to the start
+	 * of json_config.interactive.
+	 */
+	if (!scan) {
+		if (section != json_config)
+			return NULL;
+		section = json_by_key(json_config, "interactive");
+		scan = section->first;
+	}
+
+	/* Loop until we find EITHER a matching partial name, or a "*-list"
+	 * array.  For the array, scan for matching elements.
+	 */
+	while (scan) {
+		/* Is this an "-list" array? */
+		if (scan->first->type == JSON_ARRAY && json_mbs_like(scan->text, "%-list")) {
+			/* Scan the elements.  If not resuming an earlier scan
+			 * then start at the array's first element.
+			 */
+			if (!elem)
+				elem = scan->first->first;
+			for (; elem; elem = elem->next) {
+				if (elem->type == JSON_STRING && !json_mbs_ncmp(text, elem->text, len)) {
+					/* found a matching list element */
+					rl_completion_suppress_append = 1;
+					tmp = (char *)malloc(strlen(elem->text) + 3);
+					maybeQuoteCpy(tmp, elem->text);
+					elem = elem->next;
+
+					return tmp;
+				}
+			}
+
+		} else if (!json_mbs_ncmp(text, scan->text, len)) {
+			/* found a matching member name */
+			rl_completion_suppress_append = 1;
+			tmp = (char *)malloc(strlen(scan->text) + 3);
+			maybeQuoteCpy(tmp, scan->text);
+			scan = scan->next;
+			return tmp;
+		} else if (text[0] == 'n'
+			&& text[1] == 'o'
+			&& scan->first->type == JSON_BOOL
+			&& (len == 2 || !json_mbs_ncmp(text + 2, scan->text, len - 2))) {
+			/* Found a matching member name for a "no" boolean */
+			rl_completion_suppress_append = 1;
+			tmp = (char *)malloc(strlen(scan->text) + 3);
+			tmp[0] = 'n';
+			tmp[1] = 'o';
+			strcpy(tmp + 2, scan->text);
+			scan = scan->next;
+			return tmp;
+		}
+
+		/* No match.  Move to the next member. */
+		scan = scan->next;
+		if (!scan && section == json_config) {
+			section = json_by_key(json_config, "interactive");
+			scan = section->first;
+		}
+	}
+}
+
+
 /* For member completions, completion_container is set by jsoncalc_completion()
  * to an object whose member names are to be scanned.  completion_key is the
  * partial key to look for -- a pointer into readline's line buffer.  This
@@ -132,12 +225,12 @@ char *member_name_generator(const char *text, int state)
 	return NULL;
 }
 
-/* This collects all matching names into a dynamically allocated array of
- * dynamically allocated strings, and returns the array.  "text" is a pointer
- * to the start of the text within readline()'s input buffer.  "start" is
- * the number of additional characters available before "text".  "end"
- * is the index of the end of "text" though "text" is NUL-terminated so it
- * isn't all than necessary.
+/* This function is called from GNU readline.  It collects all matching names
+ * into a dynamically allocated array of dynamically allocated strings, and
+ * returns the array.  "cursor" is a pointer into the text where the next
+ * completion is needed.  "start" is the number of bytes before "cursor",
+ * and "end" is the number of additional characters after "cursor" (though
+ * the line buffer is '\0'-terminated so "end" isn't really needed.)
  */
 char **jsoncalc_completion(const char *text, int start, int end)
 {
@@ -147,7 +240,36 @@ char **jsoncalc_completion(const char *text, int start, int end)
 
 	/* Make a non-const copy of the whole line (not just "text") */
 	strcpy(buf, rl_line_buffer);
-	buf[end] = '\0';
+	buf[start + end] = '\0';
+
+	/* As a special case, "set ..." does completions from the config
+	 * data.
+	 */
+	if (start >= 4 && !strncmp(buf, "set ", 4)) {
+		/* First, though, check to see if we've already hit a "name="
+		 * where the name's value is an object, in which case use that
+		 * as the section instead of all of json_config.
+		 */
+		int equal = 0;
+		config_section = json_config;
+		for (scan = start; scan >= 4 && buf[scan] != ','; scan--) {
+			if (buf[scan] == '=')
+				equal = scan;
+		}
+		for (; scan < start && buf[scan] == ' '; scan++) {
+		}
+		if (scan < start && scan < equal) {
+			buf[equal] = '\0';
+			config_section = json_by_key(json_config, &buf[scan]);
+			if (!config_section)
+				config_section = json_by_key(json_by_key(json_config, "interactive"), &buf[scan]);
+			if (!config_section)
+				config_section = json_config;
+			buf[equal] = '=';
+		}
+
+		return rl_completion_matches(text, config_name_generator);
+	}
 
 	/* We either get "na" or "name.na" or ".name.na".  The first completes
 	 * by looking for names in the context.  The second starts by fetching
@@ -165,8 +287,8 @@ char **jsoncalc_completion(const char *text, int start, int end)
 		return rl_completion_matches(text, global_name_generator);
 	}
 
-	/* If the given text starts with "." then check to see if it's preceded
-	 * by a subscript and names.
+	/* If the given text starts with "." then check to see if it's
+	 * preceded by a subscript and names.
 	 */
 	if (*text == '.') {
 		/* If not preceded by a subscript and names, we can't help */

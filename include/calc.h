@@ -223,7 +223,7 @@ typedef struct jsoncmd_s {
 	jsoncmdname_t	   *name;/* command name and other details */
 	char		   var;
 	char		   *key; /* Name of a variable, if the cmd uses one */
-	jsoncalc_t 	   *calc;/* calc expression, fit he cmd uses one */
+	jsoncalc_t 	   *calc;/* calc expression, if the cmd uses one */
 	jsoncontextflags_t flags;/* Context flags for "key" */
 	struct jsoncmd_s   *sub; /* For "then" in "if-then-else" for example */
 	struct jsoncmd_s   *more;/* For "else" in "if-then-else" for example */

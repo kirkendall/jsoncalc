@@ -21,13 +21,13 @@ typedef enum {
 	JSON_OBJECT, JSON_ENDOBJECT,
 	JSON_ARRAY, JSON_ENDARRAY,
 	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_NULL, JSON_BOOL
-} json_type_t;
+} jsontype_t;
 
 /* These represent a parsed token */
 typedef struct {
 	const char *start;
 	size_t len;
-	json_type_t type;
+	jsontype_t type;
 } json_token_t;
 
 
@@ -43,7 +43,7 @@ typedef struct {
 typedef struct json_s {
 	struct json_s *next;	/* next element of an array or object */
 	struct json_s *first;	/* contents of this object, array, or key */
-	json_type_t type : 4;	/* type of this json_t node */
+	jsontype_t type : 4;	/* type of this json_t node */
 	unsigned    memslot:12; /* used for JSON_DEBUG_MEMORY */
 	char        text[14];	/* value of string, number, boolean; name of key */
 } json_t;
@@ -134,7 +134,7 @@ extern char *json_debug(char *flags);
 
 /* Manipulation */
 extern void json_free(json_t *json);
-extern json_t *json_simple(const char *str, size_t len, json_type_t type);
+extern json_t *json_simple(const char *str, size_t len, jsontype_t type);
 extern json_t *json_simple_from_token(json_token_t *token);
 extern json_t *json_string(const char *str, size_t len);
 extern json_t *json_number(const char *str, size_t len);
@@ -205,7 +205,7 @@ extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
  */
 extern int json_debug_count;
 extern void json_debug_free(const char *file, int line, json_t *json);
-extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, json_type_t type);
+extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, jsontype_t type);
 extern json_t *json_debug_string(const char *file, int line, const char *str, size_t len);
 extern json_t *json_debug_number(const char *file, int line, const char *str, size_t len);
 extern json_t *json_debug_bool(const char *file, int line, int boolean);

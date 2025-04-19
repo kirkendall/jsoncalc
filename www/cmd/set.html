@@ -13,6 +13,7 @@
       <dt>set <var>name</var>=<var>value</var>, ...
       <br/>set <var>name</var>, ...
       <br/>set no</var>name</var>, ...
+      <br/>set (<var>expr</var>)
       <dd>
       This allows you modify the settings interactively.
       <p>
@@ -43,9 +44,25 @@
       <tt>config.gridhead.underlined</tt> boolean option to <tt>true</tt>,
       and the <tt>config.gridhead.fg</tt> string option to "cyan" because
       "cyan" appears in the list of values for "fg".
+      <p>
+      You can also give an expression in parentheses to compute the option
+      settings at run-time.
+      The expression must return a string formatted as described above.
     </dl>
     <details open>
       <summary>Examples</summary>
+
+      <div class="example">
+        <kbd>set null="-"</kbd>
+        A simple example to start.  This sets the "null" option, so that
+        null values in tables will be displayed as "-".
+      </div>
+
+      <div class="example">
+        <kbd>set ascii</kbd>
+        <kbd>set noascii</kbd>
+        Here's an example that turns boolean option on, and then off again.
+      </div>
 
       <div class="example">
 	<kbd>set gridhead=underlined bold cyan, gridline=bold cyan</kbd>
@@ -58,6 +75,15 @@
         and the <tt>fg</tt> string member to "cyan".
         JsonCalc knows that "cyan" is a setting for <tt>fg</tt> because
         it appears in the list of preferred values for <tt>fg</tt>.
+      </div>
+
+      <div class="example">
+        <kbd>const myFavoriteColor="green"</kbd>
+        <kbd>set ("set gridhead="+myFavoriteColor)</kbd>
+        Here's an example using a computed option string.
+        It will change the color of column headings to green.
+        It will also retain the "bold" and "underlined" attributes because
+        I didn't explicitly turn them off.
       </div>
 
     </details>

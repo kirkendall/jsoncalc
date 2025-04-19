@@ -1941,7 +1941,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 				jn = stack->stack[startsp];
 			}
 			if (jn->op != JSONOP_NAME)
-				return "Syntax error";
+				return "Syntax error - Name expected";
 			jf = json_calc_function_by_name(jn->u.text);
 			if (jf == NULL) {
 				snprintf(stack->errbuf, sizeof stack->errbuf, "Unknown function %s", jn->u.text);
@@ -1976,10 +1976,10 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			if (jn->op == JSONOP_DOT)
 				jn = jn->RIGHT;
 			if (jn->op != JSONOP_NAME)
-				return "Syntax error";
+				return "Syntax error - Function name expected";
 			jf = json_calc_function_by_name(jn->u.text);
 			if (!jf) {
-				snprintf(stack->errbuf, sizeof stack->errbuf, "Unknown function %s", jn->u.text);
+				snprintf(stack->errbuf, sizeof stack->errbuf, "Unknown function \"%s\"", jn->u.text);
 				return stack->errbuf;
 			}
 
@@ -2320,8 +2320,8 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	 * If the stack still contains one of those, then we got an
 	 * incomplete parse.
 	 */
-	if (operators[stack.stack[0]->op].noexpr)
-		err = "Syntax error";
+	if (operators[stack.stack[0]->op].noexpr && !err)
+		err = "Syntax error - Incomplete expression";
 
 	/* If this leaves an operator without operands, complain */
 	switch (operators[stack.stack[0]->op].optype) {

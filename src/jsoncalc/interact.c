@@ -36,6 +36,27 @@ static void catchRLinterupt()
 }
 
 
+static char *historyfile(void)
+{
+	static char	*buf = NULL;
+
+	/* First time, generate it */
+	if (!buf) {
+		/* Get the config directory */
+		char *dir = json_file_path(NULL, NULL);
+		if (!dir)
+			return ".jsoncalc_history";
+
+		/* Append "/history" to it */
+		buf = (char *)malloc(strlen(dir) + 9);
+		strcpy(buf, dir);
+		strcat(buf, "/history");
+	}
+
+	return buf;
+}
+
+
 
 /* Interactively read a line from stdin.  This uses GNU readline unless it it
  * inhibitied or not configured.
@@ -77,7 +98,7 @@ static char *jcreadline(const char *prompt)
 	/* Add to history, if using readline */
 	if (!inhibit_readline) {
 		add_history(expr);
-		write_history(HISTORY_FILE);
+		write_history(historyfile());
 	}
 
 	/* Return it */
@@ -94,7 +115,7 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 	 * inputting expressions.
 	 */
 	using_history();
-	read_history(HISTORY_FILE);
+	read_history(historyfile());
 	rl_attempted_completion_function = jsoncalc_completion;
 	rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
 
@@ -146,5 +167,5 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 	putchar('\n');
 
 	/* Clean up the history file */
-	history_truncate_file(HISTORY_FILE, 100);
+	history_truncate_file(historyfile(), 100);
 }

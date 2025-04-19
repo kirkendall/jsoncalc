@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>The json_t Data Type</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc The <tt>json_t</tt> Data Type">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, article, The <tt>json_t</tt> Data Type">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>The <tt>json_t</tt> Data Type</h1>
+    <h4 class="timestamp">2025-04-15</h4>
+    <center>
+    <blockquote class="abstract">
+      The <tt>json_t</tt> data type is used to represent data parsed from
+      a JSON document.  It uses a tree structure.  There are tree nodes
+      representing the 6 basic data types.  Most usage is pretty simple,
+      but there are a few quirks.  Strictly speaking, you don't need to know
+      this unless you're writing C code that uses the JsonCalc library, but
+      even if you only use JsonCalc interactively with a few basic scripts,
+      this information might still be interesting.
+    </blockquote>
+    </center>
+
+    <h2>Introduction</h2>
+    The JsonCalc library, and any C program that uses it, will make extensive
+    use of <tt>json_t</tt> pointers.
+    In this article, we'll discuss the contents of a <tt>json_t</tt>, and how
+    a tree of them is used to represent data parsed from a JSON document.
+    <p>
+    The <tt>json_t</tt> structure is defined in &lt;json.h&gt; as follows:
+    <pre>
+      typedef struct json_s {
+        struct json_s *next;	/* next element of an array or object */
+        struct json_s *first;	/* contents of this object, array, or key */
+        jsontype_t type : 4;	/* type of this json_t node */
+        unsigned    memslot:12; /* used for JSON_DEBUG_MEMORY */
+        char        text[14];	/* value of string, number, boolean; name of key */
+      } json_t;
+    </pre>
+    <p>
+    The most important field is <tt>type</tt>.
+    It identifies the JSON data type that this <tt>json_t</tt> contains,
+    and will be one of the following symbols:
+    JSON_BOOL, JSON_NULL, JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_OBJECT,
+    or JSON_KEY.
+    <p>
+    The <tt>text</tt> field generally stores string values, and the
+    <tt>first</tt> field points to embedded data.
+    I'll explain the details of how they'reused for each JSON data type later
+    in this article.
+    Spoiler: For long text, JsonCalc allocated a jumbo-sized <tt>json_t</tt>
+    so the <tt>text</tt> field is big enough.
+    <p>
+    The <tt>next</tt> field is used for representing array elements or object
+    members as a linked list.
+    That makes <tt>next</tt> an unusual field because it's not about this
+    <tt>json_t</tt>; it's about the outer <tt>json_t</tt> that contains it.
+    Each element of an array, for example, will have a pointer to the next
+    element of the array.
+    The array uses each element's <tt>next</tt> to implement the linked list
+    that stores the array.
+    <p>
+    The <tt>memslot</tt> field is used to track memory usage if you compile
+    your program with -DJSON_DEBUG_MEMORY.
+    You can ignore it; it takes care of itself.
+
+    <h2>Null</h2>
+
+    A JSON <tt>null</tt> is represented by a <tt>json_t</tt> with JSON_NULL
+    stored in its <tt>type</tt> field.
+    The other fields aren't used.
+
+    <h3>Nulls with an error message</h3>
+
+    JavaScript has many symbols for handing special cases such as <tt>NaN</tt>
+    for "not a number" where a number would normally be expected.
+    Those symbols aren't valid in JSON though, so JsonCalc uses <tt>null</tt>
+    for all errors.
+    Since <tt>null json_t</tt>'s <tt>first</tt> and <tt>text</tt> fields aren't
+    used for a basic NULL, JsonCalc will sometimes store error codes and text
+    into those fields. 
+
+    <h2>Boolean</h2>
+
+    A JSON boolean value is stored in a <tt>json_t</tt> with JSON_BOOL stored
+    in its <tt>type</tt> field.
+    The <tt>text</tt> field will contain either "true" or "false".
+    You can use <tt>json-&gt;text[0] == 't'</tt> to test whether a
+    boolean <tt>json_t</tt> is true or not
+    (though the <a target="_PARENT" href="../index.html?lib=json_is_true">json_is_true()</a> function is preferred).
+
+    <h2>String</h2>
+
+    A JSON string value is stored in a <tt>json_t</tt> with JSON_STRING stored
+    in its <tt>type</tt> field.
+    If the string is too long to fit in <tt>text</tt> then JsonCalc will
+    allocate extra space to extend the size of <tt>text</tt>.
+    <p>
+    Strings are always stored in UTF-8 coding.
+    Any backslash escapes such as \n or \u0533 are converted first to Unicode
+    and then to UTF-8, so the string is what it is.
+    No further processing of backslashes is needed.
+    <p>
+    The <tt>first</tt> field is unused.
+
+    <h2>Number</h2>
+
+    A JSON number is stored in a <tt>json_t</tt> that has JSON_NUMBER stored
+    in its <tt>type</tt>field.
+    <p>
+    Values parsed from a JSON document are stored as strings in the
+    <tt>text</tt> field.
+    They are <em>not</em> immediately converted to binary for two reasons.
+    <p>
+    First, conversion between binary and text formats is about the slowest
+    thing you can do with a floating point number because the CPU has no
+    magic opcode to do it in hardware.
+    Most numbers in a JSON document will either be entirely ignored, or
+    they'll just be copied to the output verbatim.
+    Either way, converting is a waste of time.
+    <p>
+    Second, conversion looses precision.
+    The value 0.01 can't be exactly represented in floating point.
+    we can avoid that by keeping numbers in text form.
+
+    <h3>Binary numbers</h3>
+
+    Not all numbers used by JsonCalc are parsed from JSON documents though.
+    Number literals in scripts, or the results of computation, will be stored
+    in binary.
+    Again, this is done for the sake of speed and precision.
+    <p>
+    To store a binary number in a <tt>json_t</tt>, the first byte of the
+    <tt>text</tt> field is set to '\0' so the text is effectively an empty
+    string.
+    The second byte (<tt>json-&gt;text[1]</tt>) is set to 'i' for integer
+    values, or 'd' for double-precision floating point values.
+    Two macros, JSON_INT(json) and JSON_DOUBLE(json), let you access the
+    last 4 or 8 bytes of the <tt>text</tt> field as an <tt>int</tt> or
+    <tt>double</tt>.
+
+    <h2>Arrays</h2>
+    Arrays are stored as linked lists.
+
+    <h3>Optimizations</h3>
+    Since arrays don't use the <tt>text</tt> field,
+    we can use part of it to store a pointer to the end of the array.
+    This is desirable because it speed up appending to an array
+    <em>a hell of a lot!</em>
+    If we had to scan the whole array to add the next element every time,
+    then building an array would have complexity of O(n<sup>2</sup>), but
+    with a tail pointer it's just O(n).
+    And JSON data often contains large arrays, so this really means something.
+    <p>
+    There is a JSON_END_POINTER(json) macro which lets you access the last
+    8 bytes of the <tt>text</tt> field as a pointer to the last element.
+
+    <h3>Deferred Arrays</h3>
+    The JsonCalc library supports deferred arrays.
+    Instead of loading the whole array into RAM,
+    the parser just does a quick scan to find its end (so it can parse whatever
+    comes after the array), count its length, and check whether it is a table
+    (array of objects).
+    For deferred arrays, the <tt>array->first->type</tt> will be JSON_DEFERRED
+    instead of a normal data type.
+    <p>
+    When C code wants to scan an array, it normally does so by calling the
+    <a target="_PARENT" href="../index.html?lib=json_first">json_first(<var>array</var>)</a>
+    and <a target="_PARENT" href="../index.html?lib=json_next">json_next(<var>elem</var>)</a>
+    functions.
+    If the array is entirely in RAM, then these are basically the same as
+    <var>array</var><tt>-&gt;first</tt> and <var>elem</var><tt>-&gt;next</tt>.
+    <p>
+    But for deferred arrays, those functions find and retrieve the information
+    wherever it may be.
+    That usually means re-parsing the big array, one element at a time,
+    and then freeing that element before moving to the next one.
+    This is actually slower than parsing the big table once,
+    but it saves RAM so it can be worth doing because of that.
+    <p>
+    Deferred arrays aren't used only for large arrays from JSON documents.
+    They can be produced by other sources.  For example, the expression
+    <tt>1..1000000</tt> does not immediately allocate a million <tt>json_t</tt>
+    structures to store the array; it returns a deferred array that can step
+    through the whole range, one integer at a time.
+
+    <h2>Objects and Keys</h2>
+    Objects are basically arrays of members.
+    Like arrays, their contents are stored in a linked list.
+    <p>
+    A <tt>json_t</tt> containing JSON_OBJECT in its <tt>type</tt> field
+    represents the object as a whole, and its <tt>first</tt> field points
+    to its first member.
+    <p>
+    Each member is a <tt>json_t</tt> that has JSON_KEY in its <tt>type</tt>
+    field.
+    The member's key (name) is stored in the <tt>text</tt> field, and the
+    value is pointed to by the <tt>first</tt> field.
+    The <tt>next</tt> field is used to implement the linked list.
+
+    <h3>Classes</h3>
+    JsonCalc doesn't support class... yet.
+    The expectation is that it will some day, and each object's class name
+    will be stored in its <tt>text</tt>field.
+    <p>
+    It's important to note that objects from a JSON document are always
+    generic objects.  No Class.
+
+    <h3>Optimizations</h3>
+    While parsing objects from a JSON document, we use the same
+    JSON_END_POINTER(json) macro trick that we use with arrays.
+    <p>
+    We only do this while parsing JSON documents, not while updating
+    objects via scripts;
+    this is because updates need to scan the object to avoid adding duplicates.
+    That isn't an issue when parsing a JSON document though.
+    <p>
+    Since objects parsed from a JSON never have a class, they never use
+    the <tt>text</tt> field to store a class name, leaving it free to store
+    the JSON_END_POINTER(json).
+    Objects elsewhere don't use JSON_END_POINTER(json) so <tt>text</tt> is
+    available to store a class name.
+    Hence, there is never a conflict there.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

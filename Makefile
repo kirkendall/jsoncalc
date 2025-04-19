@@ -3,6 +3,7 @@ INC=	`pwd`/include
 LIB=	`pwd`/lib
 PLUGIN=	`pwd`/plugin
 CFLAGS=	-I$(INC) -DJSON_DEBUG_MEMORY
+#CFLAGS=	-I$(INC)
 LDFLAGS=-L$(LIB)
 
 all:

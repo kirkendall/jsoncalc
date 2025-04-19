@@ -63,8 +63,8 @@ static void jappendobject(json_t *container, json_t *more)
 	}
 }
 
-/* Add data to an object, array, or key.  Returns 1 normally, or 0 for
- * errors (after calling json_throw()).
+/* Add data to an object, array, or key.  Returns NULL normally, or an
+ * error message if an error is detected.
  */
 char *json_append(json_t *container, json_t *more)
 {
@@ -124,7 +124,9 @@ static json_t *parse(const char *str, size_t len, const char **refend, const cha
 	sp = 0;
 	stack[sp] = &arraybuf;
 
-	/* Guess key size */
+	/* Guess key size.  If we encounter a longer member key after this,
+	 * we'll reallocate it.
+	 */
 	keysize = 100;
 	key = (char *)malloc(keysize);
 	*key = '\0';
@@ -378,11 +380,16 @@ BadSymbol:
 	error = "Bad symbol";
 
 Error:
-	/* Free up any partial results on the stack */
-	while (sp > 0) {
-		json_free(stack[sp]);
-		sp--;
-	}
+	/* Free up any partial results.  Since every item gets added to
+	 * whatever object or array contains it immediately (even nested
+	 * arrays and objects get added before they're fully parsed), we
+	 * DON'T need to loop over the stack.  stack[0]->first contains
+	 * &arraybuf, so it shouldn't be freed either, but arraybuf.first
+	 * should.  And maybe jc, if it isn't NULL.
+	 */
+	json_free(arraybuf.first);
+	if (jc)
+		json_free(jc);
 
 	/* Stuff the error info into the appropriate places */
 	if (refend)

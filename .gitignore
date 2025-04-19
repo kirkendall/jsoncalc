@@ -1,6 +1,7 @@
 # Compiled programs, and other temporary stuff
 jsoncalc
 testcalc
+testconfig
 core
 tags
 .jsoncalc_history
@@ -10,12 +11,15 @@ www/notes
 www/INTRO.html
 www/table.elv
 www/a/SUMMARY.html
+www/a/INTRO.html
+www/a/sidebar.html
 www/f/INTRO.html
 www/f/flist.js
 www/f/sidebar.html
 www/op/sidebar.html
 www/op/oplist.js
 www/cmd/sidebar.html
+www/cmd/INTRO.html
 www/old
 Makefile.am
 configure.ac

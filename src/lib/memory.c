@@ -114,7 +114,7 @@ void json_free(json_t *json)
 }
 
 /* Allocate a json_t node and initialize some fields */
-json_t *json_simple(const char *str, size_t len, json_type_t type)
+json_t *json_simple(const char *str, size_t len, jsontype_t type)
 {
 	json_t *json;
 	size_t  size;
@@ -185,7 +185,7 @@ json_t *json_bool(int boolean)
 	if (boolean)
 		return json_simple("true", 4, JSON_BOOL);
 	else
-		return json_simple("false", 4, JSON_BOOL);
+		return json_simple("false", 5, JSON_BOOL);
 }
 
 /* Allocate a json_t for a null value */
@@ -360,7 +360,7 @@ void json_debug_free(const char *file, int line, json_t *json)
 	}
 }
 
-json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, json_type_t type)
+json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, jsontype_t type)
 {
         json_t  *json;
         int slot = memory_slot(file, line);

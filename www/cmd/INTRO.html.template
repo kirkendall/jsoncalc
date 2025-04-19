@@ -68,6 +68,7 @@
 <tr><td><a target="_PARENT" href="../index.html?cmd=plugin"><b>plugin</b> <var>name</var></a></td><td>Load a plugin, if it isn't loaded already.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=print"><b>print</b> <var>expr</var>, ...</a></td><td>Output a raw string &mdash; no quotes or backslashes</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=return"><b>return</b> <var>expr</var></a></td><td>Exit from the body of a function, and define the function's return value.</td></tr>
+<tr><td><a target="_PARENT" href="../index.html?cmd=set"><b>set</b> <var>options</var></a></td><td>Adjust the configuration of JsonCalc, similar to the -O<var>options</var> command line flag</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=switch"><b>switch</b> (<var>expr</var>) { <var>cmds</var> }</a></td><td>Jump to the <b>case</b> that matches <var>expr</var>, or <b>default</b> if there is none.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=throw"><b>throw</b> <var>error</var></a></td><td>Trigger an exception. <var>error</var> may be a string or an object.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=try"><b>try</b> { <var>cmds</var> } <b>catch</b>(<var>name</var>) { <var>cmds</var> }</a></td><td>Catch an error instead of printing it.</td></tr>

@@ -43,6 +43,16 @@ void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
 /* This callback is called if the current file's parsed data gets modified */
 static void data_modified(jsoncontext_t *layer, jsoncalc_t *lvalue)
 {
+	/* Users/scripts can modify data either via the "data" variable,
+	 * or by modifying "this" layer above it.  They both refer to the
+	 * contents of the current file.  For consistency, we only want to
+	 * set the MODIFIED flag on the "data" layer, so if we're given
+	 * the "this" layer then switch to the "data" layer.
+	 */
+	if (layer->flags & JSON_CONTEXT_THIS)
+		layer = layer->older;
+
+	/* Set the MODIFIED flag */
 	layer->flags |= JSON_CONTEXT_MODIFIED;
 }
 
@@ -273,9 +283,10 @@ static json_t *stdcurrent(char *key)
  */
 jsoncontext_t *json_context_std(json_t *args)
 {
-	json_t	*base, *global, *vars, *consts, *thisdata;
+	json_t	*base, *global, *vars, *consts, *thisdata, *thisvalue;
 	jsoncontext_t *context = NULL;
 	contexthook_t *hook;
+	int	assignable;
 
 	/* Start with a layer of system consts.  These are not automatically
 	 * freed, because they could be used by multiple context stacks.
@@ -316,12 +327,19 @@ jsoncontext_t *json_context_std(json_t *args)
 	for (hook = extralayers; hook; hook = hook->next)
 		context = (*hook->addcontext)(context);
 
-	/* Create a layer to serve as "this", containing the "data" variable.
-	 * This should be assignable.
+	/* Create a layer to contain the "data" variable, and a layer above
+	 * that to store its value as "this".  These layers should be assignable
+	 * if json_system contains "update:true".
 	 */
+	assignable = 0; 
+	if (json_is_true(json_by_key(json_system, "update")))
+		assignable = JSON_CONTEXT_VAR;
 	thisdata = json_object();
-	json_append(thisdata, json_key("data", json_null()));
-	context = json_context(context, thisdata, JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS | JSON_CONTEXT_VAR);
+	thisvalue = json_null();
+	json_append(thisdata, json_key("data", thisvalue));
+	context = json_context(context, thisdata, JSON_CONTEXT_GLOBAL | assignable | JSON_CONTEXT_DATA);
+	context->modified = data_modified;
+	context = json_context(context, thisvalue, JSON_CONTEXT_GLOBAL | assignable | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	context->modified = data_modified;
 
 	/* Create a layer above that for the contents of "global", mostly the
@@ -405,7 +423,7 @@ jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t 
  */
 json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent)
 {
-	jsoncontext_t *globals, *thiscontext;
+	jsoncontext_t *globals, *datacontext, *thiscontext;
 	json_t	*files, *j, *f;
 	int	current_file, noref, i, bits;
 	struct stat st;
@@ -426,19 +444,21 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	 * and also the "this" layer which contains the "data" variable.
 	 */
 	thiscontext = NULL;
-	for (globals = context; globals->older; globals = globals->older) {
-		/* Also look for the global "this" layer, which stores the
-		 * context of the current file.
+	for (globals = context; globals->older && globals->older->older; globals = globals->older) {
+		/* Also look for the global "this" and "data" layers, which
+		 * store the context for the current file's contents.
 		 */
-		if ((globals->flags & (JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS)) == (JSON_CONTEXT_GLOBAL | JSON_CONTEXT_THIS))
+		if (globals->older && (globals->older->flags & JSON_CONTEXT_DATA)) {
 			thiscontext = globals;
+			datacontext = globals->older;
+		}
 	}
 
 	/* If no global "this" layer was found, it must not be a std context */
 	if (!thiscontext)
 		return NULL;
 
-	/* Locate the "files" array within that context */
+	/* Locate the "files" array within "global" */
 	files = json_by_expr(globals->data, "global.files", NULL);
 	if (!files)
 		return NULL;
@@ -521,24 +541,30 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 	/* If there was a previous file, and it is writable, and modified,
 	 * and we're switching away from it, then write it now.
 	 */
-	if ((thiscontext->flags & JSON_CONTEXT_MODIFIED) != 0
+	if ((datacontext->flags & JSON_CONTEXT_MODIFIED) != 0
 	 && current_file >= 0
 	 && current_file != *refcurrent
 	 && (j = json_by_index(files, current_file)) != NULL
 	 && json_is_true(json_by_key(j, "writable"))) {
 		char *filename = json_text_by_key(j, "filename");
-		j = json_by_key(thiscontext->data, "data");
-		if (filename && j) {
+		if (filename) {
+			/* Tweak the formatting rules */
 			jsonformat_t tweaked = json_format_default;
-			tweaked.table = 'j';
-			tweaked.string = 0;
-			tweaked.elem = 0;
-			tweaked.pretty = 0;
-			tweaked.sh = 0;
+			tweaked.table = 'j'; /* Write tables in JSON */
+			tweaked.string = 0;  /* No raw strings */
+			tweaked.elem = 0;    /* Not one array member per line */
+			tweaked.pretty = 0;  /* Not pretty-printed */
+			tweaked.sh = 0;	     /* Not shell quoted */
+
+			/* Open the data file for writing */
 			tweaked.fp = json_file_update(filename);
 			if (tweaked.fp) {
-				json_print(j, &tweaked);
+				/* Write the data */
+				json_print(thiscontext->data, &tweaked);
 				fclose(tweaked.fp);
+
+				/* Turn off the MODIFIED flag */
+				datacontext->flags &= ~JSON_CONTEXT_MODIFIED;
 			}
 		}
 	}
@@ -548,7 +574,6 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 		*refcurrent = 0;
 	else if (*refcurrent >= json_length(files))
 		*refcurrent = json_length(files) - 1;
-
 
 	/* Load the new current file, if the numbers are different or no
 	 * file was loaded before.  Note that we don't need to explicitly
@@ -566,7 +591,17 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 			if (!data)
 				data = json_error_null(0, "File \"%s\" is unreadable", currentname);
 		}
-		json_append(thiscontext->data, json_key("data", data));
+
+		/* Store it as the variable "data".  This also has the
+		 * side-effect of freeing the old data.
+		 */
+		json_append(datacontext->data, json_key("data", data));
+
+		/* Also store it as "this".  The previous "this" data was
+		 * freed by the above json_append() call already, so we don't
+		 * need to free it now.
+		 */
+		thiscontext->data = data;
 
 		/* Update "current_file" number */
 		json_append(globals->data, json_key("current_file", json_from_int(*refcurrent)));

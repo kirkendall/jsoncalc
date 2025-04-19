@@ -129,13 +129,14 @@ typedef struct jsonfunc_s {
 /* This enum represents details about how a single context layer is used */
 typedef enum {
 	JSON_CONTEXT_NOFREE = 1,/* Don't free the data when context is freed */
-	JSON_CONTEXT_VAR = 2,	/* variable -- use with GLOBAL for non-local */
-        JSON_CONTEXT_CONST = 4,	/* const -- like variable but can't assign */
+	JSON_CONTEXT_VAR = 2,	/* contains vars -- use with GLOBAL for non-local */
+        JSON_CONTEXT_CONST = 4,	/* contains consts -- like variable but can't assign */
         JSON_CONTEXT_GLOBAL = 8,/* Context is accessible everywhere */
 	JSON_CONTEXT_THIS = 16, /* Context can be "this" or "that" */
-        JSON_CONTEXT_ARGS = 32, /* Function arguments and local vars/consts */
-        JSON_CONTEXT_NOCACHE = 64, /* try autoload() before *data */
-        JSON_CONTEXT_MODIFIED = 128 /* Data has been modified (set via context->modified() function */
+	JSON_CONTEXT_DATA = 32,	/* Context contains "data" variable */
+        JSON_CONTEXT_ARGS = 64, /* Function arguments and local vars/consts */
+        JSON_CONTEXT_NOCACHE = 128, /* try autoload() before *data */
+        JSON_CONTEXT_MODIFIED = 256 /* Data has been modified (set via context->modified() function */
 } jsoncontextflags_t;
 
 /* This is used to track context (the stack of variable definitions).  */

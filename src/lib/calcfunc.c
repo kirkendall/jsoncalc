@@ -795,7 +795,7 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 		/* Strings -- Can't handle objects/arrays but other types okay.
 		 * Also, count the length of the combined string, in bytes.
 		 */
-		for (len = 0, scan = args->first->next; scan; scan = scan->next) {
+		for (len = 0, scan = args->first; scan; scan = scan->next) {
 			if (scan->type == JSON_ARRAY || scan->type == JSON_OBJECT)
 				goto BadMix;
 			if (scan->type == JSON_STRING || scan->type == JSON_BOOL || (scan->type == JSON_NUMBER && *scan->text))

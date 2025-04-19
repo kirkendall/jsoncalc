@@ -67,7 +67,7 @@ sed '1,/@@@/d' INTRO.html.template >>INTRO.html
 
 # Build the "sidebar.html" file, including titles of all articles
 sed '/@@@/,$d' sidebar.html.template >sidebar.html
-sort -k2 articles$$ | head -3 | while read timestamp filename
+sort -k2 articles$$ | while read timestamp filename
 do
     echo -n "<a target=\"_PARENT\" href=\"../index.html?a=${filename/.html/}\">"
 

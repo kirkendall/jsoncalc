@@ -97,9 +97,9 @@ void debug_usage()
 /* Output a usage message and then exit. */
 static void usage(char *fmt, char *data)
 {
-	puts("Usage: jsoncalc [flags] [name=value]... [file.json]...");
+	puts("Usage: jsoncalc [flags] [script] [name=value]... [file.json]...");
 	puts("Flags: -c calc    Evaluate calc, output any results, and quit.");
-	puts("       -f file    Read calc expression from file, output the result, and quit.");
+	puts("       -f file    Read script from file, output the result, and quit.");
 	puts("       -i         Interactive.");
 	puts("       -r         Inhibit the use of readline for interactive input.");
 	puts("       -u         Update - Write back any modified *.json files listed in args.");
@@ -107,7 +107,7 @@ static void usage(char *fmt, char *data)
 	puts("       -o         Object - Assume new files should contain an empty object.");
 	puts("       -a         Array - Assume new files should contain an empty array.");
 	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
-	puts("       -d dir     Autoload files from directory \"dir\" (this invocaion only).");
+	puts("       -d dir     Autoload files from directory \"dir\" (this invocation only).");
 	puts("       -D dir     Autoload files from directory \"dir\" (persist, via -U).");
 	puts("       -O options Adjusts the configuration, including output format.");
 	puts("       -J flags   Debug: t=token, f=file, b=buffer, a=abort, e=expr, c=calc");
@@ -118,6 +118,7 @@ static void usage(char *fmt, char *data)
 	puts("so you can use them like variables. Any *.json files named on the command line");
 	puts("will be processed one at a time for -ccalc or -ffile.  For -i, the first *.json");
 	puts("is loaded as \"this\" and you can switch to others manually.");
+	puts("The -ccmd, -ffile, -lplugin, -ddir, and -Ddir flags may be repeated.");
 	if (fmt)
 		printf(fmt, data);
 	exit(1);
@@ -330,13 +331,28 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	/* Try to load the config.  If not found, use built-in defaults. */
+	/* Try to load the config.  If not found, use built-in defaults.
+	 * This also sets up json_system and json_config
+	 */
 	json_config_load("jsoncalc");
 
 	/* Set the formatting from the config */
 	json_format_set(NULL, NULL);
 
-	/* Create an object that will old any name=value parameters, and
+	/* Do a quick scan for a "-u" flag.  We need to do this before we
+	 * create the context.
+	 */
+	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
+		switch (opt) {
+		case 'u':
+			allow_update = 1;
+			json_append(json_system, json_key("update", json_bool(1)));
+			break;
+		}
+	}
+	optind = 1;
+
+	/* Create an object that will hold any name=value parameters, and
 	 * start a context.
 	 */
 	args = json_object();
@@ -429,7 +445,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'u':
-			allow_update = 1;
+			/* already handled, above */
 			break;
 		case 'D':
 			autoload_dir = optarg;
@@ -462,7 +478,7 @@ int main(int argc, char **argv)
 			while (context)
 				context = json_context_free(context);
 			usage(NULL, NULL);
-			exit(0);
+			return 0;
 		default:
 			{
 				char optstr[2];
@@ -471,6 +487,7 @@ int main(int argc, char **argv)
 				while (context)
 					context = json_context_free(context);
 				usage("Invalid flag -%s\n", optstr);
+				return 1;
 			}
 		}
 	}
@@ -493,7 +510,6 @@ int main(int argc, char **argv)
 	/* If no "-i" was given, then the first argument after options may be
 	 * the name of a script to load and run like "-f".  Or it could be the
 	 * first data file.  Check!
-	 * bytes to see if it looks script-ish.
 	 */
 	if (!interactive && optind < argc && isscript(argv[optind])) {
 		initcmd = json_cmd_append(initcmd, json_cmd_parse_file(argv[optind]), context);
@@ -501,7 +517,10 @@ int main(int argc, char **argv)
 		optind++;
 	}
 
-	/* Build an object from any name=value parameters */
+	/* Add any name=value parameters to the "args" object that we created
+	 * when we started the context.  Also, add any data files named on
+	 * the command line, via json_context_file().
+	 */
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
 
@@ -545,7 +564,7 @@ int main(int argc, char **argv)
 	if (initcmd == JSON_CMD_ERROR) {
 		while (context)
 			context = json_context_free(context);
-		exit(2);
+		return 2;
 	}
 
 	/* If no commands were defined via -ccmd or -ffile, and no -i was given

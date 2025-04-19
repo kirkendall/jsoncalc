@@ -2138,7 +2138,7 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		/* Get the expression */
 		char *str = json_cmd_parse_paren(src);
 		if (!str) {
-			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"\" expression", "import");
+			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"%s\" expression", "import");
 			return cmd;
 		}
 
@@ -2271,7 +2271,7 @@ static jsoncmd_t *print_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
 			if (list)
 				json_calc_free(list);
-			*referr = json_cmd_error(start.filename, jcmdline(&start), 1, err ? err : "Syntax error in \"\" expression", "print");
+			*referr = json_cmd_error(start.filename, jcmdline(&start), 1, err ? err : "Syntax error in \"%s\" expression", "print");
 			return NULL;
 		}
 		list = json_calc_list(list, item);

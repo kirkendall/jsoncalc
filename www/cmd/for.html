@@ -15,13 +15,16 @@
       <br/>for (<var>variable</var> of <var>array</var>) <var>cmd</var>
       <br/>for (var <var>variable</var> = <var>array</var>) <var>cmd</var>
       <br/>for (var <var>variable</var> of <var>array</var>) <var>cmd</var>
+      <br/>for (const <var>variable</var> = <var>array</var>) <var>cmd</var>
+      <br/>for (const <var>variable</var> of <var>array</var>) <var>cmd</var>
       <dd>
       This executes <var>cmd</var> for each element of <var>array</var>.
       <p>
       Within <var>cmd</var> the value of the current element is available
       via the <var>variable</var> named after the "(";
       if you don't name a variable, then it will be available as "this".
-      The <tt>var</tt> keyword declares a new variable with the new name;
+      The <tt>var</tt> or <tt>const</tt> keyword declares a new variable
+      with the new name;
       if you give a variable name without <tt>var</tt> then it must have
       already been declared before the <tt>for()...</tt> command.
       <p>

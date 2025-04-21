@@ -11,6 +11,7 @@
     <h1>Subscript operators</h1>
     <table class="opList">
       <tr><td class="left">array</td><td class="op">[</td><td class="right">number <span class="op">]</span></td><td class="opdesc">Subscript by index number</td></tr>
+      <tr><td class="left">string</td><td class="op">[</td><td class="right">number <span class="op">]</span></td><td class="opdesc">Single character by index number</td></tr>
       <tr><td class="left">table</td><td class="op">[</td><td class="right">key <span class="op">:</span> expr <span class="op">]</span></td><td class="opdesc">Subscript by object member value</td></tr>
       <tr><td class="left">object</td><td class="op">[</td><td class="right">string <span class="op">]</span></td><td class="opdesc">Member lookup using <var>string</var> as key</td></tr>
     </table>
@@ -20,6 +21,12 @@
     You can also use negative subscripts to select an element relative to
     the end of the array; for example <tt>arr[-1]</tt> would be the last
     element of array <tt>arr</tt>.
+    <p>
+    You can also use a number subscript on a string to extract a single
+    character from the string, as though the string was an array of characters.
+    Basically, "<tt>str[i]</tt>" is the same as
+    "<a target="_PARENT" href="../index.html?f=substr">str.substr(i,1)</a>".
+    You <em>cannot</em> use it on the left of an <a target="_PARENT" href="../index.html?op=assign">=</a> assignment operator to change a single letter though.
     <p>
     If the left argument is a table (array of objects), then you can 
     also use the <tt>[</tt><var>key</var><tt>:</tt><var>value</var><tt>]</tt>
@@ -84,15 +91,21 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Any member lookup first tries to find it using a case-sensitive
+        <li>Any <tt>[</tt><var>member</var><tt>:</tt><var>value</var><tt>]</tt>
+            lookup first tries to find it the member key using a case-sensitive
             search.  If that fails, then a case-insensitive search is tried.
+
+	<li>The use of subscripts on strings is in JavaScript, including the
+	    inabililty to use it in an assignment to change a single character.
 
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=dot">.</a> Dot 0perators
+      <a target="_PARENT" href="../index.html?op=dot">. and ..</a> Dot 0perators
+      <br/>
+      <a target="_PARENT" href="../index.html?f=substr">substr()</a> Function for extracting substrings
     </details>
 
   </body>

@@ -588,13 +588,25 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			break;
 		} else {
 			/* Evaluate the subscript.  Strings only work for
-			 * objects, numbers only work for arrays.
+			 * objects, numbers only work for arrays or strings.
 			 */
 			USE_RIGHT_OPERAND(calc);
 			if (left->type == JSON_OBJECT && right->type == JSON_STRING)
 				result = json_by_key(left, right->text);
 			else if (left->type == JSON_ARRAY && right->type == JSON_NUMBER)
 				result = json_by_index(left, json_int(right));
+			else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
+				size_t len = strlen(left->text);
+				size_t end = 1; /* single character */
+				ir = json_int(right);
+				if (ir < 0)
+					ir += len;
+				if (ir >= 0 && ir < len) {
+					char *str = json_mbs_substr(left->text, ir, &end);
+					result = json_string(str, end);
+					break;
+				}
+			}
 		}
 		result = json_copy(result);
 		break;

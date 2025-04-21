@@ -1009,6 +1009,11 @@ static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		parensrc.str += 3;
 		json_cmd_parse_whitespace(&parensrc);
 	}
+	else if (!strncasecmp(parensrc.str, "const", 5) && isspace(parensrc.str[5])) {
+		parsed->var = 1;
+		parensrc.str += 5;
+		json_cmd_parse_whitespace(&parensrc);
+	}
 	parsed->key = json_cmd_parse_key(&parensrc, 1);
 	if (parsed->key && parensrc.str[0] == '=') {
 		parensrc.str++;

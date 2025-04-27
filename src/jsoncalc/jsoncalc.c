@@ -47,30 +47,6 @@ jsoncontext_t *context;
  */
 jsoncmd_t *initcmd = NULL;
 
-/* Output a usage message for the -Oformat option */
-void format_usage()
-{
-	puts("The -Oformat flag controls the output format.  The \"format\" string is a");
-	puts("comma-delimited list of settings.  Each setting is a name=value pair,");
-	puts("though if you omit the =value then a default value is used.  For boolean");
-	puts("settings the default is true.  You can also turn off a boolean option by");
-	puts("giving it a \"no\" prefix.  The list of possible settings is:");
-	printf("  -O%-11sPretty print adds whitepsace to show the data's structure.\n", json_format_default.pretty ? "pretty" : "nopretty");
-	printf("  -O%-11sForces each array element onto a single line.\n", json_format_default.elem ? "elem" : "noelem");
-	printf("  -Otab=%-7dIndentation to use when pretty printing.\n", json_format_default.tab);
-	printf("  -Ooneline=%-3dIf >0, JSON strings shorter than this are not pretty-printed.\n", json_format_default.oneline);
-	printf("  -Otable=%-5sTable format: grid/csv/sh/json (Tables are arrays of objects.)\n", json_format_default.table=='s'?"sh": json_format_default.table=='c'?"csv": json_format_default.table=='g'?"grid": "json");
-	printf("  -O%-11sFor table=csv and table=grid, use the first row to find columns.\n", json_format_default.quick ? "quick" : "noquick");
-	printf("  -Oprefix=%-4sFor table=sh, this is prepended to variable names.\n", json_format_default.null);
-	printf("  -Onull=%-6sFor table=grid, this is how null will be shown.\n", json_format_default.null);
-	printf("  -O%-11sConvert any non-ASCII characters to \\uXXXX sequences.\n", json_format_default.ascii ? "ascii" : "noascii");
-	printf("  -O%-11sAdd shell quoting to JSON output.\n", json_format_default.sh ? "sh" : "nosh");
-	printf("  -O%-11sFor simple strings, output them without quoting.\n", json_format_default.string ? "string" : "nostring");
-	printf("  -O%-11sFor simple nulls, if the null represents an error then show it.\n", json_format_default.error ? "error" : "noerror");
-	printf("  -O%-11sAdd color for ANSI terminals.\n", json_format_default.color ? "color" : "nocolor");
-	printf("  -Odigits=%-4dPrecision when converting numbers to strings.\n", json_format_default.digits);
-}
-
 
 /* Output a debugging flag usage message */
 void debug_usage()
@@ -113,7 +89,7 @@ static void usage(char *fmt, char *data)
 	puts("       -J flags   Debug: t=token, f=file, b=buffer, a=abort, e=expr, c=calc");
 	puts("       -U         Save -O, -C, -D, -J flags as default config");
 	puts("This program manipulates JSON data. Without one of -ccalc or -ffile,");
-	puts("it will assume -c\"this\" if -Oformat is given, or -i if no -Oformat.  Any");
+	puts("it will assume -c\"this\" if -Ooptions is given, or -i if no -Ooptions.  Any");
 	puts("name=value parameters on the shell command line will be added to the context,");
 	puts("so you can use them like variables. Any *.json files named on the command line");
 	puts("will be processed one at a time for -ccalc or -ffile.  For -i, the first *.json");
@@ -331,6 +307,12 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	/* Detect "--help" */
+	if (argc >= 2 && !strcmp(argv[1], "--help")) {
+		usage(NULL, NULL);
+		return 0;
+	}
+
 	/* Try to load the config.  If not found, use built-in defaults.
 	 * This also sets up json_system and json_config
 	 */
@@ -432,7 +414,6 @@ int main(int argc, char **argv)
 				/* Parse the options.  Watch for errors */
 				err = json_config_parse(section, val, NULL);
 				if (err) {
-					format_usage();
 					while (context)
 						context = json_context_free(context);
 					if (err) {
@@ -451,16 +432,6 @@ int main(int argc, char **argv)
 			autoload_dir = optarg;
 			break;
 		case 'O':
-			/* Handle "-O?" here, but anything else is saved until
-			 * after we know whether this invocation is interactive
-			 * or batch mode.
-			 */
-			if (*optarg == '?') {
-				format_usage();
-				while (context)
-					context = json_context_free(context);
-				return 0;
-			}
 			anyoption = 1;
 			break;
 		case 'J':
@@ -568,7 +539,7 @@ int main(int argc, char **argv)
 	}
 
 	/* If no commands were defined via -ccmd or -ffile, and no -i was given
-	 * to explicitly make this be interactive, but a -Oformat was used to
+	 * to explicitly make this be interactive, but a -Ooption was used to
 	 * specify an output format, then assume -cthis so any data will be
 	 * output in the requested format.
 	 */
@@ -595,7 +566,6 @@ int main(int argc, char **argv)
 		/* Parse the option string.  Watch for errors. */
 		err = json_config_parse(section, optarg, NULL);
 		if (err) {
-			format_usage();
 			while (context)
 				context = json_context_free(context);
 			if (err) {

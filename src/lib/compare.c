@@ -17,9 +17,9 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 
 	// Check parameters.
 	if (obj1->type != JSON_OBJECT || obj2->type != JSON_OBJECT)
-		/* EEE "Records passed to json_compare() must be objects" */
+		;/* EEE "Records passed to json_compare() must be objects" */
 	if (orderby->type != JSON_ARRAY && orderby->type != JSON_STRING)
-		/* EEE "The field list passed to json_compare() must be an array or a string" */
+		;/* EEE "The field list passed to json_compare() must be an array or a string" */
 
 	// For each field...
 	descending = 0;
@@ -39,8 +39,8 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 			continue;
 
 		/* Get the members for the next key */
-		field1 = json_by_key(obj1, key->text);
-		field2 = json_by_key(obj2, key->text);
+		field1 = json_by_expr(obj1, key->text, NULL);
+		field2 = json_by_expr(obj2, key->text, NULL);
 		if (json_is_null(field1) && json_is_null(field2))
 			continue; // if both are NULL, skip it
 		if (json_is_null(field1))

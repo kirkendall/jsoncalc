@@ -35,6 +35,10 @@
     contatentate them.
     <tt>+</tt> contatenates them without any other changes, while
     <tt>-</tt> leaves exactly one space between them.
+    <p>
+    Combining a string with <tt>null</tt> simply returns the string unchanged.
+    This way, you can combine strings even if some of the strings are sometimes
+    missing.
 
     <h2>Dates and Periods</h2>
     <strong>JsonCalc</strong> represents dates, datetimes, and periods as
@@ -75,9 +79,13 @@
       <div class="example">
 	<kbd>"Howard" - "" - "Johnson"</kbd>
 	<samp>"Howard Johnson"</samp>
+	<kbd>"Howard" - null - "Johnson"</kbd>
+	<samp>"Howard Johnson"</samp>
 	These three strings are concatenated with spaces between them.
 	The <tt>-</tt> operator is smart enough to avoid double spaces where
 	empty strings are involved.
+	It also skips over <tt>null</tt>, such as when one of the strings
+	is missing.
       </div>
 
       <div class="example">

@@ -218,6 +218,7 @@ extern json_t *json_debug_object(const char *file, int line);
 extern json_t *json_debug_array(const char *file, int line);
 extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
 extern json_t *json_debug_copy(const char *file, int line, json_t *json);
+extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*filter)(json_t *item));
 #ifdef JSON_DEBUG_MEMORY
 #define json_free(json)			json_debug_free(__FILE__, __LINE__, json)
 #define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
@@ -233,11 +234,14 @@ extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 #define json_array()			json_debug_array(__FILE__, __LINE__)
 #define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
 #define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
+#define json_copy_filter(json, filter)	json_debug_copy_filter(__FILE__, __LINE__, json, filter)
 #endif
 
 /* Multibyte character strings */
 size_t json_mbs_len(const char *s);
 int json_mbs_width(const char *s);
+int json_mbs_height(const char *s);
+size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth);
 int json_mbs_cmp(const char *s1, const char *s2);
 int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
 const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);

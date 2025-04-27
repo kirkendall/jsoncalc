@@ -7,6 +7,7 @@
  */
 #ifdef JSON_DEBUG_MEMORY
 # undef json_copy
+# undef json_copy_filter
 #endif
 
 /* Return a deep copy of a json object... meaning that if "json" is a container
@@ -25,9 +26,8 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 		return NULL;
 
 	/* If there's a test, apply it to this item */
-	if (test && !test(json)) {
+	if (test && !test(json))
 		return NULL;
-	}
 
 	/* The top node's copy method depends on its type */
 	switch (json->type)

@@ -602,7 +602,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				if (ir < 0)
 					ir += len;
 				if (ir >= 0 && ir < len) {
-					char *str = json_mbs_substr(left->text, ir, &end);
+					const char *str = json_mbs_substr(left->text, ir, &end);
 					result = json_string(str, end);
 					break;
 				}
@@ -897,6 +897,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				/* Both are strings, or at least stringy */
 				result = json_string(left->text, strlen(left->text) + strlen(right->text));
 				strcat(result->text, right->text);
+			} else if (left->type == JSON_NULL) {
+				if (freeright) {
+					result = right;
+					freeright = NULL;
+				} else
+					result = json_copy(right);
+			} else if (right->type == JSON_NULL) {
+				if (freeleft) {
+					result = left;
+					freeleft = NULL;
+				} else
+					result = json_copy(left);
 			} else if (left->type != JSON_STRING) {
 				/* Left operand needs to be converted */
 				str = json_serialize(left, NULL);
@@ -961,6 +973,20 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				/* Both are strings, or at least stringy */
 				leftstr = left->text;
 				rightstr = right->text;
+			} else if (left->type == JSON_NULL) {
+				if (freeright) {
+					result = right;
+					freeright = NULL;
+				} else
+					result = json_copy(right);
+				break;
+			} else if (right->type == JSON_NULL) {
+				if (freeleft) {
+					result = left;
+					freeleft = NULL;
+				} else
+					result = json_copy(left);
+				break;
 			} else if (left->type != JSON_STRING) {
 				/* Left operand needs to be converted */
 				str = json_serialize(left, NULL);

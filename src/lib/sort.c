@@ -36,8 +36,10 @@ static int cmpascending(const void *v1, const void *v2)
 	/* Strings before numbers */
 	if (b1->value->type == JSON_STRING && b2->value->type == JSON_STRING)
 		return json_mbs_casecmp(b1->value->text, b2->value->text);
-	if (b1->value->type == JSON_STRING || b2->value->type == JSON_STRING)
+	if (b1->value->type == JSON_STRING)
 		return -1;
+	if (b2->value->type == JSON_STRING)
+		return 1;
 
 	/* Numbers */
 	if (b1->dvalue < b2->dvalue)
@@ -113,11 +115,15 @@ void json_sort(json_t *array, json_t *orderby)
 		for (b = 0; b < used; b++) {
 			if (!value && !bucket[b].value)
 				break;
-			else if ((value->type == JSON_STRING || value->type == JSON_BOOL)
+			else if (value
+			      && bucket[b].value
+			      && (value->type == JSON_STRING || value->type == JSON_BOOL)
 			      && bucket[b].value->type == value->type) {
 				if (!strcmp(value->text, bucket[b].value->text))
 					break;
-			} else if (value->type == JSON_NUMBER && bucket[b].value->type == JSON_NUMBER) {
+			} else if (value
+			      && value->type == JSON_NUMBER
+			      && bucket[b].value->type == JSON_NUMBER) {
 				if (dvalue == bucket[b].dvalue)
 					break;
 			} else if (!bucket[b].value)
@@ -156,6 +162,7 @@ void json_sort(json_t *array, json_t *orderby)
 	for (b = 0, b2 = 1; b2 < used; b2++) {
 		if (bucket[b].value
 		 && bucket[b].value->type == JSON_STRING
+		 && bucket[b2].value
 		 && bucket[b2].value->type == JSON_STRING
 		 && !json_mbs_casecmp(bucket[b].value->text, bucket[b2].value->text)) {
 			/* Same, case-insenstively.  Append b2 to b */

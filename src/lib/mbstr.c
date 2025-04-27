@@ -72,6 +72,84 @@ int json_mbs_width(const char *s)
         return width;
 }
 
+/* Count the height of a string, defined as one plus the number of newlines,
+ * except that a newline at the end of the string doesn't count.  Most strings
+ * are 1 row high.
+ */
+int json_mbs_height(const char *s)
+{
+	int	height;
+	for (height = 1; *s && s[1]; s++)
+		if (*s == '\n')
+			height++;
+	return height;
+}
+
+/* Extract a given line from a string.  Line counts start at 0.
+ *
+ * This returns the bytecount of the string, including the \n or \0 after
+ * it; if no such line exists then it returns 0.  If buf is non-NULL then
+ * the line will be copied into it, with a '\0' terminator.  If refstart is
+ * non-NULL, it'll be set to point to the start of the line within s.
+ * If refwidth is non-NULL the the column width is returned there.
+ */
+size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth)
+{
+	const char	*start;
+	size_t	size;
+	int	width, charwidth;
+        wchar_t wc;
+        int     in;
+        mbstate_t state;
+
+	/* Find the start of the line */
+	for (start = s; *start && line > 0; start++) {
+		if (*start == '\n')
+			line--;
+	}
+	if (line > 0 || !*start) {
+		if (buf)
+			*buf = '\0';
+		if (refstart)
+			*refstart = (char *)s;
+		if (refwidth)
+			*refwidth = 0;
+		return 0;	/* no such line */
+	}
+
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
+
+	/* For each character up to the end of the line... */
+        for (width = 0, s = start; *s && *s != '\n'; ) {
+		/* Convert the next UTF-8 character to a wc */
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
+                if (in <= 0) /* Invalid UTF-8 coding */
+			break;
+                s += in;
+
+		/* Add the character's width to the string width */
+                charwidth = wcwidth(wc);
+                if (charwidth > 0)
+			width += charwidth;
+        }
+        size = s - start + 1;
+
+        /* Return stuff */
+        if (buf) {
+		memcpy(buf, start, size);
+		buf[size - 1] = '\0';
+	}
+	if (refstart)
+		*refstart = (char *)start;
+	if (refwidth)
+		*refwidth = width;
+	return size;
+
+}
+
+
+
 /* Find the endpoints of a substring within s.  start is the character count
  * to the start of the substring, and if reflimit is non-NULL then it is a
  * character count coming in, and a byte count going out for the end of the
@@ -365,7 +443,7 @@ int json_mbs_casecmp(const char *s1, const char *s2)
          */
         if (!*s1 && !*s2)
                 return 0;
-        if (!s1)
+        if (!*s1)
                 return -1;
         return 1;
 }

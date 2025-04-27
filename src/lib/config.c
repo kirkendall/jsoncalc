@@ -215,12 +215,19 @@ void json_config_load(const char *name)
  */
 static int notlist(json_t *mem)
 {
-	/* anything except keys with names ending with "-list" */
-	if (mem->type != JSON_KEY
-	 || strlen(mem->text) < 5
-	 || strcmp(mem->text +strlen(mem->text) - 5, "-list"))
+	/* Non-members are always kept */
+	if (mem->type != JSON_KEY)
 		return 1;
-	return 0;
+
+	/* Members named "batch" or "*-list" are skipped */
+	if (!strcmp(mem->text, "batch"))
+		return 0;
+	if (strlen(mem->text) >= 5
+	 && !strcmp(mem->text + strlen(mem->text) - 5, "-list"))
+		return 0;
+
+	/* Other members are kept */
+	return 1;
 }
 
 /* Save the config data */
@@ -262,7 +269,7 @@ void json_config_save(const char *name)
 		json_print(copy, &fmt);
 		fclose(fp);
 	}
-	free(copy);
+	json_free(copy);
 }
 
 /* Get an option from a given section of the settings.  If you pass NULL

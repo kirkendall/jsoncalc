@@ -511,8 +511,8 @@ static void datetimestr(char *result, const jsondatetime_t *dt, const char *dtz)
 
 /* Return 1 iff str matches pattern.  "#" in pattern matches any digit in str,
  * "*" matches any text, "-" matches ASCII hyphen or Unicode minus sign,
- * "Z" is any timezone specifier (including none) and anything else must match
- * exactly (case-insensitive).
+ * "." is an optional decimal followed by digits, "Z" is any timezone specifier
+ * (including none) and anything else must match exactly (case-insensitive).
  */
 static int match(const char *pattern, const char *str)
 {
@@ -535,6 +535,14 @@ static int match(const char *pattern, const char *str)
 			if (str[1] != '\x88' || str[2] != '\x92')
 				return 0;
 			str += 2;
+		} else if (*pattern == '.') {
+			/* Optional "." followed by digits */
+			if (*str == '.') {
+				do
+					str++;
+				while (isdigit(*str));
+			}
+			str--; /* went one character too far */
 		} else if (toupper(*str) != *pattern)
 			return 0;
 
@@ -581,13 +589,13 @@ int json_str_date(const char *str)
 /* Return 1 iff *str looks like an ISO time "YYYY-MM-DD" with optional TZ */
 int json_str_time(const char *str)
 {
-	return match("##:##:##Z", str) || match("##:##Z", str);
+	return match("##:##:##.Z", str) || match("##:##Z", str);
 }
 
 /* Return 1 iff *str looks like an ISO datetime "YYYY-MM-DDThh:mm:ss" optional TAZ */
 int json_str_datetime(const char *str)
 {
-	return match("####-##-##T##:##:##Z", str);
+	return match("####-##-##T##:##:##.Z", str);
 }
 
 /* Return 1 iff *str looks like an ISO period "DnYnMnWnDTnHnMnS" */

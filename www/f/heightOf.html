@@ -24,8 +24,7 @@
       <div class="example">
 	<kbd>"typical".heightOf()</kbd>
 	<samp>1</samp>
-        This example shows that heightOf() isn't always the same as length.
-        The \U1f600 emoji is 2 columns wide, nudging the string height up a bit.
+        Most strings have a height of 1.
       </div>
 
       <div class="example">
@@ -35,9 +34,10 @@
       </div>
 
       <div class="example">
-        <kbd>"Do\nA deer\n".heightOf()</kbd>
+        <kbd>"Space.\nThe Final Frontier.\n".heightOf()</kbd>
         <samp>2</samp>
         This string is two lines high.
+        The final newline doesn't affect the height.
       </div>
 
     </details>

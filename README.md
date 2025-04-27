@@ -1,7 +1,49 @@
-# jsoncalc
+# JsonCalc
 
-JsonCalc is a library for accessing JSON data, and a program that uses that library.  The program is a quick little tool for exploring or converting JSON data.  
-Most people will use the program. The "jsoncalc" program uses an expression syntax that combines aspects of JavaScript and SQL. If you're familiar with those two languages then jsoncalc should be pretty intuitive for you. It also adds some array operators and subscript tricks, but really the intent is to capitalize on users' familiarity with JavaScript and SQL.  It can be used interactively, or in batch mode for automated scripts -- either stand-alone scripts written entirely in JsonCalc's language, or a shell script that uses JsonCalc for small specific tasks. For interactive use, the GNU readline library provides line editing, history, and name completion; this all intended to allow you to explore the data in a JSON file. When used in batch mode, you can output arrays of objects in a manner that's easy to use in a shell script, or in CSV (in addition to JSON of course).
+JsonCalc is program for exploring or converting JSON data.
+Its main features are:
 
-The library is written in C. It has functions for parsing JSON into an internal "json_t" format.  Other functions can then extract data from the json_t, or manipulate it (adding or changing values), convert it back into JSON or other formats, and ultimately free the data.  Most of the functions are very simple, and are each intended to do one thing well.  They can handle large data files efficiently; you are *NOT* required to load the whole file into memory before processing any of it.  It supports UTF-8 text.
+* It uses a syntax that's a combination of JavaScript and SQL.
+  If you're familiar with those two languages then JsonCalc should be
+  fairly intuitive.
+  There are a few added operators for things like filtering arrays and
+  joining tables, but they're easy to learn.
 
+* It can be used interactively, or in a shell script, or as its own scripting
+  tool.
+
+* When run interactively, it supports line editing, history, and name
+  completion.
+
+* When used in a shell script, you can pass values in to JsonCalc via
+  _name_=_value_ arguments on the command line, or via $_name_=_value_
+  environment variables.
+  Collecting JSON output is easy.
+  If you want to process rows of a table, that's pretty easy too because
+  JsonCalc supports a "shell" output format, where each row is output as
+  a line of _name_=_value_ pairs with shell quoting.
+
+* When used as a self-contained scripting language, it can easily generate
+  or convert JSON data.
+  With plugins, it can be
+
+* Member names can be case-insensitive.
+  This can save you a bit of frustration for some data sets.
+
+* Most of the logic is implemented in a library.
+  Implementing it this way allows you to embed JsonCalc in other programs.
+  The library has "hooks" that let you add your own extensions to the syntax.
+  You can also use its low-level functions to manipulate JSON data in your
+  own C/C++ programs.
+
+* It supports plugins.
+  Plugins are available for sending web requests, handling XML data, directly
+  interfacing with MySQL or SQLLite databases, logging, cacheing, and more.
+  You can implement your own plugins that use the above-mentioned "hooks"
+  to extend the syntax.
+
+* The JSON parser is quick.
+
+* It fully supports UTF-8 text.
+
+* Tables (arrays of objects) can be output in a nice grid format.

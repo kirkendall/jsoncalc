@@ -69,20 +69,21 @@
         <samp><table>
 <tr><th>name</th><th>joined</th><th>contacts</th></tr>
 <tr><td>Peter</td><td>2024-01-02</td><td>3</td></tr>
-<tr><td>Paul</td><td>2023-10-15</td>td>2</td></tr>
-<tr><td>Mary</td><td>2022-08-09</td>td>0</td></tr>
-<tr><td>Ziggy</td><td>2023-04-17</td>td>2</td></tr>
+<tr><td>Paul</td><td>2023-10-15</td><td>2</td></tr>
+<tr><td>Mary</td><td>2022-08-09</td><td>0</td></tr>
+<tr><td>Ziggy</td><td>2023-04-17</td><td>2</td></tr>
 </table>
 	</samp>
 	This scans <tt>test.cust</tt> (part of the sample data) and builds
 	a new object for each entry, containing just the <tt>name</tt> and
 	<tt>joined</tt> members, plus a count of the contact methods.
+      </div>
 
 
       <div class="example">
 	<kbd>{x:??x, y:??y, z:??z}</kbd>
 	<samp>{"x":2,"y":3}</samp>
-	Here we're constructing an object from the <tt>x<tt>, <tt>y</tt>,
+	Here we're constructing an object from the <tt>x</tt>, <tt>y</tt>,
 	and <tt>z</tt> variables, except that <tt>z</tt> doesn't exist so it
 	is effectively <tt>null</tt>.
 	The use of "<tt>:??</tt>" instead of "<tt>:</tt>" means that

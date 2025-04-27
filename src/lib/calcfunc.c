@@ -94,6 +94,8 @@ static json_t *jfn_time(json_t *args, void *agdata);
 static json_t *jfn_dateTime(json_t *args, void *agdata);
 static json_t *jfn_timeZone(json_t *args, void *agdata);
 static json_t *jfn_period(json_t *args, void *agdata);
+static json_t *jfn_abs(json_t *args, void *agdata);
+static json_t *jfn_random(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -185,8 +187,10 @@ static jsonfunc_t time_jf        = {&date_jf,        "time",        "when:string
 static jsonfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, ...actions", "string|object|number",	jfn_dateTime};
 static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, ...actions", "null",	jfn_timeZone};
 static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, ...actions", "string|object|number",	jfn_period};
+static jsonfunc_t abs_jf         = {&period_jf,      "abs",         "val:number", "number", jfn_abs};
+static jsonfunc_t random_jf      = {&abs_jf,         "random",      "val:number", "number", jfn_random};
 
-static jsonfunc_t count_jf       = {&period_jf,      "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&random_jf,      "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -682,12 +686,7 @@ static json_t *jfn_heightOf(json_t *args, void *agdata)
 		return json_from_int(1);
 
 	case JSON_STRING:
-		/* Count the newlines plus 1, stopping 1 char before the end. */
-		height = 1;
-		for (scan = args->first->text; *scan && scan[1]; scan++)
-			if (*scan == '\n')
-				height++;
-		return json_from_int(height);
+		return json_from_int(json_mbs_height(args->first->text));
 
 	case JSON_BADTOKEN:
 	case JSON_NEWLINE:
@@ -2112,6 +2111,51 @@ static json_t *jfn_period(json_t *args, void *agdata)
 {
 	return json_datetime_fn(args, "period");
 }
+
+/******************************************************************************/
+/* Math functions.  For the sake of JavaScript compatibility, the first
+ * argument to these may optionally be the "Math" object, which is ignored.
+ */
+
+static json_t *jfn_abs(json_t *args, void *agdata)
+{
+	double d;
+
+	/* Get the number, skipping an optional "Math" argument */
+	json_t	*num = args->first;
+	if (num->type == JSON_OBJECT)
+		num = num->next;
+
+	/* Fail if not a number */
+	if (num->type != JSON_NUMBER)
+		return json_error_null(0, "The %s() function expects a number", "abs");
+
+	/* Apply the function */
+	d = json_double(num);
+	if (d < 0)
+		d = -d;
+
+	/* Return the result */
+	return json_from_double(d);
+}
+
+/* Random number */
+static json_t *jfn_random(json_t *args, void *agdata)
+{
+	/* Look for an optional limit, after an optional "Math" argument */
+	int	limit;
+	json_t	*num = args->first;
+	if (num->type == JSON_OBJECT)
+		num = num->next;
+	if (num && num->type == JSON_NUMBER && (limit = json_int(num)) >= 2) {
+		/* Return an int in the range [0,limit-1] */
+		return json_from_int((int)lrand48() % limit);
+	} else {
+		/* Return a double in the range [0.0,1.0) */
+		return json_from_double(drand48());
+	}
+}
+
 
 /**************************************************************************
  * The following are aggregate functions.  These are implemented as pairs *

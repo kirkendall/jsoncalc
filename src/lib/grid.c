@@ -17,7 +17,8 @@ int json_grid(json_t *json, jsonformat_t *format)
 {
 	json_t	*explain, *row, *col, *cell;
 	char	*text;
-	int	wdata, width, c, i;
+	int	wdata, width, c, i, line;
+	size_t	size;
 	char	hdrpad;
 	char	number[40];
 	char	delim[20];
@@ -107,67 +108,102 @@ int json_grid(json_t *json, jsonformat_t *format)
 
 	/* For each row... */
 	for (row = json->first; row; row = row->next) {
-		/* Output the row */
+		/* Find the height of the tallest cell.  All cells are 1
+		 * except for strings that contain newlines.
+		 */
+		int rowheight = 1;
 		for (c = 0, col = explain->first; col; c++, col = col->next) {
-			/* Fetch the cell's text */
 			cell = json_by_key(row, json_text_by_key(col, "key"));
-			if (!cell || cell->type == JSON_NULL)
-				text = format->null;
-			else if (cell->type == JSON_ARRAY)
-				text = json_is_table(cell) ? "[table]" : "[array]";
-			else if (cell->type == JSON_OBJECT)
-				text = "{object}";
-			else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'i')
-				snprintf(text = number, sizeof number, "%d", JSON_INT(cell));
-			else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'd')
-				snprintf(text = number, sizeof number, "%.*g", format->digits, JSON_DOUBLE(cell));
-			else
-				text = cell->text;
-
-			/* Get widths */
-			width = widths[c];
-			wdata = json_mbs_width(text);
-
-			/* If a wide column heading dictates that we need
-			 * extra padding, then output half of that extra
-			 * padding now.
-			 */
-			for (i = pad[c] >> 1; i > 0; i--)
-				putc(' ', format->fp);
-
-			/* Output the cell.  Alignment depends on type */
 			if (cell && cell->type == JSON_STRING) {
-				/* left-justify strings */
-				fputs(text, format->fp);
-				for (i = 0; i < width - wdata; i++)
-					putc(' ', format->fp);
-			} else if (cell && cell->type == JSON_NUMBER) {
-				/* right-justify numbers */
-				for (i = 0; i < width - wdata; i++)
-					putc(' ', format->fp);
-				fputs(text, format->fp);
-			} else {
-				/* center everything else */
-				for (i = 0; i < (width - wdata + 1) / 2; i++)
-					putc(' ', format->fp);
-				fputs(text, format->fp);
-				for (; i < (width - wdata); i++)
-					putc(' ', format->fp);
+				int cellheight = json_mbs_height(cell->text);
+				if (cellheight > rowheight)
+					rowheight = cellheight;
 			}
-
-			/* If a wide column heading dictates that we nned
-			 * extra padding, then output the second half of
-			 * that extra padding now.
-			 */
-			for (i = pad[c] - (pad[c] >> 1); i > 0; i--)
-				putc(' ', format->fp);
-
-			/* Delimiter between columns */
-			if (col->next)
-				fputs(delim, format->fp);
-
 		}
-		putc('\n', format->fp);
+
+		/* For each line of the row... */
+		for (line = 0; line < rowheight; line++) {
+
+			/* Output this line of the row */
+			for (c = 0, col = explain->first; col; c++, col = col->next) {
+				/* Fetch the cell */
+				cell = json_by_key(row, json_text_by_key(col, "key"));
+				/* Get its text and width.  Since strings can
+				 * be multi-line, they're handled differently.
+				 */
+				if (cell && cell->type == JSON_STRING) {
+					size = json_mbs_line(cell->text, line, NULL, &text, &wdata);
+					if (size > 0)
+						size--; /* remove newline */
+				} else if (line > 0) {
+					/* All non-strings are 1 row high */
+					size = 0;
+					text = "";
+					wdata = 0;
+				} else {
+					if (!cell || cell->type == JSON_NULL)
+						text = format->null;
+					else if (cell->type == JSON_ARRAY)
+						text = json_is_table(cell) ? "[table]" : "[array]";
+					else if (cell->type == JSON_OBJECT)
+						text = "{object}";
+					else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'i')
+						snprintf(text = number, sizeof number, "%d", JSON_INT(cell));
+					else if (cell->type == JSON_NUMBER && !cell->text[0] && cell->text[1] == 'd')
+						snprintf(text = number, sizeof number, "%.*g", format->digits, JSON_DOUBLE(cell));
+					else /* boolean or non-binary number */
+						text = cell->text;
+
+					/* Get widths */
+					size = strlen(text);
+					wdata = json_mbs_width(text);
+				}
+
+				/* width of this column */
+				width = widths[c];
+
+				/* If a wide column heading dictates that we
+				 * need extra padding, then output half of that
+				 * extra padding now.
+				 */
+				for (i = pad[c] >> 1; i > 0; i--)
+					putc(' ', format->fp);
+
+				/* Output the cell. Alignment depends on type */
+				if (cell && cell->type == JSON_STRING) {
+					/* left-justify strings */
+					if (size > 0)
+						fwrite(text, size, 1, format->fp);
+					for (i = 0; i < width - wdata; i++)
+						putc(' ', format->fp);
+				} else if (cell && cell->type == JSON_NUMBER) {
+					/* right-justify numbers */
+					for (i = 0; i < width - wdata; i++)
+						putc(' ', format->fp);
+					fputs(text, format->fp);
+				} else {
+					/* center everything else */
+					for (i = 0; i < (width - wdata + 1) / 2; i++)
+						putc(' ', format->fp);
+					fputs(text, format->fp);
+					for (; i < (width - wdata); i++)
+						putc(' ', format->fp);
+				}
+
+				/* If a wide column heading dictates that we nned
+				 * extra padding, then output the second half of
+				 * that extra padding now.
+				 */
+				for (i = pad[c] - (pad[c] >> 1); i > 0; i--)
+					putc(' ', format->fp);
+
+				/* Delimiter between columns */
+				if (col->next)
+					fputs(delim, format->fp);
+
+			}
+			putc('\n', format->fp);
+		}
 	}
 
 	/* Discard the "explain" data */

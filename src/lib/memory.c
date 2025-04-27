@@ -27,6 +27,7 @@
 # undef json_object
 # undef json_parse_string
 # undef json_copy
+# undef json_copy_filter
 #endif
 
 /* For debugging, this is used to store places that allocate memory, and
@@ -494,6 +495,7 @@ json_t *json_debug_parse_string(const char *file, int line, const char *str)
         return json;
 }
 
+/* Do a deep copy of a json_t tree */
 json_t *json_debug_copy(const char *file, int line, json_t *json)
 {
         int slot = memory_slot(file, line);
@@ -501,3 +503,13 @@ json_t *json_debug_copy(const char *file, int line, json_t *json)
         json_walk(json, fixslot, &slot);
         return json;
 }
+
+/* Do a deep copy of a json_t tree, filtering items through function */
+json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*test)(json_t *elem))
+{
+        int slot = memory_slot(file, line);
+        json = json_copy_filter(json, test);
+        json_walk(json, fixslot, &slot);
+        return json;
+}
+

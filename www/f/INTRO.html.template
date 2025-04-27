@@ -46,7 +46,7 @@
 
     <details>
       <summary>All functions are global.</summary>
-      You can write them using dot notation as though they're an member functions,
+      You can write them using dot notation as though they're member functions,
       but doing so uses the data to the left of the dot for the first argument.
       All of <strong>jsoncalc</strong>'s functions work this way.
       <div class="example">
@@ -62,7 +62,7 @@
       This is consistent with <strong>jsoncalc</strong>'s goal of being a good
       quick-and-dirty query tool.
       <p>
-      You can also abbreviate function names to just the first latter and all
+      You can also abbreviate function names to just the first letter and all
       uppercase letters in the function's canonical name.
       (The canonical name is the way they're listed here.)
       <div class="example">

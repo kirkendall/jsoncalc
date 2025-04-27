@@ -9,7 +9,7 @@ stoplist="........*\|.\|..\|.*test\|ziggy.*\|yy*\|the\|.\|..\|you\|your\|yes\|ye
 # For each *.html file in $dirs
 (
 echo "var kwlist = ["
-find $dirs -name '*.html' -print | grep -v '[A-Z][A-Z][A-Z]' | while read filename
+find $dirs -name '*.html' -print | grep -v '[A-Z][A-Z][A-Z]' | grep -v '/old/' | while read filename
 do
 	# Extract the title text
 	title="$(sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p' $filename)"
@@ -22,8 +22,8 @@ do
 	query=$(basename $filename .html)
 	dir=$(dirname $filename)
 
-	# For each keyword in the file...
-	sed 's/<[^>]*>//g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&amp;/\&/g; s/[A-Za-z]\+/\n&\n/g' $filename | tr A-Z a-z | grep '[a-z]' | grep -v '/old/' |grep -v -x "$stoplist" | sort | uniq -d | while read word
+	# For each keyword in the file that occurs at least twice...
+	sed 's/<[^>]*>//g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&amp;/\&/g; s/[A-Za-z_][A-Za-z_0-9]*/\n&\n/g' $filename | tr A-Z a-z | grep '[a-z]' | grep -v -x "$stoplist" | sort | uniq -d | while read word
 	do
 		# Generate a keyword index entry
 		echo "{keyword:\"$word\",src:\"$filename\",query:\"$query\",dir:\"$dir\",description:\"$title\"},"

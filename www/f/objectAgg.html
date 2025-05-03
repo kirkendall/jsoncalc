@@ -23,6 +23,8 @@
       <div class="example">
 	<kbd>objectAgg(["a","b","c"],null)</kbd>
 	<samp>{"a":null,"b":null,"c":null}</samp>
+	<kbd>{a:1,e:2,i:3,o:4,u:5} &amp; objectAgg(["a","o"],null)</kbd>
+	<samp>{"a":1,"o":4}</samp>
         This is about the simplest possible use of <tt>objectAgg()</tt>.
         While most aggregate functions take a single arguments and can do good things
         when passed an array, <tt>objectAgg()</tt> uses two arguments and only the
@@ -34,6 +36,7 @@
         to an object, and then use the
         <a target="_PARENT" href="../index.html?op=bitwise">&amp;</a>
         set intersection operator to select the members.
+        The second example above is an example of this.
         Similarly, <a target="_PARENT" href="../index.html?op=bitwise">^</a> could
         be used to selectively delete members.
         <p>

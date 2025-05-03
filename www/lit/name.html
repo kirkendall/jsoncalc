@@ -15,7 +15,7 @@
     <p>
     Names follow one of three basic formats:
     <ul>
-      <li>An unquoted name must start with an underscore or letter.
+      <li>An unquoted name must start with a letter or underscore character.
           The rest of the name may contain any combination of letters, digits,
           or underscores.
           This is the usually most convenient format, though it's also the
@@ -114,6 +114,14 @@
 	      a table.
 	      Finally, we use that function to display <tt>global.vars</tt>.
 	    </div>
+
+	<li>JavaScript uses backticks to mark template strings.
+	    JsonCalc doesn't support template strings at this time.
+	    If it does in the future, probably there'll be a rule like
+	    "If it contains a newline or {} substitution, then it's a
+	    template string, else it's a name."
+	    For this reason, I suggest you avoid using newlines or curly braces
+	    as part of backtick-quoted names.
       </ul>
     </details>
 

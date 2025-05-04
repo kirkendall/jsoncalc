@@ -40,6 +40,10 @@ Its main features are:
     With plugins, it can be used to fetch data via the web, and write it to
     a database.
 
+* It allows simple arithmetic on ISO-8601 dates, times, datetimes, and periods.
+  There are also "Swiss army knife" functions for doing things like converting
+  to other formats, and adjusting the timezone.
+
 * Member names can be case-insensitive.
   This can save you a bit of frustration for some data sets.
   It feels almost as important as name completion.
@@ -61,7 +65,7 @@ Its main features are:
 * It fully supports UTF-8 text.
 
 * Tables (arrays of objects) can be output in a nice grid format.
-  CSV output is also supported.
+  CSV and Shell output formats are also supported.
 
 * It is well documented.
 

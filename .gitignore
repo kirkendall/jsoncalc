@@ -4,7 +4,8 @@ testcalc
 testconfig
 core
 tags
-.jsoncalc_history
+*.a
+*.so
 NOTES
 Bug
 www/notes

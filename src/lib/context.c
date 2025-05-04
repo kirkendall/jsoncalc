@@ -26,6 +26,9 @@ typedef struct contexthook_s {
 
 static contexthook_t *extralayers = NULL;
 
+/* All contexts share a single "Math" object */
+json_t *json_context_math;
+
 /* Add a function which may add 0 ot more layers to the standard context.
  * This is mostly intended to allow plugs to define symbols that should
  * be globally accessible to jsoncalc.  The jsoncalc program itself may
@@ -63,14 +66,27 @@ static void data_modified(jsoncontext_t *layer, jsoncalc_t *lvalue)
 jsoncontext_t *json_context_free(jsoncontext_t *context)
 {
         jsoncontext_t *older;
+        json_t	*noMath;
 
         /* Defend against NULL */
         if (!context)
                 return NULL;
 
-        /* If supposed to free data, do that */
-        if ((context->flags & JSON_CONTEXT_NOFREE) == 0)
+        /* If supposed to free data, do that.  One tricky bit: All contexts
+         * share a single Math object (in the bottom layer), so we don't want
+	 * to free it.
+         */
+        if ((context->flags & JSON_CONTEXT_NOFREE) == 0) {
+		if (!context->older) {
+			for (noMath = context->data->first;
+			     noMath && noMath->first != json_context_math;
+			     noMath = noMath->next) {
+			}
+			if (noMath)
+				noMath->first = json_object();
+		}
 		json_free(context->data);
+	}
 
         /* Free the context */
         older = context->older;
@@ -101,7 +117,7 @@ jsoncontext_t *json_context(jsoncontext_t *older, json_t *data, jsoncontextflags
         context = (jsoncontext_t *)malloc(sizeof(jsoncontext_t));
         memset(context, 0, sizeof(jsoncontext_t));
 
-        /* Initialize it.  We leave the hash uninitialized until we need it */
+        /* Initialize it. */
         context->older = older;
         context->data = data;
         context->flags = flags;
@@ -300,8 +316,10 @@ jsoncontext_t *json_context_std(json_t *args)
 	global = json_object();
 	vars = json_object();
 	consts = json_object();
+	if (!json_context_math)
+		json_context_math = json_object();
 	json_append(consts, json_key("JSON", json_object() ));
-	json_append(consts, json_key("Math", json_object() ));
+	json_append(consts, json_key("Math", json_context_math));
 	json_append(global, json_key("vars", vars));
 	json_append(global, json_key("consts", consts));
 	if (args)

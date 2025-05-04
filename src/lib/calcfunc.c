@@ -96,6 +96,7 @@ static json_t *jfn_timeZone(json_t *args, void *agdata);
 static json_t *jfn_period(json_t *args, void *agdata);
 static json_t *jfn_abs(json_t *args, void *agdata);
 static json_t *jfn_random(json_t *args, void *agdata);
+static json_t *jfn_sign(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -189,8 +190,9 @@ static jsonfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string
 static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, ...actions", "string|object|number",	jfn_period};
 static jsonfunc_t abs_jf         = {&period_jf,      "abs",         "val:number", "number", jfn_abs};
 static jsonfunc_t random_jf      = {&abs_jf,         "random",      "val:number", "number", jfn_random};
+static jsonfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
 
-static jsonfunc_t count_jf       = {&random_jf,      "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&sign_jf,        "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -254,6 +256,7 @@ void json_calc_function_hook(
 
 	/* Add it */
 	f = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
+	memset(f, 0, sizeof *f);
 	f->name = name;
 	f->args = args;
 	f->fn = fn;
@@ -296,6 +299,10 @@ static void free_user_functions()
 			free(scan->returntype);
 		free(scan);
 	}
+
+	/* If the json_context_math object is set, free it too */
+	if (json_context_math)
+		json_free(json_context_math);
 }
 
 /* Define or redefine a user function -- one that's defined in JsonCalc's
@@ -2154,6 +2161,34 @@ static json_t *jfn_random(json_t *args, void *agdata)
 		/* Return a double in the range [0.0,1.0) */
 		return json_from_double(drand48());
 	}
+}
+
+/* Sign */
+static json_t *jfn_sign(json_t *args, void *agdata)
+{
+	double d;
+	int	sign;
+
+	/* Get the number, skipping an optional "Math" argument */
+	json_t	*num = args->first;
+	if (num->type == JSON_OBJECT)
+		num = num->next;
+
+	/* Fail if not a number */
+	if (num->type != JSON_NUMBER)
+		return json_error_null(0, "The %s() function expects a number", "abs");
+
+	/* Apply the function */
+	d = json_double(num);
+	if (d < 0)
+		sign = -1;
+	else if (d > 0)
+		sign = 1;
+	else	
+		sign = 0;
+
+	/* Return the result */
+	return json_from_int(sign);
 }
 
 

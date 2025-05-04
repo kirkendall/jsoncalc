@@ -140,7 +140,7 @@ FILE *json_file_update(const char *filename)
  * writable directory in the path.  If "ext" is non-NULL then append it to
  * the filename.
  */
-char *json_file_path(const char *filename, const char *ext)
+char *json_file_path(const char *prefix, const char *name, const char *suffix, int major, int minor)
 {
 	char	*pathname;	/* dynamically-allocated pathname */
 	size_t	pathsize;	/* allocated size of pathname */
@@ -152,10 +152,12 @@ char *json_file_path(const char *filename, const char *ext)
 	int	first;
 
 	/* If no ext then use "" */
-	if (!filename)
-		filename = "";
-	if (!ext)
-		ext = "";
+	if (!prefix)
+		prefix = "";
+	if (!name)
+		name = "";
+	if (!suffix)
+		suffix = "";
 
 	/* Start with a modest pathname buffer */
 	pathsize = 64;
@@ -183,29 +185,29 @@ char *json_file_path(const char *filename, const char *ext)
 		 * starts with "~" then use $HOME instead.
 		 */
 		if (*dir == '~')
-			needsize = snprintf(pathname, pathsize, "%s%s/%s%s", home, dir + 1, filename, ext);
+			needsize = snprintf(pathname, pathsize, "%s%s/%s%s%s", home, dir + 1, prefix, name, suffix);
 		else if (*dir == '.' && !dir[1])
-			needsize = snprintf(pathname, pathsize, "%s%s", filename, ext);
+			needsize = snprintf(pathname, pathsize, "%s%s%s", prefix, name, suffix);
 		else
-			needsize = snprintf(pathname, pathsize, "%s/%s%s", dir, filename, ext);
+			needsize = snprintf(pathname, pathsize, "%s/%s%s%s", dir, prefix, name, suffix);
 
 		/* If necessary, expand the buffer and try again */
 		if (needsize > pathsize) {
 			pathname = (char *)realloc(pathname, needsize);
 			pathsize = needsize;
 			if (*dir == '~')
-				snprintf(pathname, pathsize, "%s%s/%s%s", home, dir + 1, filename, ext);
+				snprintf(pathname, pathsize, "%s%s/%s%s%s", home, dir + 1, prefix, name, suffix);
 			else if (*dir == '.' && !dir[1])
-				snprintf(pathname, pathsize, "%s%s", filename, ext);
+				snprintf(pathname, pathsize, "%s%s%s", prefix, name, suffix);
 			else
-				snprintf(pathname, pathsize, "%s/%s%s", dir, filename, ext);
+				snprintf(pathname, pathsize, "%s/%s%s%s", dir, prefix, name, suffix);
 		}
 
 		/* If this is the first entry in the path list, and we're
 		 * looking for a writable directory, and this directory
 		 * doesn't exist, then try to create it.
 		 */
-		if (first && !*filename && access(pathname, W_OK)) {
+		if (first && !*name && access(pathname, W_OK)) {
 			char *slash;
 			for (slash = pathname + 1; *slash; slash++) {
 				if (*slash == '/') {
@@ -217,7 +219,7 @@ char *json_file_path(const char *filename, const char *ext)
 		}
 
 		/* Are we looking for a directory or a file? */
-		if (*filename) {
+		if (*name) {
 			/* File -- if this pathname is readable, return it. */
 			if (access(pathname, R_OK) == 0) {
 				free(jsoncalcpath);

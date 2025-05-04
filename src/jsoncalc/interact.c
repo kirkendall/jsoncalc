@@ -43,7 +43,7 @@ static char *historyfile(void)
 	/* First time, generate it */
 	if (!buf) {
 		/* Get the config directory */
-		char *dir = json_file_path(NULL, NULL);
+		char *dir = json_file_path(NULL, NULL, NULL, 0, 0);
 		if (!dir)
 			return ".jsoncalc_history";
 

@@ -127,7 +127,7 @@ char json_file_new_type;
 jsonfile_t *json_file_load(const char *filename);
 void json_file_unload(jsonfile_t *jf);
 FILE *json_file_update(const char *filename);
-char *json_file_path(const char *filename, const char *ext);
+char *json_file_path(const char *prefix, const char *name, const char *suffix, int major, int minor);
 
 /* Error handling */
 extern char *json_debug(char *flags);
@@ -280,6 +280,10 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 #define json_config_get_int(section, key) json_int(json_config_get(section, key))
 #define json_config_get_double(section, key) json_double(json_config_get(section, key))
 #define json_config_get_text(section, key) json_text(json_config_get(section, key))
+
+/* Plugins */
+json_t *json_plugin;
+json_t *json_plugin_load(const char *name, int major, int minor);
 
 
 END_C

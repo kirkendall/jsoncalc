@@ -5,6 +5,7 @@ PLUGIN=	`pwd`/plugin
 CFLAGS=	-I$(INC) -DJSON_DEBUG_MEMORY
 #CFLAGS=	-I$(INC)
 LDFLAGS=-L$(LIB)
+CC=	gcc -fpic
 
 all:
 	BIN="$(BIN)" INC="$(INC)" LIB="$(LIB)" PLUGIN="$(PLUGIN)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" make -C src -e

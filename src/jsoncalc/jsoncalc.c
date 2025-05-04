@@ -382,22 +382,18 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 			/* Load the plugin */
-#if 0
-			if (!json_plugin_load(plugin)) {
-				fprintf(stderr, "Failed to load -l%s\n", plugin);
+			err = json_plugin_load(plugin, 0, 0);
+			if (err) {
+				fprintf(stderr, "%s\n", err->text);
+				json_free(err);
+				while (context)
+					context = json_context_free(context);
 				return 1;
 			}
-#endif
 
 			/* If there are options, process them now */
-			if (val)
+			if (val && *val)
 			{ 
-				/* Remove the version number, if any */
-				char *version;
-				version = strchr(plugin, '.');
-				if (version)
-					*version = '\0';
-
 				/* Find the json_config.plugin.{plugin} section.
 				 * If it doesn't exist, then fail.
 				 */
@@ -405,7 +401,7 @@ int main(int argc, char **argv)
 				if (section)
 					section = json_by_key(section, plugin);
 				if (!section) {
-					fprintf(stderr, "The -l%s plugin doesn't use option\n");
+					fprintf(stderr, "The \"%s\" plugin doesn't use options\n");
 					while (context)
 						context = json_context_free(context);
 					return 1;

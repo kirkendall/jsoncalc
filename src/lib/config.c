@@ -180,9 +180,12 @@ void json_config_load(const char *name)
 	if (!json_system) {
 		json_system = json_object();
 		json_append(json_system, json_key("config", json_config));
-		pathname = json_file_path(NULL, NULL);
+		pathname = json_file_path(NULL, NULL, NULL, 0, 0);
 		json_append(json_system, json_key("configdir", json_string(pathname, -1)));
 		free(pathname);
+		if (!json_plugin)
+			json_plugin = json_object();
+		json_append(json_system, json_key("plugin", json_plugin));
 		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
 		json_append(json_system, json_key("update", json_bool(0)));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
@@ -190,7 +193,7 @@ void json_config_load(const char *name)
 	}
 
 	/* Look for the config file */
-	pathname = json_file_path(name, ".json");
+	pathname = json_file_path(NULL, name, ".json", 0, 0);
 	if (!pathname)
 		return;
 
@@ -241,7 +244,7 @@ void json_config_save(const char *name)
 	 * in the JSONCALCPATH, even if the "config.json" file doesn't exist
 	 * there yet.
 	 */
-	pathname = json_file_path(NULL, NULL);
+	pathname = json_file_path(NULL, NULL, NULL, 0, 0);
 	if (pathname) {
 		char *tmp = malloc(strlen(pathname) + strlen(name) + 6);
 		strcpy(tmp, pathname);
@@ -250,7 +253,7 @@ void json_config_save(const char *name)
 		free(pathname);
 		pathname = tmp;
 	} else {
-		pathname = json_file_path(name, ".json");
+		pathname = json_file_path(NULL, name, ".json", 0, 0);
 		if (!pathname)
 			return; /* no place to save it */
 	}

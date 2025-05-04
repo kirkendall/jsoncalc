@@ -258,6 +258,7 @@ void json_calc_free(jsoncalc_t *calc);
 void *json_calc_ag(jsoncalc_t *calc, void *agdata);
 json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata);
 
+json_t *json_context_math;
 void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context));
 jsoncontext_t *json_context_free(jsoncontext_t *context);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);

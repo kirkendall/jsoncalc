@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>abs</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc abs - Return the absolute value">
+    <meta name="keywords" content="number, jsoncalc, function reference, abs">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>abs - Return the absolute value</h1>
+    <dl>
+      <dt>abs(<var>number</var>)
+      <br/>Math.abs(<var>number</var>)
+      <dd>
+      Returns the absolute value of a number.
+      For the sake of compatibility with JavaScript,
+      you may also pass the <tt>Math</tt> object as the first parameter
+      though this function will ignore it.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>abs(17)</kbd>
+	<samp>17</samp>
+	<kbd>abs(-17)</kbd>
+	<samp>17</samp>
+        Positive numbers are unchanged.
+        Negative numbers are made positiive.
+      </div>
+
+      <div class="example">
+	<kbd>Math.abs(-12.87)</kbd>
+	<samp>12.87</samp>
+	You may pass <tt>Math</tt> as the first parameter, to make it look
+	like JavaScript.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Most of the <tt>Math</tt> functions are missing.
+            You can add them via the <tt>-lmath</tt> plugin.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

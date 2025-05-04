@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>random</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc random - Return a random number">
+    <meta name="keywords" content="number, jsoncalc, function reference, random">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>random - Return a random number</h1>
+    <dl>
+      <dt>random()
+      <br/>random(<var>num</var>)
+      <br/>Math.random()
+      <br/>Math.random(<var>num</var>)
+      <dd>
+      This returns a random number.
+      Without a <var>num</var> argument, it returns a random number
+      between 0.0 and 1.0 (though never exactly 1.0).
+      With <var>num</var>, it returns an integer from 0 to <var>num</var>-1.
+      <p>
+      For the sake of compatibility with JavaScript, you may also pass the
+      <tt>Math</tt> object as the first parameter, which will be ignored.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>Math.random()</kbd>
+	<samp>0.0416310015946</samp>
+        Returns a random number between 0.0 and 1.0.
+      </div>
+
+      <div class="example">
+	<kbd>random(6)</kbd>
+	<samp>4</samp>
+        Returns a random integer from 0 to 5.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript's <tt>Math.random()</tt> function doesn't take any
+            arguments.  If you want a random integer in JavaScript, you have
+            to use <tt>Math.floor(Math.random() * </tt><var>num</var><tt>)</tt>.
+            JsonCalc's <tt>random()</tt> function was extended to support a
+            <var>num</var> argument because that's a common use pattern but
+            JsonCalc doesn't have a <tt>floor()</tt> function by iself;
+            <tt>floor()</tt> is part of the <tt>-lmath</tt> plugin.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

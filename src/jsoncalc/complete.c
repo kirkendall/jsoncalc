@@ -176,6 +176,8 @@ static char *config_name_generator(const char *text, int state)
 			scan = section->first;
 		}
 	}
+
+	return NULL;
 }
 
 

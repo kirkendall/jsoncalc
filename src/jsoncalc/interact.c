@@ -107,7 +107,7 @@ static char *jcreadline(const char *prompt)
 
 void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 {
-	char	*expr, *val, *errmsg;
+	char	*expr;
 	jsoncmd_t *jc;
 	jsoncmdout_t *result;
 

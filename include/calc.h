@@ -242,13 +242,25 @@ typedef struct jsoncmd_s {
 extern int json_interupt;
 
 /* Function declarations */
-void json_calc_function_hook(
+void json_calc_aggregate_hook(
         char    *name,
         char	*args,
+        char	*type,
         json_t *(*fn)(json_t *args, void *agdata),
         void   (*agfn)(json_t *args, void *agdata),
-        size_t  agsize);
-int json_calc_function_user(char *name, json_t *params, char *paramstr, char *returntype, jsoncmd_t *cmd);
+        size_t  agsize,
+        int	jfoptions);
+void json_calc_function_hook(
+	char	*name,
+	char	*args,
+	char	*type,
+        json_t *(*fn)(json_t *args, void *agdata));
+int json_calc_function_user(
+	char *name,
+	json_t *params,
+	char *paramstr,
+	char *returntype,
+	jsoncmd_t *cmd);
 jsonfunc_t *json_calc_function_by_name(char *name);
 char *json_calc_op_name(jsonop_t op);
 void json_calc_dump(jsoncalc_t *calc);

@@ -8,6 +8,7 @@
 
 /* Mostly this module exists to define some Math.xxx() functions. */
 
+#if 0
 /* Math.abs() implemented in the main jsoncalc library */
 static json_t *jfn_acos(json_t *args, void *agdata);
 static json_t *jfn_acosh(json_t *args, void *agdata);
@@ -43,7 +44,7 @@ static json_t *jfn_sqrt(json_t *args, void *agdata);
 /* Math.sumPrecise() omitted */
 static json_t *jfn_tan(json_t *args, void *agdata);
 static json_t *jfn_trunc(json_t *args, void *agdata);
-
+#endif
 
 /* Most of the Math.functions are pretty similar.  They take an optional
  * Math object as their first parameter, and a single number as their only
@@ -371,31 +372,31 @@ static json_t *jfn_pow(json_t *args, void *agdata)
 char *init()
 {
 	/* Register the functions */
-	json_calc_function_hook("acos",  "n:number", jfn_acos, NULL, 0);
-	json_calc_function_hook("acosh", "n:number", jfn_acosh, NULL, 0);
-	json_calc_function_hook("asin",  "n:number", jfn_asin, NULL, 0);
-	json_calc_function_hook("asinh", "n:number", jfn_asinh, NULL, 0);
-	json_calc_function_hook("atan",  "n:number", jfn_atan, NULL, 0);
-	json_calc_function_hook("atanh", "n:number", jfn_atanh, NULL, 0);
-	json_calc_function_hook("cbrt",  "n:number", jfn_cbrt, NULL, 0);
-	json_calc_function_hook("ceil",  "n:number", jfn_ceil, NULL, 0);
-	json_calc_function_hook("cos",   "n:number", jfn_cos, NULL, 0);
-	json_calc_function_hook("cosh",  "n:number", jfn_cosh, NULL, 0);
-	json_calc_function_hook("exp",   "n:number", jfn_exp, NULL, 0);
-	json_calc_function_hook("floor", "n:number", jfn_floor, NULL, 0);
-	json_calc_function_hook("log",   "n:number", jfn_log, NULL, 0);
-	json_calc_function_hook("log10", "n:number", jfn_log10, NULL, 0);
-	json_calc_function_hook("log2",  "n:number", jfn_log2, NULL, 0);
-	json_calc_function_hook("round", "n:number", jfn_round, NULL, 0);
-	json_calc_function_hook("sin",   "n:number", jfn_sin, NULL, 0);
-	json_calc_function_hook("sinh",  "n:number", jfn_sinh, NULL, 0);
-	json_calc_function_hook("sqrt",  "n:number", jfn_sqrt, NULL, 0);
-	json_calc_function_hook("tan",   "n:number", jfn_tan, NULL, 0);
-	json_calc_function_hook("trunc", "n:number", jfn_trunc, NULL, 0);
+	json_calc_function_hook("acos",  "n:number", "number", jfn_acos);
+	json_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
+	json_calc_function_hook("asin",  "n:number", "number", jfn_asin);
+	json_calc_function_hook("asinh", "n:number", "number", jfn_asinh);
+	json_calc_function_hook("atan",  "n:number", "number", jfn_atan);
+	json_calc_function_hook("atanh", "n:number", "number", jfn_atanh);
+	json_calc_function_hook("cbrt",  "n:number", "number", jfn_cbrt);
+	json_calc_function_hook("ceil",  "n:number", "number", jfn_ceil);
+	json_calc_function_hook("cos",   "n:number", "number", jfn_cos);
+	json_calc_function_hook("cosh",  "n:number", "number", jfn_cosh);
+	json_calc_function_hook("exp",   "n:number", "number", jfn_exp);
+	json_calc_function_hook("floor", "n:number", "number", jfn_floor);
+	json_calc_function_hook("log",   "n:number", "number", jfn_log);
+	json_calc_function_hook("log10", "n:number", "number", jfn_log10);
+	json_calc_function_hook("log2",  "n:number", "number", jfn_log2);
+	json_calc_function_hook("round", "n:number", "number", jfn_round);
+	json_calc_function_hook("sin",   "n:number", "number", jfn_sin);
+	json_calc_function_hook("sinh",  "n:number", "number", jfn_sinh);
+	json_calc_function_hook("sqrt",  "n:number", "number", jfn_sqrt);
+	json_calc_function_hook("tan",   "n:number", "number", jfn_tan);
+	json_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
 
-	json_calc_function_hook("atan2", "x:number, y:number", jfn_atan2, NULL, 0);
-	json_calc_function_hook("hypot", "n1:number, ...", jfn_hypot, NULL, 0);
-	json_calc_function_hook("pow",   "base:number, power:number", jfn_pow, NULL, 0);
+	json_calc_function_hook("atan2", "x:number, y:number", "number", jfn_atan2);
+	json_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
+	json_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
 
 	/* Insert constants into the Math object */
 	if (!json_context_math)

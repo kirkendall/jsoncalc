@@ -230,12 +230,14 @@ static jsonfunc_t *funclist      = &join_jf;
  * zeroes.  The idea is that agfn() will accumulate data, and fn() will return
  * the final result.
  */
-void json_calc_function_hook(
+void json_calc_aggregate_hook(
 	char    *name,
 	char	*args,
+	char	*type,
 	json_t *(*fn)(json_t *args, void *agdata),
 	void   (*agfn)(json_t *args, void *agdata),
-	size_t  agsize)
+	size_t  agsize,
+	int	jfoptions)
 {
 	jsonfunc_t *f;
 
@@ -262,8 +264,24 @@ void json_calc_function_hook(
 	f->fn = fn;
 	f->agfn = agfn;
 	f->agsize = agsize;
+	f->jfoptions = jfoptions;
 	f->next = funclist;
 	funclist = f;
+}
+
+/* Register a non-aggregate function.  "name" is the name of the function,
+ * and "fn" is a pointer to the actual C function that implements it.
+ * The "args" and "type" strings are the argument names and types, and the
+ * return type; these are basically just comments.
+ */
+void json_calc_function_hook(
+	char    *name,
+	char	*args,
+	char	*type,
+	json_t *(*fn)(json_t *args, void *agdata))
+{
+	/* This is just a simplified interface to the aggregate adder */
+	json_calc_aggregate_hook(name, args, type, fn, NULL, 0, 0);
 }
 
 /* This function is called automatically when the program terminates.  It
@@ -681,9 +699,6 @@ static json_t *jfn_widthOf(json_t *args, void *agdata)
  */
 static json_t *jfn_heightOf(json_t *args, void *agdata)
 {
-	int	height;
-	char	*scan;
-
 	switch (args->first->type) {
 	case JSON_NULL:
 	case JSON_BOOL:

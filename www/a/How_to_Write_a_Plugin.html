@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>How to Write a Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc subj">
+    <meta name="keywords" content="jsoncalc, article, plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    
+<h1>How to Write a Plugin</h1>
+    <h4 class="timestamp">2025-05-11</h4>
+    <center>
+    <blockquote class="abstract">
+      Start by copying <tt>src/plugins/math/</tt> to another directory within
+      <tt>src/plugins/</tt>.
+      Your plugin will need to include &lt;json.h&gt;.
+      It must define a function named <tt>init()</tt> which takes no parameters
+      and returns NULL on success or an error string on failure.
+      Compile to position-independent code.
+      Link as a shared library; it if needs other libraries such as -lm or
+      -linet, link with those too.
+      Copy the library into the <tt>plugin/</tt> directory.
+    </blockquote>
+    </center>
+
+    This article explains how to write your own plugins.
+    <p>
+    The source code for plugins resides in the <tt>src/plugins</tt> directory.
+    Each plugin gets its own subdirectory below that.
+    So choose a name for your plugin, and create a directory with that name.
+    I suggest you start by copying the math plugin's directory to your own
+    plugin's directory.
+    The math plugin is a good starting point because it is very simple.
+    <div class="example">
+      <kbd>cp src/plugins/math/ src/plugins/myplugin</kbd>
+    </div>
+
+    <h2>Source Code</h2>
+    Your plugin's *.c source file will need to include the <json.h> file
+    so it can access JsonCalc's data types and functions.
+    Some of the functions declared there use (FILE*), you'll also need
+    to include <stdio.h>.
+    You'll almost certainly need to include other headers too, but those
+    two are the minimum.
+    If your plugin uses multiple *.c files, then all of them will need
+    at least those two.
+    <p>
+    The other mandatory feature of any plugin is that it must define an
+    <tt>init()</tt> function.
+    This is called when the plugin is first loaded, and it is responsible
+    for doing any initialization such as registering new functions or
+    commands with JsonCalc.
+    It has no parameters.
+    This function should return NULL on success, or an error message on failure.
+    <p>
+    The absolute minimum plugin, therefore, looks like this:
+    <pre>
+	#include &lt;stdio.h&gt;
+	#include &lt;json.h&gt;
+
+	<b>char</b> *init(<b>void</b>)
+	{
+	    <b>return</b> "Hello, world!  I am a plugin.";
+	}
+    </pre>
+    <p>
+    If your plugin uses options (either from the config file, or appended
+    to the <tt>-lmyplugin</tt> command-line option),
+    be aware that <em>options haven't been loaded yet</em> when the
+    <tt>init()</tt> function is called.
+    <p>
+    Each plugin has its own independent namespace.
+    Names that you give your functions or variables will never clash with
+    names used in other plugins, so you shouldn't feel obligated to add a
+    "myplugin_" prefix to every global function name; it just isn't necessary.
+    For example, the <tt>init()</tt> function in your plugin will not
+    cause a name clash with any other plugin's <tt>init()</tt> function.
+
+    <h2>Hooks to Register Your Plugin's Services</h2>
+    Every plugin adds some type of service to JsonCalc.
+    The JsonCalc library defines functions to let you register the functions,
+    commands, etc.
+
+    <h3>Adding Functions</h3>
+    Your plugin can add functions (written in C) to the JsonCalc expression
+    syntax via the <tt>json_calc_function_hook()</tt>.
+    For full details on how to do this, see the
+    <a target="_PARENT" href="../index.html?a=How_to_Add_a_Function">How to Add a Function</a> article.
+    Briefly, though, the way to do it is:
+    <ul>
+      <li>Write your function in C.
+          It should take two arguments: a <tt>json_t*</tt> containing an array
+          of argument values, and a <tt>void*</tt> which can mostly be ignored.
+          The function should return a <tt>json_t*</tt> as the result.
+          To indicate an error, use <tt>json_error_null()</tt> to generate
+          the return value.
+          <pre>
+            #include <unistd.h>
+            #include <json.h>
+	    json_t *jfn_getpid(json_t *args, void *agdata)
+	    {
+		return json_from_int(getpid());
+	    }
+          </pre>
+      <li>Register the function.  This should be done in your plugin's
+	  <tt>init()</tt> function.
+	  <pre>
+	    char *init(void)
+	    {
+	        json_calc_function_hook("getpid", "", "number", jfn_getpid);
+	        return NULL;
+	    }
+	  </pre>
+      <li>Your function will be available for use in JsonCalc expressions
+          whenever your plugin is loaded.
+          <div class="example">
+            <kbd>getpid()</kbd>
+            <samp>12183</samp>
+            This shows the process id to be 12183.
+	  </div>
+    </ul>
+
+    <h3>Adding Commands</h3>
+      Adding new commands is very similar to adding new functions:
+      Write some functions in C, and then register those functions with
+      JsonCalc via a <tt>json_cmd_hook()</tt> function.
+      For details, see <a target="_PARENT" href="../index.html?a=How_to_Add_Commands">How to Add Commands</a>.
+      Briefly, the process is:
+      <ul>
+        <li>Write a function to parse the command's parameters.
+            The JsonCalc library has a number of functions to help you
+            with that.
+            The function should return a <tt>jsoncmd_t*</tt> containing
+            the parsed command, or NULL if there's nothing that needs to be
+            run later.
+            (Function definitions are stored when parsed, for example,
+            so the "function" command parser returns NULL.)
+            If your parser detects an error, it should store the error in
+            a location passed as one of the parser function's arguments;
+            returning NULL does not indicate an error.
+	<li>Write a function to run the parsed command.
+	    This is passed the value returned by the parser, and the
+	    context stack.
+	    It should return NULL on success if there is no returned value,
+	    or a jsoncmdout_t value to indicate success with a returned value,
+	    an error, or a few other things like <b>break</b> or <b>continue</b>.
+        <li>Register the parser and runner, along with the command's name,
+            via the <tt>json_cmd_hook()</tt> library function.
+      </ul>
+      <p>
+      As a simple example, here's command that writes parenthesized text
+      out to stderr.
+
+      <pre>
+          #include <stdio.h>
+          #include <json.h>
+
+	  /* Parse a stderr command */
+	  jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_ **referr)
+	  {
+	      char *text;
+	      jsoncmd_t *cmd;
+
+	      /* Parse the parenthesized text */
+	      text = json_cmd_parse_paren(src);
+	      if (!text) {
+		  *referr = json_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
+		  return NULL;
+	      }
+
+	      /* Build a command */
+	      cmd = json_cmd(src, "stderr");
+	      cmd->key = text;
+	      return cmd;
+	  }
+
+	  /* Run a stderr command */
+	  jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
+	  {
+	      fprintf(stderr, "%s\n", cmd->key);
+	  }
+
+	  /* ... and later, in the plugin's init() function... */
+	  char *init()
+	  {
+	      json_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
+	      return NULL;
+	  }
+      </pre>
+      <p>
+      Once the plugin is loaded, you can invoke the new command just like any
+      other command.
+      <div class="example">
+        <kbd>stderr Goodbye World!
+        <samp>1: The stderr command expects text in parentheses</samp>
+        <kbd>stderr (Goodbye World!)
+        <samp>Goodbye World!</samp>
+        The first command failed to parse because the text wasn't in parentheses.
+        The second succeeded, and wrote the text to stdout.
+      </div>
+
+      <dt>void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
+      <dd>This gives you a way to insert extra layers into the context stack.
+          A DBMS interface might use this, for example, to create global
+          variables for the tables in the current database.
+          <p>
+          <pre>
+              jsoncontext_t *addMyContext(jsoncontext_t *context)
+              {
+		json_t *obj = json_object;
+
+
+              }
+
+              ...
+
+              json_context_hook(
+	  </pre>
+
+      <dt>context->autoload()
+
+    </dl>
+
+    <h2>Compiling and Linking</h2>
+    Plugins are basically a type of shared library,
+    and for GNU/Linux at least that means they need to be compiled as
+    position-independent code.
+    Using the GCC compiler, you need to add <tt>-fpic</tt> to the compiler
+    command line, probably in the Makefile by settings <tt>CC=gcc -fpic</tt>.
+    That's it!  No other special treatment is needed for compiling.
+    <p>
+    To package one or more compiled object files into a single shared
+    library, use GCC with <tt>-fpic -shared</tt>.
+    (The <tt>-shared</tt> tells GCC to make a shared library instead of an
+    independent program.)
+    You'll probably also want a <tt>-o lib</tt><var>plugin</var><tt>.so</tt>
+    flag to control the name of the generated file.
+    <p>
+    One neat thing is that if your plugin depends on other C libraries such as
+    <tt>-linet</tt> for internet access, you can use those on the linker line
+    and then they'll be loaded automatically whenever your plugin is loaded.
+    The math plugin does this to add <tt>-lm</tt>, the C math library that
+    it uses to do the actual computations, so its Makefile is a good example
+    of this.
+
+    <h2>Installing</h2>
+    Your Makefile should copy the plugin's <tt>lib*.so</tt> file to the
+    <tt>plugin/</tt> directory.
+    When you run "make install" at the top of the source tree,
+    that'll copy any plugins from the <tt>plugin/</tt> directory their
+    working location.
+
+    <h2>Script Plugins</h2>
+    It is also possible to write a plugin as a JsonCalc script,
+    with no new C code at all.
+    This tends to work well for simple plugins &mdash;
+    things that JsonCalc could easily be configured to do without a plugin,
+    but you want the easy distributability of plugins.
+    For example, OAUTH2 authentication is pretty simple, so that'd be a
+    good candidate.
+    <p>
+    Script plugins are copied to the <tt>plugin/</tt> directory just like
+    binary plugins, but their names don't have a "lib" prefix, and the ".so"
+    suffix is replaced with ".jc".
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

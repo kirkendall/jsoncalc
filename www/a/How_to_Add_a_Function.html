@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>How to Add a Function (in C)</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc How to Add a Function (in C)">
+    <meta name="keywords" content="jsoncalc, article, How to Add a Function (in C)">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>How to Add a Function (in C)</h1>
+    <h4 class="timestamp">2025-05-10</h4>
+    <center>
+    <blockquote class="abstract">
+      Adding C functions to JsonCalc is fairly easy.
+      Most plugins do it.
+      When used in a JsonCalc expression, the arguments are collected into
+      an array which is passed to the C function as a single argument.
+      The arguments are automatically freed.
+      The return value can't directly use any data from the arguments,
+      but it can use copies.
+      Functions must be registered with the JsonCalc library before they can
+      be used in JsonCalc expressions.
+      Aggregate functions can also be implemented.
+      Resources used in the aggregate data can be automatically freed.
+    </blockquote>
+    </center>
+
+    This article describes how to add a function, written in C.
+    We'll start with a simple function, and then move on to aggregate functions.
+    If you're only interested in using JsonCalc's expressions and script
+    language, not extending it, then you can skip this article.
+    <p>
+    You'll see the <tt>json_t</tt> data type used a lot in this article.
+    It's used to represent JSON values, including just about all data in
+    a JsonCalc script.
+    See the <a target="_PARENT" href="../index.html?a=The_json_t_Structure">The json_t Structure</a>
+    for more info, if you're curious.
+
+    <h2>Behavior of a function</h2>
+
+    Each function is passed an array of arguments
+    (as a <tt>json_t</tt> with -&gt;type=JSON_ARRAY), and returns
+    a <tt>json_t</tt> result.
+    Here's a quick example:
+    <pre>
+	json_t *jfn_hrule(json_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
+	{
+		<b>int</b>	<var>length</var>, <var>i</var>;
+		json_t	*<var>result</var>;
+
+		/* Check arguments */
+		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_NUMBER
+		 || (<var>length</var> = json_int(<var>args-&gt;first</var>)) < 0
+		 || <var>args-&gt;first-&gt;next</var> != NULL)
+			<b>return</b> json_error_null(0, "The \"%s\" function takes non-negative number", "hyphen");
+
+		/* Allocate a json_t string as the result */
+		<var>result</var> = json_string("", <var>length</var>);
+
+		/* Fill it with hyphens */
+		<b>for</b> (<var>i</var> = 0; <var>i</var> &lt; <var>length</var>; <var>i</var>++)
+			<var>result-&gt;text[i]</var> = '-';
+
+		/* Return it */
+		<b>return</b> result;
+	}
+    </pre>
+    <p>
+    The <var>agdata</var> parameter is there mostly for the benefit of aggregate
+    functions, described later in this article.
+    Most normal (non-aggregate) functions can ignore it but you should
+    still declare it to avoid compiler warnings.
+    <blockquote>
+    I'm not sure I should say this since it's likely to change in the future,
+    but for now if your function uses a
+    <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>
+    as an argument, then the <var>args</var> array will have a <tt>null</tt>
+    where the regular expression was passed, and the actual <tt>regex_t</tt>
+    (see "<tt>man 3 regex</tt>" in Linux) will be passed as the
+    <var>agdata</var>.
+    Otherwise <var>agdata</var> can be a pointer to the current
+    <tt>json_context_t</tt>.
+    </blockquote>
+
+    <h2>Accessing parameters</h2>
+    The <var>args</var> parameter is a <tt>json_t</tt> array.
+    You can assume it will never be a deferred array.
+    This means you can use <tt>args-&gt;first</tt> to find the first argument,
+    <tt>args-&gt;first-&gt;next</tt> for the second, and so on.
+    <p>
+    The whole <var>args</var> array will be freed by the JsonCalc library
+    after your function returns.
+    There are two consequences to this:
+    <ul>
+      <li>You don't need to free the arguments when you're done.
+          That happens automatically.
+      <li>The value that your function returns can't include any part of the
+          <var>args</var> <tt>json_t</tt> tree directly.
+          (This is discussed a bit more in the next section.)
+    </ul>
+    You should always check the types of arguments.
+    Start by checking the <tt>-&gt;type</tt> field against the basic JSON
+    types such as JSON_STRING or JSON_NUMBER.
+    If you need more detailed constraints than that, do it.
+    The example at the top of this article checks to make sure the first
+    argument is a JSON_NULBER, that it isn't negative, and that no other
+    arguments were passed.
+    <p>
+    Each built-in function is always passed at least one argument.
+    If the expression that invokes it doesn't explicitly pass an argument,
+    then <tt>true</tt> will be assumed.
+    Thus, you can assume <tt>args-&gt;first</tt> is never NULL.
+
+    <h2>Returning a value</h2>
+    Each function returns a <tt>json_t</tt> value.
+    <p>
+    The value should be freshly allocated.
+    You <em>cannot</em> reuse parts of the arguments in your return value,
+    because the arguments are automatically freed after the function returns.
+    If you want to use part of the arguments in your response, use a copy
+    instead, e.g. by <tt>json_copy()</tt>.
+    <p>
+    Simple data types are easy to return, because there are functions to
+    do exactly that:
+    <table>
+      <tr><th>Type</th><th>Function</th><th>Example<th></tr>
+      <tr><td>int</td><td>json_from_int(i)</td><td><b>return</b> json_from_int(12);</td></tr>
+      <tr><td>double</td><td>json_from_double(d)</td><td><b>return</b> json_from_double(12.3);</td></tr>
+      <tr><td>double</td><td>json_string(s,len)</td><td><b>return</b> json_string("Steve",-1);</td></tr>
+      <tr><td>boolean</td><td>json_bool(b)</td><td><b>return</b> json_bool(1);</td></tr>
+      <tr><td>null</td><td>json_null()</td><td><b>return</b> json_null();</td></tr>
+    </table>
+    <p>
+    I don't want to get too deep into creation of arrays and objects,
+    but briefly:
+    Use <tt>json_array()</tt> or <tt>json_object()</tt> to allocate an empty
+    array or object, and then use <tt>json_append(container, data)</tt> to
+    add data to it.
+    For objects, the data that you add must be allocated via
+    <tt>json_key(key,value)</tt> where <var>key</var> is a simple C string,
+    and <var>value</var> is a <tt>json_t</tt>.
+    <pre>
+	json_t *<var>array</var> = json_array();
+	json_append(<var>array</var>, json_from_int(1));
+	json_append(<var>array</var>, json_from_double(1.5));
+	json_append(<var>array</var>, json_string("Hello World"));
+
+	json_t *<var>object</var> = json_<var>object</var>();
+	json_append(<var>object</var>, json_key("sample", <var>array</var>));
+
+	<em>/* The leaves object = {"sample":[1,1.5,"Hello World"]} */</em>
+    </pre>
+
+    <h2>Returning an error</h2>
+    To return an error, use the
+    <tt>json_error_null(</tt><var>code</var>, <var>format</var>, ...)</tt>
+    function.
+    <p>
+    The <var>code</var> argument is the internal identifier for that type of
+    error.
+    I suggest you just pass 0 there, at least at first.
+    Later, if you find that your potential errors are very similar those used
+    elsewhere in JsonCalc, then you can use the same <var>code</var> and
+    <var>format</var> here too.
+    The main advantage of passing a non-0 <var>code</var> is that it may allow
+    the <var>format</var> to be translated to the locale's language.
+    <p>
+    The <var>format</var> string is a printf-style format string, meaning
+    %s gets replaced by a string parameter, %d by an int, and so on.
+    It serves two purposes:
+    to provide a default text message in case no translation is available, and
+    to specify the quantity and types of any extra parameters.
+
+    <h2>Registering the function</h2>
+
+    Once your C function is written and compiled (probably in a plugin),
+    it must be registered to make JsonCalc aware of it.
+    Functions are registered via the <tt>json_calc_function_hook()</tt>
+    function.
+    This is passed the function name, a string describing the parameters,
+    and a string describing the return type.
+    Those latter two should ideally resemble TypeScript declarations,
+    though they're basically just comments so it isn't critical.
+    <pre>
+	json_calc_function_hook("hrule", "width:number", "string", jfn_hrule);
+    </pre>
+
+    <h2>Aggregate functions</h2>
+
+    Aggregate functions accumulate results across multiple elements of an array,
+    and return a single result.
+    Examples are the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
+    and <a target="_PARENT" href="../index.html?f=count">count()<a> functions.
+    In JsonCalc, this is implemented as a pair of functions:
+    One to do the aggregation, and one to return the final result.
+    For example, the aggregation half of the
+    <a target="_PARENT" href="../index.html?f=avg">avg()</a>
+    function needs to store a count of the items seen, and the sum of their
+    values.
+    The result half would return <tt>null</tt> if the final count was 0,
+    or compute the average and return that if the count was positive.
+    <p>
+    Aggregate functions invariably need a bit of persistent storage space.
+    For example, the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
+    function needs to store a count of the items seen, and the sum of their
+    values.
+    The JsonCalc library allocated space, initializes it to all-zeroes before
+    the first call, and then passes a pointer to the functions via the
+    <var>agdata</var> parameter.
+    That's a <tt>(void*)</tt> but functions can cast it to a pointer to
+    whatever data type they actually need.
+    <p>
+    Registering an aggregate function is a lot like registering a "normal"
+    function, except that we need extra arguments for the aggregator function
+    pointer, the size of the aggregate data required, and flags to optionally
+    request automatic freeing of allocated resources.
+    <p>
+    Here's an example that defines a <tt>widest()</tt> aggregate function
+    which returns the widest string value.
+
+    <pre>
+	<em>/* Define a type for storing the aggregate data we need */</em>
+	<b>typedef</b> <b>struct</b> {
+	    json_t	*/<var>str</var>;
+	    <b>int</b>		/<var>width</var>;
+	} agwidest_t;
+
+	<b>void</b> jag_widest(json_t */<var>args</var>, <b>void</b> */<var>agdata)
+	{
+		agwidest_t</var> *ag = (agwidest_t *)/<var>agdata</var>;
+		<b>int</b>	/<var>width</var>;
+
+		<em>/* Ignore non-strings.  We could convert non-strings to strings</em>
+		 * via json_serialize() but I'm trying to keep this simple.
+		 */
+		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_STRING)
+			<b>return</b>;
+
+		<em>/* Find the width of this string */</em>
+		/<var>width</var> = json_mbs_width(<var>args->first->text</var>);
+
+		<em>/* If longest so far, remember it.  If some other was being</em>
+		 * saved before, then free it now.
+		 */
+		<b>if</b> (!<var>ag-&gt;str</var> || <var>width</var> &gt; <var>ag-&gt;width</var>) {
+			<b>if</b> (<var>ag-&gt;str</var>)
+			      json_free(<var>ag-&gt;str</var>);
+			<var>ag-&gt;str</var> = json_copy(<var>args-&gt;first</var>);
+			<var>ag-&gt;width</var> = <var>width</var>;
+		}
+	}
+
+	json_t jfn_widest(json_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
+	{
+		agwidest_t *<var>ag</var> = (agwidest_t *)<var>agdata</var>;
+		json_t	*<var>result</var>;
+
+		<em>/* If no strings were ever seen, return null */</em>
+		if (!<var>ag-&gt;str</var>)
+			<b>return</b> json_null();
+
+		<em>/* Return the widest string.  Clobber the value in agdata</em>
+		 * so it isn't freed right away.
+		 */
+		<var>result</var> = <var>ag-&gt;str</var>;
+		<var>ag-&gt;str</var> = NULL;
+		<b>return</b> <var>result</var>;
+	}
+
+	<em>/* ... and later, in some initialization code somewhere */</em>
+	json_calc_aggregate_hook(
+		"widest",		<em>/* name of the function in JsonCalc expressions */</em>
+		"s:str",		<em>/* arguments -- a single string each time */</em>
+		"str",			<em>/* return type is also a string */</em>
+		jfn_widest,		<em>/* the function that returns the final value */</em>
+		jag_widest,		<em>/* the function that finds the widest-so-far */</em>
+		<b>sizeof</b>(agwidest_t),	<em>/* amount of storage space needed. */</em>
+		JSONFUNC_JSONFREE);	<em>/* automatically free the json_t in agwidest_t */</em>
+    </pre>
+    It could be used like this:
+    <div class="example">
+      <kbd>["one","two","three","four"] @ widest(this)</kbd>
+      <samp>"three"</samp>
+      The widest string in the array is "three".
+    </div>
+    <h3>Automatically freeing aggregate data</h3>
+    The bit about automatically freeing resources in the <var>agdata</var>
+    requires a bit more discussion.
+    <p>
+    There are two flags you can pass to <tt>json_calc_aggregate_hook()</tt>
+    for the final parameter: JSONFUNC_FREE and JSONFUNC_JSONFREE.
+    For JSONFUNC_FREE, the first bytes of the <var>agdata</var> are assumed
+    to be a pointer to memory that was allocated via <tt>malloc()</tt> or
+    its friends; when the <var>agdata</var> is no longer needed, if those
+    bytes represent a non-NULL pointer then <tt>free()</tt> will automatically
+    be called on that pointer, to free whatever it was pointing to.
+    The JSONFUNC_JSONFREE flag does the same, but assumes it is a <tt>json_t</tt>
+    pointer which must be freed via <tt>json_free()</tt>.
+    If you use both flags together (via the bitwise-OR operator, |),
+    then JsonCalc assumes the <var>agdata</var> starts with a pointer to
+    call <tt>free()</tt> on followed by a pointer to call <tt>json_free()</tt>
+    on.
+    The example above uses JSONFUNC_JSONFREE because the first field in the
+    <tt>agwidest_t</tt> data type is a <tt>json_t</tt> pointer.
+    <p>
+    Automatic freeing isn't just convenient; it's <em>necessary</em>.
+    The final value function (<tt>jfn_widest()</tt> in the above example)
+    can't be depended on to free it, because that function might never be
+    called, depending on the JsonCalc expression it's used in.
+    <p>
+    The <tt>jfn_widest()</tt> function returns the longest string.
+    It <em>could have</em> returned a <tt>json_copy()</tt> copy of the
+    string and then allowed JSONFUNC_JSONFREE to free the copy in the
+    <var>agdata</var>, but it's more efficient to just return it directly
+    and set the pointer in the <var>agdata</var> to NULL to prevent
+    JSONFUNC_JSONFREE from freeing it.
+
+    <h2>Adding a function in src/lib/calcfunc.c</h2>
+
+    The built-in functions are all implemented in exactly the same manner
+    as described above, with one difference:
+    Instead of registering them via <tt>json_calc_function_hook()</tt> or
+    <tt>json_calc_aggregate_hook()</tt>, they're directly added to the
+    internal linked-list of functions, via a series of initialized variables.
+    It looks clunky, but it allows us to avoid having something like a
+    <tt>json_init()<tt>.
+    There is no <tt>json_init()</tt> function because it isn't needed.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?a=The_json_t_Structure">The json_t Structure</a></td><td>Details about the <tt>json_t</tt> data type</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?a=How_to_Write_a_Plugin">How to Write a Plugin</a></td><td>Step-by-step guide to writing new plugins</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

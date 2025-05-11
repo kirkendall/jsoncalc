@@ -174,6 +174,39 @@ jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ..
 	return result;
 }
 
+/* Generate an error message */
+jsoncmdout_t *json_cmd_src_error(jsonsrc_t *src, int code, char *fmt, ...)
+{
+	va_list	ap;
+	size_t	size;
+	jsoncmdout_t *result;
+
+	/* !!!Translate the message via catalog using "code".  EXCEPT if the
+	 * format is "%s" then assume it has already been translated.
+	 */
+
+	/* Figure out how long the message will be */
+	va_start(ap, fmt);
+	size = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+
+	/* Allocate the error structure with enough space for the message */
+	result = (jsoncmdout_t *)malloc(sizeof(jsoncmdout_t) + size);
+
+	/* Fill the error structure */
+	memset(result, 0, sizeof(jsoncmdout_t) + size);
+	result->filename = src->filename;
+	result->lineno = jcmdline(src);
+	result->code = code;
+	va_start(ap, fmt);
+	vsnprintf(result->text, size + 1, fmt, ap);
+	va_end(ap);
+
+	/* Return it */
+	return result;
+}
+
+
 /*****************************************************************************
  * The following functions parse parts of an expression.  The various
  * {cmdname}_parse functions can call these as they see fit.
@@ -2348,7 +2381,7 @@ static jsoncmd_t *set_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		str = json_cmd_parse_paren(src);
 		if (!str) {
 			*referr = json_cmd_error(src->filename, jcmdline(src), 1, "Missing ) in \"%s\" expression", "set");
-			return cmd;
+			return NULL;
 		}
 
 		/* Parse it */

@@ -68,38 +68,19 @@ static char *jcreadline(const char *prompt)
 	size_t	i, size;
 
 	/* Read a line into a dynamic buffer; */
-	if (!inhibit_readline) {
-		expr = readline(prompt);
-		if (!expr)
-			return NULL;
-		i = strlen(expr);
-	} else {
-		fputs(prompt, stdout);
-		size = 80;
-		expr = (char *)malloc(size);
-		for (i = 0; (ch = getchar()) != EOF && ch != '\n'; i++) {
-			if (size < i + 2) {
-				size += 80;
-				expr = realloc(expr, size);
-			}
-			expr[i] = ch;
-		}
-		if (ch == EOF) {
-			free(expr);
-			return NULL;
-		}
-	}
+	expr = readline(prompt);
+	if (!expr)
+		return NULL;
+	i = strlen(expr);
 
 	/* Trim trailing whitespace, possibly including a newline */
 	for (; i > 0 && isspace(expr[i - 1]); i--) {
 	}
 	expr[i] = '\0';
 
-	/* Add to history, if using readline */
-	if (!inhibit_readline) {
-		add_history(expr);
-		write_history(historyfile());
-	}
+	/* Add to history */
+	add_history(expr);
+	write_history(historyfile());
 
 	/* Return it */
 	return expr;

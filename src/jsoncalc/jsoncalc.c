@@ -19,25 +19,19 @@
 /* getopt() variables not declared in <unistd.h> */
 extern char *optarg;
 extern int optind, opterr, optopt;
-#define OPTFLAGS "c:f:irsoal:uD:O:J:U?"
+#define OPTFLAGS "c:f:ioaus:S:pl:L:d:D:j:r?"
 
 /* -i -- Force interactive mode */
 int interactive = 0;
 
-/* -ccmd or -ffile -- Suggest batch mode if not forced interactive */
-int maybe_batch = 0;
-
-/* -r -- Inhibit the readline library? */
-int inhibit_readline = 0;
-
-/* -s -- Safer -- Limit file access to named files, and inhibit shell access */
-int safer = 0;
+/* -r -- Restricted -- Limit file access to named files, inhibit shell access */
+int restricted = 0;
 
 /* -u -- Update -- Allow files named on the command line to be rewritten */
 int allow_update = 0;
 
 /* -D -- This is a directory to check for autoload */
-char *autoload_dir = NULL;
+json_t *autoload_list = NULL;
 
 /* This is the context -- a stack of data that is available to expressions. */
 jsoncontext_t *context;
@@ -74,27 +68,28 @@ void debug_usage()
 static void usage(char *fmt, char *data)
 {
 	puts("Usage: jsoncalc [flags] [script] [name=value]... [file.json]...");
-	puts("Flags: -c calc    Evaluate calc, output any results, and quit.");
-	puts("       -f file    Read script from file, output the result, and quit.");
-	puts("       -i         Interactive.");
-	puts("       -r         Inhibit the use of readline for interactive input.");
-	puts("       -u         Update - Write back any modified *.json files listed in args.");
-	puts("       -s         Safer - Limit shell and file access for security.");
-	puts("       -o         Object - Assume new files should contain an empty object.");
-	puts("       -a         Array - Assume new files should contain an empty array.");
-	puts("       -l plugin  Load libjcplugin.so from $JSONCALCPATH or $LIBPATH.");
-	puts("       -d dir     Autoload files from directory \"dir\" (this invocation only).");
-	puts("       -D dir     Autoload files from directory \"dir\" (persist, via -U).");
-	puts("       -O options Adjusts the configuration, including output format.");
-	puts("       -J flags   Debug: t=token, f=file, b=buffer, a=abort, e=expr, c=calc");
-	puts("       -U         Save -O, -C, -D, -J flags as default config");
+	puts("Flags: -c command        Evaluate command for each input file, and quit.");
+	puts("       -f file           Read script, run for each input file, and quit.");
+	puts("       -i                Interactive.");
+	puts("       -o                Object - Assume new files contain an empty object.");
+	puts("       -a                Array - Assume new files contain an empty array.");
+	puts("       -u                Update - Write back any modified files.");
+	puts("       -s config         Adjust the configuration for this session only.");
+	puts("       -S config         Adjust the configurarion persistently across sessions.");
+	puts("       -p                Pretty-print, same as -sjson,pretty,oneline=0.");
+	puts("       -l plugin,config  Load/configure a plugin for this session only.");
+	puts("       -L plugin,config  Load/configure a plugin persistently across sessions.");
+	puts("       -d directory      Autoload files from directory for this session only.");
+	puts("       -D directory      Autoload from directory persistently across sessions.");
+	puts("       -j debugflags     Debugging settings, use -j? for details.");
+	puts("       -r                Restricted.  Inhibits some sensitive actions.");
 	puts("This program manipulates JSON data. Without one of -ccalc or -ffile,");
-	puts("it will assume -c\"this\" if -Ooptions is given, or -i if no -Ooptions.  Any");
+	puts("it will assume -c\"this\" if -sconfig is given, or -i if no -sconfig.  Any");
 	puts("name=value parameters on the shell command line will be added to the context,");
 	puts("so you can use them like variables. Any *.json files named on the command line");
 	puts("will be processed one at a time for -ccalc or -ffile.  For -i, the first *.json");
 	puts("is loaded as \"this\" and you can switch to others manually.");
-	puts("The -ccmd, -ffile, -lplugin, -ddir, and -Ddir flags may be repeated.");
+	puts("Most flags may be repeated for a cumulative effect.");
 	if (fmt)
 		printf(fmt, data);
 	exit(1);
@@ -108,8 +103,9 @@ static void usage(char *fmt, char *data)
 json_t *autoload(char *key)
 {
 	char    filename[1000];
-	json_t  *json;
+	json_t  *section, *dir, *ext, *json;
 
+#if 0 /* !!! Isn't there already a "files" system const? */
 	/* If "files" then return an array of file basenames */
 	if (!strcmp(key, "files")) {
 		glob_t files;
@@ -139,15 +135,33 @@ json_t *autoload(char *key)
 		}
 		return NULL;
 	}
+#endif
 
-	/* Is there a key.json file? */
-	sprintf(filename, "%s/%s.json", autoload_dir, key);
-	if (access(filename, R_OK) != 0)
+	/* Scan for a key.json (or other known extensions) file in any of
+	 * the autoload directories.
+	 */
+	dir = json_by_key(json_config, "autoload");
+	if (!dir || dir->type != JSON_ARRAY)
 		return NULL;
+	for (dir = dir->first; dir; dir = dir->next) {
+		if (dir->type != JSON_STRING)
+			continue;
+		ext = json_by_key(json_system, "extensions");
+		if (!ext || ext->type != JSON_ARRAY)
+			return NULL;
+		for (ext = ext->first; ext; ext = ext->next) {
+			if (ext->type != JSON_STRING)
+				continue;
+			sprintf(filename, "%s/%s.%s", dir->text, key, ext->text);
+			if (access(filename, R_OK) == 0) {
+				return json_parse_file(filename);
+			}
+		}
+	}
 
-	/* Try to parse the file */
-	json = json_parse_file(filename);
-	return json;
+	/* No joy */
+	return NULL;
+
 }
 
 
@@ -241,6 +255,10 @@ int isscript(char *filename)
 	FILE	*fp;
 	size_t	nbytes;
 
+	/* If it doesn't exist, then it isn't a script */
+	if (access(filename, F_OK) < 0)
+		return 0;
+
 	/* If it has a well known filename extension, trust it */
 	if (ext) {
 		if (!strcasecmp(ext, ".json")
@@ -280,6 +298,86 @@ int isscript(char *filename)
 	return 0;
 }
 
+/* Delete a string from an array of strings */
+static void delete_from_array(json_t *array, const char *str)
+{
+	json_t *scan, *lag;
+
+	/* If array is empty, do nothing */
+	if (!array->first)
+		return;
+
+	/* Scan for the string */
+	for (lag = NULL, scan = array->first; scan; lag = scan, scan = scan->next)
+		if (!strcmp(scan->text, str))
+			break;
+	if (scan) {
+		if (lag)
+			lag->next = scan->next;
+		else
+			array->first = scan->next;
+		scan->next = NULL;
+		json_free(scan);
+	}
+}
+
+static int load_plugin(char *arg)
+{
+	json_t	*err;
+
+	/* Find the list of plugins in config */
+	json_t	*section = json_by_key(json_config, "pluginloaded");
+
+	/* Make a copy of the "plugin,settings" string */
+	char *plugin = strdup(arg);
+
+	/* Separate the name from the settings */
+	arg = strchr(plugin, ',');
+	if (arg)
+		*arg++ = '\0';
+
+	/* Delete this plugin from the list if already there */
+	/* Load the plugin */
+	err = json_plugin_load(plugin, 0, 0);
+	if (err) {
+		fprintf(stderr, "%s\n", err->text);
+		json_free(err);
+		while (context)
+			context = json_context_free(context);
+		return 1;
+	}
+
+	/* If there are options, process them now */
+	if (arg && *arg)
+	{ 
+		/* Find the json_config.plugin.{plugin} section.
+		 * If it doesn't exist, then fail.
+		 */
+		section = json_by_key(json_config, "plugin");
+		if (section)
+			section = json_by_key(section, plugin);
+		if (!section) {
+			fprintf(stderr, "The \"%s\" plugin doesn't use options\n", plugin);
+			while (context)
+				context = json_context_free(context);
+			return 1;
+		}
+
+		/* Parse the options.  Watch for errors */
+		err = json_config_parse(section, arg, NULL);
+		if (err) {
+			while (context)
+				context = json_context_free(context);
+			if (err) {
+				puts(err->text);
+				json_free(err);
+				return 1;
+			}
+			return 0;
+		}
+	}
+}
+
 
 /******************************************************************************/
 int main(int argc, char **argv)
@@ -287,9 +385,9 @@ int main(int argc, char **argv)
 	int	i;
 	json_t	*args, *section, *err;
 	char	*val, *plugin;
-	int	saveconfig = 0;
-	int	anyoption = 0;
+	int	anypersistent = 0;
 	int	anyfiles = 0;
+	int	firstscript = 0;
 	int	opt;
 	int	exitcode = 0;
 
@@ -318,59 +416,215 @@ int main(int argc, char **argv)
 	 */
 	json_config_load("jsoncalc");
 
+	/* The library's default settings don't include an "autoload" list
+	 * because the library doesn't support that itself; the jsoncalc
+	 * program does.  If there is no "autoload" list in config, then
+	 * add it now.
+	 */
+	section = json_by_key(json_config, "autoload");
+	if (!section || section->type != JSON_ARRAY)
+		json_append(json_config, json_key("autoload", json_array()));
+
 	/* Set the formatting from the config */
 	json_format_set(NULL, NULL);
 
-	/* Do a quick scan for a "-u" flag.  We need to do this before we
-	 * create the context.
+	/* Scan the options for things we need to know to decide whether this
+	 * will be batch or interactive.  Check whether the first arg after
+	 * the options is a script file to help with that decision.
 	 */
-	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
-		switch (opt) {
-		case 'u':
-			allow_update = 1;
-			json_append(json_system, json_key("update", json_bool(1)));
-			break;
-		}
-	}
-	optind = 1;
-
-	/* Create an object that will hold any name=value parameters, and
-	 * start a context.
-	 */
-	args = json_object();
-	context = json_context_std(args);
-
-	/* Parse command-line flags */
-	if (argc >= 2 && !strcmp(argv[1], "--help")) {
-		while (context)
-			context = json_context_free(context);
-		usage(NULL, NULL);
-	}
-	interactive = 0;
+	interactive = -1;
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
-			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
-			maybe_batch = 1;
-			break;
 		case 'f':
-			initcmd = json_cmd_append(initcmd, json_cmd_parse_file(optarg), context);
-			maybe_batch = 1;
+		case 'p':
+		case 's':
+			if (interactive == -1)
+				interactive = 0;
 			break;
 		case 'i':
 			interactive = 1;
 			break;
-		case 'r':
-			inhibit_readline = 1;
+		case 'L':
+			/* Adjust the list of persistent plugins but DON'T LOAD
+			 * YET!  We'll load the whole peristent list after
+			 * we're done processing all -L flags, if interactive.
+			 */
+			section = json_by_key(json_config, "pluginpersist");
+			plugin = strdup(optarg);
+			val = strchr(plugin, ',');
+			if (val)
+				*val = '\0';
+			if (*plugin == '-') {
+				/* Delete from the list of peristent plugins */
+				delete_from_array(section, plugin + 1);
+			} else {
+				/* Delete if already there, and then append
+				 * to the end of the list.
+				 */
+				delete_from_array(section, plugin);
+				json_append(section, json_string(plugin, -1));
+			}
+			free(plugin);
 			break;
-		case 's':
-			safer = 1;
+
+		case '?':
+			usage(NULL, NULL);
+			break;
+		}
+	}
+	if (interactive != 1 && optind < argc)
+		firstscript = isscript(argv[optind]);
+	if (interactive == -1 && firstscript)
+		interactive = 0;
+	optind = 1;
+
+	/* Set the runmode in json_system */
+	val = interactive ? "interactive" : "batch";
+	json_append(json_system, json_key("runmode", json_string(val, -1)));
+
+	/* Load the persistent plugins.  We have to do this before the
+	 * we can process any settings included in -Dplugin,settings flags.
+	 */
+	if (interactive) {
+		section = json_by_key(json_config, "pluginpersist");
+		for (args = section->first; args; args = args->next) {
+			err = json_plugin_load(args->text, 0, 0);
+			if (err) {
+				fprintf(stderr, "%s\n", err->text);
+				json_free(err);
+				return 1;
+			}
+		}
+	}
+
+	/* Parse persistent flags */
+	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
+		if (!strchr("DLS", opt))
+			continue;
+		if (!interactive) {
+			fprintf(stderr, "Persistent options only work for interactive invocations\n");
+			return 1;
+		}
+		anypersistent = 1;
+		switch (opt) {
+		case 'D':
+			section = json_by_key(json_config, "autoload");
+			if (*optarg == '-') {
+				/* Delete from the list */
+				delete_from_array(section, optarg + 1);
+			} else {
+				/* If it was already in the list, delete it */
+				delete_from_array(section, optarg);
+
+				/* Insert at front of the list */
+				args = json_string(optarg, -1);
+				args->next = section->first;
+				section->first = args;
+			}
+			break;
+		case 'L':
+			/* We've already adjusted the pluginpersist list
+			 * and loaded all persistent plugins.  All we're doing
+			 * here is adjusting each plugin's settings.
+			 */
+			section = json_by_key(json_config, "pluginlist");
+
+			/* Separate the settings from the name */
+			plugin = strdup(optarg);
+			val = strchr(plugin, ',');
+			if (val) {
+				*val++ = '\0';
+
+				/* Find this plugin's settings */
+				section = json_by_key(json_config, "plugin");
+				if (section)
+					section = json_by_key(section, plugin);
+				if (!section) {
+					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
+					return 1;
+				}
+
+				/* Adjust the settings */
+				err = json_config_parse(section, val, NULL);
+				if (err) {
+					puts(err->text);
+					json_free(err);
+					return 1;
+				}
+			}
+			free(plugin);
+			break;
+
+		case 'S':
+			/* Parse the options. */
+			section = json_by_key(json_config, "interactive");
+			err = json_config_parse(section, val, NULL);
+			if (err) {
+				puts(err->text);
+				json_free(err);
+				return 1;
+			}
+
+		}
+	}
+	optind = 1;
+
+	/* If any persistent settings were changed, save the config */
+	if (anypersistent)
+		json_config_save("jsoncalc");
+
+	/* Register the autoload handler if we're interactive.  If we end up
+	 * not using autoload, having this registered will be only a minor
+	 * inefficiency.
+	 */
+	if (interactive)
+		json_context_hook(autodir);
+
+	/* Create an object that will hold any name=value parameters, and
+	 * start a context using it.  We have to do this before our final
+	 * scan of command-line options because we need to know the context
+	 * while parsing -ccommand or -fscript options.
+	 */
+	args = json_object();
+	context = json_context_std(args);
+
+	/* Parse remaining command-line flags */
+	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
+		switch (opt) {
+		case 'c':
+			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
+			break;
+		case 'f':
+			initcmd = json_cmd_append(initcmd, json_cmd_parse_file(optarg), context);
+			break;
+		case 'r':
+			restricted = 1;
+			break;
+		case 'u':
+			allow_update = 1;
+			json_append(json_system, json_key("update", json_bool(1)));
 			break;
 		case 'o':
 			json_file_new_type = 'o';
 			break;
 		case 'a':
 			json_file_new_type = 'a';
+			break;
+		case 'd':
+			section = json_by_key(json_config, "autoload");
+			if (*optarg == '-') {
+				/* Delete from the list */
+				delete_from_array(section, optarg + 1);
+			} else {
+				/* If it was already in the list, delete it */
+				delete_from_array(section, optarg);
+
+				/* Insert at front of the list */
+				args = json_string(optarg, -1);
+				args->next = section->first;
+				section->first = args;
+			}
 			break;
 		case 'l':
 			/* Make a copy of the -lplugin,options string */
@@ -401,7 +655,7 @@ int main(int argc, char **argv)
 				if (section)
 					section = json_by_key(section, plugin);
 				if (!section) {
-					fprintf(stderr, "The \"%s\" plugin doesn't use options\n");
+					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
 					while (context)
 						context = json_context_free(context);
 					return 1;
@@ -412,25 +666,37 @@ int main(int argc, char **argv)
 				if (err) {
 					while (context)
 						context = json_context_free(context);
-					if (err) {
-						puts(err->text);
-						json_free(err);
-						return 1;
-					}
-					return 0;
+					fprintf(stderr, "%s\n", err->text);
+					json_free(err);
+					return 1;
 				}
 			}
 			break;
-		case 'u':
-			/* already handled, above */
+		case 's':
+			section = json_by_key(json_config, interactive ? "interactive" : "batch");
+			err = json_config_parse(section, optarg, NULL);
+			if (err) {
+				while (context)
+					context = json_context_free(context);
+				fprintf(stderr, "%s\n", err->text);
+				return 1;
+			}
 			break;
-		case 'D':
-			autoload_dir = optarg;
+		case 'p':
+			if (interactive) {
+				fprintf(stderr, "The -p flag only works for batch invocations\n");
+				return 1;
+			}
+			section = json_by_key(json_config, "batch");
+			err = json_config_parse(section, optarg, NULL);
+			if (err) {
+				while (context)
+					context = json_context_free(context);
+				fprintf(stderr, "%s\n", err->text);
+				return 1;
+			}
 			break;
-		case 'O':
-			anyoption = 1;
-			break;
-		case 'J':
+		case 'j':
 			if (*optarg == '?' || json_debug(optarg)) {
 				while (context)
 					context = json_context_free(context);
@@ -438,8 +704,10 @@ int main(int argc, char **argv)
 				return 1;
 			}
 			break;
-		case 'U':
-			saveconfig = 1;
+		case 'L':
+		case 'D':
+		case 'S':
+			/* already handled */
 			break;
 		case '?':
 			while (context)
@@ -459,30 +727,24 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Register the -Ddirectory autoload.  However, since we have already
-	 * started the context (so -ccalc and -ffile could set variables),
-	 * we must also explicitly insert it into JsonCalc's main context.
+	/* We determined earlier whether the first non-option argument is a
+	 * script (as opposed to data or a name=value).  If it's a script
+	 * then parse it like a -fscript flag.
 	 */
-	if (autoload_dir) {
-		/* Add the hook, for the benefit of any later contexts */
-		json_context_hook(autodir);
-
-		/* Too late to automatically add it to JsonCalc's main context,
-		 * so we explicitly add it just under the "this" context.
-		 */
-		jsoncontext_t *thiscontext = json_context_insert(&context, JSON_CONTEXT_THIS);
-		thiscontext->older = autodir(thiscontext->older); 
-	}
-
-	/* If no "-i" was given, then the first argument after options may be
-	 * the name of a script to load and run like "-f".  Or it could be the
-	 * first data file.  Check!
-	 */
-	if (!interactive && optind < argc && isscript(argv[optind])) {
+	if (firstscript) {
 		initcmd = json_cmd_append(initcmd, json_cmd_parse_file(argv[optind]), context);
-		maybe_batch = 1;
 		optind++;
 	}
+
+	/* If -ccmd or -fscript resulted in an error (already reported) then
+	 * quit now.
+	 */
+	if (initcmd == JSON_CMD_ERROR) {
+		while (context)
+			context = json_context_free(context);
+		return 2;
+	}
+
 
 	/* Add any name=value parameters to the "args" object that we created
 	 * when we started the context.  Also, add any data files named on
@@ -491,7 +753,7 @@ int main(int argc, char **argv)
 	for (i = optind; i < argc; i++) {
 		json_t *tmp;
 
-		/* If it looks like a file, load it as a file */
+		/* If it looks like a file, then add it to the list of files */
 		if (strchr(argv[i], '.')
 		 || !strcmp(argv[i], "-")
 		 || 0 == access(argv[i], F_OK)) {
@@ -526,52 +788,12 @@ int main(int argc, char **argv)
 	/* Start on the first file named on the command line, if any */
 	json_context_file(context, NULL, 0, NULL);
 
-	/* If -ccmd or -ffile resulted in an error (already reported) then quit
+	/* If this was determined to be a batch invocation (not interactive)
+	 * but no -ccommand or -fscript flags were given, then assume "-cthis".
+	 * so any data will simply be output.
 	 */
-	if (initcmd == JSON_CMD_ERROR) {
-		while (context)
-			context = json_context_free(context);
-		return 2;
-	}
-
-	/* If no commands were defined via -ccmd or -ffile, and no -i was given
-	 * to explicitly make this be interactive, but a -Ooption was used to
-	 * specify an output format, then assume -cthis so any data will be
-	 * output in the requested format.
-	 */
-	if (!initcmd && !interactive && anyoption)
+	if (!interactive && !initcmd)
 		initcmd = json_cmd_parse_string("this");
-
-	/* If still no initcmd then assume interactive even without -i */
-	if (!initcmd)
-		interactive = 1;
-
-	/* Now that we definitively know whether this will be interactive or
-	 * batch, we can process process any -Ooptions
-	 */
-	optind = 1;
-	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
-		if (opt != 'O')
-			continue;
-
-		/* Choose whether to use batch or interactive */
-		val = interactive ? "interactive" : "batch";
-		json_append(json_system, json_key("runmode", json_string(val, -1)));
-		section = json_by_key(json_config, val);
-
-		/* Parse the option string.  Watch for errors. */
-		err = json_config_parse(section, optarg, NULL);
-		if (err) {
-			while (context)
-				context = json_context_free(context);
-			if (err) {
-				puts(err->text);
-				json_free(err);
-				return 1;
-			}
-			return 0;
-		}
-	}
 
 	/* If batch mode and no filenames were named on the command line,
 	 * then assume "-", unless stdin is a tty.
@@ -587,10 +809,6 @@ int main(int argc, char **argv)
 		interact(&context, initcmd);
 	else
 		batch(&context, initcmd);
-
-	/* If supposed to write the config, do that */
-	if (saveconfig)
-		json_config_save("jsoncalc");
 
 	/* Clean up & exit */
 CleanExit:

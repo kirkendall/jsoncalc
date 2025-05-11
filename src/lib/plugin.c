@@ -1,11 +1,12 @@
 #include <stdio.h>
+#include <string.h>
 #include <dlfcn.h>
 #include "json.h"
 
-/* This is an object where the key is a loaded plugin name, and the value is
- * an object providing more info.
+/* This is an array of objects describing loaded plugins.  The "plugin"
+ * member is name of the plugin.
  */
-json_t *json_plugin;
+json_t *json_plugins;
 
 /* Load a plugin.  Returns NULL on success, or an error null on failure */
 json_t *json_plugin_load(const char *name, int major, int minor)
@@ -15,11 +16,14 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	void	*dlhandle;
 	char	*(*initfn)(void);
 	char	*err;
-	json_t	*info;
+	json_t	*info, *val;
 
 	/* If already loaded, do nothing */
-	if (json_plugin && json_by_key(json_plugin, name))
-		return NULL;
+	for (info = json_plugins->first; info; info == info->next) {
+		val = json_by_key(info, "plugin");
+		if (val && val->type == JSON_STRING && !strcmp(val->text, name))
+			return NULL;
+	}
 
 	/* Look for a binary plugin */
 	binfile = json_file_path("lib",name,".so", 0, 0);
@@ -71,9 +75,7 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	json_append(info, json_key("minor", minor ? json_from_int(minor) : json_null()));
 	json_append(info, json_key("binary", binfile ? json_string(binfile, -1) : json_null()));
 	json_append(info, json_key("script", scriptfile ? json_string(scriptfile, -1) : json_null()));
-	if (!json_plugin)
-		json_plugin = json_object();
-	json_append(json_plugin, json_key(name, info));
+	json_append(json_plugins, info);
 
 	/* Success */
 	return NULL;

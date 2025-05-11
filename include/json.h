@@ -282,7 +282,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 #define json_config_get_text(section, key) json_text(json_config_get(section, key))
 
 /* Plugins */
-json_t *json_plugin;
+json_t *json_plugins;
 json_t *json_plugin_load(const char *name, int major, int minor);
 
 

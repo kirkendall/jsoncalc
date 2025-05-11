@@ -72,18 +72,22 @@ jsoncontext_t *json_context_free(jsoncontext_t *context)
         if (!context)
                 return NULL;
 
-        /* If supposed to free data, do that.  One tricky bit: All contexts
-         * share a single Math object (in the bottom layer), so we don't want
-	 * to free it.
-         */
+        /* If supposed to free data, do that. */
         if ((context->flags & JSON_CONTEXT_NOFREE) == 0) {
+		/* One tricky thing: The bottom layer's data may contain a
+		 * reference to json_context_math.  Since all contexts share
+		 * a single copy of that object, we don't want to free it here.
+		 */
 		if (!context->older) {
-			for (noMath = context->data->first;
-			     noMath && noMath->first != json_context_math;
-			     noMath = noMath->next) {
+			noMath = json_by_expr(context->data, "global.consts", NULL);
+			if (noMath) {
+				for (noMath = noMath->first;
+				     noMath && noMath->first != json_context_math;
+				     noMath = noMath->next) {
+				}
+				if (noMath)
+					noMath->first = json_object();
 			}
-			if (noMath)
-				noMath->first = json_object();
 		}
 		json_free(context->data);
 	}

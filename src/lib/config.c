@@ -112,13 +112,8 @@ static const char *defaultconfig = "{"
 		"\"bg\":\"on normal\","
 		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
 	"},"
-	"\"autoload\":{"
-		"\"json\":true,"
-		"\"csv\":true,"
-		"\"path\":[]"
-	"},"
-	"\"plugin\":{"
-	"}"
+	"\"pluginpersist\":[],"
+	"\"plugin\":{}"
 "}";
 
 
@@ -130,6 +125,7 @@ json_t *json_config;
  */
 json_t *json_system;
 
+/* Merge new settings into old settings. */
 static void merge(json_t *old, json_t *newload)
 {
 	json_t *newkey, *oldmem;
@@ -183,9 +179,13 @@ void json_config_load(const char *name)
 		pathname = json_file_path(NULL, NULL, NULL, 0, 0);
 		json_append(json_system, json_key("configdir", json_string(pathname, -1)));
 		free(pathname);
-		if (!json_plugin)
-			json_plugin = json_object();
-		json_append(json_system, json_key("plugin", json_plugin));
+		if (!json_plugins)
+			json_plugins = json_array();
+		json_append(json_system, json_key("plugins", json_plugins));
+		conf = json_array();
+		json_append(conf, json_string("json", -1));
+		json_append(json_system, json_key("extensions", conf));
+
 		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
 		json_append(json_system, json_key("update", json_bool(0)));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
@@ -214,7 +214,8 @@ void json_config_load(const char *name)
 }
 
 /* Select whether this part of json_config gets saved.  It should save
- * everything except members that have names ending with "-list".
+ * everything except members that have names ending with "-list", and a
+ * few others.
  */
 static int notlist(json_t *mem)
 {
@@ -224,6 +225,8 @@ static int notlist(json_t *mem)
 
 	/* Members named "batch" or "*-list" are skipped */
 	if (!strcmp(mem->text, "batch"))
+		return 0;
+	if (!strcmp(mem->text, "pluginloaded"))
 		return 0;
 	if (strlen(mem->text) >= 5
 	 && !strcmp(mem->text + strlen(mem->text) - 5, "-list"))

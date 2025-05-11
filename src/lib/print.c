@@ -293,6 +293,9 @@ static void jccsv(json_t *json, jsonformat_t *format) {
 		}
 		putc('\n', format->fp);
 	}
+
+	/* Free the column data */
+	json_free(headers);
 }
 
 /* When writing to stdout, this line indicates whether the last character

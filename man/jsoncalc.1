@@ -83,22 +83,16 @@ too.
 
 .TP
 .B -r
-Inhibit the use of the GNU readline library for interactive use.
-Commands will be read with the operating system's line buffering, so no there's no
-history or name completion.
-Still, this can be handy if you're running JsonCalc in some unusual contexts
-such as inside a debugger.
+Restricted mode.
+This inhibits some dangerous activities such as invoking an external shell
+command, or reading/writing files not named on the command line.
+This sofware is distributed with no guarantees of any kind.
+And even if
+.B jsoncalc
+itself is perfect, plugins might not be.
 
 .TP
--s
-This selects "safer" mode, which inhibits writing to files not named on the
-command line, and warns if a plugin might do dangerous things.
-JsonCalc is offered without any guarantee though, so don't blame me if
-.B -s
-lets you down.
-
-.TP
-.BI -d dir
+.BI -d directory
 Causes any unresolved names in an expression to be interpretted as
 a request to load
 .IR dir / name .json
@@ -112,7 +106,18 @@ This happens on demand; it doesn't proactively load all files in the "foo"
 directory into variables.
 
 .TP
-.BI -J flags
+.BI -D directory
+This is like
+.BI -d dir
+except that uppercase
+.BI -D dir
+is persistent across invocations, for interactive use only.
+If you want to remove a directory from the persistent list, put a "-" before
+the directory name, as in
+.BI -D- dir.
+
+.TP
+.BI -j flags
 Sets debugging flags.
 .I flags
 is a string of letters representing the debugging features to enable.
@@ -129,31 +134,61 @@ to call abort() on a JSON error,
 to output info for json_by_expr(), or
 .B c
 to output info for json_calc().
+
 .TP
-.BI -O format
-This controls the output format.
-See the "OUTPUT FORMATS" section, below.
+.BI -s settings
+This controls the output format, colors, and some other features.
+See the "SETTINGS" section, below.
+
 .TP
-.BI -C name = colors
-This controls the colors used for
-.BR -O color.
+.BI -S settings
+This is like
+.BI -s settings
+except that uppercase
+.BI -S settings
+is persistent across invocations, for interactive invocations only.
+
 .TP
-.B -U
-This causes the output format and debugging settings to be stored in
-a configuration file.
+.BI -l plugin , settings
+This loads a plugin.
+Most plugins are binary files that get linked into
+.B jsoncalc
+at runtime, to provide new functions, commands, file formats, or other features.
+Some plugins may be implemented in
+.BR jsoncalc 's
+scripting language.
+If a plugin supports settings, then you can set them by appending them after
+the plugin's name, with a comma as a delimiter.
+
+.TP
+.BI -L plugin , settings
+This is like
+.BI -l plugin , settings
+except that uppercase
+.BI -L plugin , settings
+is persistent across invocations, for interactive invocations only.
+To remove a plugin from the list, use a "-" before the plugin name, as in
+.BI -L- plugin .
 
 .P
-When running interactively, you can also enter
-.BI -O format,
-.BI -C name = colors,
+Note that the uppercase
+.BI -D directory ,
+.BI -S settings ,
 and
-.BI -J debug
-on lines by themselves, instead of an expression to evaluate.
+.BI -L plugin
+options are all like the corresponding lowercase option, except that
+the uppercase versions are persistent across interactive invocations.
+This can be very convenient.
+They intentionally don't apply for batch-mode invocations because there
+you want a consistent environment for the script to run in.
+If a script needs certain plugins to be loaded, it should use the
+.B plugin
+command to explicitly say so.
 
-.SH "OUTPUT FORMATS"
+.SH "SETTINGS"
 The
-.BI -O format
-option controls the output format.
+.BI -s settings
+option mostly controls the output format.
 The
 .I format
 is a series of names or
@@ -161,16 +196,22 @@ is a series of names or
 pairs.
 .P
 Most settings are boolean.
-Their value can be set to Y/Yes/y/yes/T/True/t/true/1 to turn the option on,
-or N/No/n/no/F/False/f/false/0 to turn the option off.
-Also, giving just the name without a value will turn it on, and prepending
-"no" to the name will turn it off.
-For example, "-Opretty" will enable pretty-printing, and "-Onocolor" will
+You can turn them on just by giving their name, or turn them off by
+ prepending "no" to the name.
+For example, "-spretty" will enable pretty-printing, and "-snocolor" will
 disable colors in the output.
 .P
-Arrays of objects are called "tables", and can support more database-oriented
-output formats such as "grid" and "csv".
+Some options are strings that have a list of preferred values associated
+with them.
+You can give just the value, without a name, and
+.B jsoncalc
+will figure out which name it belongs to.
+For example, there's a "table" setting with a list of preferred values that
+includes "csv", so if you want tables to be output in CSV format, you could
+either say "-stable=csv" or simply "-scsv".
 
+.P
+The main output format options are:
 .TS
 c c l.
 NAME	TYPE	MEANING
@@ -178,6 +219,7 @@ tab	number	Indentation to add for each layer while pretty-printing.
 oneline	number	If >0, JSON data shorter than this won't pretty-print.
 digits	number	Precision when converting floating point to text.
 elem	boolean	For top-level arrays, output elements one-per-line.
+table	string	One of csv/sh/grid/json to control table output.
 csv	boolean	Output tables in CSV format.
 sh	boolean	Output tables as shell variable assignments.
 grid	boolean Output tables as columns and rows.
@@ -189,15 +231,50 @@ prefix	string	For "sh" output, prepend this to variable names.
 null	string	How to display null in "grid" format.
 .TE
 .P
-The "sh" output format deserves a bit more discussion.
-Each row of the table will be output as a line of
+Additionally, there are sections to select the color and other attributes of
+certain types of text output.
+These are whole objects, not simple strings/boolean/numbers.
+The
+.I settings
+parser handles this pretty well, though.
+When setting the value of an object, everything up to the next comma or
+end of the setting is interpreted as a space-delimit list of settings within
+that object.
+For example, you can set the attributes of the column headers in the "grid"
+table output format via a string such as "-sgridhead=italic underlined yellow".
+The "italic" and "underlined" settings are boolean, and "yellow" is in the
+preferred value list for the "fg" (foreground color) setting.
+.P
+The types of text that can have their attributes set this way include
+.B result
+(normal output),
+.B error
+(error messages),
+.B gridhead
+(column headings in "table=grid" format)
+and
+.B gridline
+(Column separators in "table=grid").
+Their attributes are:
+.TS
+c c l.
+bold	boolean	Boldface or bright
+dim	boolean	Dim
+italic	boolean	Italic or oblique
+underline	boolean	A line under the text
+linethru	boolean	A line through the midline of the text
+blinking	boolean	Nasty blinking text
+fg	string	Foreground color: normal, black, red, green, yellow, blue, magenta, cyan, or white
+bg	string	Background color, like "fg" with with "on " prepended, such as "on red"
+
+.SS "SH OUTPUT"
+The "sh" table output format deserves a bit more discussion.
+Each row of the table will be output as a line of multiple
 .IR name = value
-pairs.
-Since a "table" is an array of objects, each row of the array is an object.
-The names and values represent the members of each row object.
+pairs, giving the values for all columns of the table in that row.
 In a shell script, you can read the lines and evaluate them one-by-one like this:
 .nf
-    jsoncalc -Osh -c scores test.json | while read row
+    jsoncalc -ssh -c scores sampledata/test.json | while read row
     do
         eval $row
         echo name=$name, score=$score
@@ -216,8 +293,7 @@ If you expect the output to be a single object then you can use
 The expression syntax resembles that of JavaScript expressions,
 but with database-like extensions.
 For a full description of the syntax, see the
-.BR json_calc (3)
-man page.
+JsonCalc web page.
 In short, though, the extensions are:
 .IP \ \(bu 3n
 .IB array @ filter
@@ -287,7 +363,7 @@ into the
 .I parts
 variable.
 .TP
-jsoncalc -Opretty file.json
+jsoncalc -p file.json
 Pretty-print file.json.
 This is non-interactive because
 .BI -O format

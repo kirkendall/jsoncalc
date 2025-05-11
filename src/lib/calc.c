@@ -41,11 +41,6 @@
  */
 
 
-/* This flag is used to terminate processing, generally in response to a
- * <Ctrl-C> being pressed while running in interactive mode.
- */
-int json_interupt;
-
 /* Implement @= natural join, @< left join, and @> right join */
 json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 {

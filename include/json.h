@@ -132,6 +132,9 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix, i
 /* Error handling */
 extern char *json_debug(char *flags);
 
+/* This flag indicates whether computations have been interupted */
+extern int json_interupt;
+
 /* Manipulation */
 extern void json_free(json_t *json);
 extern json_t *json_simple(const char *str, size_t len, jsontype_t type);

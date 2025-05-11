@@ -238,9 +238,6 @@ typedef struct jsoncmd_s {
 #define JSON_CONTEXT_FILE_SAME		(-2)
 #define JSON_CONTEXT_FILE_PREVIOUS	(-3)
 
-/* This flag indicates whether computations have been interupted */
-extern int json_interupt;
-
 /* Function declarations */
 void json_calc_aggregate_hook(
         char    *name,

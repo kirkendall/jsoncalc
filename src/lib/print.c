@@ -5,6 +5,11 @@
 #include <ctype.h>
 #include "json.h"
 
+/* This flag is used to terminate processing, generally in response to a
+ * <Ctrl-C> being pressed while running in interactive mode.
+ */
+int json_interupt;
+
 /* Print a json_t tree as JSON text.  "format" controls the format.  */
 static void jcprint(json_t *json, int indent, jsonformat_t *format)
 {
@@ -73,7 +78,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 				byelem.pretty = 0;
 				byelem.elem = 0;
 			}
-                        for (scan = scan->first; scan; scan = scan->next) {
+                        for (scan = scan->first; scan && !json_interupt; scan = scan->next) {
                                 if (format->elem && indent + format->tab > 0)
 					fprintf(format->fp, "%*c", indent + format->tab, ' ');
                                 jcprint(scan, indent + format->tab, &byelem);
@@ -130,7 +135,7 @@ static void jcsh(json_t *json, jsonformat_t *format){
 	json_t	*col;
 	char	*s, *t, *frees;
 
-	for (row = json->first; row; row = row->next) {
+	for (row = json->first; row && !json_interupt; row = row->next) {
 		for (col = row->first; col; col = col->next) {
 			/* Output the prefix, name, and an = */
 			fprintf(format->fp, "%s%s=", format->prefix, col->text);
@@ -275,7 +280,7 @@ static void jccsv(json_t *json, jsonformat_t *format) {
 	putc('\n', format->fp);
 
 	/* For each row... */
-	for (row = json->first; row; row = row->next) {
+	for (row = json->first; row && !json_interupt; row = row->next) {
 		/* Output each column.  Do it in header order, for consistency*/
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */

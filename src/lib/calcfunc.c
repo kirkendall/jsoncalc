@@ -317,10 +317,6 @@ static void free_user_functions()
 			free(scan->returntype);
 		free(scan);
 	}
-
-	/* If the json_context_math object is set, free it too */
-	if (json_context_math)
-		json_free(json_context_math);
 }
 
 /* Define or redefine a user function -- one that's defined in JsonCalc's

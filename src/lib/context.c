@@ -26,9 +26,6 @@ typedef struct contexthook_s {
 
 static contexthook_t *extralayers = NULL;
 
-/* All contexts share a single "Math" object */
-json_t *json_context_math;
-
 /* Add a function which may add 0 ot more layers to the standard context.
  * This is mostly intended to allow plugs to define symbols that should
  * be globally accessible to jsoncalc.  The jsoncalc program itself may
@@ -74,21 +71,6 @@ jsoncontext_t *json_context_free(jsoncontext_t *context)
 
         /* If supposed to free data, do that. */
         if ((context->flags & JSON_CONTEXT_NOFREE) == 0) {
-		/* One tricky thing: The bottom layer's data may contain a
-		 * reference to json_context_math.  Since all contexts share
-		 * a single copy of that object, we don't want to free it here.
-		 */
-		if (!context->older) {
-			noMath = json_by_expr(context->data, "global.consts", NULL);
-			if (noMath) {
-				for (noMath = noMath->first;
-				     noMath && noMath->first != json_context_math;
-				     noMath = noMath->next) {
-				}
-				if (noMath)
-					noMath->first = json_object();
-			}
-		}
 		json_free(context->data);
 	}
 
@@ -320,10 +302,7 @@ jsoncontext_t *json_context_std(json_t *args)
 	global = json_object();
 	vars = json_object();
 	consts = json_object();
-	if (!json_context_math)
-		json_context_math = json_object();
 	json_append(consts, json_key("JSON", json_object() ));
-	json_append(consts, json_key("Math", json_context_math));
 	json_append(global, json_key("vars", vars));
 	json_append(global, json_key("consts", consts));
 	if (args)

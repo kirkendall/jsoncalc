@@ -188,6 +188,7 @@ void json_config_load(const char *name)
 
 		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
 		json_append(json_system, json_key("update", json_bool(0)));
+		json_append(json_system, json_key("Math", json_object()));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
 		json_append(json_system, json_key("copyright", json_string(JSON_COPYRIGHT, -1)));
 	}

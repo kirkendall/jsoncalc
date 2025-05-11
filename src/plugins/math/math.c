@@ -6,45 +6,7 @@
 #include <json.h>
 #include <calc.h>
 
-/* Mostly this module exists to define some Math.xxx() functions. */
-
-#if 0
-/* Math.abs() implemented in the main jsoncalc library */
-static json_t *jfn_acos(json_t *args, void *agdata);
-static json_t *jfn_acosh(json_t *args, void *agdata);
-static json_t *jfn_asin(json_t *args, void *agdata);
-static json_t *jfn_asinh(json_t *args, void *agdata);
-static json_t *jfn_atan(json_t *args, void *agdata);
-static json_t *jfn_atan2(json_t *args, void *agdata);
-static json_t *jfn_atanh(json_t *args, void *agdata);
-static json_t *jfn_cbrt(json_t *args, void *agdata);
-static json_t *jfn_ceil(json_t *args, void *agdata);
-/* Math.clz32() omitted */
-static json_t *jfn_cos(json_t *args, void *agdata);
-static json_t *jfn_cosh(json_t *args, void *agdata);
-static json_t *jfn_exp(json_t *args, void *agdata);
-/* Math.expm1() omitted */
-static json_t *jfn_floor(json_t *args, void *agdata);
-/* Math.fround() omitted */
-static json_t *jfn_hypot(json_t *args, void *agdata);
-/* Math.imul() omitted */
-static json_t *jfn_log(json_t *args, void *agdata);
-static json_t *jfn_log10(json_t *args, void *agdata);
-/* Math.log1p() omitted */
-static json_t *jfn_log2(json_t *args, void *agdata);
-/* Math.max() implemented in the main jsoncalc library, as an aggregate fn */
-/* Math.min() implemented in the main jsoncalc library, as an aggregate fn */
-static json_t *jfn_pow(json_t *args, void *agdata);
-/* Math.random() implemented in the main jsoncalc library */
-static json_t *jfn_round(json_t *args, void *agdata);
-/* Math.sign() implemented in the main jsoncalc library */
-static json_t *jfn_sin(json_t *args, void *agdata);
-static json_t *jfn_sinh(json_t *args, void *agdata);
-static json_t *jfn_sqrt(json_t *args, void *agdata);
-/* Math.sumPrecise() omitted */
-static json_t *jfn_tan(json_t *args, void *agdata);
-static json_t *jfn_trunc(json_t *args, void *agdata);
-#endif
+/* This module exists to define some Math.xxx() functions. */
 
 /* Most of the Math.functions are pretty similar.  They take an optional
  * Math object as their first parameter, and a single number as their only
@@ -371,6 +333,8 @@ static json_t *jfn_pow(json_t *args, void *agdata)
  */
 char *init()
 {
+	json_t	*math;
+
 	/* Register the functions */
 	json_calc_function_hook("acos",  "n:number", "number", jfn_acos);
 	json_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
@@ -399,16 +363,19 @@ char *init()
 	json_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
 
 	/* Insert constants into the Math object */
-	if (!json_context_math)
-		json_context_math = json_object();
-	json_append(json_context_math, json_key("E", json_from_double(M_E)));
-	json_append(json_context_math, json_key("LN10", json_from_double(M_LN10)));
-	json_append(json_context_math, json_key("LN2", json_from_double(M_LN2)));
-	json_append(json_context_math, json_key("LOG10E", json_from_double(M_LOG10E)));
-	json_append(json_context_math, json_key("LOG2E", json_from_double(M_LOG2E)));
-	json_append(json_context_math, json_key("PI", json_from_double(M_PI)));
-	json_append(json_context_math, json_key("SQRT1_2", json_from_double(M_SQRT1_2)));
-	json_append(json_context_math, json_key("SQRT2", json_from_double(M_SQRT2)));
+	math = json_by_key(json_system, "Math");
+	if (!math) {
+		math = json_object();
+		json_append(json_system, json_key("Math", math));
+	}
+	json_append(math, json_key("E", json_from_double(M_E)));
+	json_append(math, json_key("LN10", json_from_double(M_LN10)));
+	json_append(math, json_key("LN2", json_from_double(M_LN2)));
+	json_append(math, json_key("LOG10E", json_from_double(M_LOG10E)));
+	json_append(math, json_key("LOG2E", json_from_double(M_LOG2E)));
+	json_append(math, json_key("PI", json_from_double(M_PI)));
+	json_append(math, json_key("SQRT1_2", json_from_double(M_SQRT1_2)));
+	json_append(math, json_key("SQRT2", json_from_double(M_SQRT2)));
 
 	/* Success */
 	return NULL;

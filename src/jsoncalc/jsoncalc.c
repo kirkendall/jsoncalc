@@ -388,6 +388,7 @@ int main(int argc, char **argv)
 	int	anypersistent = 0;
 	int	anyfiles = 0;
 	int	firstscript = 0;
+	int	pretty = 0;
 	int	opt;
 	int	exitcode = 0;
 
@@ -424,9 +425,6 @@ int main(int argc, char **argv)
 	section = json_by_key(json_config, "autoload");
 	if (!section || section->type != JSON_ARRAY)
 		json_append(json_config, json_key("autoload", json_array()));
-
-	/* Set the formatting from the config */
-	json_format_set(NULL, NULL);
 
 	/* Scan the options for things we need to know to decide whether this
 	 * will be batch or interactive.  Check whether the first arg after
@@ -683,18 +681,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'p':
-			if (interactive) {
-				fprintf(stderr, "The -p flag only works for batch invocations\n");
-				return 1;
-			}
-			section = json_by_key(json_config, "batch");
-			err = json_config_parse(section, optarg, NULL);
-			if (err) {
-				while (context)
-					context = json_context_free(context);
-				fprintf(stderr, "%s\n", err->text);
-				return 1;
-			}
+			pretty++;
 			break;
 		case 'j':
 			if (*optarg == '?' || json_debug(optarg)) {
@@ -707,6 +694,7 @@ int main(int argc, char **argv)
 		case 'L':
 		case 'D':
 		case 'S':
+		case 'i':
 			/* already handled */
 			break;
 		case '?':
@@ -724,6 +712,28 @@ int main(int argc, char **argv)
 				usage("Invalid flag -%s\n", optstr);
 				return 1;
 			}
+		}
+	}
+
+	/* If one or more -p flags were given, adjust the format accordingly. */
+	if (pretty > 0) {
+		if (interactive) {
+			fprintf(stderr, "The -p flag only works for batch invocations\n");
+			return 1;
+		}
+		switch (pretty)
+		case 1:	val = "pretty,json,oneline=0,noelem";	break;
+		case 2: val = "pretty,json,oneline=0,elem";	break;
+		default:val = "nopretty,json,oneline=70";
+		}
+
+		section = json_by_key(json_config, "batch");
+		err = json_config_parse(section, "pretty,json,oneline=0", NULL);
+		if (err) {
+			while (context)
+				context = json_context_free(context);
+			fprintf(stderr, "%s\n", err->text);
+			return 1;
 		}
 	}
 
@@ -745,6 +755,8 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	/* Set the formatting from the config */
+	json_format_set(NULL, NULL);
 
 	/* Add any name=value parameters to the "args" object that we created
 	 * when we started the context.  Also, add any data files named on

@@ -149,6 +149,22 @@ except that uppercase
 is persistent across invocations, for interactive invocations only.
 
 .TP
+.B -p
+A single
+.B -p
+enables pretty-printing, where newlines and whitespace are added to the
+JSON to show the structure of the data, and is equivalent to
+.BR -sjson,pretty,oneline=0,noelem .
+A double
+.B -pp
+is similar but uses
+.B elem
+to cause elements of an array to be output entirely on one line.
+A triple
+.B -ppp
+Outputs compact JSON.
+
+.TP
 .BI -l plugin , settings
 This loads a plugin.
 Most plugins are binary files that get linked into

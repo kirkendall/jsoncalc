@@ -721,7 +721,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "The -p flag only works for batch invocations\n");
 			return 1;
 		}
-		switch (pretty)
+		switch (pretty) {
 		case 1:	val = "pretty,json,oneline=0,noelem";	break;
 		case 2: val = "pretty,json,oneline=0,elem";	break;
 		default:val = "nopretty,json,oneline=70";

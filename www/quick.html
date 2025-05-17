@@ -171,7 +171,7 @@
     or CSV or even a series of shell script records.
 
     <div class="example">
-      <kbd>jsoncalc -Otable=sh -c test.scores</kbd>
+      <kbd>jsoncalc -s sh -c test.scores</kbd>
       <samp>
 name=Peter run=1 score=10<br/>
 name=Paul run=1 score=20<br/>
@@ -183,18 +183,18 @@ name=Peter run=3 score=30<br/>
 name=Paul run=3 score=25<br/>
 name=Mary run=3 score=40
       </samp>
-      This is an example of what the "-Otable=sh" output looks like, for
+      This is an example of what the shell output looks like, for
       processing data in a shell script.
-      Each line of output has one row (one object from an object array) in
+      Each line of output has one row (one object from an array of objects) in
       a format that looks like shell variable assignments.
       If any of these values required quoting to protect it from the shell,
       such quoting would be automatically added.
-      You can also tweak the variable names by adding a <tt>-Oprefix="my_"</tt> flag
+      You can also tweak the variable names by adding a <tt>-sprefix="my_"</tt> flag
       to JsonCalc, if necessary.
     </div>
 
     <div class="example">
-      <kbd>jsoncalc -Otable=sh -c test.scores | while read row<br/>
+      <kbd>jsoncalc -s sh -c test.scores | while read row<br/>
       do<div style="padding-left: 2em;">
       eval $row<br/>
       echo "$name scored $score in run# $run"
@@ -238,7 +238,7 @@ name=Mary run=3 score=40
       jsoncalc -u -c'this.name=first - last' first=Steve last=Kirkendall $file<br/>
       jsoncalc -u -c'this.contactok=contact' contact=false $file<br/>
       cat $file</kbd>
-      <samp>{"custno":12445,"name":"Steve Kirkendall","contactok":false}</samp>
+      <samp>{"custno":12554,"name":"Steve Kirkendall","contactok":false}</samp>
       In this example, we're building the JSON data piecemeal in a temporary file.
       First we let the shell choose a filename, and initialize the file to an
       empty object.
@@ -246,7 +246,6 @@ name=Mary run=3 score=40
       The <tt>-u</tt> option tells it to write the data out to the same file
       that it read it from;
       the file name is the last thing on the command line.
-      You don't need the shell's <tt>eval $(...)</tt> when using files.
       In the end, we're left with a complete JSON object in the
       <tt>$file</tt> file. 
       <p>
@@ -270,6 +269,15 @@ name=Mary run=3 score=40
           tries case-insensitive.  This can save you from some frustration.
       <li>In addition to the usual <tt>.</tt> operator, there's a <tt>..</tt>
           operator which will do a "deep" search for a member.
+      <li>Arrays of objects ("tables") can be output in multiple formats,
+          including a nice grid format.
+      <li>There are commands and functions designed specifically for
+          interactive data exploration, such as <tt>explain</tt> to describe
+          the columns of a table, <tt>find()</tt> to search for a value in a
+          large data structure, 
+      <li>It has very good support for ISO-8601 dates/times/periods.
+          You can do arithmetic on them, convert timezones, and more...
+          all of it a lot easier than in JavaScript.
       <li>You can configure it to automatically load JSON data from files
           in a given directory, on demand.
           So if you have a group of related JSON documents, they can all be
@@ -278,6 +286,7 @@ name=Mary run=3 score=40
     It also supports plugins, which is a HUGE feature.
     Most plugins are for things like fetching data from a server,
     but a few are useful for interactive use.
+    They can completely replace the user interface.
 
     <h2>How big is JsonCalc?  How fast is it?</h2>
     JsonCalc is a "medium weight" JSON tool.
@@ -287,7 +296,8 @@ name=Mary run=3 score=40
     <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
     A full-fledged JavaScript interpreter would be at least 30 times larger
     than JsonCalc, and it wouldn't interface well with shell scripts, or
-    support plugins, or autoload data from directories, or have the
+    support plugins, or autoload data from directories, or have SQL-like
+    features or the
     <a target="_PARENT" href="index.html?op=each">@</a> operator.
     <p>
     The internal representation of JSON data is likely to be around 5 times
@@ -295,8 +305,8 @@ name=Mary run=3 score=40
     2 times larger to more than 10 times larger, but 5 is a good rule of thumb.
     Bear in mind, though, that large arrays aren't normally read into memory
     all at once.  If you process them to build another large array, that
-    result array <em>will</em> be in memory so that's where you need to be aware of
-    bulk.
+    result array <em>might</em> be in memory so that's where you'd need
+    to be aware of bulk.
     <p>
     Speed is hard to gauge because there are so many variables.
     My computer isn't all that new, but
@@ -324,7 +334,7 @@ name=Mary run=3 score=40
     If an existing plugin satisfies your needs, then that's an easy win.
     If you need to write your own, the plugins included with the source code
     should serve as good examples.
-    Technically, each plugin is a shared library which must define a "load"
+    Technically, each plugin is a shared library which must define an "init"
     function.
     That function will then call JsonCalc C functions to register "hooks" for
     things like autoloading data, adding commands, and... lots of stuff.

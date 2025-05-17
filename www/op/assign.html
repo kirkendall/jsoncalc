@@ -60,7 +60,7 @@
       </div>
 
       <div class="example">
-        <kbd>var cust={first:$first,last:$past}; cust.custno=$custno; custno</kbd>
+        <kbd>var cust={first:$first,last:$last}; cust.custno =?? $custno; cust</kbd>
         <samp>{"first":"John","last":"Smith"}</samp>
         This builds an object using
         <a target="_PARENT" href="../index.html?lit=environ">environment variables</a>
@@ -110,7 +110,7 @@
 	    (like "<tt>a = a ?? b</tt>"),
 	    which is totally different from the behavior we want.
 	    We want to assign unless the right had side is null.
-	    So "<tt>??=</tt>" it is.
+	    So "<tt>=??</tt>" it is.
       </ul>
     </details>
 

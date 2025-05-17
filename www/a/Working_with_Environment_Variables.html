@@ -67,22 +67,22 @@
     JsonCalc's $<var>NAME</var>[<var>expr</var>] notation makes this easy
     to access.
     <p>
-    The subscript expression is evaluated first.
-    If the result isn't a string, then it will be converted to a string,
-    and appended to the <var>NAME</var>.
+    The subscript expression is evaluated first, and then appended to the name.
+    If the subscript isn't a string already, then it will be converted to a
+    string.
     In the part number example, this means JsonCalc could access them as
     <tt>$partno[i]</tt>.
     <div class="example">
       <kbd>$partno[1]</kbd>
       <samp>"10017"</samp>
       Fetches the value of $partno1.
-      Note that the value is always a string, even though this particular value
-      looks like it could truly be a number.
+      Note that the value of an environment variable is always a string,
+      even though this particular value looks like it could truly be a number.
       You can convert strings to numbers via the
       <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
       and
       <a target="_PARENT" href="../index.html?f=parseFloat">parseFloat()</a>
-      functions
+      functions.
     </div>
     <div class="example">
       <kbd>1..10 @ $partno[this]</kbd>

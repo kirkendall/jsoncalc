@@ -53,7 +53,7 @@
 		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_NUMBER
 		 || (<var>length</var> = json_int(<var>args-&gt;first</var>)) < 0
 		 || <var>args-&gt;first-&gt;next</var> != NULL)
-			<b>return</b> json_error_null(0, "The \"%s\" function takes non-negative number", "hyphen");
+			<b>return</b> json_error_null(0, "The \"%s\" function takes non-negative number", "hrule");
 
 		/* Allocate a json_t string as the result */
 		<var>result</var> = json_string("", <var>length</var>);
@@ -127,7 +127,7 @@
       <tr><th>Type</th><th>Function</th><th>Example<th></tr>
       <tr><td>int</td><td>json_from_int(i)</td><td><b>return</b> json_from_int(12);</td></tr>
       <tr><td>double</td><td>json_from_double(d)</td><td><b>return</b> json_from_double(12.3);</td></tr>
-      <tr><td>double</td><td>json_string(s,len)</td><td><b>return</b> json_string("Steve",-1);</td></tr>
+      <tr><td>string</td><td>json_string(s,len)</td><td><b>return</b> json_string("Steve",-1);</td></tr>
       <tr><td>boolean</td><td>json_bool(b)</td><td><b>return</b> json_bool(1);</td></tr>
       <tr><td>null</td><td>json_null()</td><td><b>return</b> json_null();</td></tr>
     </table>
@@ -144,7 +144,7 @@
 	json_t *<var>array</var> = json_array();
 	json_append(<var>array</var>, json_from_int(1));
 	json_append(<var>array</var>, json_from_double(1.5));
-	json_append(<var>array</var>, json_string("Hello World"));
+	json_append(<var>array</var>, json_string("Hello World", -1));
 
 	json_t *<var>object</var> = json_<var>object</var>();
 	json_append(<var>object</var>, json_key("sample", <var>array</var>));
@@ -166,6 +166,12 @@
     The main advantage of passing a non-0 <var>code</var> is that it may allow
     the <var>format</var> to be translated to the locale's language.
     <p>
+    On a related note, anything that you don't want translated, such as the
+    function name "hrule" in the example above, should probably not be part
+    of the error message format string.
+    Instead, it should be a separate argument, with a "%s" in the message format
+    to say where the untranslated text belongs.
+    <p>
     The <var>format</var> string is a printf-style format string, meaning
     %s gets replaced by a string parameter, %d by an int, and so on.
     It serves two purposes:
@@ -179,9 +185,9 @@
     Functions are registered via the <tt>json_calc_function_hook()</tt>
     function.
     This is passed the function name, a string describing the parameters,
-    and a string describing the return type.
-    Those latter two should ideally resemble TypeScript declarations,
-    though they're basically just comments so it isn't critical.
+    a string describing the return type, and a pointer to the C function.
+    The parameter and return type strings should ideally resemble TypeScript
+    declarations, though they're basically just comments so it isn't critical.
     <pre>
 	json_calc_function_hook("hrule", "width:number", "string", jfn_hrule);
     </pre>
@@ -191,24 +197,23 @@
     Aggregate functions accumulate results across multiple elements of an array,
     and return a single result.
     Examples are the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
-    and <a target="_PARENT" href="../index.html?f=count">count()<a> functions.
-    In JsonCalc, this is implemented as a pair of functions:
+    and <a target="_PARENT" href="../index.html?f=count">count()</a> functions.
+    <p>
+    In JsonCalc, an aggregate function is implemented as a pair of C functions:
     One to do the aggregation, and one to return the final result.
     For example, the aggregation half of the
     <a target="_PARENT" href="../index.html?f=avg">avg()</a>
-    function needs to store a count of the items seen, and the sum of their
-    values.
+    function counts of the items seen, and the sum of their values.
     The result half would return <tt>null</tt> if the final count was 0,
-    or compute the average and return that if the count was positive.
+    or compute the average and return that if the count was non-zero.
     <p>
     Aggregate functions invariably need a bit of persistent storage space.
     For example, the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
-    function needs to store a count of the items seen, and the sum of their
-    values.
-    The JsonCalc library allocated space, initializes it to all-zeroes before
-    the first call, and then passes a pointer to the functions via the
+    function needs to store the count and sum.
+    The JsonCalc library allocates space, initializes it to all-zeroes before
+    the first call, and then passes a pointer into the functions via the
     <var>agdata</var> parameter.
-    That's a <tt>(void*)</tt> but functions can cast it to a pointer to
+    It's passed as a <tt>(void*)</tt> but functions can cast it to a pointer to
     whatever data type they actually need.
     <p>
     Registering an aggregate function is a lot like registering a "normal"
@@ -222,27 +227,27 @@
     <pre>
 	<em>/* Define a type for storing the aggregate data we need */</em>
 	<b>typedef</b> <b>struct</b> {
-	    json_t	*/<var>str</var>;
-	    <b>int</b>		/<var>width</var>;
+	    json_t	*<var>str</var>;
+	    <b>int</b>		<var>width</var>;
 	} agwidest_t;
 
-	<b>void</b> jag_widest(json_t */<var>args</var>, <b>void</b> */<var>agdata)
+	<b>void</b> jag_widest(json_t *<var>args</var>, <b>void</b> *<var>agdata)
 	{
-		agwidest_t</var> *ag = (agwidest_t *)/<var>agdata</var>;
-		<b>int</b>	/<var>width</var>;
+		agwidest_t</var> *ag = (agwidest_t *)<var>agdata</var>;
+		<b>int</b>	<var>width</var>;
 
 		<em>/* Ignore non-strings.  We could convert non-strings to strings</em>
-		 * via json_serialize() but I'm trying to keep this simple.
-		 */
+		<em> * via json_serialize() but I'm trying to keep this simple.</em>
+		<em> */</em>
 		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_STRING)
 			<b>return</b>;
 
 		<em>/* Find the width of this string */</em>
-		/<var>width</var> = json_mbs_width(<var>args->first->text</var>);
+		<var>width</var> = json_mbs_width(<var>args->first->text</var>);
 
 		<em>/* If longest so far, remember it.  If some other was being</em>
-		 * saved before, then free it now.
-		 */
+		<em> * saved before, then free it now.</em>
+		<em> */</em>
 		<b>if</b> (!<var>ag-&gt;str</var> || <var>width</var> &gt; <var>ag-&gt;width</var>) {
 			<b>if</b> (<var>ag-&gt;str</var>)
 			      json_free(<var>ag-&gt;str</var>);
@@ -324,7 +329,7 @@
     <tt>json_calc_aggregate_hook()</tt>, they're directly added to the
     internal linked-list of functions, via a series of initialized variables.
     It looks clunky, but it allows us to avoid having something like a
-    <tt>json_init()<tt>.
+    <tt>json_init()</tt>.
     There is no <tt>json_init()</tt> function because it isn't needed.
 
     <details>

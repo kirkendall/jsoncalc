@@ -151,6 +151,14 @@
 	    This is because nested JSON tables are usually the most natural
 	    way to represent joined SQL tables.
 
+	<li>In the <tt>ORDER BY</tt> or <tt>GROUP BY</tt> clauses, column names
+	    can only be simple names, not expressions.
+	    The "native" <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a>
+	    and <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+	    functions are slightly more powerful, in that they allow dot
+	    expressions so you can do things like
+	    <tt>cust.orderBy("address.zip")</tt>.
+
 	<li>If the <tt>SELECT</tt> clause's <var>columns</var> list contains
 	    complex expressions without an "<tt>AS</tt> <var>key</var>"
 	    to assign it a name,

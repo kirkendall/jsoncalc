@@ -56,11 +56,10 @@ static int cmpdescending(const void *v1, const void *v2)
 }
 
 
-/* Sort a JSON table (array of objects) in place, given a list of fields.
- * The orderby list should be an array of strings; you may also include
- * a boolean "true" before any field name to make it use descending sort.
+/* This helper function does the real sorting, after parameters have been
+ * checked.
  */
-void json_sort(json_t *array, json_t *orderby)
+static void jcsort(json_t *array, json_t *orderby)
 {
 	json_t	*elem, *value;
 	int	descending;
@@ -68,30 +67,11 @@ void json_sort(json_t *array, json_t *orderby)
 	bucket_t *bucket;
 	double	dvalue;
 
-	/* Check parameters. "array" must be a table, and "orderby" should
-	 * be a list (array, or linked list of elements from an array) of
-	 * field names and descending flags.
-	 */
-	if (!json_is_table(array)) {
-		/* EEE "json_sort() should be passed an array of objects" */
-	}
-	if (orderby->type == JSON_ARRAY)
-		orderby = orderby->first;
 	descending = 0;
 	if (orderby && orderby->type == JSON_BOOL) {
 		descending = json_is_true(orderby);
 		orderby = orderby->next;
 	}
-	if (!orderby) {
-		/* EEE Empty orderby list */
-	}
-	if (orderby->type != JSON_STRING) {
-		/* EEE Orderby fields should be passed as strings */
-	}
-
-	/* An empty array is always sorted.  So is a 1-element array. */
-	if (!array->first || !array->first->next)
-		return;
 
 	/* Start with an empty bucket array */
 	nbuckets = used = 0;
@@ -101,6 +81,10 @@ void json_sort(json_t *array, json_t *orderby)
 	 * in a case-sensitive way at this phase.
 	 */
 	while (array->first) {
+		/* If user aborted, then quit */
+		if (json_interupt)
+			return;
+
 		/* Pull the element out of the array */
 		elem = array->first;
 		array->first = elem->next;
@@ -177,7 +161,7 @@ void json_sort(json_t *array, json_t *orderby)
 	/* If there are more sort keys, then recursively sort each bucket */
 	if (orderby->next) {
 		for (b = 0; b < used; b++)
-			json_sort(&bucket[b].arraybuf, orderby->next);
+			jcsort(&bucket[b].arraybuf, orderby->next);
 	}
 
 	/* Merge the buckets back into the array again */
@@ -190,4 +174,50 @@ void json_sort(json_t *array, json_t *orderby)
 
 	/* Clean up */
 	free(bucket);
+}
+
+
+/* Sort a JSON table (array of objects) in place, given a list of fields.
+ * The orderby list should be an array of strings; you may also include
+ * a boolean "true" before any field name to make it use descending sort.
+ */
+void json_sort(json_t *array, json_t *orderby)
+{
+	json_t	*check;
+	int	anykeys;
+
+	/* Check parameters. "array" must be a table, and "orderby" should
+	 * be a list (array, or linked list of elements from an array) of
+	 * field names and descending flags.
+	 */
+	if (!json_is_table(array)) {
+		/* EEE "json_sort() should be passed an array of objects" */
+		return;
+	}
+	if (orderby->type == JSON_ARRAY)
+		orderby = orderby->first;
+	anykeys = 0;
+	for (check = orderby; check; check = check->next) {
+		if (orderby->type == JSON_STRING)
+			anykeys++;
+		else if (orderby->type != JSON_BOOL) {
+			/* EEE json_sort() key list must be strings and booleans */
+			return;
+		}
+		else if (!orderby->next) {
+			/* EEE json_sort() key list can't end with a boolean */
+			return;
+		}
+	}
+	if (!anykeys) {
+		/* EEE Empty orderby list */
+		return;
+	}
+
+	/* An empty array is always sorted.  So is a 1-element array. */
+	if (!array->first || !array->first->next)
+		return;
+
+	/* Do the real sort */
+	jcsort(array, orderby);
 }

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>throw</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc throw - Trigger an error">
+    <meta name="keywords" content="command, command reference, throw">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>throw - Trigger an error</h1>
+    <dl>
+      <dt>throw "message"
+      <br/>throw "message %s", <var>expr</var>
+      <br/>throw <var>code</var>, "message"
+      <br/>throw <var>code</var>, "message %s", <var>expr</var>
+      <dd>
+      The <tt>throw</tt> command triggers an error.
+      The error may be caught by a <a target="_PARENT" href="../index.html?cmd=try">try/catch</a> command,
+      or it may be reported to the user.
+      It is passed one, two, or three comma-delimited arguments.
+      <p>
+      The first argument is an optional error code number.
+      If given, this must be a literal number &mdash; not a symbolic constant
+      or other expression.
+      If omitted, then 0 is assumed.
+      <p>
+      The first mandatory argument is the text of an error message.
+      It must be a literal string.
+      It may contain a single "%s" token to indicate where the final argument
+      is to be inserted.
+      Other printf-style placeholders are not allowed.
+      <p>
+      If the message contains a "%s" then the third argument is mandatory;
+      without "%s" it it forbidden.
+      Unlike the other arguments, this one is <em>not</em> limited to just
+      being a literal.
+      It can be any expression at all, but if the result isn't a string
+      then it might be displayed as "".
+      <p>
+      The error message (first string) may be translated via the locale.
+      The extra argument (if the error message uses %s) is not translated.
+      Consequently, I suggest using the %s to give a module name, function name,
+      or other symbol that shouldn't be translated.
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>throw "Pow!"</kbd>
+	<samp style="color:red">Line 1: Pow!</samp>
+        This generates an error with the message "Pow!".
+        Since we didn't try to catch the error, it was displayed to the user.
+      </div>
+
+      <div class="example">
+	<kbd>throw "Bad arguments in %s module", "log"</kbd>
+	<samp style="color:red">Line 1: Bad arguments in log module</samp>
+	This time we used %s in the message, and added another argument
+	containing the module name.
+	This way, if "Bad arguments in %s module" gets translated
+	to "Argumentos incorrectos en el m&oacute;dulo %s" or whatever,
+	"log" will still remain "log".
+      </div>
+
+      <div class="example">
+	<kbd>try {throw "Pow!"} catch (e) { e }</kbd>
+	<samp>{"line":1,"code":0,"message":"Pow!"}</samp>
+        This time we caught the error and displayed the object representing
+        the error.
+        There is no filename because this command was entered at the command
+        prompt, not read from a script.
+        The line number is 1 because each line entered at the command prompt
+        is processed as its own separate thing; every entered line is line 1.
+        We did not use an error code argument, so the code is 0.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This is different from JavaScript's <tt>throw</tt>.
+            In JavaScript you would typically do something like
+            <tt>throw new Error("Zap!")</tt> but since JsonCalc doesn't
+            really have object classes, I had to simplify it.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=try">try/catch</a></td><td>Error handling command.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

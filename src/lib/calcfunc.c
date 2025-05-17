@@ -261,6 +261,7 @@ void json_calc_aggregate_hook(
 	memset(f, 0, sizeof *f);
 	f->name = name;
 	f->args = args;
+	f->returntype = type;
 	f->fn = fn;
 	f->agfn = agfn;
 	f->agsize = agsize;

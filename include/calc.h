@@ -288,6 +288,7 @@ json_t *json_context_default_table(jsoncontext_t *context, char **refexpr);
 extern jsoncmd_t JSON_CMD_ERROR[];
 
 void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
+int json_cmd_lineno(jsonsrc_t *src);
 jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...);
 void json_cmd_parse_whitespace(jsonsrc_t *src);
 char *json_cmd_parse_key(jsonsrc_t *src, int quotable);

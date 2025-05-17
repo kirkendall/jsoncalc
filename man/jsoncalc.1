@@ -53,7 +53,7 @@ Usually interactive mode is implied by the lack of
 .BI -c expression,
 .BI -f file
 or 
-.BI -O format,
+.BI -s settings,
 but if you want to use some of those flags then 
 .B -i
 option makes it clear.
@@ -165,8 +165,8 @@ A triple
 Outputs compact JSON.
 
 .TP
-.BI -l plugin , settings
-This loads a plugin.
+.BI -l[-] plugin [, settings ]
+This loads a plugin, or with "-" it prevents a persistent plugin from being loaded this one time.
 Most plugins are binary files that get linked into
 .B jsoncalc
 at runtime, to provide new functions, commands, file formats, or other features.
@@ -177,7 +177,7 @@ If a plugin supports settings, then you can set them by appending them after
 the plugin's name, with a comma as a delimiter.
 
 .TP
-.BI -L plugin , settings
+.BI -L[-] plugin [, settings ]
 This is like
 .BI -l plugin , settings
 except that uppercase
@@ -192,7 +192,7 @@ Note that the uppercase
 .BI -S settings ,
 and
 .BI -L plugin
-options are all like the corresponding lowercase option, except that
+options are all like their corresponding lowercase option, except that
 the uppercase versions are persistent across interactive invocations.
 This can be very convenient.
 They intentionally don't apply for batch-mode invocations because there
@@ -206,7 +206,7 @@ The
 .BI -s settings
 option mostly controls the output format.
 The
-.I format
+.I settings
 is a series of names or
 .IR name = value
 pairs.
@@ -214,8 +214,11 @@ pairs.
 Most settings are boolean.
 You can turn them on just by giving their name, or turn them off by
  prepending "no" to the name.
-For example, "-spretty" will enable pretty-printing, and "-snocolor" will
-disable colors in the output.
+For example,
+.B -spretty
+will enable pretty-printing, and
+.B -snocolor
+will disable colors in the output.
 .P
 Some options are strings that have a list of preferred values associated
 with them.
@@ -224,7 +227,10 @@ You can give just the value, without a name, and
 will figure out which name it belongs to.
 For example, there's a "table" setting with a list of preferred values that
 includes "csv", so if you want tables to be output in CSV format, you could
-either say "-stable=csv" or simply "-scsv".
+either say
+.B -stable=csv
+or simply
+.B -scsv.
 
 .P
 The main output format options are:
@@ -254,7 +260,7 @@ The
 .I settings
 parser handles this pretty well, though.
 When setting the value of an object, everything up to the next comma or
-end of the setting is interpreted as a space-delimit list of settings within
+end of the setting is interpreted as a space-delimited list of settings within
 that object.
 For example, you can set the attributes of the column headers in the "grid"
 table output format via a string such as "-sgridhead=italic underlined yellow".
@@ -282,6 +288,21 @@ linethru	boolean	A line through the midline of the text
 blinking	boolean	Nasty blinking text
 fg	string	Foreground color: normal, black, red, green, yellow, blue, magenta, cyan, or white
 bg	string	Background color, like "fg" with with "on " prepended, such as "on red"
+.TE
+.P
+Most plugins support options, stored in an object named
+.BI plugin. pluginname .
+The preferred way to adjust the settings for a plugin is to append the
+settings after the plugin name when you're loading it, though you can also
+set them via
+.BI -splugin. pluginname = settings .
+The same rules apply for settings in these objects, so for example you could
+specify the "daily" rollover method for the "log" plugin via
+.B -llog,rollover=daily
+or
+.B -llog,daily
+or
+.B -llog -splugin.log=daily.
 
 .SS "SH OUTPUT"
 The "sh" table output format deserves a bit more discussion.
@@ -301,8 +322,8 @@ If you expect the output to be a single object then you can use
 .BR bash (1)'s
 "$(...)" notation, like this:
 .nf
-    eval $(jsoncalc -Osh -c 'scores[name:"peter"]' test.json)
-    echo score=$score
+    eval $(jsoncalc -ssh -c 'scores[name:"Paul"]' sampledata/test.json)
+    echo "$name scored $score"
 .fi
 
 .SH "EXPRESSION SYNTAX"
@@ -349,6 +370,21 @@ A full-featured SQL "SELECT" statement.
 JsonCalc also implements many JavaScript operators, functions, and commands.
 It does not support classes though, or functions that alter data such as
 .BR array .splice().
+.P.
+It
+.I does
+allow you to write functions as though they were member functions though.
+Wnenever you write
+.IB expr . func ( args ),
+the
+.I expr
+is interpreted as the first argument to
+.IB func ().
+For example,
+.B "Hello".toUpperCase()
+and
+.B toUpperCase("Hello")
+are exactly the same thing.
 
 .SH "INVOCATION EXAMPLES"
 .TP
@@ -363,7 +399,7 @@ jsoncalc file.json
 Start
 .B jsoncalc
 interactively using the contents of file.json as variable
-.I data.
+.B data.
 
 .TP
 jsoncalc -d.
@@ -382,7 +418,7 @@ variable.
 jsoncalc -p file.json
 Pretty-print file.json.
 This is non-interactive because
-.BI -O format
+.BI -s settings
 was used without
 .BR -i .
 
@@ -463,7 +499,7 @@ an extra row to be added for showing the overall average.
 This uses an SQL "SELECT" command to extract basically the same information.
 Note that SQL will choose a default name for a computed column.
 Internally, the SQL "SELECT" is translated to
-.B jsoncalc "'s"
+.BR jsoncalc "'s"
 native expression syntax so it's about as efficient either way.
 
 .TP
@@ -530,12 +566,6 @@ $JSONCALCPATH
 This is a list of directories where JsonCalc's supporting files might be
 found.
 The default value is derived from $LDLIBRARYPATH.
-
-.TP
-$LDLIBRARYPATH
-This is a standard environment variable, used to locate library files.
-JsonCalc's plugins are implemented as shared libraries, so if it can't
-find a requested library in $JSONCALCPATH then it will 
 
 .SH "SEE ALSO"
 .BR json_calc (3),

@@ -126,7 +126,7 @@ json_t *json_by_index(json_t *container, int idx)
  * this way you can write wrappers to handle things such as comma-delimited
  * lists of expressions.
  */
-json_t *json_by_expr(json_t *container, char *expr, char **next)
+json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 {
 	char	key[100];
 	int	i, deep;

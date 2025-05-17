@@ -58,14 +58,11 @@ static char *historyfile(void)
 
 
 
-/* Interactively read a line from stdin.  This uses GNU readline unless it it
- * inhibitied or not configured.
- */
+/* Interactively read a line from stdin.  */
 static char *jcreadline(const char *prompt)
 {
 	char	*expr;
-	int	ch;
-	size_t	i, size;
+	size_t	i;
 
 	/* Read a line into a dynamic buffer; */
 	expr = readline(prompt);

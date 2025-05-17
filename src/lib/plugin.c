@@ -19,7 +19,7 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	json_t	*info, *val;
 
 	/* If already loaded, do nothing */
-	for (info = json_plugins->first; info; info == info->next) {
+	for (info = json_plugins->first; info; info = info->next) {
 		val = json_by_key(info, "plugin");
 		if (val && val->type == JSON_STRING && !strcmp(val->text, name))
 			return NULL;

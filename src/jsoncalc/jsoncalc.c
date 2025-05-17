@@ -103,39 +103,7 @@ static void usage(char *fmt, char *data)
 json_t *autoload(char *key)
 {
 	char    filename[1000];
-	json_t  *section, *dir, *ext, *json;
-
-#if 0 /* !!! Isn't there already a "files" system const? */
-	/* If "files" then return an array of file basenames */
-	if (!strcmp(key, "files")) {
-		glob_t files;
-		int     i;
-		char    *basename;
-
-		sprintf(filename, "%s/*.json", autoload_dir);
-		memset(&files, 0, sizeof files);
-		if (glob(filename, 0, NULL, &files) == 0) {
-			json = json_array();
-			for (i = 0; i < files.gl_pathc; i++) {
-				struct stat st;
-				json_t *row = json_object();
-				basename = strrchr(files.gl_pathv[i], '/');
-				if (basename)
-					basename++;
-				else
-					basename = files.gl_pathv[i];
-				json_append(row, json_key("key", json_string(basename, strlen(basename) - 5)));
-				json_append(row, json_key("filename", json_string(files.gl_pathv[i], -1)));
-				stat(files.gl_pathv[i], &st);
-				json_append(row, json_key("size", json_from_int(st.st_size)));
-				json_append(json, row);
-			}
-			globfree(&files);
-			return json;
-		}
-		return NULL;
-	}
-#endif
+	json_t  *dir, *ext;
 
 	/* Scan for a key.json (or other known extensions) file in any of
 	 * the autoload directories.
@@ -166,7 +134,7 @@ json_t *autoload(char *key)
 
 
 /* This is a context hook.  It adds a layer a the standard context for
- * autoloading files from the -Ddirectory.
+ * autoloading files from the -ddirectory.
  */
 static jsoncontext_t *autodir(jsoncontext_t *context)
 {
@@ -321,69 +289,12 @@ static void delete_from_array(json_t *array, const char *str)
 	}
 }
 
-static int load_plugin(char *arg)
-{
-	json_t	*err;
-
-	/* Find the list of plugins in config */
-	json_t	*section = json_by_key(json_config, "pluginloaded");
-
-	/* Make a copy of the "plugin,settings" string */
-	char *plugin = strdup(arg);
-
-	/* Separate the name from the settings */
-	arg = strchr(plugin, ',');
-	if (arg)
-		*arg++ = '\0';
-
-	/* Delete this plugin from the list if already there */
-	/* Load the plugin */
-	err = json_plugin_load(plugin, 0, 0);
-	if (err) {
-		fprintf(stderr, "%s\n", err->text);
-		json_free(err);
-		while (context)
-			context = json_context_free(context);
-		return 1;
-	}
-
-	/* If there are options, process them now */
-	if (arg && *arg)
-	{ 
-		/* Find the json_config.plugin.{plugin} section.
-		 * If it doesn't exist, then fail.
-		 */
-		section = json_by_key(json_config, "plugin");
-		if (section)
-			section = json_by_key(section, plugin);
-		if (!section) {
-			fprintf(stderr, "The \"%s\" plugin doesn't use options\n", plugin);
-			while (context)
-				context = json_context_free(context);
-			return 1;
-		}
-
-		/* Parse the options.  Watch for errors */
-		err = json_config_parse(section, arg, NULL);
-		if (err) {
-			while (context)
-				context = json_context_free(context);
-			if (err) {
-				puts(err->text);
-				json_free(err);
-				return 1;
-			}
-			return 0;
-		}
-	}
-}
-
 
 /******************************************************************************/
 int main(int argc, char **argv)
 {
 	int	i;
-	json_t	*args, *section, *err;
+	json_t	*args, *section, *err, *omit;
 	char	*val, *plugin;
 	int	anypersistent = 0;
 	int	anyfiles = 0;
@@ -431,6 +342,7 @@ int main(int argc, char **argv)
 	 * the options is a script file to help with that decision.
 	 */
 	interactive = -1;
+	omit = json_array();
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
@@ -466,6 +378,22 @@ int main(int argc, char **argv)
 			free(plugin);
 			break;
 
+		case 'l':
+			/* Here, all we're doing is watching for -l-plugin to
+			 * temporarily remove a persistent plugin.  We do this
+			 * by adding its name to a separate "omit" list.
+			 */
+			if (optarg[0] == '-') {
+				/* Find the end of the plugin name */
+				val = strchr(optarg + 1, ',');
+				if (!val)
+					val = optarg + strlen(optarg);
+
+				/* Add it to the omit list */
+				json_append(omit, json_string(optarg + 1, val - optarg));
+			}
+			break;
+
 		case '?':
 			usage(NULL, NULL);
 			break;
@@ -487,6 +415,14 @@ int main(int argc, char **argv)
 	if (interactive) {
 		section = json_by_key(json_config, "pluginpersist");
 		for (args = section->first; args; args = args->next) {
+			/* Skip if in "omit" list (abusing the "err" variable)*/
+			for (err = omit->first; err; err = err->next)
+				if (!strcmp(err->text, args->text))
+					break;
+			if (err)
+				continue;
+
+			/* load it */
 			err = json_plugin_load(args->text, 0, 0);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
@@ -495,6 +431,9 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
+	/* Free the "omit" list */
+	json_free(omit);
 
 	/* Parse persistent flags */
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
@@ -625,11 +564,18 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'l':
+			/* If -l-plugin then skip it.  That's just for
+			 * temporarily removing persistent plugins, and we
+			 * already did that.
+			 */
+			if (*optarg == '-')
+				break;
+
 			/* Make a copy of the -lplugin,options string */
 			plugin = strdup(optarg);
 
 			/* Separate the name from the options */
-			val = strchr(optarg, ',');
+			val = strchr(plugin, ',');
 			if (val)
 				*val++ = '\0';
 
@@ -728,7 +674,7 @@ int main(int argc, char **argv)
 		}
 
 		section = json_by_key(json_config, "batch");
-		err = json_config_parse(section, "pretty,json,oneline=0", NULL);
+		err = json_config_parse(section, val, NULL);
 		if (err) {
 			while (context)
 				context = json_context_free(context);
@@ -801,11 +747,17 @@ int main(int argc, char **argv)
 	json_context_file(context, NULL, 0, NULL);
 
 	/* If this was determined to be a batch invocation (not interactive)
-	 * but no -ccommand or -fscript flags were given, then assume "-cthis".
-	 * so any data will simply be output.
+	 * but no -ccommand or -fscript flags were given, then assume "-cthis"
+	 * or "-cselect" so any data will simply be output.
 	 */
 	if (!interactive && !initcmd)
-		initcmd = json_cmd_parse_string("this");
+	{
+		args = json_config_get("batch", "table");
+		if (args && (!strcmp(args->text, "grid") || !strcmp(args->text, "sh") || !strcmp(args->text, "csv")))
+			initcmd = json_cmd_parse_string("select");
+		else
+			initcmd = json_cmd_parse_string("this");
+	}
 
 	/* If batch mode and no filenames were named on the command line,
 	 * then assume "-", unless stdin is a tty.

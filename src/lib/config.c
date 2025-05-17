@@ -288,9 +288,9 @@ json_t *json_config_get(const char *section, const char *key)
 {
 	json_t *jsect;
 
-	/* Locate the section.  If section is NULL, use all of json_config */
+	/* Locate the section.  If section is NULL, use the format settings */
 	if (section) {
-		jsect = json_by_key(json_config, section);
+		jsect = json_by_expr(json_config, section, NULL);
 		if (!jsect)
 			return NULL;
 	} else {

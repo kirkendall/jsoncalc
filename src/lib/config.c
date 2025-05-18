@@ -16,7 +16,7 @@ static const char *defaultconfig = "{"
 		"\"pretty\":true,"
 		"\"elem\":false,"
 		"\"quote\":false,"
-		"\"error\":true,"
+		"\"errors\":true,"
 		"\"ascii\":false,"
 		"\"color\":true,"
 		"\"quick\":false,"
@@ -33,7 +33,7 @@ static const char *defaultconfig = "{"
 		"\"pretty\":false,"
 		"\"elem\":false,"
 		"\"quote\":false,"
-		"\"error\":true,"
+		"\"errors\":true,"
 		"\"ascii\":false,"
 		"\"color\":false,"
 		"\"quick\":false,"
@@ -366,6 +366,7 @@ void json_config_set(const char *section, const char *key, json_t *value)
 json_t *json_config_parse(json_t *config, const char *settings, const char **refend)
 {
 	size_t	namelen, namealloc = 0, len;
+	int	negate;
 	char	*name = NULL;
 	const char *value;
 	json_t	*thisconfig, *found, *list, *jvalue;
@@ -380,6 +381,13 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 		if (isspace(*settings) || *settings == ',') {
 			settings++;
 			continue;
+		}
+
+		/* Note whether there's a "-" */
+		negate = 0;
+		if (*settings == '-') {
+			settings++;
+			negate = 1;
 		}
 
 		/* Count characters in the name */
@@ -513,7 +521,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 
 		} else { /* name or noname without = */
 			if (found && found->type == JSON_BOOL) {
-				strcpy(found->text, "true");
+				strcpy(found->text, negate ? "false" : "true" );
 				settings += namelen;
 				continue;
 			} else if (found) {

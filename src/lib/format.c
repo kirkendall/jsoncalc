@@ -148,7 +148,7 @@ void json_format_set(jsonformat_t *format, json_t *config)
 	format->pretty = json_is_true(json_by_key(section, "pretty"));
 	format->elem = json_is_true(json_by_key(section, "elem"));
 	format->sh = json_is_true(json_by_key(section, "sh"));
-	format->error = json_is_true(json_by_key(section, "error"));
+	format->errors = json_is_true(json_by_key(section, "errors"));
 	format->ascii = json_is_true(json_by_key(section, "ascii"));
 	format->color = json_is_true(json_by_key(section, "color"));
 	format->quick = json_is_true(json_by_key(section, "quick"));

@@ -75,7 +75,7 @@ typedef struct {
 	char	pretty;	/* Pretty-print JSON */
 	char	elem;	/* one element per line */
 	char	sh;	/* Quote output for shell */
-	char	error;	/* Error output.  Writes text in "null" to stderr */
+	char	errors;	/* Error output.  Writes text in "null" to stderr */
 	char	ascii;	/* Convert non-ASCII characters to \u sequences */
 	char	color;	/* Allow the use of ANSI escape sequences */
 	char	quick;	/* Output tables piecemeal.  Use first row for names */

@@ -468,7 +468,7 @@ int main(int argc, char **argv)
 			section = json_by_key(json_config, "pluginlist");
 
 			/* Separate the settings from the name */
-			plugin = strdup(optarg);
+			plugin = strdup(*optarg == '-' ? optarg + 1 : optarg);
 			val = strchr(plugin, ',');
 			if (val) {
 				*val++ = '\0';

@@ -330,7 +330,7 @@ void json_print(json_t *json, jsonformat_t *format)
 		tweaked.fp = stdout;
 
 	/* Maybe output error messages embedded in "null" */
-	if (tweaked.error && json->type == JSON_NULL && *json->text) {
+	if (tweaked.errors && json->type == JSON_NULL && *json->text) {
 		if (tweaked.color && isatty(fileno(stderr)))
 			fprintf(stderr, "%s%s%s\n",
 				tweaked.escerror,

@@ -11,7 +11,7 @@ jsonformat_t json_format_default = {
 	2,	/* tab - indentation to use when pretty-printing */
 	50,	/* oneline - JSON shorter than this will always be compact */
 	12,	/* digits - precission when converting from double to text */
-	'g',	/* table - output tables in grid format (csv/shell/grid/json) */
+	"grid",	/* table - output tables in grid format (sh/grid/json) */
 	0,	/* string - output strings as plain text */
 	1,	/* pretty - pretty-print (add whitespace to show structure) */
 	0,	/* elem - force one array element per line */
@@ -143,7 +143,7 @@ void json_format_set(jsonformat_t *format, json_t *config)
 	format->tab = json_int(json_by_key(section, "tab"));
 	format->oneline = json_int(json_by_key(section, "oneline"));
 	format->digits = json_int(json_by_key(section, "digits"));
-	format->table = *json_text_by_key(section, "table");
+	strncpy(format->table, json_text_by_key(section, "table"), sizeof format->table - 1);;
 	format->string = json_is_true(json_by_key(section, "string"));
 	format->pretty = json_is_true(json_by_key(section, "pretty"));
 	format->elem = json_is_true(json_by_key(section, "elem"));

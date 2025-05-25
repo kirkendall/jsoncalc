@@ -552,7 +552,7 @@ json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, 
 		if (filename) {
 			/* Tweak the formatting rules */
 			jsonformat_t tweaked = json_format_default;
-			tweaked.table = 'j'; /* Write tables in JSON */
+			strcat(tweaked.table, "json"); /* Write tables in JSON */
 			tweaked.string = 0;  /* No raw strings */
 			tweaked.elem = 0;    /* Not one array member per line */
 			tweaked.pretty = 0;  /* Not pretty-printed */

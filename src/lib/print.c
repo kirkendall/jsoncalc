@@ -5,6 +5,15 @@
 #include <ctype.h>
 #include "json.h"
 
+/* This type is used only in this file to store a private list of the
+ * registers table formats.
+ */
+typedef struct jctablefmt_s {
+	struct jctablefmt_s *next;
+	char *name;
+	void (*fn)(json_t *json, jsonformat_t *format);
+} jctablefmt_t;
+
 /* This flag is used to terminate processing, generally in response to a
  * <Ctrl-C> being pressed while running in interactive mode.
  */
@@ -249,7 +258,8 @@ static void jccsvsingle(json_t *elem, jsonformat_t *format)
 	}
 }
 
-static void jccsv(json_t *json, jsonformat_t *format) {
+static void jccsv(json_t *json, jsonformat_t *format)
+{
 	json_t	*headers;
 	json_t	*row, *col;
 	char	*t;
@@ -310,6 +320,40 @@ static void jccsv(json_t *json, jsonformat_t *format) {
  */
 int json_print_incomplete_line;
 
+/* This stores the list of possible table formats, other than JSON */
+static jctablefmt_t *tablefmts = NULL;
+
+void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *format)) {
+	jctablefmt_t *t;
+	json_t	*section, *list;
+
+	/* Scan to see if this format is already in the list */
+	for (t = tablefmts; t; t = t->next) {
+		if (!json_mbs_casecmp(name, t->name)) {
+			/* Yes, we know it.  Just change the function pointer */
+			t->fn = fn;
+			return;
+		}
+	}
+
+	/* It's new.  Add it to the list */
+	t = (jctablefmt_t *)malloc(sizeof(jctablefmt_t));
+	t->name = name;
+	t->fn = fn;
+	t->next = tablefmts;
+	tablefmts = t;
+
+	/* Also add it to the list of preferred values for config "table",
+	 * unless it's one of the built-ins.
+	 */
+	if (strcmp(name, "sh") && strcmp(name, "grid")) {
+		list = json_by_expr(json_config, "interactive.\"table-list\"", NULL);
+		json_append(list, json_string(name, -1));
+		list = json_by_expr(json_config, "batch.\"table-list\"", NULL);
+		json_append(list, json_string(name, -1));
+	}
+}
+
 /* Print a json_t tree as JSON text.  "format" is a combination of values from
  * the JSON_FORMAT_XXXX macros, most importantly JSON_FORMAT_INDENT(n).
  * Returns 1 if the output did NOT end with a newline, or 0 if it did.
@@ -317,6 +361,7 @@ int json_print_incomplete_line;
 void json_print(json_t *json, jsonformat_t *format)
 {
 	jsonformat_t tweaked;
+	jctablefmt_t *t;
 
 	/* If NULL pointer then don't print anything (not even "null") */
 	if (!json)
@@ -366,17 +411,29 @@ void json_print(json_t *json, jsonformat_t *format)
 	        tweaked.oneline = tweaked.pretty = 0;
 
 	/* Table output? */
-	if (strchr("scg", tweaked.table) && json_is_table(json)){
-		switch (tweaked.table) {
-		case 's': jcsh(json, &tweaked);		break;
-		case 'c': jccsv(json, &tweaked);	break;
-		case 'g': json_grid(json, &tweaked);	break;
+	if (json_is_table(json)){
+		/* If first time, then auto-register the built-in formats
+		 * other than "json".
+		 */
+		if (!tablefmts) {
+			json_print_table_hook("sh", jcsh);
+			json_print_table_hook("grid", json_grid);
 		}
 
-		/* Table output always ends with a newline */
-		if (tweaked.fp == stdout)
-			json_print_incomplete_line = 0;
-		return;
+		/* Scan for this format */
+		for (t = tablefmts; t; t = t->next) {
+			/* If not the one we want, keep looking */
+			if (json_mbs_casecmp(t->name, tweaked.table))
+				continue;
+
+			/* Use this method to format the table */
+			t->fn(json, &tweaked);
+
+			/* Table output always ends with a newline */
+			if (tweaked.fp == stdout)
+				json_print_incomplete_line = 0;
+			return;
+		}
 	}
 
 	/* Output it as JSON, possibly "pretty" */

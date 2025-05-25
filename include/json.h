@@ -70,7 +70,7 @@ typedef struct {
 	short	tab;	/* indentation to add for pretty-printing nested data */
 	short	oneline;/* Force compact output if shorter than this */
 	short	digits;	/* precision for floating point output */
-	char	table;	/* Table output: csv/shell/grid/json */
+	char	table[20];/* Table output: csv/shell/grid/json */
 	char	string;	/* unquoted string output */
 	char	pretty;	/* Pretty-print JSON */
 	char	elem;	/* one element per line */
@@ -162,15 +162,17 @@ extern json_t *json_array_group_by(json_t *array, json_t *orderby);
 extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
 
 /* Parsing */
+extern void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
 extern json_t *json_parse_string(const char *str);
 extern json_t *json_parse_file(const char *filename);
 
 /* Serialization / Output */
 extern json_t *json_explain(json_t *stats, json_t *row, int depth);
 extern char *json_serialize(json_t *json, jsonformat_t *format);
+extern void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *format));
 extern int json_print_incomplete_line;
 extern void json_print(json_t *json, jsonformat_t *format);
-extern int json_grid(json_t *json, jsonformat_t *format);
+extern void json_grid(json_t *json, jsonformat_t *format);
 extern void json_format_set(jsonformat_t *format, json_t *config);
 
 /* Accessing */

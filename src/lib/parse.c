@@ -13,6 +13,16 @@
 # undef json_parse_string
 #endif
 
+/* This data type is used only in this file to track the list of registered
+ * table formats.
+ */
+typedef struct jsonparser_s {
+	struct jsonparser_s *next;
+	const char	*name;
+	int	(*tester)(const char *str, size_t len);
+	json_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
+} jsonparser_t;
+
 
 /* Append an element to an array */
 static void jappendarray(json_t *container, json_t *more)
@@ -104,7 +114,7 @@ char *json_append(json_t *container, json_t *more)
 /* Parse an in-memory JSON document.  This could be a string, or an mmap()ed
  * file.
  */
-static json_t *parse(const char *str, size_t len, const char **refend, const char **referr)
+static json_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr)
 {
 	json_t *stack[100];
 	int	sp;
@@ -399,6 +409,24 @@ Error:
 	return NULL;
 }
 
+/* List of known parsers other than JSON */
+jsonparser_t *parsers;
+
+static json_t *parse(const char *str, size_t len, const char **refend, const char **referr)
+{
+	jsonparser_t *jp;
+
+	/* If any add-on parser wants it, let it parse try */
+	for (jp = parsers; jp; jp = jp->next) {
+		if (jp->tester(str, len))
+			return jp->parser(str, len, refend, referr);
+	}
+
+	/* Otherwise, fall back on the JSON parser */
+	return parseJSON(str, len, refend, referr);
+}
+
+
 /* Parse a string and return its json_t.  If there's an error, then it will
  * return a "null" json_t containing the error text.
  */
@@ -441,4 +469,25 @@ json_t *json_parse_file(const char *filename)
 	if (!result)
 		return json_error_null(1, "%s", error);
 	return result;
+}
+
+
+/* Register a new type of parser.  The arguments are the parser's name, a
+ * pointer to a tester function, and a pointer to a parser function.  If the
+ * tester function returns a non-zero value, then the parser function is used
+ * to parse this data.
+ */
+void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr))
+{
+	jsonparser_t *jp;
+
+	/* Allocate a new parser, and initialize it */
+	jp = (jsonparser_t *)malloc(sizeof *jp);
+	jp->name = name;
+	jp->tester = tester;
+	jp->parser = parser;
+
+	/* Add it to the list */
+	jp->next = parsers;
+	parsers = jp;
 }

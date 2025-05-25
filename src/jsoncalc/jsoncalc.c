@@ -324,7 +324,8 @@ int main(int argc, char **argv)
 	}
 
 	/* Try to load the config.  If not found, use built-in defaults.
-	 * This also sets up json_system and json_config
+	 * This also sets up json_system and json_config.  It also fetches
+	 * the list of persistent plugins, if there is one.
 	 */
 	json_config_load("jsoncalc");
 
@@ -339,7 +340,9 @@ int main(int argc, char **argv)
 
 	/* Scan the options for things we need to know to decide whether this
 	 * will be batch or interactive.  Check whether the first arg after
-	 * the options is a script file to help with that decision.
+	 * the options is a script file to help with that decision.  Also,
+	 * this adjusts the list of persistent plugins, including a lowercase
+	 * -l-plugin to temporarily remove a persistent plugin.
 	 */
 	interactive = -1;
 	omit = json_array();
@@ -357,7 +360,7 @@ int main(int argc, char **argv)
 			break;
 		case 'L':
 			/* Adjust the list of persistent plugins but DON'T LOAD
-			 * YET!  We'll load the whole peristent list after
+			 * YET!  We'll load the whole persistent list after
 			 * we're done processing all -L flags, if interactive.
 			 */
 			section = json_by_key(json_config, "pluginpersist");
@@ -366,7 +369,7 @@ int main(int argc, char **argv)
 			if (val)
 				*val = '\0';
 			if (*plugin == '-') {
-				/* Delete from the list of peristent plugins */
+				/* Delete from the list of persistent plugins */
 				delete_from_array(section, plugin + 1);
 			} else {
 				/* Delete if already there, and then append
@@ -405,7 +408,7 @@ int main(int argc, char **argv)
 		interactive = 0;
 	optind = 1;
 
-	/* Set the runmode in json_system */
+	/* Set the runmode in json_system to "interactive" or "batch" */
 	val = interactive ? "interactive" : "batch";
 	json_append(json_system, json_key("runmode", json_string(val, -1)));
 
@@ -526,7 +529,10 @@ int main(int argc, char **argv)
 	args = json_object();
 	context = json_context_std(args);
 
-	/* Parse remaining command-line flags */
+	/* Parse most remaining command-line flags.  In particular, we load
+	 * any scripts so that we can process the "plugin" commands they
+	 * contain, so ALL plugins will be loaded.
+	 */
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':

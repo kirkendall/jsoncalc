@@ -2397,6 +2397,67 @@ static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
+	size_t len;
+	char	quote;
+	char	*str, *settings;
+	json_t	*err, *section;
+
+	/* Find the end of the command */
+	json_cmd_parse_whitespace(src);
+	for (len = 0, quote = 0; src->str[len] && (quote || !strchr(";\n}", src->str[len])); len++) {
+		/* Handle backslash in a quoted string */
+		if (quote && src->str[len] == '\\' && src->str[len + 1])
+			len++;
+
+		/* Start/end quoting */
+		if (src->str[len] == quote)
+			quote = 0;
+		else if (!quote && strchr("\"'`", src->str[len]))
+			quote = src->str[len];
+	}
+
+	/* Make a temp copy of the arguments */
+	str = (char *)malloc(len + 1);
+	strncpy(str, src->str, len);
+	str[len] = '\0';
+	src->str += len;
+
+	/* Separate the plugin name from settings */
+	settings = strchr(str, ',');
+	if (settings) {
+		*settings++ = '\0';
+		while (*settings == ' ')
+			settings++;
+	} else
+		settings = "";
+
+	/* Load the plugin */
+	err = json_plugin_load(str, 0, 0);
+	if (err) {
+		*referr = json_cmd_error(src->filename, json_cmd_lineno(src), (int)(size_t)err->first, "%s", err->text);
+		return NULL;
+	}
+
+	/* Process the settings, if any */
+	if (*settings) {
+		/* Find where this plugins settings are stored */
+		section = json_by_key(json_config, "plugin");
+		section = json_by_key(section, str);
+		if (!section) {
+			*referr = json_cmd_error(src->filename, json_cmd_lineno(src), 0, "The \"%s\" plugin doesn't use settings", str);
+			return NULL;
+		}
+
+		/* Adjust the settings */
+		err = json_config_parse(section, settings, NULL);
+		if (err) {
+			*referr = json_cmd_error(src->filename, json_cmd_lineno(src), (int)(size_t)err->first, "%s", err->text);
+			return NULL;
+		}
+
+	}
+
+	/* No action needed at runtime */
 	return NULL;
 }
 
@@ -2540,7 +2601,7 @@ static jsoncmd_t *set_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	json_t *result, *conferr;
+	json_t *result, *section, *conferr;
 	char	*str;
 
 	/* Are we using an expression to generate the settings on-the-fly? */
@@ -2568,7 +2629,8 @@ static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* Parse it, and store the changes.  */
-	conferr = json_config_parse(json_by_key(json_config, "interactive"), str, NULL);
+	section = json_by_key(json_config, json_text_by_key(json_system, "runmode"));
+	conferr = json_config_parse(section, str, NULL);
 	if (conferr) {
 		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)conferr->first, "%s", conferr->text);
 		json_free(conferr);

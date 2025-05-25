@@ -86,14 +86,14 @@ too.
 Restricted mode.
 This inhibits some dangerous activities such as invoking an external shell
 command, or reading/writing files not named on the command line.
-This sofware is distributed with no guarantees of any kind.
+This software is distributed with no guarantees of any kind.
 And even if
 .B jsoncalc
 itself is perfect, plugins might not be.
 
 .TP
 .BI -d directory
-Causes any unresolved names in an expression to be interpretted as
+Causes any unresolved names in an expression to be interpreted as
 a request to load
 .IR dir / name .json
 as variable
@@ -162,7 +162,7 @@ is similar but uses
 to cause elements of an array to be output entirely on one line.
 A triple
 .B -ppp
-Outputs compact JSON.
+outputs compact JSON.
 
 .TP
 .BI -l[-] plugin [, settings ]
@@ -213,7 +213,7 @@ pairs.
 .P
 Most settings are boolean.
 You can turn them on just by giving their name, or turn them off by
- prepending "no" to the name.
+ prepending "no" or "-" to the name.
 For example,
 .B -spretty
 will enable pretty-printing, and
@@ -242,9 +242,6 @@ oneline	number	If >0, JSON data shorter than this won't pretty-print.
 digits	number	Precision when converting floating point to text.
 elem	boolean	For top-level arrays, output elements one-per-line.
 table	string	One of csv/sh/grid/json to control table output.
-csv	boolean	Output tables in CSV format.
-sh	boolean	Output tables as shell variable assignments.
-grid	boolean Output tables as columns and rows.
 string	boolean	If the output is a string, just output its text.
 pretty	boolean	Add whitespace to show the structure of the data.
 color	boolean	Enable the use of color on ANSI terminals.
@@ -272,6 +269,8 @@ The types of text that can have their attributes set this way include
 (normal output),
 .B error
 (error messages),
+.B debug
+(debugging output),
 .B gridhead
 (column headings in "table=grid" format)
 and
@@ -353,10 +352,18 @@ is left join, and
 is right join.
 A table is simply an array of objects.
 .IP \ \(bu 3n
-.IB table .orderBy( columns )
-and
-.IB table .groupBy( columns )
+.IB table .orderBy( columns ),
+.IB table .groupBy( columns ),
+.IB array .flat( depth ), and
+.IB table .unroll ( nest_list )
 functions to organize arrays of objects.
+.IP \ \(bu 3n
+.IB expr .find( value )
+to search for a value within a large data structure.
+Also,
+.IB table [ key:value ]
+notation to locate return an element from an array of objects, based on the
+contents of the object.
 .IP \ \(bu 3n
 Aggregate functions including
 .IB min( expr ),
@@ -365,7 +372,7 @@ Aggregate functions including
 and
 .IB count( expr ).
 .IP \ \(bu 3n
-A full-featured SQL "SELECT" statement.
+A rather full-featured SQL "SELECT" statement.
 .P
 JsonCalc also implements many JavaScript operators, functions, and commands.
 It does not support classes though, or functions that alter data such as
@@ -374,14 +381,14 @@ It does not support classes though, or functions that alter data such as
 It
 .I does
 allow you to write functions as though they were member functions though.
-Wnenever you write
-.IB expr . func ( args ),
+Whenever you write
+.IB expr.func ( args ),
 the
 .I expr
 is interpreted as the first argument to
 .IB func ().
 For example,
-.B "Hello".toUpperCase()
+.B \"Hello".toUpperCase()
 and
 .B toUpperCase("Hello")
 are exactly the same thing.
@@ -392,8 +399,13 @@ jsoncalc
 Start
 .B jsoncalc
 interactively, without any JSON data initially.
-It makes a decent calculator.
 
+.TP
+jsoncalc -lmath
+Start
+.B jsoncalc
+interactively, with the "math" plugin loaded.
+This adds nearly all of the functions and constants from JavaScript's Math class.
 .TP
 jsoncalc file.json
 Start
@@ -410,7 +422,7 @@ Any *.json files in the directory "." can be accessed simply by using their
 basename as a variable name, e.g. using the name
 .I parts
 in an expression would load the file
-.I parts.json
+.I ./parts.json
 into the
 .I parts
 variable.
@@ -418,7 +430,7 @@ variable.
 jsoncalc -p file.json
 Pretty-print file.json.
 This is non-interactive because
-.BI -s settings
+.B -p
 was used without
 .BR -i .
 
@@ -428,8 +440,8 @@ The following examples assume you invoked
 as "jsoncalc -dsampledata".
 
 .TP
-1+2
-This outputs 3.
+1+2*3
+This outputs 7.
 .B jsoncalc
 makes a pretty decent calculator.
 
@@ -519,13 +531,21 @@ sorted by run.
 
 .TP
 test..deepest
-This outputs the value of test.deep.deeper.deepest.
+This outputs the value of test.deep.deeper.deepest,
+which happens to br 3.
 The ".." operator digs down through multiple layers of objects, if necessary,
 to find the requested name.
 
 .TP
-emoji
-Output the contents of sampledata/emoji.json.
+test.find(3)
+This searches through test for all instances of the value 3, and lists
+them as a table.
+You can search for numbers, strings, or regular expressions (search patterns,
+see regex(7) in the Linux manual).
+
+.TP
+emojis
+Output the contents of sampledata/emojis.json.
 If your terminal doesn't display emoji, try one that does.
 The
 .BR xfce4-terminal (1)

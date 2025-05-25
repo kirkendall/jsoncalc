@@ -31,6 +31,7 @@ src/plugins/mysql/
 src/plugins/sqlite/
 src/plugins/xml/
 src/simple/simple
+log
 
 # Memo to self
 *IDEA

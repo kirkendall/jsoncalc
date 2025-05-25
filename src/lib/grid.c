@@ -10,10 +10,8 @@
 
 /* NOTE: The json_is_table() function is defined in is.c */
 
-/* If json appears to be a table, then output it as a table/grid and return 1.
- * Otherwise return 0 without outputting anything
- */
-int json_grid(json_t *json, jsonformat_t *format)
+/* If json appears to be a table, then output it as a table/grid.  */
+void json_grid(json_t *json, jsonformat_t *format)
 {
 	json_t	*explain, *row, *col, *cell;
 	char	*text;
@@ -27,7 +25,7 @@ int json_grid(json_t *json, jsonformat_t *format)
 
 	/* If not a table, return 0 */
 	if (!json_is_table(json))
-		return 0;
+		return;
 
 	/* If format is NULL then use the default format */
 	if (!format)
@@ -210,6 +208,6 @@ int json_grid(json_t *json, jsonformat_t *format)
 	json_free(explain);
 
 	/* Done! */
-	return 1;
+	return;
 }
 

@@ -142,15 +142,18 @@ static void jcsort(json_t *array, json_t *orderby)
 	else
 		qsort(bucket, used, sizeof(bucket_t), cmpascending);
 
-	/* Merge any buckets that have the same case-insensitive value */
+	/* Merge any buckets that have the same case-insensitive string value.
+	 * We only have to do this for strings, and we know each bucket contains
+	 * at least one item so JSON_END_POINTER() is non-NULL.
+	 */
 	for (b = 0, b2 = 1; b2 < used; b2++) {
 		if (bucket[b].value
 		 && bucket[b].value->type == JSON_STRING
 		 && bucket[b2].value
 		 && bucket[b2].value->type == JSON_STRING
 		 && !json_mbs_casecmp(bucket[b].value->text, bucket[b2].value->text)) {
-			/* Same, case-insenstively.  Append b2 to b */
-			JSON_END_POINTER(&bucket[b].arraybuf)->next = bucket[b].arraybuf.first;
+			/* Same, case-insensitively.  Append b2 to b */
+			JSON_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first;
 			JSON_END_POINTER(&bucket[b].arraybuf) = JSON_END_POINTER(&bucket[b2].arraybuf);
 		} else {
 			b++;

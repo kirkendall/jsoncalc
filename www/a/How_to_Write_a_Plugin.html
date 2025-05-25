@@ -78,6 +78,78 @@
     For example, the <tt>init()</tt> function in your plugin will not
     cause a name clash with any other plugin's <tt>init()</tt> function.
 
+    <h2>Config Settings</h2>
+    When <tt>init()</tt> is called,
+    JsonCalc's <tt>json_config</tt> variable has been initialized to contain
+    the library's own configuration settings, but their final values have not been
+    reloaded from the config file or command-line options yet.
+    Your <tt>init()</tt> function should take this opportunity to add its own
+    configuration options under "plugin.<var>MYPLUGIN</var>".
+    <pre>
+	<b>char</b> *screamer_settings = "{"
+	    "\"loudest\":88,"
+	    "\"quietest\":24,"
+	    "\"start-list\":[\"Ya\",\"Wha\",\"Who\",\"K\"],"
+	    "\"start\":\"Ya\"",
+	    "\"exclamation\":true"
+       "}";
+	<b>char</b> *init(<b>void</b>)
+	{
+	    /* Set the settings for the "screamer" plugin */
+	    json_t	*section, *settings;
+	    section = json_by_name(json_config, "plugin");
+	    settings = json_parse_string(screamer_settings);
+	    json_append(section, json_key("screamer", settings));
+	    <b>return</b> NULL;
+	}
+    </pre>
+    <p>
+    Note the "start-list" member, whose value is an array of strings.
+    These are the preferred settings for the "start" member, which is a
+    single string.
+    If you do something like <tt>-lscreamer,Wha</tt>, then the "Wha" will
+    be recognized as a preferred value for "start", so that's where "Wha"
+    will be stored.
+    <p>
+    The actual settings will be loaded later.
+    At this point, you're just defining the names and default values (and hence
+    data types), possibly along with some <var>xxx</var><tt>-list</tt> arrays
+    of prefered values for some of the string options.
+    Plugins and configuration settings do a fairly intricate dance,
+    and this is near the start of it.
+    The full sequence goes something like this:
+    <ol>
+      <li>The JsonCalc library's default options are loaded into the
+          <tt>json_config</tt> variable.  The config file is loaded at
+          this time too, just so we have a list of persistent plugins.
+      <li>The command-line flags are scanned to determine whether this is
+          going to be interactive or batch mode.  And also adjust the list
+          of persistent plugins.
+      <li>If interactive, then persistent plugins are loaded,
+          adding their options to <tt>json_config</tt>.
+      <li>The command-line flags are scanned again to locate and load
+          any non-persistent plugins.  So all plugins are loaded at this
+	  point, but we still only have hardcoded defaults for some options.
+      <li>If interactive and there were any persistent changes to the
+	  config settings, then the config file is saved
+          so the persistent settings will indeed persist.
+      <li>The command-line flags are scanned a third time.  Now we're
+          processing any persistent changes to settings &mdash;
+          either <b>-S</b><var>settings</var>,
+          <b>-D</b><var>directory</var>,
+          or <b>-L</b><var>plugin,settings</var>.
+      <li>The command-line flags are scanned a fourth time, to add
+          non-persistent settings to <tt>json_config</tt> &mdash;
+          either <b>-s</b><var>settings</var>,
+          <b>-d</b><var>directory</var>,
+          or <b>-l</b><var>plugin,settings</var>.
+      <li>Finally, scripts start to run or the user sees a "JsonCalc&gt;" prompt.
+    </ol>
+    <p>
+    One implication of this is, <tt>init()</tt> can't check the config settings.
+    The settings are only available later, when the user or script uses a
+    feature of the plugin, e.g. by calling a function that the plugin provides.
+      
     <h2>Hooks to Register Your Plugin's Services</h2>
     Every plugin adds some type of service to JsonCalc.
     The JsonCalc library defines functions to let you register the functions,
@@ -97,20 +169,20 @@
           To indicate an error, use <tt>json_error_null()</tt> to generate
           the return value.
           <pre>
-            #include <unistd.h>
-            #include <json.h>
-	    json_t *jfn_getpid(json_t *args, void *agdata)
+            #include &lt;unistd.h&gt;
+            #include &lt;json.h&gt;
+	    json_t *jfn_getpid(json_t *args, <b>void</b> *agdata)
 	    {
-		return json_from_int(getpid());
+		<b>return</b> json_from_int(getpid());
 	    }
           </pre>
       <li>Register the function.  This should be done in your plugin's
 	  <tt>init()</tt> function.
 	  <pre>
-	    char *init(void)
+	    <b>char</b> *init(<b>void</b>)
 	    {
 	        json_calc_function_hook("getpid", "", "number", jfn_getpid);
-	        return NULL;
+	        <b>return</b> NULL;
 	    }
 	  </pre>
       <li>Your function will be available for use in JsonCalc expressions
@@ -123,105 +195,159 @@
     </ul>
 
     <h3>Adding Commands</h3>
-      Adding new commands is very similar to adding new functions:
-      Write some functions in C, and then register those functions with
-      JsonCalc via a <tt>json_cmd_hook()</tt> function.
-      For details, see <a target="_PARENT" href="../index.html?a=How_to_Add_Commands">How to Add Commands</a>.
-      Briefly, the process is:
-      <ul>
-        <li>Write a function to parse the command's parameters.
-            The JsonCalc library has a number of functions to help you
-            with that.
-            The function should return a <tt>jsoncmd_t*</tt> containing
-            the parsed command, or NULL if there's nothing that needs to be
-            run later.
-            (Function definitions are stored when parsed, for example,
-            so the "function" command parser returns NULL.)
-            If your parser detects an error, it should store the error in
-            a location passed as one of the parser function's arguments;
-            returning NULL does not indicate an error.
-	<li>Write a function to run the parsed command.
-	    This is passed the value returned by the parser, and the
-	    context stack.
-	    It should return NULL on success if there is no returned value,
-	    or a jsoncmdout_t value to indicate success with a returned value,
-	    an error, or a few other things like <b>break</b> or <b>continue</b>.
-        <li>Register the parser and runner, along with the command's name,
-            via the <tt>json_cmd_hook()</tt> library function.
-      </ul>
-      <p>
-      As a simple example, here's command that writes parenthesized text
-      out to stderr.
+    Adding new commands is very similar to adding new functions:
+    Write some functions in C, and then register those functions with
+    JsonCalc via a <tt>json_cmd_hook()</tt> function.
+    For details, see <a target="_PARENT" href="../index.html?a=How_to_Add_Commands">How to Add Commands</a>.
+    Briefly, the process is:
+    <ul>
+      <li>Write a function to parse the command's parameters.
+	  The JsonCalc library has a number of functions to help you
+	  with that.
+	  The function should return a <tt>jsoncmd_t*</tt> containing
+	  the parsed command, or NULL if there's nothing that needs to be
+	  run later.
+	  (Function definitions are stored when parsed, for example,
+	  so the "function" command parser returns NULL.)
+	  If your parser detects an error, it should store the error in
+	  a location passed as one of the parser function's arguments;
+	  returning NULL does not indicate an error.
+      <li>Write a function to run the parsed command.
+	  This is passed the value returned by the parser, and the
+	  context stack.
+	  It should return NULL on success if there is no returned value,
+	  or a jsoncmdout_t value to indicate success with a returned value,
+	  an error, or a few other things like <b>break</b> or <b>continue</b>.
+      <li>Register the parser and runner, along with the command's name,
+	  via the <tt>json_cmd_hook()</tt> library function.
+    </ul>
+    <p>
+    As a simple example, here's command that writes parenthesized text
+    out to stderr.
 
-      <pre>
-          #include <stdio.h>
-          #include <json.h>
+    <pre>
+	#include <stdio.h>
+	#include <json.h>
 
-	  /* Parse a stderr command */
-	  jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_ **referr)
-	  {
-	      char *text;
-	      jsoncmd_t *cmd;
+	/* Parse a stderr command */
+	jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_ **referr)
+	{
+	    char *text;
+	    jsoncmd_t *cmd;
 
-	      /* Parse the parenthesized text */
-	      text = json_cmd_parse_paren(src);
-	      if (!text) {
-		  *referr = json_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
-		  return NULL;
-	      }
+	    /* Parse the parenthesized text */
+	    text = json_cmd_parse_paren(src);
+	    if (!text) {
+		*referr = json_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
+		return NULL;
+	    }
 
-	      /* Build a command */
-	      cmd = json_cmd(src, "stderr");
-	      cmd->key = text;
-	      return cmd;
-	  }
+	    /* Build a command */
+	    cmd = json_cmd(src, "stderr");
+	    cmd->key = text;
+	    return cmd;
+	}
 
-	  /* Run a stderr command */
-	  jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
-	  {
-	      fprintf(stderr, "%s\n", cmd->key);
-	  }
+	/* Run a stderr command */
+	jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
+	{
+	    fprintf(stderr, "%s\n", cmd->key);
+	}
 
-	  /* ... and later, in the plugin's init() function... */
-	  char *init()
-	  {
-	      json_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
-	      return NULL;
-	  }
-      </pre>
-      <p>
-      Once the plugin is loaded, you can invoke the new command just like any
-      other command.
-      <div class="example">
-        <kbd>stderr Goodbye World!
-        <samp>1: The stderr command expects text in parentheses</samp>
-        <kbd>stderr (Goodbye World!)
-        <samp>Goodbye World!</samp>
-        The first command failed to parse because the text wasn't in parentheses.
-        The second succeeded, and wrote the text to stdout.
-      </div>
+	/* ... and later, in the plugin's init() function... */
+	char *init()
+	{
+	    json_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
+	    return NULL;
+	}
+    </pre>
+    <p>
+    Once the plugin is loaded, you can invoke the new command just like any
+    other command.
+    <div class="example">
+      <kbd>stderr Goodbye World!</kbd>
+      <samp>1: The stderr command expects text in parentheses</samp>
+      <kbd>stderr (Goodbye World!)</kbd>
+      <samp>Goodbye World!</samp>
+      The first command failed to parse because the text wasn't in parentheses.
+      The second succeeded, and wrote the text to stdout.
+    </div>
 
-      <dt>void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
-      <dd>This gives you a way to insert extra layers into the context stack.
-          A DBMS interface might use this, for example, to create global
-          variables for the tables in the current database.
-          <p>
-          <pre>
-              jsoncontext_t *addMyContext(jsoncontext_t *context)
-              {
-		json_t *obj = json_object;
+    <h3>Adding Global Variables and Constants</h3>
+    Variables and constants are stored in the context.
+    The <b>jsoncalc</b> program creates a context for main process, and
+    usually that's all you need.
+    If you want to create another thread, you'll need another context for it,
+    but that's unlikely.
+    What is much more likely, though, is that you'll want to insert some
+    layers into the context for your own variables and constants.
+    There's a hook for that!
+    Using the hook follows a familiar pattern.
+    <ul>
+      <li>First, write a function to add your layers to the context stack.
+	  This function will take a single parameter, the top of the stack
+	  that's under construction.
+	  It will return a new top of the stack after you've added your
+	  layers.
+	  <p>
+	  There's a <tt>json_context(context, data, flags)</tt> function
+	  for adding layers.
+	  The <tt>data</tt> parameter is a json_t object, and the members
+	  will be either vars or consts depending on the flags.
+	  The new context layer will also have a few other fields that you
+	  might want to modify, including a
+	  <var>context</var><tt>-&gt;autoload()</tt> function pointer
+	  to create new variables on demand, and a
+	  <var>context</var><tt>-&gt;modified()</tt> function pointer to
+	  respond to changes in the layer's variables.
+	  <p>
+	  You can create multiple layers if you want, for example one layer
+	  for vars and another for consts.
+      <li>Second, the plugin's <tt>init()</tt> function should register the
+	  context adder function via <tt>json_context_hook()</tt>.
+      <li>Later, your vars and consts will be available for use in any
+	  expression.
+    </ul>
+    <p>
+    The <b>-d</b><var>directory</var> autoload directories are implemented
+    this way.
+    The <b>jsoncalc</b> program defines an autoload function and uses
+    <tt>json_context_hook()</tt> to insert a layer that uses it.
+    If an expression tries to use a variable that isn't defined (i.e.,
+    not yet a member of the layer's "data" object), then the autoload
+    function searches through the directory list for a file with the
+    basename that matches the requested variable.
+    If such a file is found, then it is parsed and its contents are added
+    to the "data" object, so the variable reference can access the data.
+    <p>
+    Here's a simple example that adds a layer with consts named "verdad"
+    and "falso" which return the boolean <tt>true</tt> and <tt>false</tt>
+    values.
+    <pre>
+	jsoncontext_t *miContexto(jsoncontext_t *context)
+	{
+	    json_t *obj = json_object();
+	    json_append(obj, json_key("verdad", json_bool(1)));
+	    json_append(obj, json_key("falso", json_bool(0)));
+	    <b>return</b> json_context(context, obj, 0);
+	}
 
-
-              }
-
-              ...
-
-              json_context_hook(
-	  </pre>
-
-      <dt>context->autoload()
-
-    </dl>
+	<b>char</b> *init()
+	{
+	    json_context_hook(miContexto);
+	    return NULL;
+	}
+    </pre>
+    <p>
+    Once your plugin is loaded, and the <b>jsoncalc</b> creates its context,
+    your data will be available.
+    <div class="example">
+      <kbd>verdad</kbd>
+      <samp>true</samp>
+      <kbd>falso ? "ja" : "nein"</kbd>
+      <samp>"nein"</samp>
+      No surprises.
+    </div>
 
     <h2>Compiling and Linking</h2>
     Plugins are basically a type of shared library,
@@ -264,6 +390,22 @@
     Script plugins are copied to the <tt>plugin/</tt> directory just like
     binary plugins, but their names don't have a "lib" prefix, and the ".so"
     suffix is replaced with ".jc".
+
+    <h2>Documentation</h2>
+    Your plugin's documentation should reside in a "www" directory under
+    the plugin's source directory.
+    This should mimic the structure of <b>jsoncalc</b>'s own "www" &mdash;
+    functions in "www/f/", commands in "www/cmd", and the main intro in
+    "www/intro.html".
+    <p>
+    For example, the "math" plugin's source directory is "src/plugin/math/",
+    so its documentation resides in "src/plugin/math/www/".
+    <p>
+    During installation, all of the documentation gets copied into a shared
+    directory where users can access it even without internet access.
+    <b>jsoncalc</b>'s built-in help facility will access it.
+    Plugins' functions and commands are all tossed together in the web page
+    so users can look up functions 
 
     <details>
       <summary>See Also</summary>

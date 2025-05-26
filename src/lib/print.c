@@ -321,11 +321,13 @@ static void jccsv(json_t *json, jsonformat_t *format)
 int json_print_incomplete_line;
 
 /* This stores the list of possible table formats, other than JSON */
-static jctablefmt_t *tablefmts = NULL;
+static jctablefmt_t tablesh = {NULL, "sh", jcsh};
+static jctablefmt_t tablegrid = {&tablesh, "grid", json_grid};
+static jctablefmt_t *tablefmts = &tablegrid;
 
 void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *format)) {
 	jctablefmt_t *t;
-	json_t	*section, *list;
+	json_t	*list;
 
 	/* Scan to see if this format is already in the list */
 	for (t = tablefmts; t; t = t->next) {
@@ -343,15 +345,11 @@ void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *fo
 	t->next = tablefmts;
 	tablefmts = t;
 
-	/* Also add it to the list of preferred values for config "table",
-	 * unless it's one of the built-ins.
-	 */
-	if (strcmp(name, "sh") && strcmp(name, "grid")) {
-		list = json_by_expr(json_config, "interactive.\"table-list\"", NULL);
-		json_append(list, json_string(name, -1));
-		list = json_by_expr(json_config, "batch.\"table-list\"", NULL);
-		json_append(list, json_string(name, -1));
-	}
+	/* Also add it to the list of preferred values for config "table". */
+	list = json_by_expr(json_config, "interactive.\"table-list\"", NULL);
+	json_append(list, json_string(name, -1));
+	list = json_by_expr(json_config, "batch.\"table-list\"", NULL);
+	json_append(list, json_string(name, -1));
 }
 
 /* Print a json_t tree as JSON text.  "format" is a combination of values from
@@ -412,14 +410,6 @@ void json_print(json_t *json, jsonformat_t *format)
 
 	/* Table output? */
 	if (json_is_table(json)){
-		/* If first time, then auto-register the built-in formats
-		 * other than "json".
-		 */
-		if (!tablefmts) {
-			json_print_table_hook("sh", jcsh);
-			json_print_table_hook("grid", json_grid);
-		}
-
 		/* Scan for this format */
 		for (t = tablefmts; t; t = t->next) {
 			/* If not the one we want, keep looking */

@@ -499,7 +499,7 @@ int main(int argc, char **argv)
 		case 'S':
 			/* Parse the options. */
 			section = json_by_key(json_config, "interactive");
-			err = json_config_parse(section, val, NULL);
+			err = json_config_parse(section, optarg, NULL);
 			if (err) {
 				puts(err->text);
 				json_free(err);

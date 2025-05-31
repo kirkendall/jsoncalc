@@ -79,10 +79,12 @@ typedef struct {
 	char	ascii;	/* Convert non-ASCII characters to \u sequences */
 	char	color;	/* Allow the use of ANSI escape sequences */
 	char	quick;	/* Output tables piecemeal.  Use first row for names */
+	char	graphic;/* Use Unicode graphic chars where appropriate */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
 	char	escresult[20]; /* coloring of result */
-	char	escgridhead[20]; /* coloring of grid headings */
+	char	escgridhead[20]; /* coloring of last grid heading line */
+	char	escgridhead2[20]; /* coloring of other grid heading lines */
 	char	escgridline[20]; /* coloring of grid lines between columns */
 	char	escerror[20]; /* coloring of errors */
 	char	escdebug[20]; /* coloring of debugging output */

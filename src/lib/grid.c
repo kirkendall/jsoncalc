@@ -16,9 +16,11 @@ void json_grid(json_t *json, jsonformat_t *format)
 	json_t	*explain, *row, *col, *cell;
 	char	*text;
 	int	wdata, width, c, i, line;
+	int	rowheight, cellheight;
 	size_t	size;
 	char	hdrpad;
 	char	number[40];
+	char	*bar;
 	char	delim[20];
 	int	*widths, *pad;
 	jsonformat_t tweaked;
@@ -47,22 +49,10 @@ void json_grid(json_t *json, jsonformat_t *format)
 	widths = (int *)calloc(c, sizeof(int));
 	pad = (int *)calloc(c, sizeof(int));
 
-	/* Decide whether to color the output */
-	hdrpad = '_';
-	strcpy(delim, "|");
-	if (format->color && *format->escgridhead) {
-		fputs(format->escgridhead, format->fp);
-		hdrpad = ' ';
-	}
-	if (format->color && *format->escgridline) {
-		strcpy(delim, format->escgridline);
-		strcat(delim, "|");
-		strcat(delim, json_format_color_end);
-	}
-
 	/* If any column's key is wider than their data, expand the column.
 	 * Also, output the column headings while we're at it.
 	 */
+	rowheight = 1;
 	for (c = 0, col = explain->first; col; c++, col = col->next) {
 		/* For columns that can contain arrays or objects, make sure
 		 * it's wide enough to show "[array]" or "{object}".
@@ -74,8 +64,8 @@ void json_grid(json_t *json, jsonformat_t *format)
 		else if ((!strcmp(text, "object") || !strcmp(text, "any")) && width < 8)
 			width = widths[c] = 8;
 
-		/* For nullable columns, if null isn't displayed as "" then make sure
-		 * the column is wide enough for it.
+		/* For nullable columns, if null isn't displayed as "" then
+		 * make sure the column is wide enough for it.
 		 */
 		if (*format->null && json_is_true(json_by_key(col, "nullable"))) {
 			int w = json_mbs_width(format->null);
@@ -91,29 +81,76 @@ void json_grid(json_t *json, jsonformat_t *format)
 			width = wdata;
 		}
 
-		/* Output the key as a column heading */
-		for (i = 0; i < (width - wdata + 1) / 2; i++)
-			putc(hdrpad, format->fp);
-		fputs(text, format->fp);
-		for (; i < (width - wdata); i++)
-			putc(hdrpad, format->fp);
-		if (col->next)
-			putc('|', format->fp);
+		/* If this is the highest key, then increase rowheight */
+		cellheight = json_mbs_height(text);
+		if (cellheight > rowheight)
+			rowheight = cellheight;
 	}
-	if (format->color && *format->escgridhead)
-		fputs(json_format_color_end, format->fp);
-	putc('\n', format->fp);
+
+	/* Decide whether to color the output */
+	hdrpad = format->color ? ' ' : '_';
+	bar = format->graphic ? "\xe2\x94\x82" : "|";
+	strcpy(delim, bar);
+	if (format->color && *format->escgridline) {
+		strcpy(delim, format->escgridline);
+		strcat(delim, bar);
+		strcat(delim, json_format_color_end);
+	}
+
+	/* Output the column headings.  If rowheight > 1 we need to do this
+	 * separately for each line of the headings.
+	 */
+	for (line = 0; line < rowheight; line++) {
+		/* Colorize? */
+		if (format->color) {
+			if (line + 1 == rowheight) {
+				/* Last row of headings (usually only row) */
+				if (*format->escgridhead)
+					fputs(format->escgridhead, format->fp);
+			} else {
+				/* An earlier line of multi-line headings */
+				if (*format->escgridhead2)
+					fputs(format->escgridhead2, format->fp);
+			}
+		}
+
+		/* Output this line of this column's heading */
+		for (c = 0, col = explain->first; col; c++, col = col->next) {
+			/* Get this line of the heading, and its width */
+			width = widths[c] + pad[c];
+			text = json_text_by_key(col, "key");
+			size = json_mbs_line(text, line, NULL, &text, &wdata);
+			if (size > 0)
+				size--; /* remove newline */
+
+//fprintf(format->fp, "%02d/%02d", wdata, width);
+			/* Output the key as a column heading */
+			for (i = 0; i < (width - wdata + 1) / 2; i++)
+				putc(hdrpad, format->fp);
+			if (size > 0)
+				fwrite(text, 1, size, format->fp);
+			for (; i < (width - wdata); i++)
+				putc(hdrpad, format->fp);
+			if (col->next)
+				fputs(bar, format->fp);
+		}
+
+		/* End the line */
+		if (format->color && *format->escgridhead)
+			fputs(json_format_color_end, format->fp);
+		putc('\n', format->fp);
+	}
 
 	/* For each row... */
 	for (row = json->first; row && !json_interupt; row = row->next) {
 		/* Find the height of the tallest cell.  All cells are 1
 		 * except for strings that contain newlines.
 		 */
-		int rowheight = 1;
+		rowheight = 1;
 		for (c = 0, col = explain->first; col; c++, col = col->next) {
 			cell = json_by_key(row, json_text_by_key(col, "key"));
 			if (cell && cell->type == JSON_STRING) {
-				int cellheight = json_mbs_height(cell->text);
+				cellheight = json_mbs_height(cell->text);
 				if (cellheight > rowheight)
 					rowheight = cellheight;
 			}

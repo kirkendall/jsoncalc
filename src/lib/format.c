@@ -20,10 +20,12 @@ jsonformat_t json_format_default = {
 	0,	/* ascii - use \uXXXX for non-ASCII characters */
 	1,	/* color - use colors on ANSI terminals */
 	0,	/* quick - for csv/grid, use first record to find columns */
+	1,	/* graphic - use Unicode graphic characters */
 	"",	/* prefix - prepended to names for sh format */
 	"",	/* null - text to show as null for grid format */
 	"\033[36m",	/* escresult - coloring for result */
-	"\033[4;32m",	/* eschead - coloring for table headings */
+	"\033[4;32m",	/* eschead - coloring for last grid heading line */
+	"\033[32m",	/* eschead2 - coloring for other grid heading lines */
 	"\033[32m",	/* escdelim - coloring for table column delimiter */
 	"\033[31m",	/* escerror - coloring for errors */
 	"\033[33m",	/* escdebug - coloring for debugging output */
@@ -73,7 +75,7 @@ static char *colorcode(char *esc, const char *color)
 }
 
 /* Convert a color from the config object to an escape sequence */
-static void formatcolor(char *esc, json_t *config, const char *name)
+static void formatcolor(char *esc, json_t *config, const char *name, int nounderlined)
 {
 	json_t	*color;
 	char	*wholeesc = esc;
@@ -100,7 +102,7 @@ static void formatcolor(char *esc, json_t *config, const char *name)
 		esc = colorcode(esc, "dim");
 	if (json_is_true(json_by_key(color, "italic")))
 		esc = colorcode(esc, "italic");
-	if (json_is_true(json_by_key(color, "underlined")))
+	if (!nounderlined && json_is_true(json_by_key(color, "underlined")))
 		esc = colorcode(esc, "underlined");
 	if (json_is_true(json_by_key(color, "blinking")))
 		esc = colorcode(esc, "blinking");
@@ -152,13 +154,15 @@ void json_format_set(jsonformat_t *format, json_t *config)
 	format->ascii = json_is_true(json_by_key(section, "ascii"));
 	format->color = json_is_true(json_by_key(section, "color"));
 	format->quick = json_is_true(json_by_key(section, "quick"));
+	format->graphic = json_is_true(json_by_key(section, "graphic"));
 	strncpy(format->prefix, json_text_by_key(section, "prefix"), sizeof format->prefix - 1);
 	format->prefix[sizeof format->prefix - 1] = '\0';
 	strncpy(format->null, json_text_by_key(section, "null"), sizeof format->null - 1);
 	format->null[sizeof format->null - 1] = '\0';
-	formatcolor(format->escresult, config, "result");
-	formatcolor(format->escgridhead, config, "gridhead");
-	formatcolor(format->escgridline, config, "gridline");
-	formatcolor(format->escerror, config, "error");
-	formatcolor(format->escdebug, config, "debug");
+	formatcolor(format->escresult, config, "result", 0);
+	formatcolor(format->escgridhead, config, "gridhead", 0);
+	formatcolor(format->escgridhead2, config, "gridhead", 1);
+	formatcolor(format->escgridline, config, "gridline", 0);
+	formatcolor(format->escerror, config, "error", 0);
+	formatcolor(format->escdebug, config, "debug", 0);
 }

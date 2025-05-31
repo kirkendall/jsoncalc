@@ -35,22 +35,34 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 	{
                 putc('"', format->fp);
                 for (str = json->text; *str; str++) {
-			if (*str == '"' || *str == '\\') {
+			switch (*str) {
+			case '"':
+			case '\\':
 				putc('\\', format->fp);
-			}
-			else if (*str == '\'' && format->sh) {
+				putc(*str, format->fp);
+				break;
+			case '\'':
 				/* For "sh" format, the entire output is
 				 * enclosed in ' quotes which is great for
 				 * everything except the ' character itself.
 				 * For that, we need to end the quote, add a
 				 * backslash-', and start a new quote.
 				 */
-				putc('\'', format->fp);
+				if (*str == '\'' && format->sh) {
+					putc('\'', format->fp);
+					putc('\\', format->fp);
+					putc('\'', format->fp);
+					putc('\'', format->fp);
+				}
+				putc(*str, format->fp);
+				break;
+			case '\n':
 				putc('\\', format->fp);
-				putc('\'', format->fp);
-				putc('\'', format->fp);
+				putc('n', format->fp);
+				break;
+			default:
+				putc(*str, format->fp);
 			}
-			putc(*str, format->fp);
 		}
                 putc('"', format->fp);
                 putc(':', format->fp);

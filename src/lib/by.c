@@ -115,7 +115,7 @@ json_t *json_by_index(json_t *container, int idx)
 
 /* Return an item inside nested objects or arrays, selected via a
  * JavaScript-like expression.  The expr is a string containing a series of
- * symbols or non-negative numbers.  Each of these values may be delimited
+ * member names or subscript numbers.  Each of these values may be delimited
  * by one or more characters from the list ".[]", with the idea being that
  * you would use something like "ROList.ro[0].job[0].opcode" to fetch the
  * first opcode of the first RO.
@@ -129,7 +129,7 @@ json_t *json_by_index(json_t *container, int idx)
 json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 {
 	char	key[100];
-	int	i, deep;
+	int	i, deep, quote;
 
 	/* Defend against NULL */
 	if (!container)
@@ -175,15 +175,15 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			else
 				container = json_by_key(container, key);
 		}
-		else if (*expr == '"')
+		else if (*expr == '"' || *expr == '`')
 		{
 			if (container->type != JSON_OBJECT)
 			{
 			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
 			        return NULL;
 			}
-			expr++;
-			for (i = 0; i < sizeof key - 1 && *expr != '"'; i++)
+			quote = *expr++;
+			for (i = 0; i < sizeof key - 1 && *expr != quote; i++)
 				key[i] = *expr++;
 			key[i] = '\0';
 			expr++;

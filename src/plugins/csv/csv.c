@@ -451,6 +451,10 @@ char *init()
 	settings = json_parse_string(csvsettings);
 	json_append(section, json_key("csv", settings));
 
+	/* Add "csv" to the list of recognized data file extensions */
+	section = json_by_key(json_system, "extensions");
+	json_append(section, json_string("csv", -1));
+
 	/* Register the functions */
 	json_print_table_hook("csv", csvprint);
 	json_parse_hook("csv", csvtest, csvparse);

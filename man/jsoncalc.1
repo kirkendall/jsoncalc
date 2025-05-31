@@ -33,7 +33,7 @@ Any results will be written to stdout.
 This option can be repeated to supply multiple commands to run.
 
 .TP
-.BI -f file
+.BI -f scriptfile
 Read an expression from a file, and apply it to the JSON data.
 Again, the JSON data will typically come from *.json files named on the command line.
 This option can be repeated to supply multiple script files to load.
@@ -45,6 +45,23 @@ if you want.
 Also, if the first file named after the last option appears to contain a
 JsonCalc script instead of JSON data, then it will be loaded like
 .BI -f file.
+
+.TP
+.BI -F scriptfile
+Add
+.I scriptfile
+to a list of scripts to automatically load when running interactively.
+This is persistent across interactive sessions.
+Later, to persistently remove a script from that list, you can invoke
+.B jsoncalc
+with a
+.BI -F- scriptfile
+flag.
+You can also use lowercase
+.BI -f- scriptfile
+to temporarily remove
+.I scriptfile
+from the list for a single session.
 
 .TP
 .B -i
@@ -108,13 +125,16 @@ directory into variables.
 .TP
 .BI -D directory
 This is like
-.BI -d dir
+.BI -d directory
 except that uppercase
-.BI -D dir
-is persistent across invocations, for interactive use only.
+.BI -D directory
+is persistent across interactive sessions.
 If you want to remove a directory from the persistent list, put a "-" before
 the directory name, as in
-.BI -D- dir.
+.BI -D- directory.
+You can also use lowercase
+.BI -d- directory
+to temporarily remove it for one session only.
 
 .TP
 .BI -j flags
@@ -146,7 +166,7 @@ This is like
 .BI -s settings
 except that uppercase
 .BI -S settings
-is persistent across invocations, for interactive invocations only.
+is persistent across interactive sessions.
 
 .TP
 .B -p
@@ -165,8 +185,8 @@ A triple
 outputs compact JSON.
 
 .TP
-.BI -l[-] plugin [, settings ]
-This loads a plugin, or with "-" it prevents a persistent plugin from being loaded this one time.
+.BI -l plugin [, settings ]
+This loads a plugin.
 Most plugins are binary files that get linked into
 .B jsoncalc
 at runtime, to provide new functions, commands, file formats, or other features.
@@ -177,19 +197,24 @@ If a plugin supports settings, then you can set them by appending them after
 the plugin's name, with a comma as a delimiter.
 
 .TP
-.BI -L[-] plugin [, settings ]
+.BI -L plugin [, settings ]
 This is like
 .BI -l plugin , settings
 except that uppercase
 .BI -L plugin , settings
-is persistent across invocations, for interactive invocations only.
-To remove a plugin from the list, use a "-" before the plugin name, as in
+is persistent across interactive sessions.
+To remove a plugin from the persistent list, use a "-" before the plugin name,
+as in
 .BI -L- plugin .
+You can also use lowercase
+.BI -l- plugin
+to temporarily remove a plugin from the persistent list for this session only.
 
 .P
 Note that the uppercase
-.BI -D directory ,
-.BI -S settings ,
+.BI -F scriptfile,
+.BI -D directory,
+.BI -S settings,
 and
 .BI -L plugin
 options are all like their corresponding lowercase option, except that
@@ -197,7 +222,9 @@ the uppercase versions are persistent across interactive invocations.
 This can be very convenient.
 They intentionally don't apply for batch-mode invocations because there
 you want a consistent environment for the script to run in.
-If a script needs certain plugins to be loaded, it should use the
+If a script needs certain scripts or plugins to be loaded, it should use an
+.B import
+or
 .B plugin
 command to explicitly say so.
 
@@ -226,11 +253,11 @@ You can give just the value, without a name, and
 .B jsoncalc
 will figure out which name it belongs to.
 For example, there's a "table" setting with a list of preferred values that
-includes "csv", so if you want tables to be output in CSV format, you could
-either say
-.B -stable=csv
+includes "sh" (for a format that works well on shell scripts),
+so if you want tables to be output in "sh" format, you could either say
+.B -stable=sh
 or simply
-.B -scsv.
+.B -ssh.
 
 .P
 The main output format options are:
@@ -282,7 +309,7 @@ c c l.
 bold	boolean	Boldface or bright
 dim	boolean	Dim
 italic	boolean	Italic or oblique
-underline	boolean	A line under the text
+underlined	boolean	A line under the text
 linethru	boolean	A line through the midline of the text
 blinking	boolean	Nasty blinking text
 fg	string	Foreground color: normal, black, red, green, yellow, blue, magenta, cyan, or white
@@ -313,7 +340,7 @@ In a shell script, you can read the lines and evaluate them one-by-one like this
     jsoncalc -ssh -c scores sampledata/test.json | while read row
     do
         eval $row
-        echo name=$name, score=$score
+        echo "$name earned $score points in run# $run"
     done
 .fi
 .P
@@ -434,6 +461,21 @@ This is non-interactive because
 was used without
 .BR -i .
 
+.TP
+jsoncalc -c 2+2
+Start in batch mode, evaluate 2+2 to output 4, and then quit.
+
+.TP
+jsoncalc -u script.js data.json data2.json
+Start in batch mode.
+For each *.json data file, run the
+.I script.js
+script.
+Because of the
+.BR -u ,
+if the script altered any the data from any of the *.json files,
+they would updated to include those changes.
+
 .SH "EXPRESSION EXAMPLES"
 The following examples assume you invoked
 .B jsoncalc
@@ -459,6 +501,17 @@ The result is an array of objects, which
 .B jsoncalc
 classifies as a table,
 so it is output as a table.
+
+.TP
+"2024-12-25" + "P12D"
+This is an example of ISO-8601 date/time/period calculation.
+It adds 12 days to Christmas, returning "2025-01-06".
+.B jsoncalc
+makes date calculation easy.
+(If the strings didn't look like a date and a period, they would have been
+concatenated just as in JavaScript.
+If you want to concatenate strings, no questions asked, then use the
+concat() function.)
 
 .TP
 test
@@ -516,7 +569,7 @@ native expression syntax so it's about as efficient either way.
 
 .TP
 test.scores.groupBy("run")@@{run,avgScore:avg(score)}
-The difference between @@ and @ is with groups are used, @ only outputs one
+The difference between @@ and @ is that when groups are used, @ only outputs one
 value per group while @@ outputs one item per row.
 In this example, we get a separate copy of each row for each name, even though
 the name isn't included in the resulting rows.
@@ -532,10 +585,16 @@ sorted by run.
 .TP
 test..deepest
 This outputs the value of test.deep.deeper.deepest,
-which happens to br 3.
+which happens to be 3.
 The ".." operator digs down through multiple layers of objects, if necessary,
 to find the requested name.
 
+.TP
+test.cust[0].contact[type:"address"]
+This looks in
+.B text.cust[0].contact
+(an array of objects)
+for an element containing a member with the name "type" and value "address".
 .TP
 test.find(3)
 This searches through test for all instances of the value 3, and lists
@@ -546,11 +605,24 @@ see regex(7) in the Linux manual).
 .TP
 emojis
 Output the contents of sampledata/emojis.json.
-If your terminal doesn't display emoji, try one that does.
-The
+If your terminal doesn't display emojis, try one that does.
+I recommend
 .BR xfce4-terminal (1)
-program handles emoji well.
+or
+.BR gnome-terminal (1).
+KDE's
+.BR konsole (1)
+is so-so, and plain old
+.BR xterm (1)
+is just bad.
 
+.TP
+explain test.cust
+This examines
+.B test.cust
+(an array of objects)
+to determine the names, data types, and other information about each member.
+Basically this is the column information used by the "grid" table output method.
 
 .SH FILES
 
@@ -560,14 +632,14 @@ This directory stores JsonCalc's configuration.
 It may also store temporary files such as caches and logs.
 
 .TP
-.IR PATH /lib plugin-version .so
+.IR PATH /lib plugin .so
 Where
 .I PATH
 is a directory name from $JSONCALCPATH,
 this is where a binary plugin may be found.
 
 .TP
-.IR PATH /plugin-version .jc
+.IR PATH / plugin .jc
 Where
 .I PATH
 is a directory name from $JSONCALCPATH,
@@ -590,6 +662,13 @@ The default value is derived from $LDLIBRARYPATH.
 .SH "SEE ALSO"
 .BR json_calc (3),
 .BR bash (1),
-.BR xfce4-terminal (1)
+.BR xfce4-terminal (1),
+.BR gnome-terminal (1)
+.P
+The home page for JsonCalc is
+.US
+http://www.jsoncalc.org/
+.UE
+
 .SH AUTHOR
 Steve Kirkendall, kirkenda@gmail.com

@@ -134,7 +134,7 @@ FILE *json_file_update(const char *filename)
 	return fdopen(fd, "w");
 }
 
-/* Scan $JSONCALCPATH for a given file.  If found, return its full pathname
+/* Scan JsonCalc's path for a given file.  If found, return its full pathname
  * as a dynamically-allocated string (which the calling function must free).
  * If not found, return NULL.  If "filename" is NULL then just look for a
  * writable directory in the path.  If "ext" is non-NULL then append it to
@@ -145,9 +145,7 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix, i
 	char	*pathname;	/* dynamically-allocated pathname */
 	size_t	pathsize;	/* allocated size of pathname */
 	char	*home;		/* User's home directory */
-	char	*jsoncalcpath;	/* Value of the $JSONCALCPATH or a default */
-	char	*strtok_context;/* used internally by strtok_r() */
-	char	*dir;		/* A directory from the path */
+	json_t	*path;		/* Array of directories to check */
 	size_t	needsize;	/* Size of the pathname we're considering */
 	int	first;
 
@@ -163,44 +161,40 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix, i
 	pathsize = 64;
 	pathname = (char *)malloc(pathsize);
 
-	/* Get the home directory.  If not set, then assume "." */
+	/* Get the home directory.  If not set, then assume ".".  We use this
+	 * when a path entry starts with "~/".
+	 */
 	home = getenv("HOME");
 	if (!home)
 		home = ".";
 
-	/* Get the path from $JSONCALCPATH, or use a default */
-	jsoncalcpath = getenv("JSONCALCPATH");
-	if (!jsoncalcpath)
-		jsoncalcpath = JSON_PATH_DEFAULT;
-
-	/* Make a copy of the path -- strtok_r() mangles it */
-	jsoncalcpath = strdup(jsoncalcpath);
+	/* Get the path from json_config */
+	path = json_by_key(json_system, "path");
+	if (!path || path->type != JSON_ARRAY)
+		return NULL;
 
 	/* For each entry in the path... */
-	first = 1;
-	for (dir = strtok_r(jsoncalcpath, JSON_PATH_DELIM, &strtok_context);
-	     dir;
-	     dir = strtok_r(NULL, JSON_PATH_DELIM, &strtok_context)) {
+	for (path = path->first; path; path = path->next) {
 		/* Generate the filename in this directory.  If the directory
 		 * starts with "~" then use $HOME instead.
 		 */
-		if (*dir == '~')
-			needsize = snprintf(pathname, pathsize, "%s%s/%s%s%s", home, dir + 1, prefix, name, suffix);
-		else if (*dir == '.' && !dir[1])
+		if (*path->text == '~')
+			needsize = snprintf(pathname, pathsize, "%s%s/%s%s%s", home, path->text + 1, prefix, name, suffix);
+		else if (*path->text == '.' && !path->text[1])
 			needsize = snprintf(pathname, pathsize, "%s%s%s", prefix, name, suffix);
 		else
-			needsize = snprintf(pathname, pathsize, "%s/%s%s%s", dir, prefix, name, suffix);
+			needsize = snprintf(pathname, pathsize, "%s/%s%s%s", path->text, prefix, name, suffix);
 
 		/* If necessary, expand the buffer and try again */
 		if (needsize > pathsize) {
 			pathname = (char *)realloc(pathname, needsize);
 			pathsize = needsize;
-			if (*dir == '~')
-				snprintf(pathname, pathsize, "%s%s/%s%s%s", home, dir + 1, prefix, name, suffix);
-			else if (*dir == '.' && !dir[1])
+			if (*path->text == '~')
+				snprintf(pathname, pathsize, "%s%s/%s%s%s", home, path->text + 1, prefix, name, suffix);
+			else if (*path->text == '.' && !path->text[1])
 				snprintf(pathname, pathsize, "%s%s%s", prefix, name, suffix);
 			else
-				snprintf(pathname, pathsize, "%s/%s%s%s", dir, prefix, name, suffix);
+				snprintf(pathname, pathsize, "%s/%s%s%s", path->text, prefix, name, suffix);
 		}
 
 		/* If this is the first entry in the path list, and we're
@@ -222,20 +216,17 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix, i
 		if (*name) {
 			/* File -- if this pathname is readable, return it. */
 			if (access(pathname, R_OK) == 0) {
-				free(jsoncalcpath);
 				return pathname;
 			}
 		} else {
 			/* Directory -- if pathname is writable, return it */
 			if (access(pathname, W_OK) == 0) {
-				free(jsoncalcpath);
 				return pathname;
 			}
 		}
 	}
 
 	/* Not found -- clean up and return NULL */
-	free(jsoncalcpath);
 	free(pathname);
 	return NULL;
 }

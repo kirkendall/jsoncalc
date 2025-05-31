@@ -117,10 +117,7 @@ typedef struct {
 	const char	*base;	/* Contents of the file, as a giant string */
 } jsonfile_t;
 
-/* This is the default path, used when $JSONCALCPATH is unset */
-#define JSON_PATH_DEFAULT	"~/.config/jsoncalc:/usr/share/jsoncalc:/var/lib/jsoncalc"
-
-#define JSON_PATH_DELIM		":"
+#define JSON_PATH_DELIM		':'
 
 BEGIN_C
 

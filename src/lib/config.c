@@ -164,11 +164,78 @@ static void merge(json_t *old, json_t *newload)
 	}
 }
 
+/* Return an array of directory names to look in for files related to JsonCalc
+ * -- plugins and documentation mostly.
+ */
+static json_t *configpath(const char *envvar)
+{
+	const char *env;
+	json_t *path, *entry;
+	int	isjsoncalcpath;
+	size_t	len;
+
+	/* If no envvar then just fake it completely */
+	if (!envvar) {
+		path = json_array();
+		json_append(path, json_string("~/.config/jsoncalc", -1));
+		json_append(path, json_string("/usr/local/lib64/jsoncalc", -1));
+		json_append(path, json_string("/usr/local/lib/jsoncalc", -1));
+		json_append(path, json_string("/usr/lib64/jsoncalc", -1));
+		json_append(path, json_string("/usr/lib/jsoncalc", -1));
+		json_append(path, json_string("/lib64/jsoncalc", -1));
+		json_append(path, json_string("/lib/jsoncalc", -1));
+		return path;
+	}
+
+	/* Fetch the value.  If unset, return NULL */
+	env = getenv(envvar);
+	if (!env)
+		return NULL;
+
+	/* Distinguish between $JSONCALCPATH and $LD_LIBRARY_PATH */
+	isjsoncalcpath = !strcmp(envvar, "JSONCALCPATH");
+
+	/* Start building an array of entries.  If not $JSONCALCPATH then
+	 * put the config directory first.
+	 */
+	path = json_array();
+	if (!isjsoncalcpath)
+		json_append(path, json_string("~/.config/jsoncalc", -1));
+
+	/* For each entry in the path... */
+	while (*env) {
+		/* Find the end of this entry */
+		for (len = 0; env[len] && env[len] != JSON_PATH_DELIM; len++) {
+		}
+
+		/* Convert it to a string.  If not from $JSONCALCPATH then
+		 * add "/jsoncalc" to the string.
+		 */
+		if (len == 0)
+			entry = json_string(".", 1);
+		else if (isjsoncalcpath) {
+			entry = json_string(env, len);
+		} else {
+			entry = json_string(env, len + 9);
+			strcat(entry->text, "/jsoncalc");
+		}
+
+		/* Add it to the path */
+		json_append(path, entry);
+
+		/* Move to the next entry */
+		env += len;
+		if (*env == JSON_PATH_DELIM)
+			env++;
+	}
+	return path;
+}
+
 /* Load the configuration data, and return it */
 void json_config_load(const char *name)
 {
 	char	*pathname;
-	json_t	*conf;
+	json_t	*conf, *value;
 
 	/* Load the default config */
 	json_config = json_parse_string(defaultconfig);
@@ -176,6 +243,19 @@ void json_config_load(const char *name)
 	/* If json_system isn't set up yet, then set it up now */
 	if (!json_system) {
 		json_system = json_object();
+
+		/* We also want to add the path for plugins and documentation.
+		 * This is from $JSONCALCPATH, but if $JSONCALCPATH isn't set
+		 * then we want to derive it from $LD_LIBRARY_PATH.  And if
+		 * $LD_LIBRARY_PATH isn't set then we simulate that too.
+		 */
+		value = configpath("JSONCALCPATH");
+		if (!value)
+			value = configpath("LD_LIBRARY_PATH");
+		if (!value)
+			value = configpath(NULL);
+		json_append(json_system, json_key("path", value));
+
 		json_append(json_system, json_key("config", json_config));
 		pathname = json_file_path(NULL, NULL, NULL, 0, 0);
 		json_append(json_system, json_key("configdir", json_string(pathname, -1)));
@@ -192,6 +272,7 @@ void json_config_load(const char *name)
 		json_append(json_system, json_key("Math", json_object()));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
 		json_append(json_system, json_key("copyright", json_string(JSON_COPYRIGHT, -1)));
+
 	}
 
 	/* Look for the config file */

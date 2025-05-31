@@ -40,6 +40,50 @@
  * the temporary values.
  */
 
+/* These make accessing the left and right operands easier/clearer. */
+#define LEFT  u.param.left
+#define RIGHT u.param.right
+
+/* These two macros fetch the left and right operands.  They always set the
+ * "left" and "right" variables.  If the the value is freshly allocated
+ * (meaning json_calc() is responsible for freeing it) then they also set
+ * the "freeleft" and "freeright" variables.
+ */
+#define USE_LEFT_OPERAND(calc)	if ((left = jcsimple(calc->LEFT, context)) == NULL)\
+		left = freeleft = json_calc(calc->LEFT, context, agdata)
+#define USE_RIGHT_OPERAND(calc)	if ((right = jcsimple(calc->RIGHT, context)) == NULL)\
+		right = freeright = json_calc(calc->RIGHT, context, agdata)
+
+/* If calc is a literal or name, then we can retrieve the value without
+ * allocating anything.  Do that, and return it.  Otherwise return NULL.
+ */
+static json_t *jcsimple(jsoncalc_t *calc, jsoncontext_t *context)
+{
+	json_t *tmp;
+
+	/* If literal then return its value */
+	if (calc->op == JSONOP_LITERAL)
+		return calc->u.literal;
+
+	/* If simple name then look it up */
+	if (calc->op == JSONOP_NAME)
+		return json_context_by_key(context, calc->u.text, NULL);
+
+	/* We can do name.name too */
+	if (calc->op == JSONOP_DOT
+	 && calc->RIGHT->op == JSONOP_NAME
+	 && (tmp = jcsimple(calc->LEFT, context)) != NULL
+	 && tmp->type == JSON_OBJECT)
+		return json_by_key(tmp, calc->RIGHT->u.text);
+
+	/* We can choose a default table when SELECT is used without FROM */
+	if (calc->op == JSONOP_FROM)
+		return json_context_default_table(context, NULL);
+
+	/* No joy */
+	return NULL;
+}
+
 
 /* Implement @= natural join, @< left join, and @> right join */
 json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
@@ -248,51 +292,6 @@ void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, js
 	local = json_context(context, row, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	jcag(calc->u.ag, local, agdata);
 	json_context_free(local);
-}
-
-/* These make accessing the left and right operands easier/clearer. */
-#define LEFT  u.param.left
-#define RIGHT u.param.right
-
-/* These two macros fetch the left and right operands.  They always set the
- * "left" and "right" variables.  If the the value is freshly allocated
- * (meaning json_calc() is responsible for freeing it) then they also set
- * the "freeleft" and "freeright" variables.
- */
-#define USE_LEFT_OPERAND(calc)	if ((left = jcsimple(calc->LEFT, context)) == NULL)\
-		left = freeleft = json_calc(calc->LEFT, context, agdata)
-#define USE_RIGHT_OPERAND(calc)	if ((right = jcsimple(calc->RIGHT, context)) == NULL)\
-		right = freeright = json_calc(calc->RIGHT, context, agdata)
-
-
-/* If calc is a literal or name, then we can retrieve the value without
- * allocating anything.  Do that, and return it.  Otherwise return NULL.
- */
-static json_t *jcsimple(jsoncalc_t *calc, jsoncontext_t *context)
-{
-	json_t *tmp;
-
-	/* If literal then return its value */
-	if (calc->op == JSONOP_LITERAL)
-		return calc->u.literal;
-
-	/* If simple name then look it up */
-	if (calc->op == JSONOP_NAME)
-		return json_context_by_key(context, calc->u.text, NULL);
-
-	/* We can do name.name too */
-	if (calc->op == JSONOP_DOT
-	 && calc->RIGHT->op == JSONOP_NAME
-	 && (tmp = jcsimple(calc->LEFT, context)) != NULL
-	 && tmp->type == JSON_OBJECT)
-		return json_by_key(tmp, calc->RIGHT->u.text);
-
-	/* We can choose a default table when SELECT is used without FROM */
-	if (calc->op == JSONOP_FROM)
-		return json_context_default_table(context, NULL);
-
-	/* No joy */
-	return NULL;
 }
 
 /* This implements the @ and @@ operators.  "first" is the first element of
@@ -1167,6 +1166,37 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				result = json_bool(0);
 				break;
 			}
+		} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
+			|| (left->type == JSON_STRING && right->type == JSON_NUMBER)) {
+			/* When comparing strings and numbers, convert the
+			 * string to a number.
+			 */
+			if (left->type == JSON_NUMBER)
+				nl = json_double(left);
+			else {
+				nl = strtod(left->text, &str);
+				if (*str) {
+					/* Not a clean conversion, so not equal */
+					result = json_bool(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
+					break;
+				}
+			}
+			if (right->type == JSON_NUMBER)
+				nr = json_double(right);
+			else {
+				nr = strtod(right->text, &str);
+				if (*str) {
+					/* Not a clean conversion, so not equal */
+					result = json_bool(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
+					break;
+				}
+			}
+			if (nl < nr)
+				il = -1;
+			else if (nl > nr)
+				il = 1;
+			else
+				il = 0;
 		} else {/* hopefully string, but other types work too */
 			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE)
 				il = json_mbs_casecmp(left->text, right->text);
@@ -1212,6 +1242,33 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		} else if (left->type == JSON_STRING && right->type == JSON_STRING) {
 			if (json_mbs_casecmp(left->text, right->text) < 0)
 				result = json_bool(0);
+		} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
+			|| (left->type == JSON_STRING && right->type == JSON_NUMBER)) {
+			/* When comparing strings and numbers, convert the
+			 * string to a number.
+			 */
+			if (left->type == JSON_NUMBER)
+				nl = json_double(left);
+			else {
+				nl = strtod(left->text, &str);
+				if (*str) {
+					/* Not a clean conversion */
+					result = json_bool(0);
+					break;
+				}
+			}
+			if (right->type == JSON_NUMBER)
+				nr = json_double(right);
+			else {
+				nr = strtod(right->text, &str);
+				if (*str) {
+					/* Not a clean conversion */
+					result = json_bool(0);
+					break;
+				}
+			}
+			if (nl < nr)
+				result = json_bool(0);
 		} else
 			result = json_error_null(1, "BETWEEN only works on strings and numbers");
 
@@ -1220,8 +1277,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			freeright = NULL;
 		}
 
-		/* Test upper bound.  If we already know the tested value is below
-		 * the lower bound, we can skip this.
+		/* Test upper bound.  If we already know the tested value is
+		 * below the lower bound, we can skip this.
 		 */
 		if (!result) {
 			USE_RIGHT_OPERAND(calc->RIGHT);
@@ -1231,8 +1288,34 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			} else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
 				if (json_mbs_casecmp(left->text, right->text) > 0)
 					result = json_bool(0);
-			}
-			else
+			} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
+				|| (left->type == JSON_STRING && right->type == JSON_NUMBER)) {
+				/* When comparing strings and numbers, convert
+				 * the string to a number.
+				 */
+				if (left->type == JSON_NUMBER)
+					nl = json_double(left);
+				else {
+					nl = strtod(left->text, &str);
+					if (*str) {
+						/* Not a clean conversion */
+						result = json_bool(0);
+						break;
+					}
+				}
+				if (right->type == JSON_NUMBER)
+					nr = json_double(right);
+				else
+					nr = strtod(right->text, &str);
+				if (nl > nr) {
+					result = json_bool(0);
+					if (*str) {
+						/* Not a clean conversion */
+						result = json_bool(0);
+						break;
+					}
+				}
+			} else
 				result = json_error_null(1, "BETWEEN only works on strings and numbers");
 		}
 

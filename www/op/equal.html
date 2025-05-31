@@ -16,8 +16,12 @@
     </table>
     The <tt>==</tt> and <tt>!=</tt> operators compare for equality/inequality.
     They work for strings or numbers. For strings, the comparison is
-    case-sensitive.  If you try to compare a string to a number, the
-    number will be converted to a string for the comparison.
+    case-sensitive.
+    <p>
+    If you try to compare a string to a number, the
+    string will be converted to a number and then the numbers will be compared.
+    If the string can't be converted to a number, then the values are considered
+    to be unequal.
     <p>
     The <tt>=</tt> and <tt>&lt;&gt;</tt> operators are the same, but
     case-insensitive.

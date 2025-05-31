@@ -16,7 +16,17 @@
     These are comparison operators.
     They work on numbers or strings.
     <p>
+    If you compare a number to a string,
+    the string will be converted to a number
+    and then the numbers will be compared.
+    If the string can't be converted to a number then the comparison is
+    <tt>false</tt>.
+    <p>
     For strings, the comparison is case-sensitive.
+    If you want to compare two strings case-insensitively,
+    use <a target="_PARENT" href="../index.html?f=toUpperCase">toUpperCase()</a>
+    or <a target="_PARENT" href="../index.html?f=toLowerCase">toLowerCase()</a>
+    to convert them before comparison.
 
     <details open>
       <summary>Examples</summary>

@@ -17,6 +17,12 @@
     It can work on numbers or strings.
     When comparing strings,
     the comparison will be case-insensitive since that's SQL convention.
+    <p>
+    If you mix strings and numbers, then the strings will be converted to
+    numbers, and then the numbers will be compared.
+    If a string can't be converted to a number then the operator returns
+    <tt>false</tt>.
+
     <details open>
       <summary>Examples</summary>
 

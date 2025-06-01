@@ -184,6 +184,8 @@ static json_t *configpath(const char *envvar)
 		json_append(path, json_string("/usr/lib/jsoncalc", -1));
 		json_append(path, json_string("/lib64/jsoncalc", -1));
 		json_append(path, json_string("/lib/jsoncalc", -1));
+		json_append(path, json_string("/usr/local/share/jsoncalc", -1));
+		json_append(path, json_string("/usr/share/jsoncalc", -1));
 		return path;
 	}
 
@@ -192,7 +194,7 @@ static json_t *configpath(const char *envvar)
 	if (!env)
 		return NULL;
 
-	/* Distinguish between $JSONCALCPATH and $LD_LIBRARY_PATH */
+	/* Distinguish between $JSONCALCPATH and other paths */
 	isjsoncalcpath = !strcmp(envvar, "JSONCALCPATH");
 
 	/* Start building an array of entries.  If not $JSONCALCPATH then
@@ -227,6 +229,12 @@ static json_t *configpath(const char *envvar)
 		env += len;
 		if (*env == JSON_PATH_DELIM)
 			env++;
+	}
+
+	/* If not $JSONCALCPATH then add shared directories */
+	if (!isjsoncalcpath) {
+		json_append(path, json_string("/usr/local/share/jsoncalc", -1));
+		json_append(path, json_string("/usr/share/jsoncalc", -1));
 	}
 	return path;
 }

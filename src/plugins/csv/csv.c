@@ -8,7 +8,6 @@
 
 static char *csvsettings = "{"
 	"\"backslash\":true,"	/* Use \x sequences when generating CSV */
-	"\"quoteall\":true,"	/* Quote all strings, even safe ones */
 	"\"crlf\":false,"	/* Output \r\n as newlines, instead of \n */
 	"\"emptynull\":false,"	/* Parse empty/missing cells as null, not "" */
 	"\"pad\":false"		/* Pad short rows to full width of headings */
@@ -17,6 +16,9 @@ static char *csvsettings = "{"
 /*****************************************************************************/
 /* CSV output                                                                */
 /*****************************************************************************/
+
+static int backslash;
+static int crlf;
 
 /* Output a single number, string, or symbol in CSV notation */
 static void csvsingle(json_t *elem, jsonformat_t *format)
@@ -48,13 +50,17 @@ static void csvsingle(json_t *elem, jsonformat_t *format)
 		putc('"', format->fp);
 		for (s = elem->text; *s; s++) {
 			if (*s == '\n') {
-				putc('\r', format->fp);
+				if (crlf)
+					putc('\r', format->fp);
 				putc('\n', format->fp);
 			} else if ((unsigned char)*s < ' ' || *s == '\177') {
 				/* omit control characters */
-			} else if (*s == '"' || *s == '\\') {
+			} else if (backslash && (*s == '"' || *s == '\\')) {
 				putc('\\', format->fp);
 				putc(*s, format->fp);
+			} else if (*s == '"') {
+				putc('"', format->fp);
+				putc('"', format->fp);
 			} else if ((*s & 0x80) != 0 && format->ascii) {
 				char buf[13], *c;
 				s = (char *)json_mbs_ascii(s, buf);
@@ -82,6 +88,10 @@ static void csvprint(json_t *json, jsonformat_t *format)
 	json_t	*row, *col;
 	char	*t;
 	int	first;
+
+	/* Check options */
+	backslash = json_is_true(json_config_get("plugin.csv", "backslash"));
+	crlf = json_is_true(json_config_get("plugin.csv", "crlf"));
 
 	/* Collect column names */
 	headers = json_explain(NULL, json->first, 0);

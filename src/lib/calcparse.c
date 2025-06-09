@@ -608,7 +608,7 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			 * them such as "from" and "desc" are often used as
 			 * member names, and "distinct" is a jsoncalc function
 			 * name.  You could wrap them in backticks to prevent
-			 * them from being taked as keywords, but that'd be
+			 * them from being taken as keywords, but that'd be
 			 * inconvenient.
 			 */
 			if (token->len == 8 && !strncasecmp(token->full, "distinct", 8)) {

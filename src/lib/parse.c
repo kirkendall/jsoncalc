@@ -125,6 +125,16 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 	size_t	keysize;
 	size_t	tlen;	/* token length */
 	int	escape;
+	char	*emptyobject = "object";
+	int	defersize = 0;
+
+	/* Get parser config */
+	jc = json_by_key(json_config, "emptyobject");
+	if (jc && jc->type == JSON_STRING)
+		emptyobject = jc->text;
+	jc = json_by_key(json_config, "defersize");
+	if (jc && jc->type == JSON_STRING)
+		defersize = json_int(jc);
 
 	/* Start with a stack containing an empty array.  We expect parsing to
 	 * put one thing in the array.
@@ -306,6 +316,16 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 			if (stack[sp]->type != JSON_OBJECT) {
 				error = "Missing ]";
 				goto Error;
+			}
+
+			/* If empty object, maybe convert it to an empty
+			 * string or array.
+			 */
+			if (!stack[sp]->first) {
+				if (*emptyobject == 'a')
+					stack[sp]->type = JSON_ARRAY;
+				else if (*emptyobject == 's')
+					stack[sp]->type = JSON_STRING;
 			}
 			sp--;
 			str++;

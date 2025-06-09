@@ -3,15 +3,15 @@ INC=	../../../include
 BIN=	../../../bin
 PLUGIN=	../../../plugin
 
-ALL=	$(PLUGIN)/libmath.so
+ALL=	$(PLUGIN)/pluginmath.so
 SRC=	math.c
 OBJ=	math.o
 LIBS=	-lm
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic
 
-$(ALL): libmath.so
-	cp libmath.so $(PLUGIN)/libmath.so
+$(ALL): pluginmath.so
+	cp pluginmath.so $(PLUGIN)/pluginmath.so
 
-libmath.so: $(OBJ)
-	$(CC) -shared $(OBJ) $(LIBS) -o libmath.so
+pluginmath.so: $(OBJ)
+	$(CC) -shared $(OBJ) $(LIBS) -o pluginmath.so

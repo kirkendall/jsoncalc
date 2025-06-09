@@ -3,15 +3,15 @@ INC=	../../../include
 BIN=	../../../bin
 PLUGIN=	../../../plugin
 
-ALL=	$(PLUGIN)/libcsv.so
+ALL=	$(PLUGIN)/plugincsv.so
 SRC=	csv.c
 OBJ=	csv.o
 LIBS=	-lm
 CFLAGS=	-I$(INC)
 CC=	gcc -g -fpic
 
-$(ALL): libcsv.so
-	cp libcsv.so $(PLUGIN)/libcsv.so
+$(ALL): plugincsv.so
+	cp plugincsv.so $(PLUGIN)/plugincsv.so
 
-libcsv.so: $(OBJ)
-	$(CC) -shared $(OBJ) $(LIBS) -o libcsv.so
+plugincsv.so: $(OBJ)
+	$(CC) -shared $(OBJ) $(LIBS) -o plugincsv.so

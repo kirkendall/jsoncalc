@@ -3,14 +3,14 @@ INC=	../../../include
 BIN=	../../../bin
 PLUGIN=	../../../plugin
 
-ALL=	$(PLUGIN)/liblog.so
+ALL=	$(PLUGIN)/pluginlog.so
 SRC=	log.c
 OBJ=	log.o
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
 
-$(ALL): liblog.so
-	cp liblog.so $(PLUGIN)/liblog.so
+$(ALL): pluginlog.so
+	cp pluginlog.so $(PLUGIN)/pluginlog.so
 
-liblog.so: $(OBJ)
-	$(CC) -shared $(OBJ) -o liblog.so
+pluginlog.so: $(OBJ)
+	$(CC) -shared $(OBJ) -o pluginlog.so

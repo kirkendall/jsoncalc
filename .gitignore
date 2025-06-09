@@ -26,7 +26,6 @@ Makefile.am
 configure.ac
 src/Makefile.am
 src/plugins/Makefile
-src/plugins/curl/
 src/plugins/mysql/
 src/plugins/sqlite/
 src/plugins/xml/

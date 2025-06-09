@@ -26,9 +26,9 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	}
 
 	/* Look for a binary plugin */
-	binfile = json_file_path("lib",name,".so", 0, 0);
+	binfile = json_file_path("plugin",name,".so", 0, 0);
 	if (!binfile)
-		binfile = json_file_path("lib",name,".so", 0, 0);
+		binfile = json_file_path("plugin",name,".so", 0, 0);
 
 	/* Look for a script file */
 	scriptfile = NULL;

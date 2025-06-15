@@ -118,6 +118,7 @@
     <table class="referencelist">
       <thead>
         <tr>
+          <th>Plugin</th>
           <th>Function</th>
           <th>Description</th>
 	</tr>

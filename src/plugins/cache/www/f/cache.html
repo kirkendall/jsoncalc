@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>cache</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc cache - Configure or access a cache">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, cache">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>cache - Configure or access a cache</h1>
+    <dl>
+      <dt>plugin cache;
+      <br/>cache(<var>cacheName</var>)
+      <br/>cache(<var>cacheName</var>, <var>settings</var>)
+      <br/>cache(<var>cacheName</var>, <var>index</var>)
+      <br/>cache(<var>cacheName</var>, <var>index</var>, <var>data</var>)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=cache">cache</a> plugin.
+      You must load the plugin via either -lcache on the shell command line,
+      or a <tt>plugin cache;</tt> line in a script.
+      <p>
+      This configures a cache, or adds an item to it, or retrieves an item
+      from it.
+      Everything you could want to do to a cache, right here in one function.
+      <p>
+      The <var>cacheName</var> should be a string describing the types of
+      things you want to put in the cache, such as "cookies" or "vins".
+      If you invoke <tt>cache()</tt> with only a <var>cacheName</var>
+      then it will return an object containing that cache's settings.
+      <p>
+      The <var>settings</var> argument is an object, probably returned by
+      a previous call to <tt>cache(</tt><var>cacheName</var><tt>)</tt>
+      and then modified.
+      This will store the new settings for the cache.
+      <p>
+      Alternatively, if you give an <var>index</var> string argument instead of
+      <var>settings</var>, then it will look for an item in the
+      <var>cacheName</var> cache associated with the given <var>index</var>
+      value.
+      If no such item is found, or it has expired, then <tt>null</tt>
+      is returned.
+      (Note that since <var>settings</var> is an object, and
+      <var>index</var> is a string, there's no ambiguity here.)
+      <p>
+      If you pass both <var>index</var> and <var>data</var>, then
+      <var>data</var> will be added to the cache and can be retrieved later
+      via the <var>index</var>.
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>cache("cookies")</kbd>
+	<samp>{"seconds":600,"bytes":50000,"touchUsed":false}</samp>
+	This fetches the settings for the "cookies" cache.
+      </div>
+
+      <div class="example">
+	<kbd>cache("cookies", {seconds:300});</kbd>
+	<samp>{"seconds":300,"bytes":50000,"touchUsed":false}</samp>
+	This changes the <tt>seconds</tt> setting.
+	Other settings are unaffected.
+      </div>
+
+      <div class="example">
+	<kbd>cache("cookies", "oatmeal");</kbd>
+	<samp>null</samp>
+        Here we're looking for a cookie named "oatmeal", but it isn't in
+        the cache yet so <tt>cache()</tt> returns <tt>null</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>void cache("cookies", "oatmeal", {texture:"chewy",fruit:"apple"});</kbd>
+        In this call, we're adding "oatmeal" to the cache.
+        The data is stored, and also returned by the call
+        however the <tt>void</tt> hides the returned value so it doesn't
+        clutter output.
+      </div>
+
+      <div class="example">
+	<kbd>cache("cookies", "oatmeal");</kbd>
+	<samp>{"texture":"chewy","fruit":"apple"}</samp>
+        This time, the <tt>cache()</tt> does find "oatmeal"
+        in the "cookies" cache.
+        Its associated data is returned.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The plugins' settings are used as the default settings for each
+            new cache, but once you change a cache's settings they stay changed.
+            The settings are persistent.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=cache">plugin cache</a></td><td>Overview of the cache plugin</td><tr>
+      </table>
+    </details>
+
+  </body>
+</html>

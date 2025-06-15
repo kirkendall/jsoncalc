@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Cache Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc cache plugin summary">
+    <meta name="keywords" content="jsoncalc, cache plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Cache Plugin</h1>
+    The <strong>cache</strong> provides a way to store temporary files
+    such as cookies or OAUTH2 tokens.
+    <p>
+    Multiple caches are supported.
+    Each cache can have its own settings, which are persistent and shared
+    among processes.
+    New caches default settings come from the plugin's settings.
+    <p>
+    <a href="#options">Options</a> &nbsp;
+    <a href="#functions">Functions</a> &nbsp;
+    <a href="#commands">Commands</a> &nbsp;
+    <a href="#other">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Option Name</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>dir</td>
+          <td>string</td>
+          <td>""</td>
+          <td>This is the directory where the cache resides.
+              Leaving it set to "" causes the plugin to search through
+              the JsonCalc path (<tt>config.path</tt>) for the first writable
+              directory, and create a "cache" subdirectory there to store all
+              caches.
+	  </td>
+	</tr>
+        <tr>
+          <td>seconds</td>
+          <td>number</td>
+          <td>600</td>
+          <td>How many seconds to retain cached information.
+              Anything older than this will be discarded.
+              As a special case, setting it to 0 will prevent cached items
+              from ever being discarded due to age.
+	  </td>
+	</tr>
+        <tr>
+          <td>bytes</td>
+          <td>number</td>
+          <td>50000</td>
+          <td>Approximate number of bytes that each cache is allowed to use.
+              If a cache grows larger than this, then older items will be
+              deleted to shrink it down.
+              As a special case, settings this to 0 will prevent cached items
+              from ever being discarded due to the cache's overall disk usage.
+	  </td>
+	</tr>
+        <tr>
+          <td>touchUsed</td>
+          <td>boolean</td>
+          <td>false</td>
+          <td>Normally (when this is <tt>false</tt>)
+              when looking for older cache items to discard,
+              the module goes by when the item was added to the cache,
+              regardless of how recently the item was retrieved and used
+              again.
+              Setting this to <tt>true</tt> will change that so the
+              <tt>seconds</tt> setting is relative to the last use,
+              not when the item was first added to the cache.
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="functions">Functions</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=cache/cache.html">cache()</td>
+          <td>Configure a cache, or add/retrieve an item.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    The <strong>cache</strong> plugin doesn't add any commands.
+
+    <h2 id="other">Other Features</h2>
+    The <strong>cache</strong> plugin doesn't add any other features.
+
+  </body>
+</html>

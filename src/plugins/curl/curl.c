@@ -138,10 +138,10 @@ static size_t urlencode(json_t *data, char *buf, int component)
 	return 0;
 }
 
-/* curlget(url:string, data?:string|object, headers?:string[], decode:?boolean):string
+/* curlGet(url:string, data?:string|object, headers?:string[], decode:?boolean):string
  * Read a URL using HTTP "GET"
  */
-static json_t *jfn_curlget(json_t *args, void *agdata)
+static json_t *jfn_curlGet(json_t *args, void *agdata)
 {
 	CURL	*curl;
 	CURLcode result;
@@ -154,7 +154,7 @@ static json_t *jfn_curlget(json_t *args, void *agdata)
 
 	/* Check required parameters */
 	if (!args->first || args->first->type != JSON_STRING)
-		return json_error_null(0, "The %s() function requires a URL string", "curlget");
+		return json_error_null(0, "The %s() function requires a URL string", "curlGet");
 
 	/* Check optional parameters. */
 	data = headers = NULL;
@@ -165,21 +165,21 @@ static json_t *jfn_curlget(json_t *args, void *agdata)
 			headers = more;
 			for (scan = headers->first; scan; scan = scan->next) {
 				if (scan->type != JSON_STRING)
-					return json_error_null(0, "For %s() then array of request headers must be all strings", "curlget");
+					return json_error_null(0, "For %s() then array of request headers must be all strings", "curlGet");
 			}
 		} else if (more->type == JSON_BOOL)
 			decode = json_is_true(more);
 		else if (more->type == JSON_OBJECT || more->type == JSON_STRING)
 			data = more;
 		else
-			return json_error_null(0, "Extra parameter added to %s()", "curlget");
+			return json_error_null(0, "Extra parameter added to %s()", "curlGet");
 	}
 
 	/* Build a list of request headers */
 	if (decode)
 		slist = curl_slist_append(slist, "Accept: application/json");
 	if (headers) {
-		for (scan = headers->first; scan; scan = headers->next) {
+		for (scan = headers->first; scan; scan = scan->next) {
 			slist = curl_slist_append(slist, scan->text);
 		}
 	}
@@ -252,10 +252,10 @@ static json_t *jfn_curlget(json_t *args, void *agdata)
 	return response;
 }
 
-/* curlpost(url:string, data:string|object|array, mimetype?:string, headers?:string[], decode?:boolean):string
+/* curlPost(url:string, data:string|object|array, mimetype?:string, headers?:string[], decode?:boolean):string
  * Send data via an HTTP "POST" request, and return the response string.
  */
-static json_t *jfn_curlpost(json_t *args, void *agdata)
+static json_t *jfn_curlPost(json_t *args, void *agdata)
 {
 	CURL	*curl;
 	CURLcode result;
@@ -269,11 +269,11 @@ static json_t *jfn_curlpost(json_t *args, void *agdata)
 
 	/* Check required parameters */
 	if (!args->first || args->first->type != JSON_STRING)
-		return json_error_null(0, "The %s() function requires a URL string", "curlpost");
+		return json_error_null(0, "The %s() function requires a URL string", "curlPost");
 	url = args->first->text;
 	content = args->first->next;
 	if (!content || (content->type != JSON_STRING && content->type != JSON_OBJECT && content->type != JSON_ARRAY))
-		return json_error_null(0, "The %s() function requires data as its second argument", "curlpost");
+		return json_error_null(0, "The %s() function requires data as its second argument", "curlPost");
 
 	/* Allow optional parameters in any order */
 	headers = NULL;
@@ -283,17 +283,17 @@ static json_t *jfn_curlpost(json_t *args, void *agdata)
 		if (more->type == JSON_STRING) {
 			contentType = more->text;
 			if (strchr(contentType, ':') || !strchr(contentType, '/'))
-				return json_error_null(0, "Any extra string passed to %s() should be a MIME type", "curlpost");
+				return json_error_null(0, "Any extra string passed to %s() should be a MIME type", "curlPost");
 		} else if (more->type == JSON_ARRAY) {
 			/* Make sure they're all strings */
 			for (scan = more->first; scan; scan = scan->next)
 				if (scan->type != JSON_STRING || !strchr(scan->text, ':'))
-					return json_error_null(0, "An array passed to %s() should contain only header strings", "curlpost");
+					return json_error_null(0, "An array passed to %s() should contain only header strings", "curlPost");
 			headers = more;
 		} else if (more->type == JSON_BOOL) {
 			decode = json_is_true(more);
 		} else
-			return json_error_null(0, "Invalid type of optional parameter passed to %s()", "curlpost");
+			return json_error_null(0, "Invalid type of optional parameter passed to %s()", "curlPost");
 	}
 
 	/* If a content type was given, and the content isn't a string, then
@@ -310,7 +310,7 @@ static json_t *jfn_curlpost(json_t *args, void *agdata)
 			contentstr = (char *)malloc(arglen + 1);
 			urlencode(content, contentstr, 1);
 		} else
-			return json_error_null(0, "The %s() function can't convert data to %s", "curlpost", contentType);
+			return json_error_null(0, "The %s() function can't convert data to %s", "curlPost", contentType);
 	} else if (content->type == JSON_STRING) {
 		switch (*content->text) {
 		case '{':	/* } */
@@ -353,7 +353,7 @@ static json_t *jfn_curlpost(json_t *args, void *agdata)
 	if (decode)
 		slist = curl_slist_append(slist, "Accept: application/json");
 	if (headers) {
-		for (scan = headers->first; scan; scan = headers->next) {
+		for (scan = headers->first; scan; scan = scan->next) {
 			slist = curl_slist_append(slist, scan->text);
 		}
 	}
@@ -365,10 +365,8 @@ static json_t *jfn_curlpost(json_t *args, void *agdata)
 
 	/* Set up the transfer */
 	curl_easy_setopt(curl, CURLOPT_URL, url);
-fprintf(stderr, "URL=%s\n", url);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, contentstr);
-fprintf(stderr, "POSTFIELDS=%s\n", contentstr);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
 
@@ -452,7 +450,7 @@ static json_t *jfn_uuid(json_t *args, void *agdata)
 	 */
 	fd = open("/dev/random", O_RDONLY);
 	if (fd < 0)
-		fd = open("/dev/random", O_RDONLY);
+		fd = open("/dev/urandom", O_RDONLY);
 	if (fd >= 0) {
 		read(fd, bytes, sizeof bytes);
 		close(fd);
@@ -494,13 +492,12 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 	 */
 	len = strlen(args->first->text);
 	len = ((len + 2) / 3) * 4;
-fprintf(stderr, "len=%d\n", (int)len);
 
 	/* Allocate the result buffer */
 	result = json_string("", len);
 
 	/* Convert each group of 3 bytes */
-	for (str = args->first->text, j = 0; j + 4 <= len; str += 3) {
+	for (str = args->first->text, j = 0; str[0] && str[1] && str[2]; str += 3) {
 		/* Most significant 6 bits of first byte */
 		digit = (*str >> 2) & 0x3f;
 		result->text[j++] = b64[digit];
@@ -520,7 +517,6 @@ fprintf(stderr, "len=%d\n", (int)len);
 	}
 
 	/* If there's any leftover bytes, convert them too */
-fprintf(stderr, "str=\"%s\"\n", str);
 	if (str[0] && str[1]) {
 		/* TWO BYTES LEFT, NEED 3 MORE DIGITS PLUS "=" */
 
@@ -569,8 +565,8 @@ char *init()
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	/* Register the functions */
-	json_calc_function_hook("curlget", "url:string, data?:string|object, headers?:string[], decode?:boolean", "string | any", jfn_curlget);
-	json_calc_function_hook("curlpost", "url:string, data?:any, mimetype?:string, headers?:string[], decode?:boolean", "string | any", jfn_curlpost);
+	json_calc_function_hook("curlGet", "url:string, data?:string|object, headers?:string[], decode?:boolean", "string | any", jfn_curlGet);
+	json_calc_function_hook("curlPost", "url:string, data:any, mimetype?:string, headers?:string[], decode?:boolean", "string | any", jfn_curlPost);
 	json_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
 	json_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
 	json_calc_function_hook("uuid",  "", "string", jfn_uuid);

@@ -403,7 +403,7 @@ json_t *json_config_get(const char *section, const char *key)
  */
 void json_config_set(const char *section, const char *key, json_t *value)
 {
-	json_t *jsect;
+	json_t	*jsect;
 
 	/* Locate the section.  If section is NULL, use all of json_config,
 	 * or the "interactive" or "batch" subsection, as appropriate.
@@ -412,10 +412,16 @@ void json_config_set(const char *section, const char *key, json_t *value)
 	 */
 	if (section) {
 		/* Use the named section */
-		jsect = json_by_key(json_config, section);
+		jsect = json_by_expr(json_config, section, NULL);
 		if (!jsect) {
-			jsect = json_object();
-			json_append(json_config, json_key(section, jsect));
+			if (!strncmp(section, "plugin.", 7)) {
+				jsect = json_by_key(json_config, "plugin");
+				json_append(jsect, json_key(section + 7, json_object()));
+				jsect = json_by_key(jsect, section + 7);
+			} else {
+				jsect = json_object();
+				json_append(json_config, json_key(section, jsect));
+			}
 		}
 	} else {
 		/* Use the top level of the config... or, in the "interactive"

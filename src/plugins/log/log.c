@@ -27,9 +27,11 @@ static char *config = "{"
 	"\"date\":false,"
 	"\"time\":false,"
 	"\"utc\":false,"
+	"\"pid\":false,"
 	"\"file\":false,"
 	"\"line\":false,"
 	"\"detail\":9,"
+	"\"flush\":true,"
 "}";
 
 
@@ -502,7 +504,7 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t *list, *scan;
 	FILE	*out;
-	int	showdate, showtime, showfile, showline;
+	int	showdate, showtime, showpid, showfile, showline;
 	int	lastchar;
 
 	/* If this detail level is too high, skip it */
@@ -526,6 +528,7 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* Write any line info */
 	showdate = getbool("date");
 	showtime = getbool("time");
+	showtime = getbool("pid");
 	showfile = getbool("file");
 	showline = getbool("line");
 	if (showdate || showtime) {
@@ -548,8 +551,13 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			fprintf(out, "%02d%02d%02d%s",
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 	}
+	if (showpid) {
+		if (showdate || showtime || showpid)
+			putc(' ', out);
+		fprintf(out, "[%5d]", (int)getpid());
+	}
 	if (showfile) {
-		if (showdate || showtime)
+		if (showdate || showtime || showpid)
 			putc(' ', out);
 		fputs(cmd->filename, out);
 		if (showline)
@@ -602,6 +610,10 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* If it's a tty, turn off colors */
 	if (isatty(fileno(out)) && json_format_default.color)
 		fputs(json_format_color_end, out);
+
+	/* If supposed to flush, then do that */
+	if (getbool("flush"))
+		fflush(out);
 
 	/* Success! */
 	return NULL;

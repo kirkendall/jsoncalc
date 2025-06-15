@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>uuid</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc uuid - Generate a unique ID string">
+    <meta name="keywords" content="string, jsoncalc, function reference, uuid">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>uuid - Generate a unique ID string</h1>
+    <dl>
+      <dt>uuid()
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      <p>
+      The <tt>uuid()</tt> funnction generates a Universally Unique Identifier
+      string, consisting of 32 hex digits with some hyphens inserted to divide
+      the value into groups of 8-4-4-4-12 digits.
+      Many standards use UUIDs to identify documents, records, transactions,
+      etc.
+      <p>
+      The digits are all random.
+      If possible, they'll be derived from /dev/random or /dev/urandom.
+      If that isn't available, it'll use the <i>lrand48</i>(3) function
+      which doesn't really have enough bits to really generate
+      32 hex digits (128 bits) randomly.
+      <p>
+      The full UUID standard specifies multiple ways to generate the
+      UUID value (e.g. by deriving some bits from a timestamp or counter
+      instead of random), but this <tt>uuid()</tt> function is always random.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>uuid()</kbd>
+	<samp>"0556cafe-1443-45d5-67bc-32d403f41d52"</samp>
+
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>UUIDs are also sometimes refered to as GUIDs ("Globally" instead of
+            "Universally") especially in the Microsoft world.
+
+	<li>Most standards say that UUIDs should use lowercase a-f as hex
+	    digits, which this <tt>uuid()</tt> function does.  They also say
+	    that comparisons should be case-insensitive though, like JsonCalc's
+	    <a target="_PARENT" href="../../../index.html?op=equal">=</a>
+	    operator.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
+      </table>
+    </details>
+
+  </body>
+</html>

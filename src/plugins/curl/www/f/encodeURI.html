@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>encodeURI</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc encodeURI - URL-encode an URI, preserving its structure">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, encodeURI">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>encodeURI - URL-encode an URI, preserving its structure</h1>
+    <dl>
+      <dt>encodeURI(<var>arg</var>)
+      <br/>encodeURI(<var>arg</var>, <var>optionalarg</var>)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      <p>
+      The <tt>encodeURI()</tt> function converts spaces and non-ASCII characters
+      to %XX sequences.
+      It does not convert other characters such as "?" and "&amp;".
+      This function is most useful when you have a URL that uses (or may use)
+      non-ASCII characters in the resource name.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>encodeURI("http://maps.br/S&atilde;o Paolo/")</kbd>
+	<samp>"http://maps.br/S%C3%A3o%20Paolo/"</samp>
+        The &atilde; is converted to %C3%A2 because those two bytes represent
+        the UTF8-encoding of &atilde;.
+        The space is converted to %20.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a>
+            function is better when appending a parameter to a URL, because
+            it encodes more characters such as &amp; which can't be included
+            in a parameter value without this encoding.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=encodeURIComponent">encodeURIComponent()</a></td><td>URL-encode the value of a parameter</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

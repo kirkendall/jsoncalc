@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>encodeURIComponent</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc encodeURIComponent - URL-encode an parameter value">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, encodeURIComponent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>encodeURIComponent - URL-encode an parameter value</h1>
+    <dl>
+      <dt>encodeURIComponent(<var>string</var>)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      <p>
+      This function converts a string into a series of pure ASCII characters
+      that are safe to use as the values of parameters appended to a URL.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>encodeURIComponent("A Pi&ntilde;a Colada & Thou")</kbd>
+	<samp>"A%20Pi%C3%B1a%20Colada%20%26%20Thou"</samp>
+        The &ntilde; is converted %C3%B1, exposing the two bytes that represent
+        that character in UTF-8.
+        The spaces are converted to %20.
+        The ampersand (&amp;) is converted to %26.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>encodeURIComponent()</tt> function converts more characters
+	    to %XX notation than <a target="_PARENT" href="../../index.html?f=curl/encodeURI">encodeURI()</a>,
+	    such as &amp; which can't be included in a parameter value  without
+	    this conversion.
+	    Use <tt>encodeURIComponent()</tt> when constructing a URI/URL.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=encodeURI">encodeURI()</a></td><td></td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=command">command</a></td><td>Description of command</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?op=operator">operator</a></td><td>Description of operator</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

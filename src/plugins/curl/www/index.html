@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Curl Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc curl plugin summary">
+    <meta name="keywords" content="jsoncalc, curl plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Curl Plugin</h1>
+    The <strong>curl</strong> plugin gives access to the "cURL" library
+    of network protocols.
+    In particular, this provides an easy way to send HTTP/HTTPS requests.
+    It can also handle other protocols such as SFTP.
+    <p>
+    The cURL library is huge, complicated, and powerful.
+    JsonCalc's <strong>curl</strong> plugin is small and simple.
+    <p>
+    <a href="#options">Options</a> &nbsp;
+    <a href="#functions">Functions</a> &nbsp;
+    <a href="#commands">Commands</a> &nbsp;
+    <a href="#other">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Option Name</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>buffer</td>
+          <td>number</td>
+          <td>0</td>
+          <td>Maximum bytes of a response to buffer in memory.
+              Responses larger than this will be stored in a temporary file
+              instead.
+              You'll still be able to refer to the response as a string though.
+              As a special case, 0 means "no limit".
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="functions">Functions</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/curlGet.html">curlGet()</td>
+          <td>Send a request and return its response</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/curlPost.html">curlPost()</td>
+          <td>Send an HTTP[S] "POST" request and return its response</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/encodeURI.html">encodeURI()</td>
+          <td>Encode a string to work around characters that are unsafe in URLs.</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent.html">encodeURIComponent()</td>
+          <td>Encode a string to use as part of a URL.</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/mime64.html">mime64()</td>
+          <td>Encode a string using MIME Base64 encoding.</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../../index.html?f=curl/uuid.html">uuid()</td>
+          <td>Generate a random Universally Unique ID.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    The <strong>curl</strong> plugin doesn't add any commands.
+
+    <h2 id="other">Other Features</h2>
+    The <strong>curl</strong> plugin doesn't add any other features.
+
+  </body>
+</html>

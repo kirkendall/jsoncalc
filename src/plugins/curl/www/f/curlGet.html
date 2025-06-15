@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>curlGet</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc curlGet - Send an HTTP/HTTPS GET request">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, curlGet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>curlGet - Send an HTTP GET request</h1>
+    <dl>
+      <dt>plugin curl;
+      <br/>curlGet(<var>url</var>)
+      <br/>curlGet(<var>url</var>, <var>query</var>, <var>headers</var>, <var>decode</var>)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      This sends a request and returns the response.
+      Typically the request URL would be use "http:" or "https:" but
+      other protocols such as "sftp:" are supported too.
+      <p>
+      The <tt>url</tt> argument is required.
+      All other arguments are optional, and may be given in any order.
+      As luck would have it, each possible argument has a different data type
+      so <tt>curlGet()</tt> can figure out which argument is what.
+      <p>
+      A string or object is taken to be query data.
+      If it's a string, it will be appended to the URL with a "?" delimiter.
+      If it is an object, then members of the object will provide names and
+      values to append, and the values will URL-encoded.
+      For example, <tt>{season:"All Season"}</tt> would append
+      "?season=All%20Season" to the URL.
+      <p>
+      An array of strings is taken to be a list of HTTP request headers.
+      For example, you might include an ["Accept: application/json"] header
+      list to specifically request that the response be encoded in JSON.
+      <p>
+      The response is normally returned as a string.
+      If you add a <tt>true</tt> parameter, then <tt>curlGet()</tt> will
+      attempt to decode the response, and return the object (or whatever)
+      that the response decodes to.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>curlGet("http://localhost/")</kbd>
+	<samp><i>Some big HTML string</i></samp>
+        This attempts to fetch the main index of a local HTTP server.
+        Assuming you have one running, you should receive an HTML document
+        back, as a string.
+      </div>
+
+      <div class="example">
+	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
+	<kbd>const headers=["Authorization: basic "+mime64(user+":"+pass)];</kbd>
+	<kbd>curlGet("https://example.net/app/request.json", data, headers, true)</kbd>
+	<samp><i>A bunch of parsed data.</i></samp>
+	First we build an object containing data to add to the URL.
+	Then we build an <tt>Authorization:</tt> header
+	(always as an array of strings, not a single string).
+	Then we pass those to <tt>curlGet()</tt>, along with the URL
+	and a <tt>true</tt> flag to parse the result.
+	The parsed response data is then returned.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>If you pass query data as a string instead of an object, then
+            must ensure that the string is URL-encoded.
+            This will probably involve calling <a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a>.
+
+        <li>Passing <tt>true</tt> to parse the response also implies that
+            the request headers should include an ["Accept: application/json"]
+            header line.
+            However, if you've loaded another plugin that supports parsing
+            other data formats (e.g., the "csv" or "xml" plugins) then those
+            will be recognized and parsed too.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a></td><td>Send an HTTP/HTTPS "POST" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a></td><td>Make a string safe to pass as part of a URL</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME64</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

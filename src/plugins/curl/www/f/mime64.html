@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>mime64</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc mime64 - Convert a string to MIME base64 encoding">
+    <meta name="keywords" content="string, jsoncalc, function reference, mime64">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>mime64 - Convert a string to MIME base64 encoding</h1>
+    <dl>
+      <dt>mime64(<var>string</var>)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      <p>
+      This function converts a string to MIME base64 encoding.
+      This is most prominently used to encode the username and password
+      for an HTTP "Authentication: Basic" header line.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>mime64("This is a test")</kbd>
+	<samp>"VGhpcyBpcyBhIHRlc3Q="</samp>
+        Each group of 3 bytes (not characters) of the string are converted to
+        a group of 4 base-64 digits.
+        These digits are upper- and lower-case ASCII letters, digits, and the
+        "." and "/" characters.
+        If the string's length isn't an exact multiple of 3 then the base-64
+        representation will be padded with one or two "=" characters.
+      </div>
+
+      <div class="example">
+	<kbd>const headers = [ "Authentication: Basic " + mime64(userid + ":" + password) ]</kbd>
+        This shows how you can build an "Authentication: Basic" header line.
+        It's wrapped in square brackets to make it an array because that's how the
+        <a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</a>
+        and
+        <a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a>
+        functions want to receive their headers.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>"Encoded" doesn't mean "encrypted"!
+            The only reason to use base-64 encoding is to convert potentially
+            troublesome characters or random bytes into nice safe printable
+            ASCII characters.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</td><td>Send an HTTP/HTTPS "GET" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</td><td>Send an HTTP/HTTPS "POST" request</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -73,6 +73,14 @@ static void jcsort(json_t *array, json_t *orderby)
 		orderby = orderby->next;
 	}
 
+	/* If no more keys to sort by, then do nothing */
+	if (!orderby)
+		return;
+
+	/* Empty arrays and single-element arrays are inherently sorted */
+	if (!array->first || !array->first->next)
+		return;
+
 	/* Start with an empty bucket array */
 	nbuckets = used = 0;
 	bucket = NULL;
@@ -201,13 +209,13 @@ void json_sort(json_t *array, json_t *orderby)
 		orderby = orderby->first;
 	anykeys = 0;
 	for (check = orderby; check; check = check->next) {
-		if (orderby->type == JSON_STRING)
+		if (check->type == JSON_STRING)
 			anykeys++;
-		else if (orderby->type != JSON_BOOL) {
+		else if (check->type != JSON_BOOL) {
 			/* EEE json_sort() key list must be strings and booleans */
 			return;
 		}
-		else if (!orderby->next) {
+		else if (!check->next) {
 			/* EEE json_sort() key list can't end with a boolean */
 			return;
 		}

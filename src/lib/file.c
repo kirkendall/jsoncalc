@@ -84,7 +84,7 @@ jsonfile_t *json_file_load(const char *filename)
 	return jf;
 }
 
-/* Close a file that was opened via json_file_open_to_read() */
+/* Close a file that was opened via json_file_load() */
 void json_file_unload(jsonfile_t *jf)
 {
 	if (jf->isfile) {

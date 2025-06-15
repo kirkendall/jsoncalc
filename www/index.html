@@ -30,27 +30,31 @@
 
 console.log(namevalue[1] + "=" + namevalue[2]);
 		switch (namevalue[1]) {
-		case 'lit':
+		case 'lit': // Literals
 		    $("#main").prop("src", "lit/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "lit/sidebar.html");
 		    break;
-		case 'f':
+		case 'f': // Functions (JsonCalc, not C)
 		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "f/sidebar.html");
 		    break;
-		case 'op':
+		case 'op': // Operators
 		    $("#main").prop("src", "op/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "op/sidebar.html");
 		    break;
-		case 'cmd':
+		case 'cmd': // Commands
 		    $("#main").prop("src", "cmd/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "cmd/sidebar.html");
 		    break;
-		case 'a':
+		case 'p': // Plugins
+		    $("#main").prop("src", "plugin/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "sidebar.html");
+		    break;
+		case 'a': // Articles
 		    $("#main").prop("src", "a/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "a/sidebar.html");
 		    break;
-		case 'quick':
+		case 'quick': // Quick intro
 		    $("#main").prop("src", "quick.html");
 		    break;
 		}

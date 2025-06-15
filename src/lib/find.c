@@ -84,6 +84,11 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				 * element isn't and object/array.
 				 */
 				continue;
+			} else if (scan->type == JSON_STRING && find->regex) {
+				/* Compare against the regexp */
+				regmatch_t matches[10];
+				if (regexec(find->regex, scan->text, 10, matches, 0) != 0)
+					continue;
 			} else if (scan->type == JSON_STRING && find->needle->type == JSON_STRING) {
 				/* Compare as strings */
 				if (find->ignorecase) {
@@ -93,11 +98,6 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 					if (0 != strcmp(find->needle->text, scan->text))
 						continue;
 				}
-			} else if (scan->type == JSON_STRING && find->regex) {
-				/* Compare against the regexp */
-				regmatch_t matches[10];
-				if (regexec(find->regex, scan->text, 10, matches, 0) != 0)
-					continue;
 			} else if (scan->type == JSON_NUMBER) {
 				/* Does it match? */
 

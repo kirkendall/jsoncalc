@@ -22,7 +22,7 @@ static char *config = "{"
 	"\"ext\":\".log\","
 	"\"rollover-list\":[\"daily\",\"size\",\"never\"],"
 	"\"rollover\":\"never\","
-	"\"kbytes\":100,"
+	"\"bytes\":100000,"
 	"\"keep\":10,"
 	"\"date\":false,"
 	"\"time\":false,"
@@ -242,7 +242,7 @@ void rollsize(const char *logname)
 	size_t	len;
 	struct stat st;
 	json_t	*val;
-	off_t	kbytes;
+	off_t	bytes;
 	int	keeplogs, ver, highver;
 	int	fd;
 	glob_t	globbuf;
@@ -257,13 +257,13 @@ void rollsize(const char *logname)
 	lockf(fd, F_LOCK, (off_t)0);
 
 	/* Get the size limit */
-	kbytes = 100;
-	val = json_config_get("plugin.log", "kbytes");
+	bytes = 100000;
+	val = json_config_get("plugin.log", "bytes");
 	if (val && val->type == JSON_NUMBER)
-		kbytes = json_int(val);
+		bytes = json_int(val);
 
 	/* Check the size of the log file */
-	if (fstat(fd, &st) < 0 || st.st_size < 1024 * kbytes) {
+	if (fstat(fd, &st) < 0 || st.st_size < bytes) {
 		/* Either it doesn't exist, or it's small -- no rollover */
 		close(fd); /* <-- also frees the lock */
 		return;
@@ -349,14 +349,14 @@ FILE *switchfile(const char *logname)
 	 */
 	if (ftell(prevfp) == 0) {
 		char today[12];
-		json_t *kbytes = json_config_get("plugin.log", "kbytes");
+		json_t *bytes = json_config_get("plugin.log", "bytes");
 		datedelta(today, 0);
 		if (roll->type != JSON_STRING)
 			fprintf(prevfp, "%s never\n", today);
 		else if (!strcmp(roll->text, "daily"))
 			fprintf(prevfp, "%s daily %d", today, keep());
 		else if (!strcmp(roll->text, "size"))
-			fprintf(prevfp, "%s size=%dK %d", today, json_int(kbytes), keep());
+			fprintf(prevfp, "%s size(%dK) %d", today, json_int(bytes) / 1024, keep());
 		else
 			fprintf(prevfp, "%s never\n", today);
 	}

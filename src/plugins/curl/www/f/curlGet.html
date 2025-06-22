@@ -12,7 +12,7 @@
     <dl>
       <dt>plugin curl;
       <br/>curlGet(<var>url</var>)
-      <br/>curlGet(<var>url</var>, <var>query</var>, <var>headers</var>, <var>decode</var>)
+      <br/>curlGet(<var>url</var>, <var>query?</var>, <var>flag?</var>, ...)
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
       You must load the plugin via either -lcurl on the shell command line,
@@ -26,21 +26,22 @@
       As luck would have it, each possible argument has a different data type
       so <tt>curlGet()</tt> can figure out which argument is what.
       <p>
-      A string or object is taken to be query data.
-      If it's a string, it will be appended to the URL with a "?" delimiter.
-      If it is an object, then members of the object will provide names and
-      values to append, and the values will URL-encoded.
+      If the <tt>url</tt> is followed by a string or object, it is taken to
+      be a query to append to the URL.
+      A string will be appended verbatim.
+      An object must only have member values that are strings or numbers,
+      and they will be converted to a series of name=value pairs as though
+      from an HTML form, with URL encoding done automatically.
       For example, <tt>{season:"All Season"}</tt> would append
       "?season=All%20Season" to the URL.
       <p>
-      An array of strings is taken to be a list of HTTP request headers.
-      For example, you might include an ["Accept: application/json"] header
-      list to specifically request that the response be encoded in JSON.
-      <p>
-      The response is normally returned as a string.
-      If you add a <tt>true</tt> parameter, then <tt>curlGet()</tt> will
-      attempt to decode the response, and return the object (or whatever)
-      that the response decodes to.
+      This may be followed by one or more flag arguments.
+      The flags are numbers, but there's a <tt>CURL</tt> object which
+      defines symbolic names for the numbers, so you'll generally want to use
+      <tt>CURL.bearer_</tt> instead of its number (which happens to be 4).
+      The underscore at the end of the symbolic name is a clue that this
+      flag requires an extra parameter, specifically a bearer token in
+      this case.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -55,15 +56,14 @@
 
       <div class="example">
 	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
-	<kbd>const headers=["Authorization: basic "+mime64(user+":"+pass)];</kbd>
-	<kbd>curlGet("https://example.net/app/request.json", data, headers, true)</kbd>
+	<kbd>curlGet("https://example.net/app/request.json", data, CURL.username_, "steve", CURL.password_, "haBiBi", CURL.decode)</kbd>
 	<samp><i>A bunch of parsed data.</i></samp>
-	First we build an object containing data to add to the URL.
-	Then we build an <tt>Authorization:</tt> header
-	(always as an array of strings, not a single string).
-	Then we pass those to <tt>curlGet()</tt>, along with the URL
-	and a <tt>true</tt> flag to parse the result.
-	The parsed response data is then returned.
+	First we build an object containing data to append to the URL.
+	Then we run <tt>curlGet()</tt> passing it the URL, the data, and some
+	flags.
+	The flags define the user name and password and imply that
+	"Authentication: Basic" should be used, and also to decode the response
+	text, so we get an object instead of a big string.
       </div>
 
     </details>
@@ -73,15 +73,12 @@
       <ul>
 
         <li>If you pass query data as a string instead of an object, then
-            must ensure that the string is URL-encoded.
+            you must ensure that the string is URL-encoded.
             This will probably involve calling <a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a>.
 
-        <li>Passing <tt>true</tt> to parse the response also implies that
-            the request headers should include an ["Accept: application/json"]
-            header line.
-            However, if you've loaded another plugin that supports parsing
-            other data formats (e.g., the "csv" or "xml" plugins) then those
-            will be recognized and parsed too.
+        <li>To avoid having to repeat your login credentials with every request,
+            you may need to enable cookies by adding a <tt>CURL.cookies</tt>
+            flag.
 
       </ul>
     </details>
@@ -91,6 +88,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../../index.html?p=curl">curl</a></td><td>Overview of the curl plugin</td><tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a></td><td>Send an HTTP/HTTPS "POST" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlOther">curlOther()</a></td><td>Send an HTTP/HTTPS request other than "GET" or "POST"</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a></td><td>Make a string safe to pass as part of a URL</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME64</td></tr>
       </table>

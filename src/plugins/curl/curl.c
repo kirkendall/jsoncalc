@@ -13,6 +13,25 @@
  * the internet using a wide variety of protocols.
  */
 
+static char *settings = "{"
+	"\"buffer\":0,"
+	"\"cookiejar\":\"\""
+"}";
+
+/* These bits are used to select boolean options */
+typedef enum { 
+	OPT_PROXY_ = 1,		/* (url) Define an optional proxy server */
+	OPT_USERNAME_,		/* (user) Use Authentication: Basic */
+	OPT_PASSWORD_,		/* (pass) Password to pair with OPT_USERNAME_ */
+	OPT_BEARER_,		/* (token) Use Authentication: Bearer */
+	OPT_REQCONTENT, 	/* Send content with the request */
+	OPT_REQCONTENTTYPE_,	/* (mimetype) Define the Content-Type of the request content */
+	OPT_REQHEADER_,		/* (headerlines) Add header request lines */
+	OPT_COOKIES,		/* Allow cookies to be sent/received */
+	OPT_FOLLOWLOCATION,	/* Follow HTTP 3xx redirects */
+	OPT_DECODE,		/* Try to decode the response content */
+	OPT_HEADERS		/* Return headers along with content */
+} opt_t;
 
 /* This data type is used as a read buffer */
 typedef struct {
@@ -23,14 +42,13 @@ typedef struct {
 	FILE	*fp;	/* temp file buffer */
 } receiver_t;
 
-
 /* This is a callback function for CURL to send us the received data */
 static size_t receive(char *data, size_t size, size_t nmemb, void *clientp)
 {
 	receiver_t *rcv = (receiver_t *)clientp;
 
 	/* If necessary, enlarge the buffer */
-	if (rcv->used + size * nmemb > rcv->size) {
+	if (rcv->used + size * nmemb + 1> rcv->size) {
 		rcv->size = ((rcv->used + size * nmemb) | 0x3fff) + 1; /* 16K chunks */
 		rcv->buf = (char *)realloc(rcv->buf, rcv->size);
 	}
@@ -38,9 +56,42 @@ static size_t receive(char *data, size_t size, size_t nmemb, void *clientp)
 	/* Add new data to the buffer */
 	memcpy(rcv->buf + rcv->used, data, size * nmemb);
 	rcv->used += size * nmemb;
+	rcv->buf[rcv->used] = '\0';
 	return size * nmemb;
 }
 
+/* This stores the name of a temporary cookie jar (file) */
+static char *tempcookiejar;
+
+/* When exiting, delete the temporary cookie jar (if any) */
+static void curlcleanup(void)
+{
+	if (!tempcookiejar)
+		return;
+	unlink(tempcookiejar);
+	free(tempcookiejar);
+}
+
+
+/* Convert a big header string into an array of header lines */
+static json_t *headerArray(char *header)
+{
+	json_t *array = json_array();
+	size_t	len;
+
+	/* until we hit the blank line parking the end... */
+	while (*header >= ' ') {
+		/* Look for the end of this line */
+		for (len = 1; header[len] >= ' '; len++) {
+		}
+		json_append(array, json_string(header, len));
+		if (header[len] == '\r' && header[len + 1] == '\n')
+			header += len + 2;
+		else
+			header += len;
+	}
+	return array;
+}
 
 
 /* This internal utility function generates URL-encoded form parameters from
@@ -138,264 +189,331 @@ static size_t urlencode(json_t *data, char *buf, int component)
 	return 0;
 }
 
-/* curlGet(url:string, data?:string|object, headers?:string[], decode:?boolean):string
- * Read a URL using HTTP "GET"
+/* Construct a CURL request, send it, and receive the response.  "fn" is the
+ * function name, for reporting purposes.  "request" is an HTTP verb -- usually
+ * "GET" or "POST", but it could be "HEAD", "DELETE", or whatever.  "argsfirst"
+ * is the first element of a JSON array of arguments.
  */
-static json_t *jfn_curlGet(json_t *args, void *agdata)
+static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 {
 	CURL	*curl;
 	CURLcode result;
-	struct curl_slist *slist = NULL;
+	struct curl_slist *slist;
 	char	*url, *str, *mustfree;
-	int	decode;
+	json_t	*data;
+	char	*reqcontenttype;
+	int	content;/* whether to send data as content (else append to URL)*/
+	int	decode;	/* decode response content? */
+	int	headers;/* return header info too? */
 	size_t	arglen;
-	receiver_t rcv = {0};
-	json_t	*more, *scan, *data, *headers, *response;
+	receiver_t rcv = {0}, hdr = {0};
+	json_t	*more, *scan, *response;
 
-	/* Check required parameters */
-	if (!args->first || args->first->type != JSON_STRING)
-		return json_error_null(0, "The %s() function requires a URL string", "curlGet");
-
-	/* Check optional parameters. */
-	data = headers = NULL;
-	decode = 0;
-	for (more = args->first->next; more; more = more->next) {
-		if (more->type == JSON_ARRAY) {
-			/* List of request headers.  Must be all strings */
-			headers = more;
-			for (scan = headers->first; scan; scan = scan->next) {
-				if (scan->type != JSON_STRING)
-					return json_error_null(0, "For %s() then array of request headers must be all strings", "curlGet");
-			}
-		} else if (more->type == JSON_BOOL)
-			decode = json_is_true(more);
-		else if (more->type == JSON_OBJECT || more->type == JSON_STRING)
-			data = more;
-		else
-			return json_error_null(0, "Extra parameter added to %s()", "curlGet");
-	}
-
-	/* Build a list of request headers */
-	if (decode)
-		slist = curl_slist_append(slist, "Accept: application/json");
-	if (headers) {
-		for (scan = headers->first; scan; scan = scan->next) {
-			slist = curl_slist_append(slist, scan->text);
-		}
-	}
-
-	/* Open a handle */
+	/* Allocate a CURL handle */
 	curl = curl_easy_init();
 	if (!curl)
-		return json_error_null(0, "Failed to allocate a CURL handle");
+		return json_error_null(0, "Failed to allocate a CURL handle in %s()", fn);
 
-	/* Get the URL */
-	url = args->first->text;
-	mustfree = NULL;
+	/* First argument must be URL */
+	if (!argsfirst || argsfirst->type != JSON_STRING)
+		return json_error_null(0, "The %s() function requires a URL string", fn);
+	url = argsfirst->text;
 
-	/* If there is data, append it to the URL */
-	if (data) {
-		if (data->type == JSON_STRING) {
-			str = data->text;
-			arglen = strlen(str);
-			mustfree = (char *)malloc(strlen(url) + 2 + arglen);
-			strcpy(mustfree, url);
-			if (strchr(url, '?'))
-				strcat(mustfree, "&");
-			else
-				strcat(mustfree, "?");
-			strcat(mustfree, str);
-		} else /* JSON_OBJECT */ {
-			arglen = urlencode(data, NULL, 1);
-			mustfree = (char *)malloc(strlen(url) + 2 + arglen);
-			strcpy(mustfree, url);
-			if (strchr(url, '?'))
-				strcat(mustfree, "&");
-			else
-				strcat(mustfree, "?");
-			urlencode(data, mustfree + strlen(mustfree), 1);
-		}
-		url = mustfree;
+	/* If next arg isn't a number, then it must be data */
+	data = NULL;
+	more = argsfirst->next;
+	if (more && more->type != JSON_NUMBER) {
+		data = more;
+		more = more->next;
 	}
 
-	/* Set up the transfer */
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
-
-	/* Do it */
-	result = curl_easy_perform(curl);
-	curl_easy_cleanup(curl);
-
-	/* Detect errors */
-	if (result != CURLE_OK)
-		return json_error_null(0, "CURL error %d", (int)result);
-
-	/* Maybe try to parse it; otherwise convert the returned data to a
-	 * string.  If the returned data isn't really text, this could be
-	 * embarrassing.
+	/* Scan the args for option numbers.  Some options are followed by
+	 * other data.
 	 */
-	response = NULL;
-	if (decode)
-		response = json_parse_string(rcv.buf);
-	if (!response)
-		response = json_string(rcv.buf ? rcv.buf : "", rcv.used);
+	reqcontenttype = NULL;
+	content = !strcmp(request, "POST");
+	decode = headers = 0;
+	slist = NULL;
+	for (; more; more = more->next) {
+		if (more->type != JSON_NUMBER)
+			continue;
+		switch (json_int(more)) {
+		case OPT_PROXY_:
+			if (!more->next || more->next->type != JSON_STRING) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
+			}
+			more = more->next;
+			curl_easy_setopt(curl, CURLOPT_PROXY, more->text);
+			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
+			break;
 
-	/* Clean up */
-	if (mustfree)
-		free(mustfree);
-	if (rcv.buf)
-		free(rcv.buf);
+		case OPT_USERNAME_:
+			if (!more->next || more->next->type != JSON_STRING) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
+			}
+			more = more->next;
+			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+			curl_easy_setopt(curl, CURLOPT_USERNAME, more->text);
+			break;
+		case OPT_PASSWORD_:
+			if (!more->next || more->next->type != JSON_STRING) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
+			}
+			more = more->next;
+			curl_easy_setopt(curl, CURLOPT_PASSWORD, more->text);
+			break;
+		case OPT_BEARER_:
+			if (!more->next || more->next->type != JSON_STRING) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
+			}
+			more = more->next;
+			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
+			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
+			break;
+		case OPT_REQCONTENT:
+			if (!data) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_REQCONTENT only works if content is given after URL", fn);
+			}
+			content = 1;
+			break;
+		case OPT_REQCONTENTTYPE_:
+			if (!more->next
+			 || more->next->type != JSON_STRING
+			 || strchr(more->next->text, ':')
+			 || !strchr(more->next->text, '/')) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+			}
+			more = more->next;
+			reqcontenttype = more->text;
+			break;
+		case OPT_REQHEADER_:
+			more = more->next;
+			if (!more || more->type != JSON_STRING || !strchr(more->text, ':')) {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(slist);
+				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+			}
+			slist = curl_slist_append(slist, more->text);
+			break;
+		case OPT_COOKIES:
+			/* If cookiejar is "" then make one up */
+			str = json_config_get("plugin.curl", "cookiejar")->text;
+			if (!str || !*str)
+				str = tempcookiejar;
+			if (!str) {
+				str = json_file_path(NULL, NULL, NULL, 0, 0);
+				tempcookiejar = (char *)malloc(strlen(str) + 18);
+				strcpy(tempcookiejar, str);
+				strcat(tempcookiejar, "cookiejar.XXXXXX");
+				close(mkstemp(tempcookiejar));
+				atexit(curlcleanup);
+				free(str);
+				str = tempcookiejar;
+			}
 
-	/* Return the response text */
-	return response;
-}
+			/* Tell the cURL library to use it */
+			curl_easy_setopt(curl, CURLOPT_COOKIEFILE, str);
+			curl_easy_setopt(curl, CURLOPT_COOKIEJAR, str);
+			break;
+		case OPT_FOLLOWLOCATION:
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+			break;
+		case OPT_DECODE:
+			decode = 1;
+			break;
+		case OPT_HEADERS:
+			headers = 1;
+			break;
+		default:
+			curl_easy_cleanup(curl);
+			curl_slist_free_all(slist);
+			return json_error_null(0, "Invalid option number %d passed to %s()", json_int(more), fn);
+		}
 
-/* curlPost(url:string, data:string|object|array, mimetype?:string, headers?:string[], decode?:boolean):string
- * Send data via an HTTP "POST" request, and return the response string.
- */
-static json_t *jfn_curlPost(json_t *args, void *agdata)
-{
-	CURL	*curl;
-	CURLcode result;
-	struct curl_slist *slist = NULL;
-	char	*url;
-	json_t	*content, *headers, *response, *more, *scan;
-	char	*contentType;
-	char	*contentstr, *headerstr;
-	int	decode;
-	receiver_t rcv = {0};
+	}
 
-	/* Check required parameters */
-	if (!args->first || args->first->type != JSON_STRING)
-		return json_error_null(0, "The %s() function requires a URL string", "curlPost");
-	url = args->first->text;
-	content = args->first->next;
-	if (!content || (content->type != JSON_STRING && content->type != JSON_OBJECT && content->type != JSON_ARRAY))
-		return json_error_null(0, "The %s() function requires data as its second argument", "curlPost");
-
-	/* Allow optional parameters in any order */
-	headers = NULL;
-	contentType = NULL;
-	decode = 0;
-	for (more = content->next; more; more = more->next) {
-		if (more->type == JSON_STRING) {
-			contentType = more->text;
-			if (strchr(contentType, ':') || !strchr(contentType, '/'))
-				return json_error_null(0, "Any extra string passed to %s() should be a MIME type", "curlPost");
-		} else if (more->type == JSON_ARRAY) {
-			/* Make sure they're all strings */
-			for (scan = more->first; scan; scan = scan->next)
-				if (scan->type != JSON_STRING || !strchr(scan->text, ':'))
-					return json_error_null(0, "An array passed to %s() should contain only header strings", "curlPost");
-			headers = more;
-		} else if (more->type == JSON_BOOL) {
-			decode = json_is_true(more);
-		} else
-			return json_error_null(0, "Invalid type of optional parameter passed to %s()", "curlPost");
+	/* If we're supposed to send content but have no data, fail */
+	if (content && !data) {
+		curl_easy_cleanup(curl);
+		curl_slist_free_all(slist);
+		return json_error_null(0, "The %s() needs data to send", fn);
 	}
 
 	/* If a content type was given, and the content isn't a string, then
 	 * convert the content to a string in an appropriate way.  This only
-	 * works for HTML form data or 
+	 * works for HTML form data or JSON.
 	 */
-	if (contentType) {
-		if (content->type == JSON_STRING)
-			contentstr = content->text;
-		else if (strstr(contentType, "json") || strstr(contentType, "JSON")) {
-			contentstr = json_serialize(content, NULL);
-		} else if (strstr(contentType, "form") || strstr(contentType, "FORM")) {
-			size_t arglen = urlencode(content, NULL, 1);
-			contentstr = (char *)malloc(arglen + 1);
-			urlencode(content, contentstr, 1);
-		} else
-			return json_error_null(0, "The %s() function can't convert data to %s", "curlPost", contentType);
-	} else if (content->type == JSON_STRING) {
-		switch (*content->text) {
-		case '{':	/* } */
-		case '[':	contentType = "application/json";	break;
-		case '<':	contentType = "application/xml";	break;
-		default:	contentType = "application/x-www-form-urlencoded";
+	mustfree = str = NULL;
+	if (reqcontenttype) {
+		if (data->type == JSON_STRING)
+			str = data->text;
+		else if (strstr(reqcontenttype, "json") || strstr(reqcontenttype, "JSON")) {
+			mustfree = str = json_serialize(data, NULL);
+		} else if (strstr(reqcontenttype, "form") || strstr(reqcontenttype, "FORM")) {
+			size_t arglen = urlencode(data, NULL, 1);
+			mustfree = str = (char *)malloc(arglen + 1);
+			urlencode(data, str, 1);
+		} else {
+			curl_easy_cleanup(curl);
+			curl_slist_free_all(slist);
+			return json_error_null(0, "The %s() function can't convert data to %s", fn, reqcontenttype);
 		}
-		contentstr = content->text;
-	} else if (content->type == JSON_ARRAY) {
-		contentType = "application/json";
-		contentstr = json_serialize(content, NULL);
-	} else if (content->type == JSON_OBJECT) {
+	} else if (data && data->type == JSON_STRING) {
+		switch (*data->text) {
+		case '{':	/* } */
+		case '[':	reqcontenttype = "application/json";	break;
+		case '<':	reqcontenttype = "application/xml";	break;
+		default:	reqcontenttype = "application/x-www-form-urlencoded";
+		}
+		str = data->text;
+	} else if (data && data->type == JSON_ARRAY) {
+		reqcontenttype = "application/json";
+		mustfree = str = json_serialize(data, NULL);
+	} else if (data && data->type == JSON_OBJECT) {
 		/* If all member values are strings or numbers, assume HTML
 		 * form otherwise assume JSON
 		 */
-		for (scan = content->first; scan; scan = scan->next) {
+		for (scan = data->first; scan; scan = scan->next) {
 			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER)
 				break;
 		}
 		if (scan) {
 			/* complex values, can't be a form so assume JSON */
-			contentstr = json_serialize(content, NULL);
-			contentType = "application/json";
+			str = json_serialize(data, NULL);
+			reqcontenttype = "application/json";
 		} else {
 			/* simple values, it's probably form data */
-			size_t arglen = urlencode(content, NULL, 1);
-			contentstr = (char *)malloc(arglen + 1);
-			urlencode(content, contentstr, 1);
-			contentType = "application/x-www-form-urlencoded";
+			size_t arglen = urlencode(data, NULL, 1);
+			str = (char *)malloc(arglen + 1);
+			urlencode(data, str, 1);
+			reqcontenttype = "application/x-www-form-urlencoded";
 		}
-	} else
-		return json_error_null(0, "The %s() function can't guess the content type");
-
-	/* Build a list of request headers */
-	headerstr = (char *)malloc(strlen(contentType) + 15);
-	strcpy(headerstr, "Content-Type: ");
-	strcat(headerstr, contentType);
-	slist = curl_slist_append(slist, headerstr);
-	free(headerstr);
-	if (decode)
-		slist = curl_slist_append(slist, "Accept: application/json");
-	if (headers) {
-		for (scan = headers->first; scan; scan = scan->next) {
-			slist = curl_slist_append(slist, scan->text);
-		}
+	} else if (data) {
+		curl_easy_cleanup(curl);
+		curl_slist_free_all(slist);
+		return json_error_null(0, "The %s() function can't guess the content type", fn);
 	}
 
-	/* Open a handle */
-	curl = curl_easy_init();
-	if (!curl)
-		return json_error_null(0, "Failed to allocate a CURL handle");
+	/* If we have data but aren't sending content, append it to the URL. */
+	if (str && !content) {
+		char	*newurl = (char *)malloc(strlen(url) + 2 + strlen(str));
+		strcpy(newurl, url);
+		if (strchr(url, '?'))
+			strcat(newurl, "&");
+		else
+			strcat(newurl, "?");
+		strcat(newurl, str);
+		if (mustfree)
+			free(mustfree);
+		mustfree = url = newurl;
+	}
 
-	/* Set up the transfer */
+	/* If sending data as content, and we have a content-type, then add
+	 * it to the list of header lines.
+	 */
+	if (str && content && reqcontenttype)
+	{
+		char	*tmp = (char *)malloc(15 + strlen(reqcontenttype));
+		strcpy(tmp, "Content-Type: ");
+		strcat(tmp, reqcontenttype);
+		slist = curl_slist_append(slist, tmp);
+		free(tmp);
+	}
+
+	/* Almost there!  Set the last few options */
+	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, contentstr);
+	if (slist)
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	if (str && content)
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, str);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
+	if (headers) {
+		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, receive);
+		curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&hdr);
+	}
 
 	/* Do it */
 	result = curl_easy_perform(curl);
 	curl_easy_cleanup(curl);
-	if (contentstr != content->text)
-		free(contentstr);
+	curl_slist_free_all(slist);
+	if (mustfree)
+		free(mustfree);
 
 	/* Detect errors */
-	if (result != CURLE_OK)
-		return json_error_null(0, "CURL error %d", (int)result);
+	if (result != CURLE_OK) {
+		if (rcv.buf)
+			free(rcv.buf);
+		if (hdr.buf)
+			free(hdr.buf);
+		return json_error_null(0, "CURL error: %s", curl_easy_strerror(result));
+	}
 
 	/* Maybe try to parse it; otherwise convert the returned data to a
 	 * string.  If the returned data isn't really text, this could be
 	 * embarrassing.
 	 */
 	response = NULL;
-	if (decode)
+	if (decode && rcv.buf)
 		response = json_parse_string(rcv.buf);
 	if (!response)
 		response = json_string(rcv.buf ? rcv.buf : "", rcv.used);
 
-	/* Clean up */
+	/* If supposed to return headers, then build an object containing
+	 * both the headers and the response
+	 */
+	if (headers) {
+		json_t *obj = json_object();
+		json_append(obj, json_key("headers", headerArray(hdr.buf)));
+		json_append(obj, json_key("response", response));
+		response = obj;
+	}
+
+	/* Return the response */
 	if (rcv.buf)
 		free(rcv.buf);
-
-	/* Return the response text */
+	if (hdr.buf)
+		free(hdr.buf);
 	return response;
+}
+
+/* curlGet(url:string, data?:string|object, headers?:string[], decode:?boolean):any
+ * Read a URL using HTTP "GET"
+ */
+static json_t *jfn_curlGet(json_t *args, void *agdata)
+{
+	return curlHelper("curlGet", "GET", args->first);
+}
+
+/* curlPost(url:string, data:string|object|array, ...):any
+ * Send data via an HTTP "POST" request, and return the response string.
+ */
+static json_t *jfn_curlPost(json_t *args, void *agdata)
+{
+	return curlHelper("curlPost", "POST", args->first);
+}
+
+/* curlOther(verb:string, url:string, data:string|object|array, ...):any
+ * Send data via an HTTP "POST" request, and return the response string.
+ */
+static json_t *jfn_curlOther(json_t *args, void *agdata)
+{
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
+	return curlHelper("curlOther", args->first->text, args->first->next);
 }
 
 static json_t *jfn_encodeURI(json_t *args, void *agdata)
@@ -468,6 +586,11 @@ static json_t *jfn_uuid(json_t *args, void *agdata)
 		build += 2;
 	}
 
+	/* Because this is version 4 (all random), the version digit should
+	 * always be '4'.  That's the first digit in the third grouping.
+	 */
+	result->text[14] = '4';
+
 	/* Return it */
 	return result;
 }
@@ -510,7 +633,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 		digit = ((str[1] << 2) & 0x3c) | ((str[2] >> 6) & 0x03);
 		result->text[j++] = b64[digit];
 
-		/* Final 6 bits fro third byte */
+		/* Final 6 bits from third byte */
 		digit = (str[2] & 0x3f);
 		result->text[j++] = b64[digit];
 
@@ -559,14 +682,34 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
  */
 char *init()
 {
-	json_t	*math;
+	json_t	*curl;
+
+	/* Store the curl plugin's settings */
+	curl = json_by_key(json_config, "plugin");
+	json_append(curl, json_key("curl", json_parse_string(settings)));
+
+	/* Add a "curl" object to json_system, to hold option consts */
+	curl = json_object();
+	json_append(curl, json_key("proxy_", json_from_int(OPT_PROXY_)));
+	json_append(curl, json_key("username_", json_from_int(OPT_USERNAME_)));
+	json_append(curl, json_key("password_", json_from_int(OPT_PASSWORD_)));
+	json_append(curl, json_key("bearer_", json_from_int(OPT_BEARER_)));
+	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
+	json_append(curl, json_key("reqContentType_", json_from_int(OPT_REQCONTENTTYPE_)));
+	json_append(curl, json_key("reqHeader_", json_from_int(OPT_REQHEADER_)));
+	json_append(curl, json_key("cookies", json_from_int(OPT_COOKIES)));
+	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
+	json_append(curl, json_key("decode", json_from_int(OPT_DECODE)));
+	json_append(curl, json_key("headers", json_from_int(OPT_HEADERS)));
+	json_append(json_system, json_key("CURL", curl));
 
 	/* Initialize CURL */
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	/* Register the functions */
-	json_calc_function_hook("curlGet", "url:string, data?:string|object, headers?:string[], decode?:boolean", "string | any", jfn_curlGet);
-	json_calc_function_hook("curlPost", "url:string, data:any, mimetype?:string, headers?:string[], decode?:boolean", "string | any", jfn_curlPost);
+	json_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);
+	json_calc_function_hook("curlPost", "url:string, data:any, ...", "string | any", jfn_curlPost);
+	json_calc_function_hook("curlOther", "verb:string, url:string, data?:any, ...", "string | any", jfn_curlOther);
 	json_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
 	json_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
 	json_calc_function_hook("uuid",  "", "string", jfn_uuid);

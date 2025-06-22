@@ -11,8 +11,8 @@
     <h1>curlPost - Send an HTTP/HTTPS "POST" request</h1>
     <dl>
       <dt>plugin curl;
-      <br/>curlPost(<var>url</var>, <var>content</var>)
-      <br/>curlPost(<var>url</var>, <var>content</var>, <var>contentType</var>, <var>headers</var>, <var>decode</var>)
+      <br/>curlPost(<var>url</var>, <var>content</var>, <var>flag?</var>...)
+      
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
       You must load the plugin via either -lcurl on the shell command line,
@@ -24,37 +24,31 @@
       This allows POST requests to sent larger data with a complex structure.
       <p>
       The <tt>url</tt> and <tt>content</tt> arguments are required.
-      All other arguments are optional, and may be given in any order.
-      As luck would have it, each possible argument has a different data type
-      so <tt>curlPost()</tt> can figure out which argument is what.
       <p>
-      A string will be interpreted as the MIME type of the content.
-      A typical value might be <tt>"application/json"</tt>.
-      If you don't specify the content's MIME type, then
-      <tt>curlPost()</tt> will try to guess it.
-      <p>
-      An array of strings is taken to be a list of HTTP request headers.
-      For example, you might include an ["Accept: application/json"] header
-      list to specifically request that the response be encoded in JSON.
-      <p>
-      The response is normally returned as a string.
-      If you add a <tt>true</tt> parameter, then <tt>curlPost()</tt> will
-      attempt to decode the response, and return the object (or whatever)
-      that the response decodes to.
+      Any arguments after that should be a flag as listed in the
+      "Other Features" section of the 
+      <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin
+      overview.
+      Some of these flags require extra data which should be given as the
+      argument following the flag;
+      their names end with a "_" character as a clue that more info is needed.
+      For example, the <tt>CURL.bearer_</tt> flag should always be followed
+      by the bearer token string.
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
 	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
-	<kbd>const headers=["Authorization: basic "+mime64(user+":"+pass)];</kbd>
-	<kbd>curlPost("https://example.net/app/request.json", data, headers, true)</kbd>
+	<kbd>curlPost("https://example.net/app/request.json", data, CURL.decode, CURL.bearer_, token)</kbd>
 	<samp><i>A bunch of parsed data.</i></samp>
 	First we build an object containing data to send as the request's content.
-	Then we build an <tt>Authorization:</tt> header
-	(always as an array of strings, not a single string).
-	Then we pass those to <tt>curlPost()</tt>, along with the URL
-	and a <tt>true</tt> flag to parse the result.
+	Then we call <tt>curlPost()</tt>, passing it the URL and the data,
+	followed by flags.
+	The <tt>CURL.decode</tt> flag tells it to attempt to decode the response
+	so we get an object back instead of a big string of JSON source code.
+	The <tt>CURL.bearer_</tt> flag tells it to use "Authentication: Bearer"
+	with the bearer token that's stored in a "token" variable.
 	The parsed response data is then returned.
       </div>
 
@@ -64,9 +58,9 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Passing <tt>true</tt> to parse the response also implies that
-            the request headers should include an ["Accept: application/json"]
-            header line.
+        <li>Passing a <tt>CURL.decode</tt> flag to parse the response also
+            implies that the request headers should include an
+            "Accept: application/json" header line.
             However, if you've loaded another plugin that supports parsing
             other data formats (e.g., the "csv" or "xml" plugins) then those
             will be recognized and parsed too.
@@ -79,7 +73,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</a></td><td>Send an HTTP/HTTPS "GET" request</td></tr>
-        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME64</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlOther">curlOther()</a></td><td>Send an HTTP/HTTPS request other than "GET" or "POST"</td></tr>
       </table>
     </details>
 

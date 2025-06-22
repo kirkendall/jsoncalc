@@ -112,7 +112,7 @@
     <a target="_PARENT" href="../index.html?f=curl/curlGet">curlGet()</a>,
     <a target="_PARENT" href="../index.html?f=curl/curlPost">curlPost()</a>, and
     <a target="_PARENT" href="../index.html?f=curl/curlOther">curlOther()</a>.
-    Each option that you use should be passed as a separate argument to the
+    Each flag that you use should be passed as a separate argument to the
     function.
     Symbols with names ending with "_" require extra data provided in the
     next argument, for example when passing <tt>CURL.username_</tt>, the
@@ -143,12 +143,12 @@
           This defines the user name to use for the request, and also implies
           that "Authentication: Basic" should be used.
           You'll probably want to pair this with the <tt>CURL.password_</tt>
-          option.
+          flag.
           <p style="margin-bottom:0">
           If you want to use a username and password, but with an authentication
           mechanism other than "Basic", such as "Digest", then you'll need to
           add the appropriate header line yourself via the
-          <tt>CURL.reqHeader_</tt> option.
+          <tt>CURL.reqHeader_</tt> flag.
         </td>
         <td>CURLOPT_HTTPAUTH, CURLOPT_USERNAME</td>
       </tr>
@@ -185,17 +185,18 @@
           since "POST" requests set this by default and no other requests
           normally send content.
           Also, note that there are no other arguments associated with this
-          option.
+          flag, since the associated data is always the argument after the
+          URL.
         </td>
         <td>CURLOPT_POSTFIELDS</td>
       </tr>
       <tr>
-        <td>CURL.reqContentType</td>
+        <td>CURL.reqContentType_</td>
         <td>mimetype: string</td>
         <td>
           When a request includes content, this defines the MIME type of the
           data so the server knows how to process it properly.
-          If you don't use this option to specify the content type, then
+          If you don't use this flag to specify the content type, then
           <strong>the curl plugin will guess the MIME type</strong>.
           If you do need to specify it though, it'll probably be one of
           "application/x-www-form-data",
@@ -205,15 +206,15 @@
         <td>CURLOPT_HTTPHEADER</td>
       </tr>
       <tr>
-        <td>CURL.reqHeader</td>
+        <td>CURL.reqHeader_</td>
         <td>headerline: string</td>
         <td>
           This lets you inject any header line into an HTTP request header.
           Header lines contain a label, a colon-space, and a value.
           A typical example might be "Cache-Control: no-cache".
           <p style="margin-bottom:0">
-          This option is repeatable.
-          You can use multiple <tt>CURL.reqHeader</tt> option lines to insert
+          This flag is repeatable.
+          You can use multiple <tt>CURL.reqHeader_</tt> flag arguments to insert
           multiple header lines.
         </td>
         <td>CURLOPT_HTTPHEADER</td>

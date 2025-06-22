@@ -17,8 +17,8 @@
 /* These are the default settings, used for new caches. */
 static char *config = "{"
 	"\"seconds\":600,"
-	"\"bytes\":50000,"
-	"\"touchUsed\":false,"
+	"\"bytes\":0,"
+	"\"touch\":false,"
 	"\"dir\":\"\","
 "}";
 
@@ -109,7 +109,7 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 	time_t	seconds;	/* derived from from "seconds" */
 	off_t	maxbytes;	/* from "bytes" */
 	off_t	totbytes;
-	int	touchUsed;	/* from "touchUsed" */
+	int	touch;	/* from "touch" */
 	glob_t	globbuf;
 	struct stat st;
 	int	i;
@@ -160,8 +160,8 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 	/* Extract the cleaning settings */
 	time(&now);
 	seconds = json_int(json_by_key(settings, "seconds"));
-	maxbytes = 1024 + json_int(json_by_key(settings, "kbytes"));
-	touchUsed = json_is_true(json_by_key(settings, "touchUsed"));
+	maxbytes = json_int(json_by_key(settings, "bytes"));
+	touch = json_is_true(json_by_key(settings, "touch"));
 
 	/* Scan the files in the cache */
 	filename = cacheFile(cache, "*");
@@ -174,7 +174,7 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 				continue;
 
 			/* If old, delete it.  Else count its size. */
-			if (seconds > 0 && (touchUsed ? st.st_atime : st.st_mtime) < now - seconds)
+			if (seconds > 0 && (touch ? st.st_atime : st.st_mtime) < now - seconds)
 				unlink(globbuf.gl_pathv[i]);
 			else
 				totbytes += st.st_size;
@@ -193,7 +193,7 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 					continue;
 
 				/* If old, delete it. */
-				if ((touchUsed ? st.st_atime : st.st_mtime) < now - seconds)
+				if ((touch ? st.st_atime : st.st_mtime) < now - seconds)
 					unlink(globbuf.gl_pathv[i]);
 			}
 		}
@@ -211,6 +211,10 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 	json_t	*settings;
 	json_t	*data;
 	char	*filename;
+	time_t	now;
+	time_t	seconds;	/* derived from from "seconds" */
+	int	touch;
+	struct stat st;
 
 	/* Get the cache name */
 	if (args->first->type != JSON_STRING)
@@ -264,9 +268,21 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 			}
 		}
 
+		/* If limiting the cache by size, then clean the cache */
+		if (json_int(json_by_key(settings, "bytes")) > 0)
+			json_free(cleanCache(cache, NULL));
+
 		/* Make a copy of the data to return */
 		data = json_copy(data);
 	} else {
+		/* If the file exists but is old, then clean the cache */
+		time(&now);
+		seconds = json_int(json_by_key(settings, "seconds"));
+		touch = json_is_true(json_by_key(settings, "touch"));
+		if (stat(filename, &st) >= 0
+		 && (touch ? st.st_atime : st.st_mtime) + seconds < now)
+			json_free(cleanCache(cache, NULL));
+
 		/* Try to read the data from a file */
 		data = json_parse_file(filename);
 

@@ -59,7 +59,8 @@ body.article h2 {
 }
 
 #mainpanels a,
-#mainpanels a:visited {
+#mainpanels a:visited,
+a.button {
 	border: 3px outset #f0f0f0;
 	white-space: nowrap;
 	color: black;

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>curlOther</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc curlOther - Send an HTTP/HTTPS request other than GET or POST">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, curlOther">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>curlOther - Send an HTTP request other than GET or POST</h1>
+    <dl>
+      <dt>plugin curl;
+      <br/>curlOther(<var>verb</var>, <var>url</var>)
+      <br/>curlOther(<var>url</var>, <var>query?</var>, <var>flag?</var>, ...)
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      This sends a request and returns the response.
+      Typically the request URL would be use "http:" or "https:" but
+      other protocols such as "sftp:" are supported too.
+      <p>
+      The <tt>verb</tt> and <tt>url</tt> arguments are required.
+      All others are optional.
+      <p>
+      The <tt>verb</tt> would typically be "DELETE" or "HEAD", though HTTP
+      does define a few others.
+      The use of this for any protocol other than HTTP/HTTPS may be... weird.
+      <p>
+      If the <tt>url</tt> is followed by a string or object, it is taken to
+      be a query to append to the URL, or to send as the request's content
+      if you include a <tt>CURL.reqContent</tt> flag.
+      A string will be appended verbatim.
+      An object without <tt>CURL.reqContent</tt> must only have member values
+      that are strings or numbers, and they will be converted to a series of
+      name=value pairs as though from an HTML form,
+      with URL encoding done automatically.
+      For example, <tt>{season:"All Season"}</tt> would append
+      "?season=All%20Season" to the URL.
+      However, with <tt>CURL.reqContent</tt> the data can be anything.
+      <p>
+      This may be followed by one or more flag arguments.
+      The flags are numbers, but there's a <tt>CURL</tt> object which
+      defines symbolic names for the numbers, so you'll generally want to use
+      <tt>CURL.bearer_</tt> instead of its number (which happens to be 4).
+      The underscore at the end of the symbolic name is a clue that this
+      flag requires an extra parameter, specifically a bearer token in
+      this case.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>curlOther("DELETE", "http://localhost/event/" + id)</kbd>
+	<samp><i>Some big confirmation string</i></samp>
+	This sends an HTTP "DELETE" request, to delete an event I guess.
+	Often sites that use a "DELETE" request like to embed important
+	ID numbers as parts of the URL, instead of in the query or content.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>If you pass query data as a string instead of an object, then
+            you must ensure that the string is URL-encoded.
+            This will probably involve calling <a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a>.
+
+        <li>To avoid having to repeat your login credentials with every request,
+            you may need to enable cookies by adding a <tt>CURL.cookies</tt>
+            flag.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a></td><td>Send an HTTP/HTTPS "POST" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</a></td><td>Send an HTTP/HTTPS "GET" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a></td><td>Make a string safe to pass as part of a URL</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME64</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

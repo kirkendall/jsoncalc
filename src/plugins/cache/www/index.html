@@ -18,10 +18,10 @@
     among processes.
     New caches default settings come from the plugin's settings.
     <p>
-    <a href="#options">Options</a> &nbsp;
-    <a href="#functions">Functions</a> &nbsp;
-    <a href="#commands">Commands</a> &nbsp;
-    <a href="#other">Other Features</a>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
 
 
     <h2 id="options">Options</h2>
@@ -44,6 +44,7 @@
               the JsonCalc path (<tt>config.path</tt>) for the first writable
               directory, and create a "cache" subdirectory there to store all
               caches.
+              Usually this works out to be "~/.config/jsoncalc/cache/".
 	  </td>
 	</tr>
         <tr>
@@ -59,7 +60,7 @@
         <tr>
           <td>bytes</td>
           <td>number</td>
-          <td>50000</td>
+          <td>0</td>
           <td>Approximate number of bytes that each cache is allowed to use.
               If a cache grows larger than this, then older items will be
               deleted to shrink it down.
@@ -68,7 +69,7 @@
 	  </td>
 	</tr>
         <tr>
-          <td>touchUsed</td>
+          <td>touch</td>
           <td>boolean</td>
           <td>false</td>
           <td>Normally (when this is <tt>false</tt>)
@@ -94,7 +95,7 @@
       </thead>
       <tbody>
         <tr>
-          <td><a target="_PARENT" href="../../index.html?f=cache/cache.html">cache()</td>
+          <td><a target="_PARENT" href="../index.html?f=cache/cache.html">cache()</td>
           <td>Configure a cache, or add/retrieve an item.</td>
         </tr>
       </tbody>

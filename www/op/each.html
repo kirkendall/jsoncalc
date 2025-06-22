@@ -18,12 +18,12 @@
     collect the results in a new array which is the final result of the operator.
     <p>
     The only difference between <tt>@</tt> and <tt>@@</tt> is that if you divide
-    the array into groups (by embedding sub-arrays within the array (e.g. via the
+    the array into groups (by embedding sub-arrays within the array e.g. via the
     <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function)
     then <tt>@</tt> will include one result per group,
     while <tt>@@</tt> returns a result for each element of each group.
     <p>
-    So the right operand gets evalated a lot.
+    So the right operand gets evaluated a lot.
     Usually once for each array element.
     While it is being evaluated, the <tt>this</tt> variable is set to the element's value
     so you can access it just by using the name <tt>this</tt>.
@@ -171,6 +171,35 @@
         adds nothing to the response for <tt>null</tt>.
       </div>
 
+      <div class="example">
+        <kbd>test.scores @ score &gt; 30 ? count(*)</kbd>
+        <samp>[9,9]</samp>
+        <kbd>test.scores @ score &gt; 30 @ count(*)</kbd>
+        <samp>[2,2]</samp>
+        <kbd>test.scores @ count(score &gt; 30)</kbd>
+        <samp>[2,2,2,2,2,2,2,2,2]</samp>
+        <kbd>count(test.scores @ score &gt; 30)</kbd>
+        <samp>2</samp>
+	This demonstrates a quirk of aggregate functions.
+	In the first example, <tt>count(*)</tt> is invoked for every item,
+	even though its return value is only used when <tt>score&gt;30</tt>.
+	We get a count of 9 items, returned just twice.
+	Assuming you really wanted a count of the items where
+	<tt>score&gt;30</tt>, the other examples use
+	<tt>count()</tt> better, in different ways.
+	The second example starts by filtering out the low scores, and then uses
+	a second <tt>@</tt> operator on the resulting two-element array to
+	generate a count which is returned separately for each element.
+	The third example uses <tt>count()</tt>'s argument to selectively
+	count the high scores, but then returns that count for all elements.
+	The fourth passes a filtered array as the argument to count(), which
+	then returns a simple number.
+	Note the last example could also by implemented by using the
+	<tt>.length</tt> attribute instead of <tt>count()</tt>.
+      </div>
+
+
+
     </details>
 
     <details>
@@ -185,7 +214,7 @@
 	    one element for each left operand element.
 	    You might expect it to return just one summary item, but no.
 	    It must return one result element per ungrouped left element in order
-	    for things ike the <tt>groupBy("run","overall")</tt> example above
+	    for things like the <tt>groupBy("run","overall")</tt> example above
 	    to work.
 
 	<li>The eagerness of <tt>@</tt> and <tt>@@</tt> to treat subarrays as
@@ -226,6 +255,9 @@
     <details>
       <summary>See Also</summary>
       <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> - split a table based on member values.
+      <br/>
+      <a target="_PARENT" href="../index.html?f=count">count()</a> - aggregate function for counting items.
+      <br/>
       <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> - collect keys and values to form an object.
     </details>
 

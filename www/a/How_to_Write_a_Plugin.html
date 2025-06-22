@@ -230,7 +230,7 @@
 	#include <json.h>
 
 	/* Parse a stderr command */
-	jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_ **referr)
+	jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_t **referr)
 	{
 	    char *text;
 	    jsoncmd_t *cmd;
@@ -270,12 +270,12 @@
       <kbd>stderr (Goodbye World!)</kbd>
       <samp>Goodbye World!</samp>
       The first command failed to parse because the text wasn't in parentheses.
-      The second succeeded, and wrote the text to stdout.
+      The second succeeded, and wrote the text to stderr.
     </div>
 
     <h3>Adding Global Variables and Constants</h3>
     Variables and constants are stored in the context.
-    The <b>jsoncalc</b> program creates a context for main process, and
+    The <b>jsoncalc</b> program creates a context for the main process, and
     usually that's all you need.
     If you want to create another thread, you'll need another context for it,
     but that's unlikely.
@@ -354,14 +354,14 @@
     and for GNU/Linux at least that means they need to be compiled as
     position-independent code.
     Using the GCC compiler, you need to add <tt>-fpic</tt> to the compiler
-    command line, probably in the Makefile by settings <tt>CC=gcc -fpic</tt>.
+    command line, probably in the Makefile by setting <tt>CC=gcc -fpic</tt>.
     That's it!  No other special treatment is needed for compiling.
     <p>
     To package one or more compiled object files into a single shared
     library, use GCC with <tt>-fpic -shared</tt>.
     (The <tt>-shared</tt> tells GCC to make a shared library instead of an
     independent program.)
-    You'll probably also want a <tt>-o lib</tt><var>plugin</var><tt>.so</tt>
+    You'll probably also want a <tt>-o plugin</tt><var>plugin</var><tt>.so</tt>
     flag to control the name of the generated file.
     <p>
     One neat thing is that if your plugin depends on other C libraries such as
@@ -372,7 +372,7 @@
     of this.
 
     <h2>Installing</h2>
-    Your Makefile should copy the plugin's <tt>lib*.so</tt> file to the
+    Your Makefile should copy the plugin's <tt>plugin*.so</tt> file to the
     <tt>plugin/</tt> directory.
     When you run "make install" at the top of the source tree,
     that'll copy any plugins from the <tt>plugin/</tt> directory their
@@ -396,7 +396,7 @@
     the plugin's source directory.
     This should mimic the structure of <b>jsoncalc</b>'s own "www" &mdash;
     functions in "www/f/", commands in "www/cmd", and the main intro in
-    "www/intro.html".
+    "www/index.html".
     <p>
     For example, the "math" plugin's source directory is "src/plugin/math/",
     so its documentation resides in "src/plugin/math/www/".

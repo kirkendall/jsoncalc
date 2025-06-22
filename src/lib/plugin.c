@@ -2,6 +2,7 @@
 #include <string.h>
 #include <dlfcn.h>
 #include "json.h"
+#include "calc.h"
 
 /* This is an array of objects describing loaded plugins.  The "plugin"
  * member is name of the plugin.
@@ -31,7 +32,7 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 		binfile = json_file_path("plugin",name,".so", 0, 0);
 
 	/* Look for a script file */
-	scriptfile = NULL;
+	scriptfile = json_file_path("plugin",name,".jc", 0, 0);
 
 	/* If neither was found, fail */
 	if (!binfile && !scriptfile)
@@ -64,6 +65,14 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 
 	/* If there's a script file, load it */
 	if (scriptfile) {
+		jsoncmd_t *cmd = json_cmd_parse_file(scriptfile);
+		if (cmd) {
+			/* We don't have a context to run it in, so all we
+			 * can do is free it.  This means script plugins can
+			 * only load other plugins, or define functions.
+			 */
+			json_cmd_free(cmd);
+		}
 	}
 
 	/* IF WE GET HERE, IT WAS SUCCESSFULLY LOADED */

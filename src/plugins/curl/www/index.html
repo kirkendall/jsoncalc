@@ -18,6 +18,18 @@
     The cURL library is huge, complicated, and powerful.
     JsonCalc's <strong>curl</strong> plugin is small and simple.
     <p>
+    The most important features are the
+    <a target="_PARENT" href="../index.html?f=curl/curlGet">curlGet()</a>,
+    <a target="_PARENT" href="../index.html?f=curl/curlPost">curlPost()</a>, and
+    <a target="_PARENT" href="../index.html?f=curl/curlOther">curlOther()</a>
+    functions, which send a request (usually HTTP or HTTPS) and return the
+    response.
+    They work synchronously, meaning they don't return until the response has
+    been fully received.
+    <p>
+    There are a few other utility functions for doing things like generate
+    a UUID string.
+    <p>
     <a href="#options" class="button">Options</a> &nbsp;
     <a href="#functions" class="button">Functions</a> &nbsp;
     <a href="#commands" class="button">Commands</a> &nbsp;
@@ -64,6 +76,18 @@
     </table>
 
     <h2 id="functions">Functions</h2>
+    The
+    <a target="_PARENT" href="../index.html?f=curl/curlGet">curlGet()</a>,
+    <a target="_PARENT" href="../index.html?f=curl/curlPost">curlPost()</a>, and
+    <a target="_PARENT" href="../index.html?f=curl/curlOther">curlOther()</a>
+    functions are all very similar to each other, on purpose.
+    <tt>curlGet()</tt> is passed a URL, optional data to append to the URL,
+    and optional flags to control other things like whether the response should
+    be decoded to an object.
+    For <tt>curlPost()</tt>, the data is mandatory and will be sent as content
+    instead of appended to the URL.
+    For <tt>curlOther()</tt>, an HTTP request verb such as "DELETE" is passed
+    before the URL.
     <table class="referencelist">
       <thead>
         <tr>

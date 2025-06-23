@@ -36,7 +36,7 @@
       </thead>
       <tbody>
         <tr>
-          <td>buffer</td>
+          <td>uffer</td>
           <td>number</td>
           <td>0</td>
           <td>Maximum bytes of a response to buffer in memory.
@@ -112,10 +112,17 @@
     <a target="_PARENT" href="../index.html?f=curl/curlGet">curlGet()</a>,
     <a target="_PARENT" href="../index.html?f=curl/curlPost">curlPost()</a>, and
     <a target="_PARENT" href="../index.html?f=curl/curlOther">curlOther()</a>.
-    Each flag that you use should be passed as a separate argument to the
-    function.
+    Each flag that you use should be passed
+    either as a separate argument to the function,
+    or as an element in an array passed to the function.
+    If there's a collection of flags that you often pass to multiple
+    <tt>curlXXXX()</tt> functions, then it makes sense to store them in an
+    array, but if its just a solitary call then passing it as extra arguments
+    makes sense.
+    <p>
     Symbols with names ending with "_" require extra data provided in the
-    next argument, for example when passing <tt>CURL.username_</tt>, the
+    next argument or array element.
+    For example when passing <tt>CURL.username_</tt>, the
     next argument should be a string containing the user name.
     <table class="referencelist">
       <tr><th>Option</th><th>Extra data</tt><th>Description</th><th>Related cURL options</tt></tr>

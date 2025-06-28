@@ -337,10 +337,16 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		return json_error_null(0, "The %s() function requires a URL string", fn);
 	url = argsfirst->text;
 
-	/* If next arg isn't a number, then it must be data */
+	/* If next arg isn't a number, then it must be data... except that if
+	 * it's null then there is no data.
+	 */
 	data = NULL;
 	more = argsfirst->next;
-	if (more && more->type != JSON_NUMBER) {
+	if (more && more->type == JSON_NULL) {
+		more = more->next;
+		/* but leave data set to NULL */
+	}
+	else if (more && more->type != JSON_NUMBER) {
 		data = more;
 		more = more->next;
 	}

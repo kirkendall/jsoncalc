@@ -148,6 +148,16 @@
     next argument or array element.
     For example when passing <tt>CURL.username_</tt>, the
     next argument should be a string containing the user name.
+    <p>
+    To avoid ambiguity, if you're using an array to pass the flags to
+    <a target="_PARENT" href="../index.html?f=curl/curlGet">curlGet()</a> or
+    <a target="_PARENT" href="../index.html?f=curl/curlOther">curlOther()</a>
+    and don't want to pass any data,
+    then you should pass <tt>null</tt> as the argument between the URL
+    and the flags array.
+    The <tt>null</tt> will take the place where the data should go, and
+    prevent the functions from mistaking the flag list for the data.
+
     <table class="referencelist">
       <tr><th>Option</th><th>Extra data</tt><th>Description</th><th>Related cURL options</tt></tr>
       <tr>

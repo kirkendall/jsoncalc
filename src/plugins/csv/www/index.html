@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CSV Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc csv plugin summary">
+    <meta name="keywords" content="jsoncalc, csv plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>CSV Plugin</h1>
+    The <strong>csv</strong> plugin allows JsonCalc to read or write files
+    in CSV format.
+    <p>
+    CSV is a plain text data format in which each line contains a single
+    row of a table, and the columns are delimited by commas.
+    If a value is a string containing characters other than ASCII letters and
+    digits, it should be enclosed in quote characters.
+    Quoting even allows strings to contain literal newlines.
+    If the value contains actual quote characters, they can be represented
+    by either a backslash-quote sequence or a quote-quote sequence.
+    You can also use backslash-backslash to add a single backslash to the
+    value.
+    <p>
+    Reading CSV data doesn't require any special action.
+    If the data looks like CSV instead of JSON, then it'll be parsed by
+    the CSV parser instead of the JSON parser.
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Option Name</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>backslash</td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>This controls whether generated CSV should use backslashes,
+              including using backslash-quote for quote characters in string
+              values.
+              Changing the option to <tt>false</tt> makes it use quote-quote
+              for quote characters.
+	  </td>
+	</tr>
+        <tr>
+          <td>crlf</td>
+          <td>boolean</td>
+          <td>false</td>
+          <td>When generating files, this controls whether newlines are
+              indicated by a CR-LF pair or just a Unix-style LF character.
+	  </td>
+	</tr>
+        <tr>
+          <td>headless</td>
+          <td>boolean</td>
+          <td>false</td>
+          <td>Usually the first row of a CSV file is column headings,
+              providing names for all of the columns so that data parsed in
+              following rows can be labeled.
+              This is a good thing and you want it.
+              <p>
+              If you're given data without column headings, then you can still
+              read it by setting <tt>headless</tt> to <tt>true</tt>.
+              Then all rows will be read as data rows, but instead of given
+              each cell a name (by making each row an object), it'll just
+              read each row as an array of values.
+              So you end up with an array of arrays, instead of an array of
+              objects.
+              <em>This means it isn't a "table" as JsonCalc defines it.</em>
+              You'll need to find a way to assign names to the cells,
+              converting each row array into a row object.
+              <p>
+              JsonCalc can also write headless CSV data, but it must be a
+              table &mdash; the columns must be assigned names so JsonCalc
+              knows it's a table.
+              When writing, all the <tt>headless</tt> option does is inhibit
+              generation of the column label row.
+	  </td>
+	</tr>
+        <tr>
+          <td>emptynull</td>
+          <td>boolean</td>
+          <td>false</td>
+          <td>When reading files, if a cell is empty it would normally be
+              interpreted as an empty string.
+              Setting this option cause empty cells to be <tt>null</tt>.
+              Note that a cell containing empty quotes would still be an
+              empty string though.
+	  </td>
+	</tr>
+        <tr>
+          <td>pad</td>
+          <td>boolean</td>
+          <td>false</td>
+          <td>When reading files, if a data row is shorter than the column
+              heading row, then setting this option will add the missing
+              columns for each row.
+              The added columns will be either an empty string or <tt>null</tt>,
+              under the control of the <tt>emptynull</tt> option.
+              Without this, the missing cells are simply absent from the
+              row's object.
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="functions">Functions</h2>
+    The <tt>csv</tt> plugin doesn't add any functions.
+
+    <h2 id="commands">Commands</h2>
+    The <strong>csv</strong> plugin doesn't add any commands.
+
+    <h2 id="other">Other Features</h2>
+    As mentioned earlier, no special action is necessary when reading CSV.
+    If data looks like CSV instead of JSON, then it'll be parsed via the CSV
+    parser instead of the JSON parser.
+    <p>
+    To write CSV data, you need to set the "table" formatting option to "csv".
+    When you load this plugin, it adds "csv" to the list of preferred values
+    for that option, so just saying <tt>-lcsv -scsv</tt> will load the CSV
+    plugin and then use it for output.
+    In a script, you could switch to CSV output by giving a <tt>set csv</tt>
+    command.
+    <p>
+    JsonCalc only pays attention to the "table" formatting option when it's
+    outputting a table &mdash; a non-empty array of objects.
+    If you read headless CSV data, you get an array of arrays, not an array
+    of objects, so you can't output headless data until you assign names
+    to the columns.
+    Here's an example of assigning names to columns.
+    <div class="example">
+      <kbd>var rgbn = [[0,0,0,"black"],[255,255,255,"white"],[255,255,0,"yellow"]];</kbd>
+      <kbd>var headings = ["red","green","blue","colorname"];</kbd>
+      <kbd>var tbl = [rgbn] @@ arraysToObject(headings, this);</kbd>
+      <kbd>tbl;</kbd>
+      <samp>
+        <table>
+	  <tr><th>red</th><th>green</th><th>blue</th><th>colorname</th></tr>
+	  <tr><td>0</td><td>0</td><td>0</td><td>black</td></tr>
+	  <tr><td>255</td><td>255</td><td>255</td><td>white</td></tr>
+	  <tr><td>255</td><td>255</td><td>0</td><td>yellow</td></tr>
+	</table>
+      </samp>
+      <kbd>set csv; set plugin.csv.headless;</kbd>
+      <kbd>tbl;</kbd>
+      <samp>0,0,0,"black"<br/>
+255,255,255,"white"<br/>
+255,255,0,"yellow"</samp>
+      This is harder than it looks!
+      The <a target="_PARENT" href="../index.html?op=each">@ and @@</a>
+      operators see nested arrays as a way to group records, but we don't
+      want that.
+      We want each element of <tt>rgbn</tt> to be taken as a row, not a grouping.
+      Adding an extra set of brackets as in <tt>[rgbn]</tt> makes the whole
+      <tt>rgbn</tt> array be seen as one group, and that allows its elements
+      to be correctly handled as elements.
+      But now we want separate rows in the result for each element of
+      <tt>rgbn</tt> instead of one for the group, so we need to use
+      <tt>@@</tt> instead of <tt>@</tt>.
+      Actually assigning names for a single row via
+      <a target="_PARENT" href="../index.html?f=arraysToObject">arraysToObject()</a>
+      is the only easy thing here.
+      <p>
+      Once we've converted the array of row arrays to a table
+      (array of objects), we first output it in the usual "grid" format,
+      and then select "csv" and CSV's "headless" and output it that way.
+    </div>
+    <p>
+    The above example is only relevant if you're working with headless CSV
+    tables.
+    As long as the CSV data starts with column headings, the <b>csv</b>
+    plugin will read it as a table without any fuss.
+
+
+  </body>
+</html>

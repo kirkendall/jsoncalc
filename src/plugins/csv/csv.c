@@ -9,6 +9,7 @@
 static char *csvsettings = "{"
 	"\"backslash\":true,"	/* Use \x sequences when generating CSV */
 	"\"crlf\":false,"	/* Output \r\n as newlines, instead of \n */
+	"\"headless\":false,"	/* First row is data, not column headings */
 	"\"emptynull\":false,"	/* Parse empty/missing cells as null, not "" */
 	"\"pad\":false"		/* Pad short rows to full width of headings */
 "}";
@@ -19,6 +20,7 @@ static char *csvsettings = "{"
 
 static int backslash;
 static int crlf;
+static int headless;
 
 /* Output a single number, string, or symbol in CSV notation */
 static void csvsingle(json_t *elem, jsonformat_t *format)
@@ -92,6 +94,7 @@ static void csvprint(json_t *json, jsonformat_t *format)
 	/* Check options */
 	backslash = json_is_true(json_config_get("plugin.csv", "backslash"));
 	crlf = json_is_true(json_config_get("plugin.csv", "crlf"));
+	headless = json_is_true(json_config_get("plugin.csv", "headless"));
 
 	/* Collect column names */
 	headers = json_explain(NULL, json->first, 0);
@@ -100,22 +103,24 @@ static void csvprint(json_t *json, jsonformat_t *format)
 			headers = json_explain(headers, row, 0);
 	}
 
-	/* Output column names */
-	for (col = headers->first, first = 1; col; col = col->next) {
-		/* Skip arrays and objects */
-		t = json_text_by_key(col, "type");
-		if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
-			continue;
+	/* Output column names, unless headless */
+	if (!headless) {
+		for (col = headers->first, first = 1; col; col = col->next) {
+			/* Skip arrays and objects */
+			t = json_text_by_key(col, "type");
+			if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
+				continue;
 
-		/* Comma before all but first */
-		if (!first)
-			putc(',', format->fp);
-		first = 0;
+			/* Comma before all but first */
+			if (!first)
+				putc(',', format->fp);
+			first = 0;
 
-		/* Output the key */
-		csvsingle(json_by_key(col, "key"), format);
+			/* Output the key */
+			csvsingle(json_by_key(col, "key"), format);
+		}
+		putc('\n', format->fp);
 	}
-	putc('\n', format->fp);
 
 	/* For each row... */
 	for (row = json->first; row && !json_interupt; row = row->next) {
@@ -405,8 +410,25 @@ static json_t *csvparse(const char *buf, size_t len, const char **refend, const 
 	const char *cursor;
 
 	/* Check options */
+	headless = json_is_true(json_config_get("plugin.csv", "headless"));
 	emptynull = json_is_true(json_config_get("plugin.csv", "emptynull"));
 	pad = json_is_true(json_config_get("plugin.csv", "pad"));
+
+	/* If headless, then just parse each row as an array, and append the
+	 * row's array as an element to the document's array.  The result
+	 * isn't a "table" as JsonCalc defines it, but it's the best we can do.
+	 */
+	if (headless) {
+		table = json_array();
+		cursor = buf;
+		while (cursor < &buf[len] && *cursor != '\n') {
+			row = csvrow(buf, len, &cursor, columns);
+			if (!row)
+				break;
+			json_append(table, row);
+		}
+		return table;
+	}
 
 	/* Parse the heading row */
 	cursor = buf;

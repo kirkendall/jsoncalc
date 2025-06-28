@@ -463,7 +463,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	void    *localag;
 	jsonfuncextra_t recon;
 
-	/* If interupted then simply return an error null */
+	/* If interrupted then simply return an error null */
 	if (json_interupt)
 		return json_error_null(1, "Interupted");
 
@@ -1417,6 +1417,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_ASSIGN:
 		USE_RIGHT_OPERAND(calc);
+
+		/* If error, then just return the error.  Don't assign */
+		if (right->type == JSON_NULL && *right->text) {
+			/* Errors are never stored in variables, so we know
+			 * it's freshly allocated.  Return it as the result
+			 * without freeing it.
+			 */
+			assert(freeright);
+			freeright = NULL;
+			result = right;
+			break;
+		}
 
 		/* We always want a copy */
 		if (!freeright)

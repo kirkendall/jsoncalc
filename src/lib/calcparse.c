@@ -1632,6 +1632,7 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_STARTOBJECT
 			 && jc->op != JSONOP_SUBSCRIPT
 			 && jc->op != JSONOP_COLON
+			 && jc->op != JSONOP_MAYBEMEMBER
 			 && jc->op != JSONOP_ASSIGN
 			 && jc->op != JSONOP_APPEND
 			 && jc->op != JSONOP_COMMA

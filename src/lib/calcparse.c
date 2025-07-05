@@ -148,6 +148,7 @@ static struct {
 	{"STRING",	"STR",	-1,	0,	JCOP_OTHER},
 	{"SUBSCRIPT",	"S[",	170,	0,	JCOP_OTHER},
 	{"SUBTRACT",	"-",	210,	0,	JCOP_INFIX}, /* or JSONOP_NEGATE */
+	{"VALUES",	"VAL",	125,	0,	JCOP_INFIX},
 	{"WHERE",	"WHE",	2,	1,	JCOP_OTHER},
 	{"INVALID",	"XXX",	666,	1,	JCOP_OTHER}
 };
@@ -208,6 +209,7 @@ void json_calc_dump(jsoncalc_t *calc)
 		break;
 
 	  case JSONOP_ARRAY:
+#if 0
 		printf("[");
 		if (calc->LEFT) {
 			json_calc_dump(calc->LEFT);
@@ -217,6 +219,9 @@ void json_calc_dump(jsoncalc_t *calc)
 			}
 		}
 		printf("]");
+#else
+		printf("[array]");
+#endif
 		break;
 
 	  case JSONOP_OBJECT:
@@ -272,11 +277,11 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
 	  case JSONOP_NESTRICT:
-	  case JSONOP_COMMA:
 	  case JSONOP_BETWEEN:
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 	  case JSONOP_MAYBEASSIGN:
+	  case JSONOP_VALUES:
 		if (calc->LEFT) {
 			printf("(");
 			json_calc_dump(calc->LEFT);
@@ -289,6 +294,13 @@ void json_calc_dump(jsoncalc_t *calc)
 			if (calc->RIGHT)
 				json_calc_dump(calc->RIGHT);
 		}
+		break;
+
+	  case JSONOP_COMMA:
+		/* Comma expressions can get huge.  Best to hide LEFT */
+		printf("...,");
+		if (calc->RIGHT)
+			json_calc_dump(calc->RIGHT);
 		break;
 
 	  case JSONOP_FNCALL:
@@ -599,6 +611,8 @@ char *lex(char *str, token_t *token, stack_t *stack)
 			token->op = JSONOP_ISNOTNULL;
 		} else if (token->len == 2 && !strncasecmp(token->full, "as", 2)) {
 			token->op = JSONOP_AS;
+		} else if (token->len == 6 && !strncasecmp(token->full, "values", 6)) {
+			token->op = JSONOP_VALUES;
 		} else if (token->len == 6 && !strncasecmp(token->full, "select", 6)) {
 			token->len = 6;
 			token->op = JSONOP_SELECT;
@@ -972,6 +986,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 	  case JSONOP_MAYBEASSIGN:
+	  case JSONOP_VALUES:
 		json_calc_free(jc->LEFT);
 		json_calc_free(jc->RIGHT);
 		break;
@@ -995,10 +1010,10 @@ void json_calc_free(jsoncalc_t *jc)
 		break;
 
 	  case JSONOP_REGEX:
-		/* jc->u.regex.preg is a pointer to a regex_t buffer.  We need to
-		 * call regfree() on that buffer to release the data associated with
-		 * the buffer, and also free() to release the memory for the buffer
-		 * itself.
+		/* jc->u.regex.preg is a pointer to a regex_t buffer.  We need
+		 * to call regfree() on that buffer to release the data
+		 * associated with the buffer, and also free() to release
+		 * the memory for the buffer itself.
 		 */
 		regfree((regex_t *)jc->u.regex.preg);
 		free(jc->u.regex.preg);
@@ -1171,6 +1186,7 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_MAYBEASSIGN:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
+	  case JSONOP_VALUES:
 		return jcisag(jc->LEFT) || jcisag(jc->RIGHT);
 
 	  case JSONOP_ENVIRON:
@@ -1631,6 +1647,7 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_STARTARRAY
 			 && jc->op != JSONOP_STARTOBJECT
 			 && jc->op != JSONOP_SUBSCRIPT
+			 && jc->op != JSONOP_VALUES
 			 && jc->op != JSONOP_COLON
 			 && jc->op != JSONOP_MAYBEMEMBER
 			 && jc->op != JSONOP_ASSIGN
@@ -2042,6 +2059,11 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 			top[-3] = fixcomma(top[-2], JSONOP_ARRAY);
 			stack->sp -= 2;
 			continue;
+		} else if (PATTERN("[x,]")) {
+			/* Superfluous trailing comma in array generator */
+			top[-4] = fixcomma(top[-3], JSONOP_ARRAY);
+			stack->sp -= 3;
+			continue;
 		}
 
 		/* Treat "x is null" and "x is not null" like "x === null"
@@ -2205,6 +2227,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_ASSIGN:
 	  case JSONOP_APPEND:
 	  case JSONOP_MAYBEASSIGN:
+	  case JSONOP_VALUES:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, ag);
 		break;
@@ -2314,8 +2337,11 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	}
 
 	/* One last reduce */
-	if (!err)
+	if (!err) {
+		if (json_debug_flags.calc)
+			puts("Doing the final reduce...");
 		err = reduce(&stack, NULL, token.full + token.len);
+	}
 
 	/* Some operators (tokens, really) are only used during parsing.
 	 * If the stack still contains one of those, then we got an

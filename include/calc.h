@@ -79,6 +79,7 @@ typedef enum {
 	JSONOP_STRING,
 	JSONOP_SUBSCRIPT,
 	JSONOP_SUBTRACT,
+	JSONOP_VALUES,
 	JSONOP_WHERE,
 	JSONOP_INVALID /* <-- This must be the last */
 } jsonop_t;

@@ -140,6 +140,8 @@
     If you read headless CSV data, you get an array of arrays, not an array
     of objects, so you can't output headless data until you assign names
     to the columns.
+    The <a target="_PARENT" href="../../index.html?op=values">VALUES</a>
+    operator is good for that.
     Here's an example of assigning names to columns.
     <div class="example">
       <kbd>var rgbn = [[0,0,0,"black"],[255,255,255,"white"],[255,255,0,"yellow"]];</kbd>
@@ -159,20 +161,11 @@
       <samp>0,0,0,"black"<br/>
 255,255,255,"white"<br/>
 255,255,0,"yellow"</samp>
-      This is harder than it looks!
-      The <a target="_PARENT" href="../index.html?op=each">@ and @@</a>
-      operators see nested arrays as a way to group records, but we don't
-      want that.
-      We want each element of <tt>rgbn</tt> to be taken as a row, not a grouping.
-      Adding an extra set of brackets as in <tt>[rgbn]</tt> makes the whole
-      <tt>rgbn</tt> array be seen as one group, and that allows its elements
-      to be correctly handled as elements.
-      But now we want separate rows in the result for each element of
-      <tt>rgbn</tt> instead of one for the group, so we need to use
-      <tt>@@</tt> instead of <tt>@</tt>.
-      Actually assigning names for a single row via
-      <a target="_PARENT" href="../index.html?f=arraysToObject">arraysToObject()</a>
-      is the only easy thing here.
+      First we assign some sample data to a variable, as an array of arrays.
+      Next we assign column headings to another variable.
+      Then we use the 
+      <a target="_PARENT" href="../../index.html?op=values">VALUES</a>
+      operator to combine them into a table.
       <p>
       Once we've converted the array of row arrays to a table
       (array of objects), we first output it in the usual "grid" format,
@@ -183,7 +176,5 @@
     tables.
     As long as the CSV data starts with column headings, the <b>csv</b>
     plugin will read it as a table without any fuss.
-
-
   </body>
 </html>

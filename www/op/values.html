@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VALUES operator</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - VALUES operator">
+    <meta name="keywords" content="array, object, jsoncalc, operator reference, VALUES">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>VALUES operator</h1>
+    <table class="opList">
+      <tr><td class="left">array</td><td class="op"><a target="_PARENT" href="../index.html?op=values">VALUES</a></td><td class="right">array<br/>array[]</td><td class="opdesc">Assign names to values, resulting in objects</td></tr>
+    </table>
+    The VALUES operator adds keys (names) to an array of values to generate
+    an object or a table.
+    <p>
+    The left operand must be a non-empty array of strings to use as keys.
+    The right operand can be either an array of values,
+    or an array of arrays of values (basically list of rows, where each row
+    is an array of values).
+    <p>
+    If the right operand is an array of values, then the operator returns
+    a single object, formed by pairing the keys and the values.
+    If it is an array of row arrays, then each row array is converted to
+    an object separately, and the resulting objects are collected
+    to form a result array;
+    assuming the right operand isn't an array isn't empty,
+    this will result in a table (non-empty array of objects).
+    <p>
+    The number of keys does not need to match the number of values.
+    If the list of keys is longer than the values array, then the extra members
+    will be skipped.
+    If the list of values is longer, then the extra values are skipped.
+    <p>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>["a","b"] values [1,2]</kbd>
+	<samp>{"a":1,"b":2}</samp>
+        The right hand side is a simple array of values, so the VALUES
+        operator returns an object.
+      </div>
+
+      <div class="example">
+	<kbd>["a","b","c"] values [[1,2],[3,4,5],[6,7,8,9]]</kbd>
+	<samp>
+	  <table>
+	    <tr><th>a</th><th>b</th><th>c</th></tr>
+	    <tr><td>1</td><td>2</td><td></td></tr>
+	    <tr><td>3</td><td>4</td><td>5</td></tr>
+	    <tr><td>6</td><td>7</td><td>8</td></tr>
+	  </table>
+	</samp>
+	This time the right hand side is an array of arrays, so each "row"
+	gets converted to an object, and the result is a table.
+	The first row had no value for "c" so it was omitted.
+	The last row had an extra value (the "9") which was also omitted.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> function can do similar things.
+            Usually <tt>VALUES</tt> is simpler, but combining <tt>objectAgg()</tt>
+            with the <a target="_PARENT" href="../index.html?op=each">@</a> operator
+            can be more flexible.
+
+	<li>This operator is meant to resemble
+	    the "VALUES" clause of an SQL "INSERT" command.
+	    JsonCalc requires quotes around the keys, uses square brackets
+	    instead of parentheses, and requires an extra set of brackets
+	    around the whole list of value rows.
+	    SQL also requires the number of keys to match the number of values.
+	    <table>
+	      <tr><th>SQL:</th><td>(a,b) values (1,2), (3,4)</td></tr>
+	      <tr><th>JsonCalc:</th><td>["a","b"] values [[1,2], [3,4]]</td></tr>
+	    </table>
+
+	<li>The <tt>VALUES</tt> operator can be handy when converting headless
+	    CSV data to a table.
+	    The <a target="_PARENT" href="../index.html?p=csv">csv plugin</a>
+	    can read headless data, but returns it as an array of arrays of
+	    values instead of a table, since the data doesn't supply its own
+	    column headings.
+	    You can use <tt>VALUES</tt> to add the column headings.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?p=csv">plugin csv</a> - a plugin for handling CSV data
+      <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> - Function to build objects from keys and values
+    </details>
+
+  </body>
+</html>

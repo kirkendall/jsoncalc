@@ -180,6 +180,48 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 	return result;
 }
 
+/* Combine keys and values */
+static json_t *jcvalues(json_t *keys, json_t *values)
+{
+	json_t	*key, *value, *vrow, *rowobj, *result;
+
+	/* First argument must be an array of strings to use as keys */
+	if (keys->type != JSON_ARRAY)
+		key = keys; /* not NULL marking the end of happy scan */
+	else {
+		for (key = keys->first; key; key = key->next)
+			if (key->type != JSON_STRING)
+				break;
+	}
+	if (key || !keys->first)
+		return json_error_null(0, "Left of VALUES must be an array of strings");
+
+	/* Right argument may be either an array of values, or any array of
+	 * arrays of values.  If all elements are arrays then assume the latter.
+	 */
+	if (values->type != JSON_ARRAY)
+		return json_error_null(0, "Right of VALUES must be array of values, or array of arrays of values");
+	for (value = values->first; value; value = value->next) {
+		if (value->type != JSON_ARRAY) {
+			/* Do the single object version */
+			result = json_object();
+			for (key = keys->first, value = values->first; key && value; key = key->next, value = value->next)
+				json_append(result, json_key(key->text, json_copy(value)));
+			return result;
+		}
+	}
+
+	/* We'll be doing the table version. */
+	result = json_array();
+	for (vrow = values->first; vrow; vrow = vrow->next) {
+		rowobj = json_object();
+		for (key = keys->first, value = vrow->first; key && value; key = key->next, value = value->next)
+			json_append(rowobj, json_key(key->text, json_copy(value)));
+		json_append(result, rowobj);
+	}
+	return result;
+}
+
 
 /* Invoke all aggregates for the current item ("this" in context) */
 static void jcag(jsonag_t *ag, jsoncontext_t *context, void *agdata)
@@ -1409,6 +1451,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			result = json_copy(result);
 		else
 			result = json_error_null(1, "There is no default table for SELECT");
+		break;
+
+	  case JSONOP_VALUES:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		result = jcvalues(left, right);
 		break;
 
 	  case JSONOP_REGEX:

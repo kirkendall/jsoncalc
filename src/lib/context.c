@@ -63,7 +63,6 @@ static void data_modified(jsoncontext_t *layer, jsoncalc_t *lvalue)
 jsoncontext_t *json_context_free(jsoncontext_t *context)
 {
         jsoncontext_t *older;
-        json_t	*noMath;
 
         /* Defend against NULL */
         if (!context)

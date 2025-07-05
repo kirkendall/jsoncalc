@@ -174,6 +174,7 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix, i
 		return NULL;
 
 	/* For each entry in the path... */
+	first = 1;
 	for (path = path->first; path; path = path->next) {
 		/* Generate the filename in this directory.  If the directory
 		 * starts with "~" then use $HOME instead.

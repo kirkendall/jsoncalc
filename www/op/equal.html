@@ -24,7 +24,7 @@
     to be unequal.
     <p>
     The <tt>=</tt> and <tt>&lt;&gt;</tt> operators are the same, but
-    case-insensitive.
+    case-insensitive and they ignore trailing spaces.
     <p>
     The <tt>===</tt> and <tt>!==</tt> operators are "strict" in that if the
     operands are of different types, then the are not converted; instead,
@@ -54,6 +54,15 @@
       </div>
 
       <div class="example">
+	<kbd>"Steve " == "Steve"</kbd>
+	<samp>false</samp>
+	<kbd>"Steve " = "Steve"</kbd>
+	<samp>true</samp>
+	<tt>==</tt> requires all characters to match,
+	<tt>=</tt> ignores trailing spaces.
+      </div>
+
+      <div class="example">
 	<kbd>{a:1, b:2} === {b:2, a:1}</kbd>
 	<samp>true</samp>
 	<kbd>{a:1, b:2} == {b:2, a:1}</kbd>
@@ -70,15 +79,17 @@
       <ul>
 
         <li>The <tt>=</tt> and <tt>&lt;&gt;</tt> operators are from SQL.
-            They are case-insensitive because SQL is case-insensitive.
+            They are case-insensitive and ignore trailing spaces because
+            that's how they behave in SQL.
 
-	<li>The <tt>=</tt> operator is used for comparison in SQL, but assignment
-	    in JavaScript.  JsonCalc tries to use it both ways.  This rarely
-	    causes confusion though since JsonCalc only allows assignment as
-	    a separate statement; you can't sneak an assignment into an
-	    expression as you can with JavaScript.  If you do need to force
-	    something like "a=b" to be a comparison instead of an assignment,
-	    wrap it in parentheses.
+	<li>The <tt>=</tt> operator is used for comparison in SQL,
+	    but assignment in JavaScript.
+	    JsonCalc tries to use it both ways.
+	    This rarely causes confusion though since JsonCalc only allows
+	    assignment as a separate statement; you can't sneak an assignment
+	    into an expression as you can with JavaScript.
+	    If you do need to force something like "<tt>a=b</tt>" to be a
+	    comparison instead of an assignment, wrap it in parentheses.
 	    <div class="example">
 	      <kbd>a=b</kbd>
 	      <kbd>(a=b)</kbd>

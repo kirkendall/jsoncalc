@@ -1240,9 +1240,48 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			else
 				il = 0;
 		} else {/* hopefully string, but other types work too */
-			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE)
-				il = json_mbs_casecmp(left->text, right->text);
-			else
+			if (calc->op == JSONOP_ICEQ || calc->op == JSONOP_ICNE){
+				size_t lenl, lenr, spacesl, spacesr;
+
+				/* The tricky thing here is that we want to
+				 * ignore trailing spaces.  This sounds like
+				 * a job for json_mbs_ncasecmp(), but that
+				 * function specifies length by character
+				 * count, but trailing spaces are easier to
+				 * find via byte count, so we kind of have to
+				 * do it both ways.
+				 */
+
+				/* Find the string lengths, in bytes */
+				lenl = strlen(left->text);
+				lenr = strlen(right->text);
+
+				/* Count tailing spaces */
+				for (spacesl = 0; spacesl < lenl && left->text[lenl - spacesl - 1] == ' '; spacesl++) {
+				}
+				for (spacesr = 0; spacesr < lenr && right->text[lenr - spacesr - 1] == ' '; spacesr++) {
+				}
+
+				/* Now we switch from bytes to characters.
+				 * For the spacesl and spacesr variables,
+				 * no conversion is needed since spaces are
+				 * 1 byte each, always.  But lenl and lenr
+				 * need to be recounted.
+				 */
+				lenl = json_mbs_len(left->text);
+				lenr = json_mbs_len(right->text);
+
+				/* Compare trimmed lengths.  If not the same
+				 * then the strings don't match.  Otherwise we
+				 * need to check the characters.
+				 */
+				if (lenl - spacesl != lenr - spacesr)
+					il = 1;	/* trimmed lengths differ */
+				else if (lenl - spacesl == 0)
+					il = 0; /* both are empty */
+				else
+					il = json_mbs_ncasecmp(left->text, right->text, lenl - spacesl);
+			} else
 				il = strcmp(left->text, right->text);
 		}
 

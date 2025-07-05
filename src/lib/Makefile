@@ -11,7 +11,7 @@ LIBOBJ=	by.o calc.o calcfunc.o calcparse.o compare.o config.o context.o \
 	parse.o plugin.o print.o serialize.o sort.o text.o walk.o
 #CC=gcc -g -pg
 #CC=gcc -g -O
-CC=gcc -g -fpic
+CC=gcc -g -fpic -Wall
 CFLAGS=-Wall -DJSON_DEBUG_MEMORY -I$(INCLUDE)
 
 all: $(LIB)/libjson.so

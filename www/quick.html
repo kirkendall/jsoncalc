@@ -74,7 +74,15 @@
     There are some new operators and functions, but mostly its like a
     stripped-down JavaScript with some SQL features added in.
     It supports the most common JavaScript functions and operators.
-    <p>
+    <blockquote>
+    JsonCalc's scripting language is <strong>not a full JavaScript or SQL
+    implementation</strong>, nor will it ever be.
+    That isn't the goal.
+    Instead, it's meant to be a simple little language for doing simple
+    little things.
+    The similarity to JavaScript and SQL is only intended to help new users
+    guess the names of common features.
+    </blockquote>
     You can also declare variables, and define functions.
     That can be handy in scripts, but my big motivator was that variables
     and functions can save you some typing when you're using it interactively
@@ -149,8 +157,9 @@
       Internally, the SELECT operator is converted into a set of "native"
       operators and functions.
       The <a target="_PARENT" href="index.html?op=each">@</a> operator
-      takes an array as its left operand; processes each element of the
-      array via the right operand; and collects the results in a new array.
+      takes an array as its left operand;
+      processes each element of the array via the expression on the right;
+      and collects the results in a new array.
       <tt>@</tt> also knows about grouping, and accumulates a separate
       <tt>avg(score)</tt> for each group, and then returns only one
       element per group.
@@ -273,15 +282,16 @@ name=Mary run=3 score=40
           including a nice grid format.
       <li>There are commands and functions designed specifically for
           interactive data exploration, such as <tt>explain</tt> to describe
-          the columns of a table, <tt>find()</tt> to search for a value in a
-          large data structure, 
+          the columns of a table, and <tt>find()</tt> to search for a value in a
+          large data structure.
       <li>It has very good support for ISO-8601 dates/times/periods.
           You can do arithmetic on them, convert timezones, and more...
           all of it a lot easier than in JavaScript.
       <li>You can configure it to automatically load JSON data from files
           in a given directory, on demand.
-          So if you have a group of related JSON documents, they can all be
-          at-hand, and you can cross-reference them all you want.
+          So if you have a group of related JSON documents,
+          they can all be at-hand but not loaded until needed,
+          and you can cross-reference them all you want.
     </ul>
     It also supports plugins, which is a HUGE feature.
     Most plugins are for things like fetching data from a server,
@@ -317,7 +327,7 @@ name=Mary run=3 score=40
     Yes, there are basically three ways to extend JsonCalc.
     <p>
     The easy way is to define a custom set of functions in JsonCalc's
-    scripting language, to do tasks that you find yourself doing often.
+    scripting language for doing tasks that you find yourself repeating often.
     For example, the above customer-building example could be implemented
     as a function, and then the "-c" option is just <tt>-c'buildCustomer()'</tt>.
     JsonCalc can be configured to load your functions automatically.
@@ -329,6 +339,7 @@ name=Mary run=3 score=40
     about JsonCalc's anatomy to add a function.
     A few basic <tt>json_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
     But all the source code is there if you need it.
+    Similarly, commands are segregated into the <tt>cmd.c</tt> source file.
     <p>
     The final way is via plugins.
     If an existing plugin satisfies your needs, then that's an easy win.

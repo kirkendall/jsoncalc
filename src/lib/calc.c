@@ -1256,7 +1256,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				lenl = strlen(left->text);
 				lenr = strlen(right->text);
 
-				/* Count tailing spaces */
+				/* Count trailing spaces */
 				for (spacesl = 0; spacesl < lenl && left->text[lenl - spacesl - 1] == ' '; spacesl++) {
 				}
 				for (spacesr = 0; spacesr < lenr && right->text[lenr - spacesr - 1] == ' '; spacesr++) {

@@ -2376,6 +2376,11 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 		shift(&stack, jc, token.full);
 	}
 
+	/* Defend against calls where the expression is completely missing */
+	if (!err && stack.sp == 0) {
+		err = "Expression is missing";
+	}
+
 	/* One last reduce */
 	if (!err) {
 		if (json_debug_flags.calc)
@@ -2387,11 +2392,11 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	 * If the stack still contains one of those, then we got an
 	 * incomplete parse.
 	 */
-	if (operators[stack.stack[0]->op].noexpr && !err)
+	if (!err && operators[stack.stack[0]->op].noexpr)
 		err = "Syntax error - Incomplete expression";
 
 	/* If this leaves an operator without operands, complain */
-	switch (operators[stack.stack[0]->op].optype) {
+	switch (stack.sp > 0 ? operators[stack.stack[0]->op].optype : JCOP_OTHER) {
 	case JCOP_OTHER:
 		break;
 	case JCOP_INFIX:
@@ -2410,7 +2415,7 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 	}
 
 	/* If it compiled cleanly, look for aggregate functions */
-	if (stack.sp == 1 && !err)
+	if (!err && stack.sp == 1)
 		stack.stack[0] = parseag(stack.stack[0], NULL);
 
 	/* Store the error message (or lack thereof) */

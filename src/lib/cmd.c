@@ -1471,27 +1471,43 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 }
 static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	json_t	*value;
+	json_t	*value, *error;
+	jsoncmd_t *each;
 
 	/* A single statement can declare multiple vars/consts */
-	while (cmd) {
-		/* Evaluate the value */
-		if (cmd->calc)
-			value = json_calc(cmd->calc, *refcontext, NULL);
-		else
+	error = NULL;
+	for (each = cmd; each; each = each->more) {
+		/* Evaluate the value. If error, remember it */
+		value = NULL;
+		if (each->calc) {
+			value = json_calc(each->calc, *refcontext, NULL);
+			if (value->type == JSON_NULL && *value->text) {
+				if (error)
+					free(value);
+				else
+					error = value;
+				value = NULL;
+			}
+		}
+		if (!value)
 			value = json_null();
 
 		/* Add it to the context */
-		if (!json_context_declare(refcontext, cmd->key, value, cmd->flags)) {
+		if (!json_context_declare(refcontext, each->key, value, each->flags)) {
 			/* Duplicate! */
 			json_free(value);
-			return json_cmd_error(cmd->filename, cmd->lineno, 1, "Duplicate %s \"%s\"",
-				(cmd->flags & JSON_CONTEXT_CONST) ? "const" : "var",
-				cmd->key);
+			return json_cmd_error(each->filename, each->lineno, 1, "Duplicate %s \"%s\"",
+				(each->flags & JSON_CONTEXT_CONST) ? "const" : "var",
+				each->key);
 		}
+	}
 
-		/* Move to the next */
-		cmd = cmd->more;
+	/* If we encountered an error in an initializer, return it */
+	if (error) {
+		jsoncmdout_t *result;
+		result = json_cmd_error(cmd->filename, cmd->lineno, (int)(size_t)error->first, "%s", error->text);
+		json_free(error);
+		return result;
 	}
 
 	/* Success! */

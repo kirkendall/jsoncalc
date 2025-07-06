@@ -1230,10 +1230,12 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 {
 	jsoncalc_t *jc, *ja;
 	token_t t;
+	int	anyselectag;
 
 	/* If there's a column list in the SELECT clause, convert it to an
 	 * object generator.
 	 */
+	anyselectag = 0;
 	if (sel->select) {
 		sel->select = fixcomma(sel->select, JSONOP_OBJECT);
 
@@ -1250,6 +1252,13 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 				}
 			}
 		}
+
+		/* We also need to know if ANY of the columns use aggregates.
+		 * This will help us organize the right hand side of the @
+		 * expression.
+		 */
+		for (jc = sel->select; jc && !anyselectag; jc = jc->u.param.right)
+			anyselectag = jcisag(jc->u.param.left);
 	}
 
 	/* Maybe dump some debugging info */
@@ -1309,10 +1318,41 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 
 	/* Is there a column list in SELECT, or a WHERE clause? */
 	if (sel->select || sel->where || sel->groupby) {
-		/* If we have both, then combine them via a ? operator */
-		if (sel->select && sel->where)
+		/* If we have both, then combine them.  If the select list
+		 * doesn't use aggregates then combine them via a ? operator.
+		 * With aggregates, it gets more complicated.
+		 */
+		if (sel->select && sel->where && !anyselectag) {
 			ja = jcleftright(JSONOP_QUESTION, sel->where, sel->select);
-		else if (sel->select)
+		} else if (sel->select && sel->where) {
+			/* The complicated way. To avoid having aggregates in
+			 * the select list accumulate results over all records
+			 * (not just ones satisfying the where clause), we need
+			 * to use two @ operators - one to apply the where test
+			 * and one to generate the rows.
+			 */
+
+			/* Add the @ for the where test */
+			jc = jcleftright(JSONOP_GROUP, jc, sel->where);
+
+			/* If grouping, then we need an extra groupBy() call
+			 * since this @ will remove grouping information.
+			 */
+			if (sel->groupby) {
+				/* The list is already json_t array of strings.
+				 * Make it be a jsoncalc_t literal.
+				 */
+				t.op = JSONOP_LITERAL;
+				ja = jcalloc(&t);
+				ja->u.literal = json_copy(sel->groupby);
+
+				/* Add groupBy() function call */
+				jc = jcfunc("groupBy", jc, ja, NULL);
+			}
+
+			/* Add the select list separately */
+			ja = sel->select;
+		} else if (sel->select)
 			ja = sel->select;
 		else if (sel->where)
 			ja = sel->where;

@@ -24,7 +24,7 @@
  * functions.  Also json_calc_parse() of course.
  */
 
-/* This array isn't actually store anything; it just provides a distict
+/* This array doesn't actually store anything; it just provides a distinct
  * value that can be used to recognize when json_cmd_parse() and
  * json_cmd_parse_string() detect an error.
  */
@@ -638,9 +638,6 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 	json_cmd_parse_whitespace(src);
 	first = cmd = NULL;
 	while (src->str < src->buf + src->size && *src->str) {
-		/* Find the line number of this command */
-		json_cmd_parse_whitespace(src);
-
 		/* Parse it */
 		next = json_cmd_parse_single(src, &result);
 
@@ -675,6 +672,9 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 		/* Also, store the filename and line number of this command */
 		cmd->filename = src->filename;
 		cmd->lineno = json_cmd_lineno(src);
+
+		/* Skip whitespace */
+		json_cmd_parse_whitespace(src);
 	}
 
 	/* Return the commands.  Might be NULL. */
@@ -1433,7 +1433,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 	for (;;) {
 		cmd->key = json_cmd_parse_key(src, 1);
 		if (!cmd->key) {
-			*referr = json_cmd_error(src->filename, json_cmd_lineno(src), 1, "Name expected after %s", cmd->name->name);
+			*referr = json_cmd_src_error(src, 1, "Name expected after %s", cmd->name->name);
 			json_cmd_free(first);
 			return NULL;
 		}
@@ -1444,7 +1444,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 			cmd->calc = json_calc_parse(src->str, &end, &err, 0);
 			src->str = end;
 			if (err) {
-				*referr = json_cmd_error(src->filename, json_cmd_lineno(src), 1, "Error in expression (%s)", err);
+				*referr = json_cmd_src_error(src, 1, "Error in expression (%s)", err);
 				json_cmd_free(first);
 				return NULL;
 			}
@@ -1469,6 +1469,7 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 
 	return first;
 }
+
 static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t	*value, *error;
@@ -1589,7 +1590,7 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Function name */
 	fname = json_cmd_parse_key(src, 1);
 	if (!fname) {
-		*referr = json_cmd_error(src->filename, json_cmd_lineno(src), 1, "Missing function name");
+		*referr = json_cmd_src_error(src, 1, "Missing function name");
 		goto Error;
 	}
 

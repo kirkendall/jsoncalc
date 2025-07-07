@@ -228,6 +228,81 @@ or
 .B plugin
 command to explicitly say so.
 
+.SH "INTERACTIVE VS. BATCH MODE"
+.B jsoncalc
+can run in interactive mode or in batch mode.
+.P
+The selection of mode depends on the command-line flags and arguments.
+Using the
+.B -i
+flag always forces interactive mode, but without that it tries to guess.
+If you use 
+.BI -c expression,
+.BI -f file,
+.BI -s settings,
+or
+.B -p
+then it will assume batch mode unless you give 
+.BR -i .
+If the first argument after the flags is a script file (not a JSON data file)
+then that counts as a
+.BI -f file
+flag and will imply batch mode unless
+.B -i
+is also used.
+.P
+In interactive mode,
+the first JSON data file named on the command line is loaded into a variable
+named "data".
+You can use the "file" command to switch to other files.
+If no data files are named on the command line, then "data" will be null.
+Any scripts or commands listed on the command line will be executed once,
+after the first file is loaded.
+.P
+In batch mode, all data files are loaded, one after the other, and any
+scripts or commands will be executed separately for each one.
+If no data files are named on the command line, and stdin is a file or pipe,
+then
+.B jsoncalc
+will read from stdin and write to stdout.
+.P
+Either way, any data files named on the command line will
+.I not
+be updated unless you also give a
+.B -u
+flag to enable updates.
+This doesn't affect writing to stdout when no files are named on the command line.
+.P
+For convenience, interactive sessions can set some flags
+.BI (-S settings,
+.BI -F script,
+and
+.BI -L plugins )
+persistently.
+If you often need the "csv" plugin for your interactive sessions, you can
+invoke
+.B jsoncalc
+once with a
+.B -Lcsv
+flag and then it'll always be loaded for your interactive sessions.
+Later, if you decide you don't want to autoload the "csv" plugin, you
+can remove it from the persistent list giving a
+.B -L-csv
+flag.
+.P
+In order to provide batch sessions with a consistent runtime environment,
+persistent options
+.I do not apply
+to batch sessions.
+Instead, your batch script should use
+the "set", "import", and "plugin" commands to specify what runtime features it needs.
+.P
+Except, again for convenience, if stdout is a tty then even batch mode will
+use the persistent settings for the "table", "color", and "graphic" options.
+You can still override this via the
+.BI -s settings
+flag or the "set" command though.
+
 .SH "SETTINGS"
 The
 .BI -s settings

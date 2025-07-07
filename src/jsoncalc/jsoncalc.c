@@ -428,6 +428,20 @@ int main(int argc, char **argv)
 	val = interactive ? "interactive" : "batch";
 	json_append(json_system, json_key("runmode", json_string(val, -1)));
 
+	/* When running in batch mode, we use a separate set of formatting
+	 * options which are NOT persistent, because we want batch scripts to
+	 * have a consistent runtime environment.  HOWEVER, we can tweak those
+	 * settings to work better for terminal output vs pipe/file output.
+	 * USERS CAN STILL OVERRIDE THIS VIA THE -s FLAG.
+	 */
+	if (!interactive && isatty(1)) {
+		/* Copy "graphic", "color", and "table" from interactive */
+		section = json_by_key(json_config, "interactive");
+		json_config_set("batch", "graphic", json_copy(json_by_key(section, "graphic")));
+		json_config_set("batch", "color", json_copy(json_by_key(section, "color")));
+		json_config_set("batch", "table", json_copy(json_by_key(section, "table")));
+	}
+
 	/* Load the persistent plugins.  We have to do this before we process
 	 * any settings included in -Dplugin,settings flags.  Also load any
 	 * -Fscript scripts, because they might load plugins too.

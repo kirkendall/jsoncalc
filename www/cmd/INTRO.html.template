@@ -60,6 +60,7 @@
 <tr><td><a target="_PARENT" href="../index.html?cmd=default"><b>default</b>:</a></td><td>Define the default case for a <b>switch</b> command.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=delete"><b>delete</b> <var>lvalue</var></a></td><td>Delete a variable, or part of a variable.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=edit"><b>edit</b> ...</a></td><td>Invoke an external editor on a function or script.</td></tr>
+<tr><td><a target="_PARENT" href="../index.html?cmd=explain"><b>explain</b> <var>table</var></a></td><td>Describe the columns of a table.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=file"><b>file</b> ...</a></td><td>Move between data files</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=for"><b>for</b> (<b>var</b> <var>name</var> = <var>arr</var>) <var>cmds</var></a></td><td>Execute <var>cmds</var> with <var>name</var> set to each element of array <var>arr</var></td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=function"><b>function</b> <var>name</var> (<var>args</var>) <var>cmds</var></a></td><td>Define a function.</td></tr>

@@ -6,7 +6,7 @@ LDLIBS=	-ljson
 
 all: simple
 
-simple: simple.c $(LIB)/libjson.a
+simple: simple.c $(LIB)/libjson.so
 	$(CC) $(CFLAGS) $(LDFLAGS) simple.c $(LDLIBS) -o simple
 
 clean:

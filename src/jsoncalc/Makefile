@@ -7,7 +7,7 @@ OBJ=	jsoncalc.o interact.o batch.o complete.o
 CC=	gcc -g -fpic
 CFLAGS=	-Wall -I$(INC) -DJSON_DEBUG_MEMORY
 LDFLAGS=-L$(LIB)
-LDLIBS= -ljson -lreadline -ldl
+LDLIBS= -ljson -lreadline
 
 
 all: $(BIN)/jsoncalc

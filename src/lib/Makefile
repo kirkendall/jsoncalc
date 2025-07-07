@@ -1,6 +1,7 @@
 LIB=	../../lib
 INCLUDE=../../include
 HDRS=	$(INCLUDE)/calc.h $(INCLUDE)/error.h $(INCLUDE)/json.h $(INCLUDE)/version.h
+LIBS=	-ldl
 LIBSRC=	by.c calc.c calcfunc.c calcparse.c compare.c config.c context.c \
 	copy.c cmd.c datetime.c debug.c equal.c explain.c file.c find.c \
 	flat.c format.c grid.c groupby.c is.c length.c mbstr.c memory.c \
@@ -19,7 +20,7 @@ all: $(LIB)/libjson.so
 $(LIBOBJ): $(HDRS)
 
 $(LIB)/libjson.so: $(LIBOBJ)
-	$(CC) $(LIBOBJ) -shared -o $(LIB)/libjson.so
+	$(CC) $(LIBOBJ) $(LIBS) -shared -o $(LIB)/libjson.so
 
 $(LIB)/libjson.a: $(LIBOBJ)
 	$(RM) $(LIB)/libjson.a

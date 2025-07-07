@@ -38,7 +38,7 @@ static const char *defaultconfig = "{"
 		"\"ascii\":false,"
 		"\"color\":false,"
 		"\"quick\":false,"
-		"\"graphic\":true,"
+		"\"graphic\":false,"
 		"\"prefix\":\"\","
 		"\"null\":\"\","
 	"},"
@@ -400,6 +400,8 @@ json_t *json_config_get(const char *section, const char *key)
  * or in the "interactive" or "batch" subsection as appropriate.  If you
  * pass a non-NULL section name and that name doesn't exist, then it'll be
  * added.  THIS FUNCTION DOESN'T VERIFY THAT NAMES OR DATA TYPES ARE CORRECT.
+ * Also, the "value" is incorporated into the json_config tree, so it can't be
+ * used anywhere else in order to avoid memory issues.  Maybe use json_copy().
  */
 void json_config_set(const char *section, const char *key, json_t *value)
 {

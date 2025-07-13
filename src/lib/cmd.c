@@ -761,7 +761,10 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 		/* Maybe output trace info */
 		if (json_debug_flags.trace) {
-			fprintf(stderr, "%s:%d: %s\n", cmd->filename, cmd->lineno, cmd->name->name);
+			if (cmd->key)
+				fprintf(stderr, "%s%s:%d: %s %s%s\n", json_format_default.escdebug, cmd->filename, cmd->lineno, cmd->name->name, cmd->key, json_format_color_end);
+			else
+				fprintf(stderr, "%s%s:%d: %s%s\n", json_format_default.escdebug, cmd->filename, cmd->lineno, cmd->name->name, json_format_color_end);
 		}
 
 		/* Run the command */
@@ -806,9 +809,17 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 	/* Decode the "result" response */
 	if (!result) /* Function terminated without "return" -- use null */
 		out = json_null();
-	else if (!result->ret) /* Error - convert to error null */
+	else if (!result->ret) {
+#if 0
+		/* Error - convert to error null, but save the filename/lineno
+		 * on the context stack, so we can give better error feedback
+		 * to the user.
+		 */
+		context->older->err.filename = result->filename;
+		context->older->err.lineno = result->filename;
+#endif
 		out = json_error_null(result->code, "%s", result->text);
-	else if (result->ret == &json_cmd_break) /* "break" */
+	} else if (result->ret == &json_cmd_break) /* "break" */
 		out = json_error_null(1, "Misuse of \"break\"");
 	else if (result->ret == &json_cmd_continue) /* "continue" */
 		out = json_error_null(1, "Misuse of \"continue\"");
@@ -838,7 +849,9 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t *context)
 {
 	jsoncmd_t *next, *end;
+#if 0
 	jsoncmdout_t *result;
+#endif
 
 	/* If "existing" is JSON_CMD_ERROR then just return it unchanged. */
 	if (existing == JSON_CMD_ERROR)
@@ -868,6 +881,7 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 		next = added->next;
 		added->next = NULL;
 
+#if 0
 		/* Maybe execute "const" and "var" now */
 		if (context && (added->name->run == var_run || added->name->run == const_run)) {
 			result = json_cmd_run(added, &context);
@@ -875,6 +889,7 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 			json_cmd_free(added);
 			continue;
 		}
+#endif
 
 		/* Append this command to "existing" */
 		if (existing)
@@ -1101,7 +1116,7 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* Evaluate the for-loop's array expression */
 	array = json_calc(cmd->calc, *refcontext, NULL);
 	if (!array || array->type != JSON_ARRAY) {
-		if (array->type == JSON_NULL && array->text[0])
+		if (json_is_error(array))
 			return json_cmd_error(cmd->filename, cmd->lineno, (int)(long)array->first, "%s", array->text);
 		return json_cmd_error(cmd->filename, cmd->lineno, 1, "\"for\" expression is not an array");
 	}
@@ -1482,7 +1497,7 @@ static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		value = NULL;
 		if (each->calc) {
 			value = json_calc(each->calc, *refcontext, NULL);
-			if (value->type == JSON_NULL && *value->text) {
+			if (json_is_error(value)) {
 				if (error)
 					free(value);
 				else
@@ -1669,7 +1684,7 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 			/* Evaluate the expression */
 			defvalue = json_calc(calc, NULL, NULL);
-			if (defvalue->type == JSON_NULL && *defvalue->text) {
+			if (json_is_error(defvalue)) {
 				*referr = json_cmd_src_error(src, (int)(long)defvalue->first, "%s", defvalue->text);
 				goto Error;
 			}
@@ -2130,7 +2145,7 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* Detect errors */
-	if (table->type == JSON_NULL && table->text[0])
+	if (json_is_error(table))
 		return json_cmd_error(cmd->filename, cmd->lineno, (int)(long)table->first, "%s", table->text);
 	if (!json_is_table(table))
 		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Not a table");
@@ -2243,7 +2258,7 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		json_t *result = json_calc(cmd->calc, *refcontext, NULL);
 
 		/* If we got an error, then return the error */
-		if (result->type == JSON_NULL && *result->text) {
+		if (json_is_error(result)) {
 			jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
 			json_free(result);
 			return err;
@@ -2294,121 +2309,78 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	char	*end, *err;
-	jsoncmd_t *cmd;
-	jsonsrc_t start;
+	char	*end, *filename;
+	FILE	*fp;
+	jsoncmd_t *code, *cmd;
+	jsonsrc_t start = *src;
 
-	/* We can either invoke this with a filename (or just basename), or
-	 * a parenthesized expression yielding a string which is interpreted
-	 * the same way.
-	 */
-	start = *src;
+	/* Parse the name. */
 	json_cmd_parse_whitespace(src);
-	if (!*src->str || *src->str == ';' || *src->str == '}') {
-		/* "import" with no arguments does nothing */
+	for (end = src->str; *end && *end != ';' && *end != '}'; end++){
+	}
+	while (end > src->str && end[-1] == ' ')
+		end--;
+	filename = (char *)malloc(end - src->str + 4);
+	strncpy(filename, src->str, end - src->str);
+	filename[end - src->str] = '\0';
+	src->str = end;
+
+	/* If the filename has no extension, then assume ".jc" */
+	end = strrchr(filename, '/');
+	if (end)
+		end++;
+	else
+		end = filename;
+	end = strchr(end, '.');
+	if (!end)
+		strcat(filename, ".jc");
+
+	/* For security's sake, make sure the name doesn't start with "/"
+	 * or contain "../"
+	 */
+	if (filename[0] == '/' || strstr(filename, "../")) {
+		*referr = json_cmd_src_error(&start, 1, "Unsafe file name to import: \"%s\"", filename);
 		return NULL;
 	}
 
-	/* Allocate a cmd */
-	cmd = json_cmd(&start, &jcn_import);
-	if (*src->str == '(') {
-		/* Get the expression */
-		char *str = json_cmd_parse_paren(src);
-		if (!str) {
-			*referr = json_cmd_src_error(src, 1, "Missing ) in \"%s\" expression", "import");
-			return cmd;
-		}
+	/* If the file doesn't exist or is unreadable, fail */
+	if (access(filename, F_OK) < 0) {
+		*referr = json_cmd_src_error(&start, 1, "Import file \"%s\" does not exist", filename);
+		return NULL;
+	}
+	fp = fopen(filename, "r");
+	if (!fp) {
+		*referr = json_cmd_src_error(&start, 1, "Import file \"%s\" is unreadable", filename);
+		return NULL;
+	}
+	fclose(fp);
 
-		/* Parse the expression */
-		cmd->calc = json_calc_parse(str, &end, &err, 0);
-		if (err || *end || !cmd->calc) {
-			free(str);
-			*referr = json_cmd_src_error(src, 1, err ? err : "Syntax error in \"%s\" expression", "import");
-			return cmd;
-		}
-		free(str);
-	} else {
-		/* Assume it is a filename.  Find the end of it, and copy it
-		 * into the cmd->key.
-		 */
-		for (end = src->str; *end && *end != ';' && *end != '}'; end++){
-		}
-		while (end > src->str && end[-1] == ' ')
-			end--;
-		cmd->key = (char *)malloc(end - src->str + 1);
-		strncpy(cmd->key, src->str, end - src->str);
-		cmd->key[end - src->str] = '\0';
-
-		/* Move past the end of the name */
-		src->str = end;
-		json_cmd_parse_whitespace(src);
+	/* Load the file. If it contains any code other than function
+	 * definitions, then stow it in a cmd to run later; this is necessary
+	 * for declaring variables and constants, because those get stored in
+	 * the context but we don't have a context at parse time.
+	 */
+	cmd = NULL;
+	code = json_cmd_parse_file(filename);
+	if (code) {
+		cmd = json_cmd(&start, &jcn_import);
+		cmd->sub = code;
 	}
 
 	/* Move past the ';', if there is one */
+	json_cmd_parse_whitespace(src);
 	if (*src->str == ';')
 		src->str++;
 	json_cmd_parse_whitespace(src);
 
-	/* Return the command */
+	/* Probably nothing left to do at runtime... except maybe vars */
 	return cmd;
 }
 
 static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	json_t	*result = NULL;
-	char	*filename;
-	FILE	*fp;
-
-	/* Determine what type of "import" invocation this is */
-	if (cmd->calc) {
-		/* "import (calc) -- Evaluate the expression. */
-		result = json_calc(cmd->calc, *refcontext, NULL);
-
-		/* If we got an error, then return the error */
-		if (result->type == JSON_NULL && *result->text) {
-			jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
-			json_free(result);
-			return err;
-		}
-
-		/* Anything other than a string is an error */
-		if (result->type != JSON_STRING) {
-			json_free(result);
-			return json_cmd_error(cmd->filename, cmd->lineno, 1, "file expressions should return a number or string.");
-		}
-
-		/* The string's text is the filename */
-		filename = result->text;
-	} else {
-		/* "import filename" -- filename is stored in ->key */
-		filename = cmd->key;
-	}
-
-	/* For security's sake, make sure the name doesn't start with "/"
-	 * or contain "../"
-	 */
-	if (filename[0] == '/' || strstr(filename, "../"))
-		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Unsafe file name to import: \"%s\"", filename);
-
-	/* If the file doesn't exist or is unreadable, fail */
-	if (access(filename, F_OK) < 0)
-		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Import file \"%s\" does not exist", filename);
-	fp = fopen(filename, "r");
-	if (!fp)
-		return json_cmd_error(cmd->filename, cmd->lineno, 1, "Import file \"%s\" is unreadable", filename);
-	fclose(fp);
-
-	/* Load the file. If it contains any code other than function
-	 * definitions, then execute it and forget it.
-	 */
-	jsoncmd_t *code = json_cmd_parse_file(filename);
-	if (code) {
-		json_cmd_run(code, refcontext);
-		json_cmd_free(code);
-	}
-
-	/* Return success always */
-	return NULL;
+	/* Declare variables and such */
+	return json_cmd_run(cmd->sub, refcontext);
 }
 
 
@@ -2530,7 +2502,7 @@ static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	list = json_calc(cmd->calc, *refcontext, NULL);
 
 	/* If error, then return the error */
-	if (list && list->type == JSON_NULL && *list->text) {
+	if (json_is_error(list)) {
 		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)list->first, "%s", list->text);
 		json_free(list);
 		return err;
@@ -2625,7 +2597,7 @@ static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	if (cmd->calc) {
 		/* Evaluate it */
 		result = json_calc(cmd->calc, *refcontext, NULL);
-		if (result->type == JSON_NULL && *result->text) {
+		if (json_is_error(result)) {
 			jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
 			json_free(result);
 			return err;
@@ -2675,7 +2647,7 @@ static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	json_t *result = json_calc(cmd->calc, *refcontext, NULL);
 
 	/* If we got an error ("null" with text), then convert to jsoncmdout_t */
-	if (result && result->type == JSON_NULL && *result->text) {
+	if (json_is_error(result)) {
 		jsoncmdout_t *err = json_cmd_error(cmd->filename, cmd->lineno, (int)(long)result->first, "%s", result->text);
 		json_free(result);
 		return err;

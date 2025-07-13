@@ -46,6 +46,12 @@ int json_is_null(json_t *json)
 	return (!json || json->type == JSON_NULL);
 }
 
+/* Test whether a JSON value is a NULL that represents an error. */
+int json_is_error(json_t *json)
+{
+	return (json && json->type == JSON_NULL && json->text[0]);
+}
+
 /* Test whether a JSON value is an array of objects */
 int json_is_table(json_t *json)
 {

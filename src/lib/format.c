@@ -23,6 +23,7 @@ jsonformat_t json_format_default = {
 	1,	/* graphic - use Unicode graphic characters */
 	"",	/* prefix - prepended to names for sh format */
 	"",	/* null - text to show as null for grid format */
+	"\033[36;1m",	/* escprompt - coloring for the prompt */
 	"\033[36m",	/* escresult - coloring for result */
 	"\033[4;32m",	/* eschead - coloring for last grid heading line */
 	"\033[32m",	/* eschead2 - coloring for other grid heading lines */
@@ -74,14 +75,17 @@ static char *colorcode(char *esc, const char *color)
 	return esc;
 }
 
-/* Convert a color from the config object to an escape sequence */
-static void formatcolor(char *esc, json_t *config, const char *name, int nounderlined)
+/* Convert a color from the config object to an escape sequence.  "esc" points
+ * to a buffer to receive the escape sequence.  "name" is the name of a color
+ * setting, such as "gridhead". 'nounderlined" inhibits underlining if set to 1.
+ */
+void json_format_esc(char *esc, const char *name, int nounderlined)
 {
 	json_t	*color;
 	char	*wholeesc = esc;
 
 	/* Find the nested object describing this color */
-	color = json_by_key(config, name);
+	color = json_by_key(json_config, name);
 	if (!color) {
 		*esc = '\0';
 		return;
@@ -159,10 +163,11 @@ void json_format_set(jsonformat_t *format, json_t *config)
 	format->prefix[sizeof format->prefix - 1] = '\0';
 	strncpy(format->null, json_text_by_key(section, "null"), sizeof format->null - 1);
 	format->null[sizeof format->null - 1] = '\0';
-	formatcolor(format->escresult, config, "result", 0);
-	formatcolor(format->escgridhead, config, "gridhead", 0);
-	formatcolor(format->escgridhead2, config, "gridhead", 1);
-	formatcolor(format->escgridline, config, "gridline", 0);
-	formatcolor(format->escerror, config, "error", 0);
-	formatcolor(format->escdebug, config, "debug", 0);
+	json_format_esc(format->escprompt, "prompt", 0);
+	json_format_esc(format->escresult, "result", 0);
+	json_format_esc(format->escgridhead, "gridhead", 0);
+	json_format_esc(format->escgridhead2, "gridhead", 1);
+	json_format_esc(format->escgridline, "gridline", 0);
+	json_format_esc(format->escerror, "error", 0);
+	json_format_esc(format->escdebug, "debug", 0);
 }

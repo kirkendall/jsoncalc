@@ -83,6 +83,28 @@ static char *jcreadline(const char *prompt)
 	return expr;
 }
 
+/* Built a colorized prompt string.  This is basically the given prompt with
+ * a couple of escape sequences added to start and stop the prompt colors,
+ * and also a couple of special characters that ReadLine uses to indicate
+ * certain parts of the prompt (namely those escape sequences) are zero-width.
+ */
+static char *jcprompt(const char *prompt)
+{
+	static char	buf[50];
+
+	sprintf(buf, "%c%s%c%s%c%s%c ",
+		RL_PROMPT_START_IGNORE,
+		json_format_default.escprompt,
+		RL_PROMPT_END_IGNORE,
+		prompt,
+		RL_PROMPT_START_IGNORE,
+		json_format_color_end,
+		RL_PROMPT_END_IGNORE);
+
+	return buf;
+}
+
+
 void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 {
 	char	*expr;
@@ -111,7 +133,7 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 
 	/* Read an expression */
 	for (running = 0;
-	     (expr = jcreadline("JsonCalc: ")) != NULL;
+	     (expr = jcreadline(jcprompt("JsonCalc:"))) != NULL;
 	     running = 0) {
 		/* Ignore empty lines */
 		if (!expr[0])

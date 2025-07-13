@@ -82,6 +82,7 @@ typedef struct {
 	char	graphic;/* Use Unicode graphic chars where appropriate */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
+	char	escprompt[20]; /* coloring for the prompt */
 	char	escresult[20]; /* coloring of result */
 	char	escgridhead[20]; /* coloring of last grid heading line */
 	char	escgridhead2[20]; /* coloring of other grid heading lines */
@@ -173,6 +174,7 @@ extern int json_print_incomplete_line;
 extern void json_print(json_t *json, jsonformat_t *format);
 extern void json_grid(json_t *json, jsonformat_t *format);
 extern void json_format_set(jsonformat_t *format, json_t *config);
+extern void json_format_esc(char *esc, const char *name, int nounderlined);
 
 /* Accessing */
 extern json_t *json_by_key(const json_t *container, const char *key);
@@ -190,6 +192,7 @@ extern int json_int(json_t *json);
 extern int json_length(json_t *container);
 extern int json_is_true(json_t *json);
 extern int json_is_null(json_t *json);
+extern int json_is_error(json_t *json);
 extern int json_is_table(json_t *json);
 extern int json_is_short(json_t *json, size_t oneline);
 extern int json_is_date(json_t *json);

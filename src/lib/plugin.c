@@ -42,8 +42,21 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	if (binfile) {
 		/* Load it */
 		dlhandle = dlopen(binfile, RTLD_LAZY | RTLD_LOCAL);
-		if (!dlhandle)
-			return json_error_null(0, "The \"%s\" plugin could not be loaded", name);
+		if (!dlhandle) {
+			/* Try to shorten dlerror() output */
+			err = dlerror();
+			if (*err == '/') {
+				while (*err && *err != ':')
+					err++;
+				if (*err == ':')
+					err++;
+				while (*err == ' ')
+					err++;
+				if (!*err)
+					err = dlerror();
+			}
+			return json_error_null(0, "The \"%s\" plugin could not be loaded: %s", name, err);
+		}
 
 		/* Find the init function */
 		dlerror(); /* clear the error status */

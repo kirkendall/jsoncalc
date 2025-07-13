@@ -40,7 +40,7 @@ static json_t *jfn_arity(json_t *args, void *agdata)
 
 extern jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr);
 extern jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run);
+jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
 
 /* This parses our "example" command.  The command name has already been
  * parsed, which is how json_cmd_parse_string() and json_cmd_parse_file()
@@ -69,31 +69,36 @@ jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* We'll use either an expression in parentheses, or literal text. */
 	text = NULL;
 	expr = NULL;
+	json_cmd_parse_whitespace(src);
 	if (*src->str == '(') {
 		/* Extract the parenthesized expression, returning it as a
 		 * dynamically-allocated string.  This is smart enough to
 		 * handled embedded parentheses, quotes, etc.
 		 */
 		text = json_cmd_parse_paren(src);
-		if (!paren) {
+		if (!text) {
 			*referr = json_cmd_src_error(src, 0, "The %s command requires an expression in parentheses", "example");
 			return NULL;
 		}
 
 		/* Parse the string as an expression */
-		expr = json_calc_parse(text, &end, &err);
+		expr = json_calc_parse(text, &end, &err, 0);
 		free(text);
+		text = NULL;
 		if (!expr) {
-			*referror = json_cmd_src_error(src, 0, "Syntax error for %s: %s", "example", err);
+			*referr = json_cmd_src_error(src, 0, "Syntax error for %s: %s", "example", err);
 			return NULL;
 		}
 	} else {
 		/* collect chars up to the end of the command */
-		for (len = 0; src->str[len] < src->buf[src->size] && strchr(";}", src->str[len]); len++) {
+		for (len = 0; &src->str[len] < &src->buf[src->size] && !strchr("\n;}", src->str[len]); len++) {
 		}
 		text = (char *)malloc(len + 1);
-		strcpy(text, src->str, len);
+		strncpy(text, src->str, len);
 		text[len] = '\0';
+		src->str += len;
+		if (*src->str == ';')
+			src->str++;
 	}
 
 	/* Build a command containing the text */
@@ -106,10 +111,10 @@ jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 /* Run an "example" command.  The result of parsing it is passed as "cmd",
  * and a reference to the context is passed via *refcontext.
  */
-jsoncmdout_t *run_example(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	char	*text, *mustfree;
-	json_t	result;
+	json_t	*result;
 	jsoncmdout_t *out;
 	int	color;
 	wchar_t	wc;
@@ -124,8 +129,8 @@ jsoncmdout_t *run_example(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		result = json_calc(cmd->calc, *refcontext, NULL);
 
 		/* If error, then return the error */
-		if (result->type == JSON_NULL && *json->text) {
-			out = json_cmd_error(cmd->filename, cmd->linenno, 0, "Error in %s: %s", "example", json->text);
+		if (result->type == JSON_NULL && *result->text) {
+			out = json_cmd_error(cmd->filename, cmd->lineno, 0, "Error in %s: %s", "example", result->text);
 			json_free(result);
 			return out;
 		}
@@ -146,11 +151,14 @@ jsoncmdout_t *run_example(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	memset(&state, 0, sizeof state);
 	for (color = 0; *text; color = (color + 1) & 0x7, text += in) {
 		in = mbrtowc(&wc, text, MB_CUR_MAX, &state);
-		fprintf(stderr, "\033[3%dm%.*s", color, in, text);
+		fprintf(stderr, "\033[3%d;1m%.*s", color, in, text);
 	}
 	fputs("\033m\n", stderr);
 
 	/* Return NULL to continue to next command */
+	json_free(result);
+	if (mustfree)
+		free(mustfree);
 	return NULL;
 }
 
@@ -170,15 +178,15 @@ char *init()
 	 * ~/.config/jsoncalc/jsoncalc.json file.and will only be available
 	 * when the functions and commands are invoked.
 	 */
-	settings = json_parse_string("{\"str\":\"Wow!\",\"num\":4,\"bool\":true}";
+	settings = json_parse_string("{\"str\":\"Wow!\",\"num\":4,\"bool\":true}");
 	section = json_by_key(json_config, "plugin");
-	json_append(section, json_key("example", settings);
+	json_append(section, json_key("example", settings));
 
 	/* Register the functions */
 	json_calc_function_hook("arity",  "x:any, ...", "number", jfn_arity);
 
 	/* Register the commands.  The first arg is the plugin name. */
-	json_cmd_hook("example", "example", parse_example, run_example);
+	json_cmd_hook("example", "example", example_parse, example_run);
 
 	/* Success */
 	return NULL;

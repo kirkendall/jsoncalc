@@ -1,4 +1,4 @@
-LIB=	../../../plugin
+LIB=	../../../lib
 INC=	../../../include
 BIN=	../../../bin
 PLUGIN=	../../../plugin
@@ -23,6 +23,7 @@ docs:
 	for i in www/f/*.html; do case "$$i" in *SKELETON.html)true;; *) cp "$$i" $(WWW)/f/curl; esac; done
 
 clean:
+	$(RM) $(PLUGIN)/plugincurl.so
 	$(RM) plugincurl.so
 	$(RM) $(OBJ)
 	$(RM) $(WWW)/plugin/curl.html

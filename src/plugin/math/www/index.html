@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Defines functions expected in JavaScript's Math object</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc curl plugin summary">
+    <meta name="keywords" content="jsoncalc, curl plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Math Plugin</h1>
+    The <strong>math</strong> plugin defines most of the functions and
+    constants expected in JavaScript's Math object.
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    The <tt>math</tt> plugin doesn't have any options.
+
+    <h2 id="functions">Functions</h2>
+    You can call the following functions like a "normal" function, or with
+    a JavaScript-like "Math." prefix.
+    For example, <tt>sqrt(2)</tt> and <tt>Math.sqrt(2)</tt> both do the exact
+    same thing.
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/acos">acos(n:number):number</a></td><td>inverse cosine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/acosh">acosh(n:number):number</a></td><td>inverse hyperbolic cosine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/asin">asin(n:number):number</a></td><td>inverse sine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/asinh">asinh(n:number):number</a></td><td>inverse hyperbolic sine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/atan">atan(n:number):number</a></td><td>inverse tangent</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/atan2">atan2(x:number, y:number):number</a></td><td>angle toward a given point</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/atanh">atanh(n:number):number</a></td><td>inverse hyperbolic tangent</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/cbrt">cbrt(n:number):number</a></td>cube root<td></td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/ceil">ceil(n:number):number</a></td><td>ceiling (round up)</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/cos">cos(n:number):number</a></td><td>cosine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/cosh">cosh(n:number):number</a></td><td>hyperbolic cosine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/exp">exp(n:number):number</a></td><td>exponent (Math.E raised to the power <var>n</var>)</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/floor">floor(n:number):number</a></td><td>floor (round down)</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/log">log(n:number):number</a></td><td>natural logarithm</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/log10">log10(n:number):number</a></td><td>base-10 logarithm</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/log2">log2(n:number):number</a></td><td>base-2 logarithm</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/pow">pow(base:number, power:number):number</a></td><td>raise base to the given power</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/round">round(n:number):number</a></td><td>round to nearest integer</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/sin">sin(n:number):number</a></td><td>sine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/sinh">sinh(n:number):number</a></td><td>hyperbolic sine</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/sqrt">sqrt(n:number):number</a></td><td>square root</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/tan">tan(n:number):number</a></td><td>tangent</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/trunc">trunc(n:number):number</a></td><td>round toward 0</td>
+	</tr>
+	<tr>
+	  <td><a target="_PARENT" href="../index.html?f=math/hypot">hypot(n1:number, ...):number</a></td><td>hypotenuse (square root of sum of squares)</td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    The <tt>math</tt> plugin doesn't add any commands.
+
+    <h2 id="other">Other Features</h2>
+    The following constants will be defined in the Math object.
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Constant</th>
+          <th>Value</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+	<tr><td>E</td><td>2.71828182846</td><td>base for natural log</td></tr>
+	<tr><td>LN10</td><td>2.30258509299</td><td>log(10)</td></tr>
+	<tr><td>LN2</td><td>0.69314718056</td><td>log(2)</td></tr>
+	<tr><td>LOG10E</td><td>0.434294481903</td><td>log10(Math.E)</td></tr>
+	<tr><td>LOG2E</td><td>1.44269504089</td><td>log2(Math.E)</td></tr>
+	<tr><td>PI</td><td>3.14159265359</td><td>&pi;</td></tr>
+	<tr><td>SQRT1_2</td><td>0.707106781187</td><td>sqrt(1/2)</td></tr>
+	<tr><td>SQRT2</td><td>1.41421356237</td><td>sqrt(2)</td></tr>
+
+      </tbody>
+    </table>
+  </body>
+</html>

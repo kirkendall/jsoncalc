@@ -1,0 +1,904 @@
+<!-- Creator     : groff version 1.22.4 -->
+<!-- CreationDate: Mon Jul  7 14:57:04 2025 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title>jsoncalc</title>
+
+</head>
+<body>
+
+<h1 align="center">jsoncalc</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#INTERACTIVE VS. BATCH MODE">INTERACTIVE VS. BATCH MODE</a><br>
+<a href="#SETTINGS">SETTINGS</a><br>
+<a href="#EXPRESSION SYNTAX">EXPRESSION SYNTAX</a><br>
+<a href="#INVOCATION EXAMPLES">INVOCATION EXAMPLES</a><br>
+<a href="#EXPRESSION EXAMPLES">EXPRESSION EXAMPLES</a><br>
+<a href="#FILES">FILES</a><br>
+<a href="#ENVIRONMENT">ENVIRONMENT</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+
+<hr>
+
+
+<h2>NAME
+<a name="NAME"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">jsoncalc
+&minus; JSON calculator and reformatter</p>
+
+<h2>SYNOPSIS
+<a name="SYNOPSIS"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+[<i>OPTION</i>] [<i>file.jc</i>]
+[<i>name</i><b>=</b><i>value</i>] [<i>file.json</i>]...</p>
+
+<h2>DESCRIPTION
+<a name="DESCRIPTION"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+is a tool for examining or modifying JSON data. It can be
+run interactively or in batch mode. It integrates well with
+shell scripts.</p>
+
+<h2>OPTIONS
+<a name="OPTIONS"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The typical
+<b>--help</b> and <b>--version</b> options are supported.
+Other than that, all options are short. <b><br>
+-c</b><i>command</i></p>
+
+<p style="margin-left:22%;">Apply <i>command</i> to the
+JSON data. The JSON data will typically come from *.json
+files also given in the command line. Any results will be
+written to stdout. This option can be repeated to supply
+multiple commands to run.</p>
+
+<p style="margin-left:11%;"><b>-f</b><i>scriptfile</i></p>
+
+<p style="margin-left:22%;">Read an expression from a file,
+and apply it to the JSON data. Again, the JSON data will
+typically come from *.json files named on the command line.
+This option can be repeated to supply multiple script files
+to load. You can also mix it with <b>-c</b><i>command</i> if
+you want.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="22%"></td>
+<td width="78%">
+
+
+<p>Also, if the first file named after the last option
+appears to contain a JsonCalc script instead of JSON data,
+then it will be loaded like <b>-f</b><i>file.</i></p></td></tr>
+</table>
+
+<p style="margin-left:11%;"><b>-F</b><i>scriptfile</i></p>
+
+<p style="margin-left:22%;">Add <i>scriptfile</i> to a list
+of scripts to automatically load when running interactively.
+This is persistent across interactive sessions. Later, to
+persistently remove a script from that list, you can invoke
+<b>jsoncalc</b> with a <b>-F-</b><i>scriptfile</i> flag. You
+can also use lowercase <b>-f-</b><i>scriptfile</i> to
+temporarily remove <i>scriptfile</i> from the list for a
+single session.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p><b>-i</b></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>Force interactive mode. Usually interactive mode is
+implied by the lack of <b>-c</b><i>expression,</i>
+<b>-f</b><i>file</i> or <b>-s</b><i>settings,</i> but if you
+want to use some of those flags then <b>-i</b> option makes
+it clear.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p>-u</p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>This option allows JsonCalc to update any data files
+named on the command line, if their data was changed via
+assignments. This is often used when JsonCalc is
+constructing JSON documents from other data sources such as
+environment variables or <i>name</i><b>=</b><i>value</i>
+arguments on the shell command line.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p><b>-o</b>|<b>-a</b></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>These affect JsonCalc&rsquo;s behavior when trying to
+load a file that doesn&rsquo;t exist. Normally that&rsquo;s
+an error, but <b>-o</b> and <b>-a</b> cause it to load
+missing files as empty objects or arrays, respectively. This
+can be handy if you&rsquo;re using JsonCalc to construct a
+JSON document from scratch. You&rsquo;ll usually want
+<b>-u</b> too.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p><b>-r</b></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>Restricted mode. This inhibits some dangerous activities
+such as invoking an external shell command, or
+reading/writing files not named on the command line. This
+software is distributed with no guarantees of any kind. And
+even if <b>jsoncalc</b> itself is perfect, plugins might not
+be.</p> </td></tr>
+</table>
+
+<p style="margin-left:11%;"><b>-d</b><i>directory</i></p>
+
+<p style="margin-left:22%;">Causes any unresolved names in
+an expression to be interpreted as a request to load
+<i>dir</i>/<i>name</i>.json as variable <i>name</i>. For
+example, if you invoke JsonCalc with <b>-d</b><i>foo</i> and
+then use the name &quot;bar&quot; in an expression, JsonCalc
+will load foo/bar.json into the &quot;bar&quot; variable.
+This happens on demand; it doesn&rsquo;t proactively load
+all files in the &quot;foo&quot; directory into
+variables.</p>
+
+<p style="margin-left:11%;"><b>-D</b><i>directory</i></p>
+
+<p style="margin-left:22%;">This is like
+<b>-d</b><i>directory</i> except that uppercase
+<b>-D</b><i>directory</i> is persistent across interactive
+sessions. If you want to remove a directory from the
+persistent list, put a &quot;-&quot; before the directory
+name, as in <b>-D-</b><i>directory.</i> You can also use
+lowercase <b>-d-</b><i>directory</i> to temporarily remove
+it for one session only.</p>
+
+<p style="margin-left:11%;"><b>-j</b><i>flags</i></p>
+
+<p style="margin-left:22%;">Sets debugging flags.
+<i>flags</i> is a string of letters representing the
+debugging features to enable. The letters are <b>t</b> to
+output tokens as they&rsquo;re parsed, <b>f</b> for files as
+each chunk is read, <b>b</b> to output the remaining buffer,
+<b>a</b> to call abort() on a JSON error, <b>e</b> to output
+info for json_by_expr(), or <b>c</b> to output info for
+json_calc().</p>
+
+<p style="margin-left:11%;"><b>-s</b><i>settings</i></p>
+
+<p style="margin-left:22%;">This controls the output
+format, colors, and some other features. See the
+&quot;SETTINGS&quot; section, below.</p>
+
+<p style="margin-left:11%;"><b>-S</b><i>settings</i></p>
+
+<p style="margin-left:22%;">This is like
+<b>-s</b><i>settings</i> except that uppercase
+<b>-S</b><i>settings</i> is persistent across interactive
+sessions.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p><b>-p</b></p></td>
+<td width="8%"></td>
+<td width="78%">
+
+
+<p>A single <b>-p</b> enables pretty-printing, where
+newlines and whitespace are added to the JSON to show the
+structure of the data, and is equivalent to
+<b>-sjson,pretty,oneline=0,noelem</b>. A double <b>-pp</b>
+is similar but uses <b>elem</b> to cause elements of an
+array to be output entirely on one line. A triple
+<b>-ppp</b> outputs compact JSON.</p></td></tr>
+</table>
+
+
+<p style="margin-left:11%;"><b>-l</b><i>plugin</i><b>[,</b><i>settings</i><b>]</b></p>
+
+<p style="margin-left:22%;">This loads a plugin. Most
+plugins are binary files that get linked into
+<b>jsoncalc</b> at runtime, to provide new functions,
+commands, file formats, or other features. Some plugins may
+be implemented in <b>jsoncalc</b>&rsquo;s scripting
+language. If a plugin supports settings, then you can set
+them by appending them after the plugin&rsquo;s name, with a
+comma as a delimiter.</p>
+
+
+<p style="margin-left:11%;"><b>-L</b><i>plugin</i><b>[,</b><i>settings</i><b>]</b></p>
+
+<p style="margin-left:22%;">This is like
+<b>-l</b><i>plugin</i><b>,</b><i>settings</i> except that
+uppercase <b>-L</b><i>plugin</i><b>,</b><i>settings</i> is
+persistent across interactive sessions. To remove a plugin
+from the persistent list, use a &quot;-&quot; before the
+plugin name, as in <b>-L-</b><i>plugin</i><b>.</b> You can
+also use lowercase <b>-l-</b><i>plugin</i> to temporarily
+remove a plugin from the persistent list for this session
+only.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Note that the
+uppercase <b>-F</b><i>scriptfile,</i>
+<b>-D</b><i>directory,</i> <b>-S</b><i>settings,</i> and
+<b>-L</b><i>plugin</i> options are all like their
+corresponding lowercase option, except that the uppercase
+versions are persistent across interactive invocations. This
+can be very convenient. They intentionally don&rsquo;t apply
+for batch-mode invocations because there you want a
+consistent environment for the script to run in. If a script
+needs certain scripts or plugins to be loaded, it should use
+an <b>import</b> or <b>plugin</b> command to explicitly say
+so.</p>
+
+<h2>INTERACTIVE VS. BATCH MODE
+<a name="INTERACTIVE VS. BATCH MODE"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+can run in interactive mode or in batch mode.</p>
+
+<p style="margin-left:11%; margin-top: 1em">The selection
+of mode depends on the command-line flags and arguments.
+Using the <b>-i</b> flag always forces interactive mode, but
+without that it tries to guess. If you use
+<b>-c</b><i>expression,</i> <b>-f</b><i>file,</i>
+<b>-s</b><i>settings,</i> or <b>-p</b> then it will assume
+batch mode unless you give <b>-i</b>. If the first argument
+after the flags is a script file (not a JSON data file) then
+that counts as a <b>-f</b><i>file</i> flag and will imply
+batch mode unless <b>-i</b> is also used.</p>
+
+<p style="margin-left:11%; margin-top: 1em">In interactive
+mode, the first JSON data file named on the command line is
+loaded into a variable named &quot;data&quot;. You can use
+the &quot;file&quot; command to switch to other files. If no
+data files are named on the command line, then
+&quot;data&quot; will be null. Any scripts or commands
+listed on the command line will be executed once, after the
+first file is loaded.</p>
+
+<p style="margin-left:11%; margin-top: 1em">In batch mode,
+all data files are loaded, one after the other, and any
+scripts or commands will be executed separately for each
+one. If no data files are named on the command line, and
+stdin is a file or pipe, then <b>jsoncalc</b> will read from
+stdin and write to stdout.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Either way, any
+data files named on the command line will <i>not</i> be
+updated unless you also give a <b>-u</b> flag to enable
+updates. This doesn&rsquo;t affect writing to stdout when no
+files are named on the command line.</p>
+
+<p style="margin-left:11%; margin-top: 1em">For
+convenience, interactive sessions can set some flags
+<b>(-S</b><i>settings,</i> <b>-F</b><i>script,</i> and
+<b>-L</b><i>plugins</i><b>)</b> persistently. If you often
+need the &quot;csv&quot; plugin for your interactive
+sessions, you can invoke <b>jsoncalc</b> once with a
+<b>-Lcsv</b> flag and then it&rsquo;ll always be loaded for
+your interactive sessions. Later, if you decide you
+don&rsquo;t want to autoload the &quot;csv&quot; plugin, you
+can remove it from the persistent list giving a
+<b>-L-csv</b> flag.</p>
+
+<p style="margin-left:11%; margin-top: 1em">In order to
+provide batch sessions with a consistent runtime
+environment, persistent options <i>do not apply</i> to batch
+sessions. Instead, your batch script should use the
+&quot;set&quot;, &quot;import&quot;, and &quot;plugin&quot;
+commands to specify what runtime features it needs.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Except, again
+for convenience, if stdout is a tty then even batch mode
+will use the persistent settings for the &quot;table&quot;,
+&quot;color&quot;, and &quot;graphic&quot; options. You can
+still override this via the <b>-s</b><i>settings</i> flag or
+the &quot;set&quot; command though.</p>
+
+<h2>SETTINGS
+<a name="SETTINGS"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The
+<b>-s</b><i>settings</i> option mostly controls the output
+format. The <i>settings</i> is a series of names or
+<i>name</i>=<i>value</i> pairs.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Most settings
+are boolean. You can turn them on just by giving their name,
+or turn them off by <br>
+prepending &quot;no&quot; or &quot;-&quot; to the name. For
+example, <b>-spretty</b> will enable pretty-printing, and
+<b>-snocolor</b> will disable colors in the output.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Some options
+are strings that have a list of preferred values associated
+with them. You can give just the value, without a name, and
+<b>jsoncalc</b> will figure out which name it belongs to.
+For example, there&rsquo;s a &quot;table&quot; setting with
+a list of preferred values that includes &quot;sh&quot; (for
+a format that works well on shell scripts), so if you want
+tables to be output in &quot;sh&quot; format, you could
+either say <b>-stable=sh</b> or simply <b>-ssh.</b></p>
+
+<p style="margin-left:11%; margin-top: 1em">The main output
+format options are:</p>
+
+
+<p align="center" style="margin-top: 1em"><img src="grohtml-49761.png" alt="Image grohtml-49761.png"></p>
+
+<p style="margin-left:11%; margin-top: 1em">Additionally,
+there are sections to select the color and other attributes
+of certain types of text output. These are whole objects,
+not simple strings/boolean/numbers. The <i>settings</i>
+parser handles this pretty well, though. When setting the
+value of an object, everything up to the next comma or end
+of the setting is interpreted as a space-delimited list of
+settings within that object. For example, you can set the
+attributes of the column headers in the &quot;grid&quot;
+table output format via a string such as
+&quot;-sgridhead=italic underlined yellow&quot;. The
+&quot;italic&quot; and &quot;underlined&quot; settings are
+boolean, and &quot;yellow&quot; is in the preferred value
+list for the &quot;fg&quot; (foreground color) setting.</p>
+
+<p style="margin-left:11%; margin-top: 1em">The types of
+text that can have their attributes set this way include
+<b>result</b> (normal output), <b>error</b> (error
+messages), <b>debug</b> (debugging output), <b>gridhead</b>
+(column headings in &quot;table=grid&quot; format) and
+<b>gridline</b> (Column separators in
+&quot;table=grid&quot;). Their attributes are:</p>
+
+
+<p align="center" style="margin-top: 1em"><img src="grohtml-49762.png" alt="Image grohtml-49762.png"></p>
+
+<p style="margin-left:11%; margin-top: 1em">Most plugins
+support options, stored in an object named
+<b>plugin.</b><i>pluginname</i><b>.</b> The preferred way to
+adjust the settings for a plugin is to append the settings
+after the plugin name when you&rsquo;re loading it, though
+you can also set them via
+<b>-splugin.</b><i>pluginname</i><b>=</b><i>settings</i><b>.</b>
+The same rules apply for settings in these objects, so for
+example you could specify the &quot;daily&quot; rollover
+method for the &quot;log&quot; plugin via
+<b>-llog,rollover=daily</b> or <b>-llog,daily</b> or
+<b>-llog -splugin.log=daily.</b></p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>SH
+OUTPUT</b> <br>
+The &quot;sh&quot; table output format deserves a bit more
+discussion. Each row of the table will be output as a line
+of multiple <i>name</i>=<i>value</i> pairs, giving the
+values for all columns of the table in that row. In a shell
+script, you can read the lines and evaluate them one-by-one
+like this: <br>
+jsoncalc -ssh -c scores sampledata/test.json | while read
+row <br>
+do <br>
+eval $row <br>
+echo &quot;$name earned $score points in run# $run&quot;
+<br>
+done</p>
+
+<p style="margin-left:11%; margin-top: 1em">If you expect
+the output to be a single object then you can use
+<b>bash</b>(1)&rsquo;s &quot;$(...)&quot; notation, like
+this: <br>
+eval $(jsoncalc -ssh -c
+&rsquo;scores[name:&quot;Paul&quot;]&rsquo;
+sampledata/test.json) <br>
+echo &quot;$name scored $score&quot;</p>
+
+<h2>EXPRESSION SYNTAX
+<a name="EXPRESSION SYNTAX"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The expression
+syntax resembles that of JavaScript expressions, but with
+database-like extensions. For a full description of the
+syntax, see the JsonCalc web page. In short, though, the
+extensions are:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p>&nbsp; &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p><i>array</i><b>@</b><i>filter</i> and
+<i>array</i><b>@@</b><i>filter</i> operators to transform
+arrays.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p>&nbsp; &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p>A <i>table</i><b>@=</b><i>table,
+table</i><b>@&lt;</b><i>table</i> and
+<i>table</i><b>@&gt;</b><i>table</i></p> </td></tr>
+</table>
+
+<p style="margin-left:15%; margin-top: 1em">database join
+operators. <b>@=</b> is natural join, <b>@&lt;</b> is left
+join, and <b>@&gt;</b> is right join. A table is simply an
+array of objects.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p style="margin-top: 1em">&nbsp; &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+
+<p style="margin-top: 1em"><i>table</i><b>.orderBy(</b><i>columns</i><b>),</b>
+<i>table</i><b>.groupBy(</b><i>columns</i><b>),</b>
+<i>array</i><b>.flat(</b><i>depth</i><b>),</b><i>and
+table</i><b>.unroll</b><i>(</i><b>nest_list</b><i>)</i>
+functions to organize arrays of objects.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p>&nbsp; &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p><i>expr</i><b>.find(</b><i>value</i><b>)</b> to search
+for a value within a large data structure. Also,
+<i>table</i><b>[</b><i>key:value</i><b>]</b> notation to
+locate return an element from an array of objects, based on
+the contents of the object.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p>&nbsp; &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p>Aggregate functions including
+<i>min(</i><b>expr</b><i>), max(</i><b>expr</b><i>),
+avg(</i><b>expr</b><i>)</i> and
+<i>count(</i><b>expr</b><i>).</i></p> </td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p><i>&nbsp;</i> &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p>A rather full-featured SQL &quot;SELECT&quot;
+statement.</p> </td></tr>
+</table>
+
+<p style="margin-left:11%; margin-top: 1em">JsonCalc also
+implements many JavaScript operators, functions, and
+commands. It does not support classes though, or functions
+that alter data such as <b>array</b>.splice(). It
+<i>does</i> allow you to write functions as though they were
+member functions though. Whenever you write
+<i>expr.func</i><b>(</b><i>args</i><b>),</b> the <i>expr</i>
+is interpreted as the first argument to
+<i>func</i><b>().</b> For example, <b>and
+toUpperCase(&quot;Hello&quot;)</b> are exactly the same
+thing.</p>
+
+<h2>INVOCATION EXAMPLES
+<a name="INVOCATION EXAMPLES"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">jsoncalc</p>
+
+<p style="margin-left:22%;">Start <b>jsoncalc</b>
+interactively, without any JSON data initially.</p>
+
+<p style="margin-left:11%;">jsoncalc -lmath</p>
+
+<p style="margin-left:22%;">Start <b>jsoncalc</b>
+interactively, with the &quot;math&quot; plugin loaded. This
+adds nearly all of the functions and constants from
+JavaScript&rsquo;s Math class.</p>
+
+<p style="margin-left:11%;">jsoncalc file.json</p>
+
+<p style="margin-left:22%;">Start <b>jsoncalc</b>
+interactively using the contents of file.json as variable
+<b>data.</b></p>
+
+<p style="margin-left:11%;">jsoncalc -d.</p>
+
+<p style="margin-left:22%;">Start <b>jsoncalc</b>
+interactively. Any *.json files in the directory
+&quot;.&quot; can be accessed simply by using their basename
+as a variable name, e.g. using the name <i>parts</i> in an
+expression would load the file <i>./parts.json</i> into the
+<i>parts</i> variable.</p>
+
+<p style="margin-left:11%;">jsoncalc -p file.json</p>
+
+<p style="margin-left:22%;">Pretty-print file.json. This is
+non-interactive because <b>-p</b> was used without
+<b>-i</b>.</p>
+
+<p style="margin-left:11%;">jsoncalc -c 2+2</p>
+
+<p style="margin-left:22%;">Start in batch mode, evaluate
+2+2 to output 4, and then quit.</p>
+
+<p style="margin-left:11%;">jsoncalc -u script.js data.json
+data2.json</p>
+
+<p style="margin-left:22%;">Start in batch mode. For each
+*.json data file, run the <i>script.js</i> script. Because
+of the <b>-u</b>, if the script altered any the data from
+any of the *.json files, they would updated to include those
+changes.</p>
+
+<h2>EXPRESSION EXAMPLES
+<a name="EXPRESSION EXAMPLES"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The following
+examples assume you invoked <b>jsoncalc</b> as
+&quot;jsoncalc -dsampledata&quot;.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p>1+2*3</p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>This outputs 7. <b>jsoncalc</b> makes a pretty decent
+calculator.</p> </td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p>1..10</p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p>Output an array of integers from 1 to 10.</p></td></tr>
+</table>
+
+<p style="margin-left:11%;">1..10@{n:this,</p>
+
+<p style="margin-left:22%;">For each element of the array,
+construct an object. The @ operator loops over the elements
+from the left operand (an array) and applies the right
+operand (an expression) to them with &quot;this&quot; set to
+the array element&rsquo;s value. The {...} notation is an
+object generator. The result is an array of objects, which
+<b>jsoncalc</b> classifies as a table, so it is output as a
+table.</p>
+
+<p style="margin-left:11%;">&quot;2024-12-25&quot; +
+&quot;P12D&quot;</p>
+
+<p style="margin-left:22%;">This is an example of ISO-8601
+date/time/period calculation. It adds 12 days to Christmas,
+returning &quot;2025-01-06&quot;. <b>jsoncalc</b> makes date
+calculation easy. (If the strings didn&rsquo;t look like a
+date and a period, they would have been concatenated just as
+in JavaScript. If you want to concatenate strings, no
+questions asked, then use the concat() function.)</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="6%">
+
+
+<p>test</p></td>
+<td width="5%"></td>
+<td width="67%">
+
+
+<p>Output the contents of sampledata/test.json.</p></td>
+<td width="11%">
+</td></tr>
+</table>
+
+<p style="margin-left:11%;">test.scores</p>
+
+<p style="margin-left:22%;">Output the &quot;scores&quot;
+member of the object loaded from sampledata/test.json. This
+is a table (array of objects) and the default interactive
+format is to output tables in a human-readable grid, so it
+should look pretty.</p>
+
+
+<p style="margin-left:11%;">test.scores.orderBy([&quot;name&quot;,&quot;run&quot;])</p>
+
+<p style="margin-left:22%;">Output the same table, but
+sorted by name and run.</p>
+
+<p style="margin-left:11%;">test.scores@run==1</p>
+
+<p style="margin-left:22%;">Only output rows for run 1. The
+@ and @@ operators take an array as the left operand and an
+expression on the right to filter the array. If the
+expression returns a boolean value, then the element is
+omitted or kept.</p>
+
+<p style="margin-left:11%;">test.scores@{run,score}</p>
+
+<p style="margin-left:22%;">Only output the &quot;run&quot;
+and &quot;score&quot; columns. If the right-hand operand of
+@ or @@ returns a value other than <b>null, true</b> or
+<b>false</b> then it is used instead of the array&rsquo;s
+element.</p>
+
+
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)@{run,avgScore:avg(score)}</p>
+
+<p style="margin-left:22%;">This groups the records by
+score, and then computes the average score within each
+group. <b>avg(</b><i>x</i><b>)</b> is an aggregate function,
+meaning it first accumulates data across all rows of the
+data (or all in the group, in this case) and goes back and
+makes the cumulative result available when evaluating each
+row. The @ operator only adds one row per group.</p>
+
+
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;,&quot;total&quot;)@{run,avgScore:avg(score)}</p>
+
+<p style="margin-left:22%;">The difference here is,
+groupBy() is passed an extra parameter that causes an extra
+row to be added for showing the overall average.</p>
+
+<p style="margin-left:11%;">&quot;select run, avg(score)
+from test.scores group by run&quot;</p>
+
+<p style="margin-left:22%;">This uses an SQL
+&quot;SELECT&quot; command to extract basically the same
+information. Note that SQL will choose a default name for a
+computed column. Internally, the SQL &quot;SELECT&quot; is
+translated to <b>jsoncalc</b>&rsquo;s native expression
+syntax so it&rsquo;s about as efficient either way.</p>
+
+
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)@@{run,avgScore:avg(score)}</p>
+
+<p style="margin-left:22%;">The difference between @@ and @
+is that when groups are used, @ only outputs one value per
+group while @@ outputs one item per row. In this example, we
+get a separate copy of each row for each name, even though
+the name isn&rsquo;t included in the resulting rows.</p>
+
+
+<p style="margin-left:11%;">test.scores.orderBy(&quot;name&quot;).groupBy(&quot;name&quot;)@{name,avgScore:avg(score)}</p>
+
+<p style="margin-left:22%;">Compute the average score for
+each name. Note that groupBy() only compares adjacent items
+when grouping, so we need to explicitly sort by name before
+we can group by name. This wasn&rsquo;t an issue when
+grouping by run because the data was already sorted by
+run.</p>
+
+<p style="margin-left:11%;">test..deepest</p>
+
+<p style="margin-left:22%;">This outputs the value of
+test.deep.deeper.deepest, which happens to be 3. The
+&quot;..&quot; operator digs down through multiple layers of
+objects, if necessary, to find the requested name.</p>
+
+
+<p style="margin-left:11%;">test.cust[0].contact[type:&quot;address&quot;]</p>
+
+<p style="margin-left:22%;">This looks in
+<b>text.cust[0].contact</b> (an array of objects) for an
+element containing a member with the name &quot;type&quot;
+and value &quot;address&quot;.</p>
+
+<p style="margin-left:11%;">test.find(3)</p>
+
+<p style="margin-left:22%;">This searches through test for
+all instances of the value 3, and lists them as a table. You
+can search for numbers, strings, or regular expressions
+(search patterns, see regex(7) in the Linux manual).</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+<p>emojis</p></td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p>Output the contents of sampledata/emojis.json. If your
+terminal doesn&rsquo;t display emojis, try one that does. I
+recommend <b>xfce4-terminal</b>(1) or
+<b>gnome-terminal</b>(1). KDE&rsquo;s <b>konsole</b>(1) is
+so-so, and plain old <b>xterm</b>(1) is just bad.</p></td></tr>
+</table>
+
+<p style="margin-left:11%;">explain test.cust</p>
+
+<p style="margin-left:22%;">This examines <b>test.cust</b>
+(an array of objects) to determine the names, data types,
+and other information about each member. Basically this is
+the column information used by the &quot;grid&quot; table
+output method.</p>
+
+<h2>FILES
+<a name="FILES"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em">~/.config/jsoncalc/</p>
+
+<p style="margin-left:22%;">This directory stores
+JsonCalc&rsquo;s configuration. It may also store temporary
+files such as caches and logs.</p>
+
+
+<p style="margin-left:11%;"><i>PATH</i>/lib<i>plugin</i>.so</p>
+
+<p style="margin-left:22%;">Where <i>PATH</i> is a
+directory name from $JSONCALCPATH, this is where a binary
+plugin may be found.</p>
+
+
+<p style="margin-left:11%;"><i>PATH</i>/<i>plugin</i>.jc</p>
+
+<p style="margin-left:22%;">Where <i>PATH</i> is a
+directory name from $JSONCALCPATH, this is where a script
+plugin may be found.</p>
+
+<h2>ENVIRONMENT
+<a name="ENVIRONMENT"></a>
+</h2>
+
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p style="margin-top: 1em">$HOME</p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em">This is used to find the
+<i>~/.config/jsoncalc</i> directory.</p></td></tr>
+</table>
+
+<p style="margin-left:11%;">$JSONCALCPATH</p>
+
+<p style="margin-left:22%;">This is a list of directories
+where JsonCalc&rsquo;s supporting files might be found. The
+default value is derived from $LDLIBRARYPATH.</p>
+
+<h2>SEE ALSO
+<a name="SEE ALSO"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>json_calc</b>(3),
+<b>bash</b>(1), <b>xfce4-terminal</b>(1),
+<b>gnome-terminal</b>(1)</p>
+
+<p style="margin-left:11%; margin-top: 1em">The home page
+for JsonCalc is http://www.jsoncalc.org/ <br>
+<a href=""></a></p>
+
+<h2>AUTHOR
+<a name="AUTHOR"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Steve
+Kirkendall, kirkenda@gmail.com</p>
+<hr>
+</body>
+</html>

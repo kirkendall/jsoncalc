@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+  </head>
+  <body>
+    <h3>JsonCalc Plugins</h3>
+    <div class="sidebar">
+      @@@
+    </div>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>An Example Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc curl plugin summary">
+    <meta name="keywords" content="jsoncalc, curl plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Example Plugin</h1>
+    The <strong>example</strong> plugin does nothing useful.
+    It merely implements one function and one command, so you can
+    see how that's done.
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Option Name</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>str</td>
+          <td>string</td>
+          <td>"Wow!"</td>
+          <td>Example of a string option.</td>
+	</tr>
+        <tr>
+          <td>num</td>
+          <td>number</td>
+          <td>4</td>
+          <td>Example of a number option.</td>
+	</tr>
+        <tr>
+          <td>bool</td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Example of a boolean option.</td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="functions">Functions</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=example/arity">arity()</a></td>
+          <td>Returns a count of the arguments passed into it.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=example/example">example</a></td>
+          <td>Displays its argument in rainbow text.
+              The argument can be literal text, or
+              a parenthesized expression that returns the text to display.
+	  </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="other">Other Features</h2>
+    The <tt>example</tt> plugin doesn't add any other features.
+  </body>
+</html>

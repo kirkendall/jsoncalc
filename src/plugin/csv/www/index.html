@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>CSV Plugin</title>
+    <title>Adds the Ability to Parse and Generate CSV Data.</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
     <meta name="description" content="jsoncalc csv plugin summary">
     <meta name="keywords" content="jsoncalc, csv plugin">
@@ -146,7 +146,7 @@
     <div class="example">
       <kbd>var rgbn = [[0,0,0,"black"],[255,255,255,"white"],[255,255,0,"yellow"]];</kbd>
       <kbd>var headings = ["red","green","blue","colorname"];</kbd>
-      <kbd>var tbl = [rgbn] @@ arraysToObject(headings, this);</kbd>
+      <kbd>var tbl = headings values rgbn;</kbd>
       <kbd>tbl;</kbd>
       <samp>
         <table>
@@ -170,6 +170,10 @@
       Once we've converted the array of row arrays to a table
       (array of objects), we first output it in the usual "grid" format,
       and then select "csv" and CSV's "headless" and output it that way.
+      <p>
+      If you don't really care about the assigned names, then you can
+      generate them automatically via an expression such as
+      <tt>1..row[0].length @ rowNumber("A")</tt> wh
     </div>
     <p>
     The above example is only relevant if you're working with headless CSV

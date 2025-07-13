@@ -1,4 +1,4 @@
-LIB=	../../../plugin
+LIB=	../../../lib
 INC=	../../../include
 BIN=	../../../bin
 PLUGIN=	../../../plugin
@@ -7,7 +7,7 @@ WWW=	../../../www
 ALL=	$(PLUGIN)/plugincache.so
 SRC=	cache.c
 OBJ=	cache.o
-LIBS=	`cache-config --libs`
+LIBS=	
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
 
@@ -23,6 +23,7 @@ docs:
 	for i in www/f/*.html; do case "$$i" in *SKELETON.html)true;; *) cp "$$i" $(WWW)/f/cache; esac; done
 
 clean:
+	$(RM) $(PLUGIN)/plugincache.so
 	$(RM) plugincache.so
 	$(RM) $(OBJ)
 	$(RM) $(WWW)/plugin/cache.html

@@ -11,7 +11,6 @@
     <h1>import - Load JsonCalc code from another file</h1>
     <dl>
       <dt>import <var>filename</var>
-      <br/>import (<var>expression</var>)
       <dd>
       Load JsonCalc code from another file.
       This can be used to split large scripts into multiple files, so you
@@ -25,6 +24,9 @@
       This is intentional.
       You might find a bug in a script, edit it in another window to correct
       the bug, and then use <tt>import</tt> to reload the corrected version.
+      <p>
+      If the filename you give doesn't include a filename extension, then
+      ".jc" will be assumed.
     </dl>
     <details open>
       <summary>Examples</summary>

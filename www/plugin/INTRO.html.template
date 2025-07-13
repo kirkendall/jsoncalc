@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JsonCalc Plugins</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc plugin summary">
+    <meta name="keywords" content="jsoncalc, plugin reference">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>JsonCalc Plugins</h1>
+    This is a list of plugins that are available to the
+    <strong>jsoncalc</strong> program.
+    <p>
+    There are basically two ways to load plugins:
+    From the shell command line via a "-l<var>plugin</var>" or "-L<var>plugin</var>" flag, or
+    within a script or interactively via the <a target="_PARENT" href="../index.html?cmd=plugin">plugin <var>plugin</var></a> command.
+    The uppercase "-L<var>plugin</var>" variant will persistently load a plugin
+    across interactive sessions.
+    <p>
+    Either way, you can follow the plugin name with a comma and settings for
+    that plugin.
+    For example, "-llog,detail=4" or "<tt>plugin log,detail=4</tt>"
+    loads the "log" plugin and sets its detail level to 4.
+    <p>
+    You can write your own plugins.
+    See the "<a target="_PARENT" href="../index.html?a=How_to_Write_a_Plugin">How to Write a Plugin</a>" article.
+    <p>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Plugin</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody id="commandList">
+	@@@
+      </tbody>
+    </table>
+  </body>
+</html>

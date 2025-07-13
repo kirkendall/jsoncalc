@@ -13,8 +13,8 @@
     <h4 class="timestamp">2025-05-11</h4>
     <center>
     <blockquote class="abstract">
-      Start by copying <tt>src/plugins/math/</tt> to another directory within
-      <tt>src/plugins/</tt>.
+      Start by copying <tt>src/plugins/example/</tt> to another directory
+      within <tt>src/plugin/</tt>.
       Your plugin will need to include &lt;json.h&gt;.
       It must define a function named <tt>init()</tt> which takes no parameters
       and returns NULL on success or an error string on failure.
@@ -27,14 +27,14 @@
 
     This article explains how to write your own plugins.
     <p>
-    The source code for plugins resides in the <tt>src/plugins</tt> directory.
+    The source code for plugins resides in the <tt>src/plugin</tt> directory.
     Each plugin gets its own subdirectory below that.
     So choose a name for your plugin, and create a directory with that name.
-    I suggest you start by copying the math plugin's directory to your own
-    plugin's directory.
-    The math plugin is a good starting point because it is very simple.
+    I suggest you start by copying the
+    <a target="_PARENT" href="../../index.html?p=example">example plugin</a>'s
+    directory to your own plugin's directory.
     <div class="example">
-      <kbd>cp src/plugins/math/ src/plugins/myplugin</kbd>
+      <kbd>cp src/plugin/example/ src/plugin/myplugin</kbd>
     </div>
 
     <h2>Source Code</h2>
@@ -388,8 +388,7 @@
     good candidate.
     <p>
     Script plugins are copied to the <tt>plugin/</tt> directory just like
-    binary plugins, but their names don't have a "lib" prefix, and the ".so"
-    suffix is replaced with ".jc".
+    binary plugins, but their names end with ".jc" instead of ".so".
 
     <h2>Documentation</h2>
     Your plugin's documentation should reside in a "www" directory under
@@ -398,21 +397,71 @@
     functions in "www/f/", commands in "www/cmd", and the main intro in
     "www/index.html".
     <p>
-    For example, the "math" plugin's source directory is "src/plugin/math/",
-    so its documentation resides in "src/plugin/math/www/".
+    For example,
+    the "example" plugin's source directory is "src/plugin/example/",
+    so its documentation resides in /plugin/example/www/".
     <p>
-    During installation, all of the documentation gets copied into a shared
-    directory where users can access it even without internet access.
+    Each function and each command should get their own page.
+    The basename of the page should be the same as the function name or
+    command name.
+    For example, a function named "myfun()" would be described in
+    "src/plugin/myplugin/www/f/myfun.html".
+    <p>
+    The "example" plugin's "www/f" and "www/cmd" subdirectories contain
+    files named "SKELETON.html" which can serve as the start for any actual
+    file or command web pages.
+    This should result in pages that follow a consistent structure, which
+    will be easier for other programmers to read.
+    <p>
+    After copying "SKELETON.html" to start a function or command web page,
+    the steps you need to do to edit it are:
+    <ol>
+      <li>Change every instance of "thisplugin" to the actual name of your
+          plugin.
+      <li>Change every instance of "fn" (or "cmd") to the name of the function
+          (or command).
+      <li>Change both instances of "One line summary" to brief title-length
+          description of the function (or command).
+      <li>Show the function/command syntax after the &lt;dt&gt; tag.
+          If there are significant variations, list them separately using
+          &lt;br/&gt; between them.
+      <li>Change "Describe...here." to a description.  This is likely to be
+          several paragraphs long.
+      <li>Probably delete the "This is an aggregate function" paragraph.
+      <li>Add some examples.  The &lt;div class="example"&gt; block is used
+          for examples.  Generally each example should get its own block.
+          Within the block &lt;kbd&gt; is used to mark the text that a user
+          could type into JsonCalc, and &lt;samp&gt; is used for the expected
+          result of that command.  You can follow that with text (inside
+          &lt;div class="example"&gt;
+          but outside of &lt;kbd&gt; or &lt;samp&gt;)
+          explaining the example.
+      <li>If there are any quirks or tips, explain them in the "Notes" section.
+          If there aren't any, then delete the entire "Notes" section.
+      <li>The "See Also" section should already contain a link to the plugin's
+          overview page.
+          If you want links to other functions, commands, or operators, you
+          can add those too; the page includes samples of all three so you can
+          see the format.
+          If you want links elsewhere in the web page, use the same &lt;a&gt;
+          format as shown there.
+          <p>
+          Note that all links should go through "index.html"
+          with query parameters to select what gets shown in each frame.
+          The main advantage of going through "index.html" is that the browser's
+          address bar shows how to recreate the entire web page (including the
+          search bar and sidebar).
+          Users can bookmark pages for individual functions/commands/whatever
+          or copy and paste links into other documents such as email,
+    </ol>
+    <p>
+    When you run "make" in the top directory, the documentation will be copied
+    from "src/plugin/*/www/" to the appropriate directories under "www".
+    <p>
+    During installation ("make install"), all of the documentation gets copied
+    into a shared directory where users can access it even without
+    internet access.
     <b>jsoncalc</b>'s built-in help facility will access it.
-    Plugins' functions and commands are all tossed together in the web page
-    so users can look up functions 
-
-    <details>
-      <summary>See Also</summary>
-      <table>
-        <tr><td>link here</td><td>Quick description here</td></tr>
-      </table>
-    </details>
 
   </body>
 </html>

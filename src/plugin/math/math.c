@@ -245,7 +245,7 @@ static json_t *jfn_atan2(json_t *args, void *agdata)
 	y = json_double(arg->next);
 
 	/* Clear errno so we can detect errors */
-	errno == 0;
+	errno = 0;
 
 	/* Do it */
 	x = atan2(x, y);
@@ -308,14 +308,14 @@ static json_t *jfn_pow(json_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != JSON_NUMBER || !arg->next || arg->next->type != JSON_NUMBER || arg->next->next)
-		return json_error_null(0, "The %s() function expect two numbers number as its arguments", atan2);
+		return json_error_null(0, "The %s() function expect two numbers number as its arguments", "pow");
 
 	/* Convert to binary */
 	base = json_double(arg);
 	power = json_double(arg->next);
 
 	/* Clear errno so we can detect errors */
-	errno == 0;
+	errno = 0;
 
 	/* Do it */
 	base = pow(base, power);

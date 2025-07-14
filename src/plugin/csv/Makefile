@@ -11,14 +11,11 @@ LIBS=
 CFLAGS=	-I$(INC)
 CC=	gcc -g -fpic
 
-$(ALL): plugincsv.so docs
+$(ALL): plugincsv.so
 	cp plugincsv.so $(PLUGIN)/plugincsv.so
 
 plugincsv.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o plugincsv.so
-
-docs:
-	cp www/index.html $(WWW)/plugin/csv.html
 
 clean:
 	$(RM) $(PLUGIN)/plugincsv.so

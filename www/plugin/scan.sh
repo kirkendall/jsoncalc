@@ -1,21 +1,5 @@
 #!/bin/sh
 
-for i in ../../src/plugins/*/.
-do
-	i=${i:0:-2}
-	plugin=$(basename $i)
-
-	# Copy the plugin's "index.html" as "$plugin.html"
-	if [ -f "$i/www/index.html" ]
-	then
-		cp "$i/www/index.html" "$plugin.html"
-	fi
-
-	# Copy any function documentation
-
-	# Copy any command documentation
-done
-
 # Build the INTRO.html and sidebar.html files
 sed '/@@@/,$d' INTRO.html.template >INTRO.html
 sed '/@@@/,$d' sidebar.html.template >sidebar.html

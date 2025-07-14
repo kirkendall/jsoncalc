@@ -16,11 +16,6 @@ $(ALL): pluginmath.so
 pluginmath.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o pluginmath.so
 	
-docs:
-	cp www/index.html $(WWW)/plugin/math.html
-	[ -d $(WWW)/f/math ] || mkdir $(WWW)/f/math
-	for i in www/f/*.html; do case "$$i" in *SKELETON.html)true;; *) cp "$$i" $(WWW)/f/cache; esac; done
-
 clean:
 	$(RM) $(PLUGIN)/pluginmath.so
 	$(RM) pluginmath.so

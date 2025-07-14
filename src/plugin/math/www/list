@@ -1,0 +1,24 @@
+acos (n:number):number inverse cosine
+acosh (n:number):number inverse hyperbolic cosine
+asin (n:number):number inverse sine
+asinh (n:number):number inverse hyperbolic sine
+atan (n:number):number inverse tangent
+atan2 (x:number,y:number):number angle toward a given point
+atanh (n:number):number inverse hyperbolic tangent
+cbrt (n:number):number cube root
+ceil (n:number):number ceiling (round up)
+cos (n:number):number cosine
+cosh (n:number):number hyperbolic cosine
+exp (n:number):number exponent (Math.E raised to the power n)
+floor (n:number):number floor (round down)
+log (n:number):number natural logarithm
+log10 (n:number):number base-10 logarithm
+log2 (n:number):number base-2 logarithm
+pow (base:number,power:number):number raise base to the given power
+round (n:number):number round to nearest integer
+sin (n:number):number sine
+sinh (n:number):number hyperbolic sine
+sqrt (n:number):number square root
+tan (n:number):number tangent
+trunc (n:number):number round toward 0
+hypot (n1:number,...):number hypotenuse (square root of sum of squares)

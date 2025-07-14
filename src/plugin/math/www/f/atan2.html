@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>atan2</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc atan2 - Angle toward a given point">
+    <meta name="keywords" content="number, jsoncalc, function reference, atan2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>atan2 - Angle toward a given point</h1>
+    <dl>
+      <dt><b>atan2</b>(x:number,y:number):number
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=math">math</a> plugin.
+      You must load the plugin via either -lmath on the shell command line,
+      or a <tt>plugin math;</tt> line in a script.
+      <p>
+      Returns the angle toward a given point.
+      This is similar to
+      <a target="_PARENT" href="../../index.html?f=math/atan">atan(x/y)</a>
+      except that <tt>atan2</tt> takes the signs of x and y into account
+      to select the correct quadrant.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>atan2(1,-2)</kbd>
+	<samp>2.67794504459</samp>
+        From the signs of the arguments, the function knows the angle
+        must be in the 4th quadrant.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=math">plugin math</a></td><td>Overview of the math plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=math/atan">atan()</a></td><td>Inverse tangent function.</td><tr>
+      </table>
+    </details>
+
+  </body>
+</html>

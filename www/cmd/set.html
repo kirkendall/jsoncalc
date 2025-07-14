@@ -23,22 +23,22 @@
       to "maybe", for example.
       The <tt>set</tt> command lets you modify config in a controlled manner.
       <p>
-      The arguments are basically comma-delimit list of changes.
+      The arguments are basically a comma-delimited list of changes.
       You don't need to quote the new values of string option, unless you
       want to include whitespace or other funky characters.
       For booleans, you can set them to <tt>true</tt> just by giving their name
       without any "=value", and you can set them to <tt>false</tt> by giving
-      their name with a "no" prefix.
+      their name with a "no" or "-" prefix.
       <p>
       Also, some options are strings that have a list of allowed (or at least
       preferred) values.
       For those options, you can set them just by giving the value without
       a "name=".
       The "table" option is an example of this.
-      You can set "table" to "csv" just by running "<tt>set csv</tt>".
+      You can set "table" to "sh" just by running "<tt>set sh</tt>".
       <p>
       Some options are complex objects.
-      The text attributes such as <tt>gridhead</tt> are examples of this.
+      Text attributes such as <tt>gridhead</tt> are examples of this.
       For these options, you can give a space-delimited list of settings.
       For example, "<tt>set gridhead=underlined cyan</tt>" will set the
       <tt>config.gridhead.underlined</tt> boolean option to <tt>true</tt>,
@@ -79,7 +79,7 @@
 
       <div class="example">
         <kbd>const myFavoriteColor="green"</kbd>
-        <kbd>set ("set gridhead="+myFavoriteColor)</kbd>
+        <kbd>set ("gridhead="+myFavoriteColor)</kbd>
         Here's an example using a computed option string.
         It will change the color of column headings to green.
         It will also retain the "bold" and "underlined" attributes because
@@ -92,8 +92,8 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>The "-O<var>options</var>" command line flag uses the same syntax
-            as the <tt>set</tt> command's arguments.
+        <li>The "-s<var>options</var>" and "-S<var>options</var>" command line
+            flag uses the same syntax as the <tt>set</tt> command's arguments.
 
         <li>Name completion (the &lt;Tab&gt; key) works differently for the
             <tt>set</tt> command.

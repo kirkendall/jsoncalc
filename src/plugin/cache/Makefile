@@ -11,16 +11,11 @@ LIBS=
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
 
-$(ALL): plugincache.so docs
+$(ALL): plugincache.so
 	cp plugincache.so $(PLUGIN)/plugincache.so
 
 plugincache.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o plugincache.so
-
-docs:
-	cp www/index.html $(WWW)/plugin/cache.html
-	[ -d $(WWW)/f/cache ] || mkdir $(WWW)/f/cache
-	for i in www/f/*.html; do case "$$i" in *SKELETON.html)true;; *) cp "$$i" $(WWW)/f/cache; esac; done
 
 clean:
 	$(RM) $(PLUGIN)/plugincache.so

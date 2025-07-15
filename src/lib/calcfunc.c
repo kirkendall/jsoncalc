@@ -97,6 +97,7 @@ static json_t *jfn_period(json_t *args, void *agdata);
 static json_t *jfn_abs(json_t *args, void *agdata);
 static json_t *jfn_random(json_t *args, void *agdata);
 static json_t *jfn_sign(json_t *args, void *agdata);
+static json_t *jfn_wrap(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -191,8 +192,9 @@ static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string
 static jsonfunc_t abs_jf         = {&period_jf,      "abs",         "val:number", "number", jfn_abs};
 static jsonfunc_t random_jf      = {&abs_jf,         "random",      "val:number", "number", jfn_random};
 static jsonfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
+static jsonfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width:number", "number", jfn_wrap};
 
-static jsonfunc_t count_jf       = {&sign_jf,        "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&wrap_jf,        "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -2201,6 +2203,43 @@ static json_t *jfn_sign(json_t *args, void *agdata)
 
 	/* Return the result */
 	return json_from_int(sign);
+}
+
+
+static json_t *jfn_wrap(json_t *args, void *agdata)
+{
+	char	*str;
+	int	width;
+	size_t	len;
+	json_t	*result;
+
+	/* Check args */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(0, "The %s() function's first argument should be a string to wrap", "wrap");
+	str = args->first->text;
+	if (args->first->next && args->first->next->type != JSON_NUMBER)
+		return json_error_null(0, "The %s() function's second argument should be wrap width", "wrap");
+	if (args->first->next)
+		width = json_int(args->first->next);
+	else
+		width = 0;
+
+	/* Passing width=0 uses the default width */
+	if (width == 0)
+		width = 80; /* !!! should probably be a setting */
+
+	/* Positive means word wrap, negative means character wrap */
+	if (width < 0)
+		len = json_mbs_wrap_char(NULL, str, -width);
+	else
+		len = json_mbs_wrap_word(NULL, str, width);
+printf("width=%d, len=%d, str=\"%s\"\n", width, (int)len, str);
+	result = json_string("", len);
+	if (width < 0)
+		len = json_mbs_wrap_char(result->text, str, -width);
+	else
+		len = json_mbs_wrap_word(result->text, str, width);
+	return result;
 }
 
 

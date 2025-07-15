@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>wrap</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc wrap - Wrap text to a given width">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, wrap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>wrap - Wrap text to a given width</h1>
+    <dl>
+      <dt>wrap(<var>text</var>, <var>width</var>)
+      <dd>
+      The <tt>wrap()</tt> function performs word wrap or character wrap,
+      adjusting text to fit a given width.
+      <p>
+      Passing a negative width causes it to perform character wrap.
+      This also deletes non-printing characters such as control characters.
+      <p>
+      Passing a positive width causes it to perform word wrap.
+      For the purposes of this function, a "word" is defined to be any
+      sequence of characters that doesn't contain spaces or non-printing
+      characters such as control characters.
+      All characters between words is collapsed to a single space, unless
+      it contains two or more newlines in which case it is collapsed to
+      exactly two newlines.
+      <p>
+      If you don't specify a width, or if you pass 0 as the width, then 80
+      is used.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Now is the time for all good men to come to the aid of their country".wrap(20)</kbd>
+	<samp>"Now is the time for\nall good men to come\nto the aid of their\ncountry"</samp>
+	<kbd>print "Now is the time for all good men to come to the aid of their country".wrap(20)</kbd>
+	<samp>Now is the time for
+<br/>all good men to come
+<br/>to the aid of their
+<br/>country</samp>
+	The first example shows how some spaces were converted to newlines.
+	The second example uses the
+	<a target="_PARENT" href="../index.html?cmd=print">print</a>
+	to output the string as plain text instead of a JSON quoted string.
+      </div>
+
+      <div class="example">
+	<kbd>print "Now is the time for all good men to come to the aid of their country".wrap(-17)</kbd>
+	<samp>Now is the time f
+<br/>or all good men t
+<br/>o come to the aid
+<br/>&nbspof their country
+</samp>
+        Here we're doing character wrapping.  This inserts newlines between
+        characters.  It doesn't really care about spaces, much.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>It is possible for the returned text to be too wide.
+            For word wrap, if a single word is wider than the requested width,
+            it will <em>not</em> be split.
+            Even for character wrap, if you specify a width of -1 and the text
+            contains double-wide characters such as emoji, they'll be wider
+            than the requested width.
+
+	<li>If you want an array of lines instead of one big multi-line string,
+	    then apply
+	    <a target="_PARENT" href="../index.html?f=split">split("\n")</a>
+	    to the result.
+	    <div class="example">
+	      <kbd>"Now is the time for all good men to come to the aid of their country".wrap(20).split("\n")</kbd>
+	      <samp>["Now is the time for","all good men to come","to the aid of their","country"]</samp>
+	    </div>
+
+	<li>The "grid" table format can handle wrapped strings.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=print">print</a></td><td>Command to print strings as plain text.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=split">split</a></td><td>Function to split a string into an array of smaller strings.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

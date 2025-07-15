@@ -148,6 +148,141 @@ size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *r
 
 }
 
+/* Perform word wrap.  For the purposes of this function, a "word" is defined
+ * to be a sequence of characters that doesn't include spaces or control
+ * characters.  Returns the length of the resulting string.  If you pass a
+ * non-NULL buf pointer then the characters will be stored there.
+ */
+size_t json_mbs_wrap_word(char *buf, const char *s, int width)
+{
+	size_t len;
+	wchar_t wc;
+	const char	*word;
+	int	in, w, w1, column, spaces, newlines;
+	mbstate_t state;
+
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
+
+	/* For each character... */
+	for (len = 0, column = 0; *s; s += in) {
+		/* Count spaces or control characters. */
+		spaces = newlines = 0;
+		while (*s > '\0' && *s <= ' ') {
+			spaces++;
+			if (*s == '\n')
+				newlines++;
+			s++;
+		}
+
+		/* If that took us to the end of the string, we're done */
+		if (!*s)
+			break;
+
+		/* Multiple newlines get converted to a double newline */
+		if (newlines >= 2) {
+			if (buf) {
+				*buf++ = '\n';
+				*buf++ = '\n';
+			}
+			len += 2;
+			column = 0;
+		}
+
+		/* Count the width of the word */
+		w = 0;
+		word = s;
+		while ((*s & 0xff) > ' ') {
+			in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
+			s += in;
+			w1 = wcwidth(wc);
+			if (w1 > 0)
+				w += w1;
+		}
+
+		/* Add a newline to the result if necessary */
+		if (column > 0 && column + 1 + w > width) {
+			if (buf)
+				*buf++ = '\n';
+			len++;
+			column = 0;
+		}
+
+		/* Add this word */
+		if (buf) {
+			if (column > 0)
+				*buf++ = ' ';
+			memcpy(buf, word, (size_t)(s - word));
+			buf += (s - word);
+		}
+		if (column > 0) {
+			len++;
+			column++;
+		}
+		len += (size_t)(s - word);
+		column += w;
+
+		/* The loop adds "in" to "s" but we already did that. Undo it */
+		s -= in;
+	}
+
+	/* Add a NUL byte at the end */
+	if (buf)
+		*buf = '\0';
+	return len;
+}
+
+
+/* Perform character wrap.  Returns the length of the resulting string.
+ * If you pass a non-NULL buf pointer then the characters will be stored
+ * there.
+ */
+size_t json_mbs_wrap_char(char *buf, const char *s, int width)
+{
+	size_t len;
+	wchar_t wc;
+	int	in, w, column;
+	mbstate_t state;
+
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
+
+	/* For each character... */
+	for (len = 0, column = 0; *s; s += in) {
+		/* Delete control characters */
+		if (*s >= '\0' && *s < ' ')
+			continue;
+
+		/* Convert to wc. */
+		in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
+
+		/* Check its width.  Skip if not printable */
+		w = wcwidth(wc);
+		if (w < 0)
+			continue;
+
+		/* Add a newline to the result if necessary */
+		if (column + w > width) {
+			if (buf)
+				*buf++ = '\n';
+			len++;
+			column = 0;
+		}
+
+		/* Add this character */
+		if (buf) {
+			memcpy(buf, s, (size_t)in);
+			buf += in;
+		}
+		len += in;
+		column += w;
+	}
+
+	/* Add a NUL byte at the end */
+	if (buf)
+		*buf = '\0';
+	return len;
+}
 
 
 /* Find the endpoints of a substring within s.  start is the character count

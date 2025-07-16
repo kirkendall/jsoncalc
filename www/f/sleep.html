@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>sleep</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc sleep - Pause execution for a given duration">
+    <meta name="keywords" content="string, number, jsoncalc, function reference, sleep">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>sleep - Pause execution for a given duration</h1>
+    <dl>
+      <dt>sleep(<var>seconds</var>:number|period):null
+      <dd>
+      This pauses execution for a given number of seconds, and then resumes.
+      It always returns <tt>null</tt>.
+      <p>
+      Usually you'll pass the sleep duration as a number, representing seconds.
+      It can be floating point number, allowing sleeping by fractions of a
+      second.
+      Alternatively, you can pass an ISO 8601 period string such as "PT1M30S"
+      to sleep for one minute and 30 seconds.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>current_time;sleep(5);current_time</kbd>
+	<samp>"12:22:36"<br/>
+	null<br/>
+	"12:22:41"</samp>
+        This first shows the current time, then sleeps for 5 seconds (showing
+        the <tt>null</tt> returned by <tt>sleep(5)</tt>), and finally shows
+        the current time again.
+        You can see that 5 seconds elapsed between the two time checks.
+      </div>
+
+      <div class="example">
+	<kbd>current_time;sleep(0.5);current_time</kbd>
+	<samp>"12:23:18"<br/>
+	null<br/>
+	"12:23:18"</samp>
+        This is like the first example, but we only slept for half a second
+        so the current time didn't change significantly.
+      </div>
+
+      <div class="example">
+	<kbd>current_time;void sleep("PT1M");current_time</kbd>
+	<samp>"12:24:37"<br/>
+	"12:25:37"</samp>
+	Here we're specifying the sleep time via an ISO 8601 period string.
+	Also, we used the <a target="_PARENT" href="../index.html?cmd=void">void</a> command to hide the <tt>null</tt> returned by <tt>sleep()</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>At the time of this writing, JsonCalc's support for fractions of
+            seconds in ISO time periods is limited.
+            I really should do something about that.
+            For now, though, if you need to sleep a fraction of a second
+            then you must specify the sleep time as a number.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=void">void</a></td><td>Command to evaluate an expression but discard the result.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <regex.h>
 #include <assert.h>
+#include <time.h>
 #define _XOPEN_SOURCE
 #define __USE_XOPEN
 #include <wchar.h>
@@ -98,6 +99,7 @@ static json_t *jfn_abs(json_t *args, void *agdata);
 static json_t *jfn_random(json_t *args, void *agdata);
 static json_t *jfn_sign(json_t *args, void *agdata);
 static json_t *jfn_wrap(json_t *args, void *agdata);
+static json_t *jfn_sleep(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -192,9 +194,10 @@ static jsonfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string
 static jsonfunc_t abs_jf         = {&period_jf,      "abs",         "val:number", "number", jfn_abs};
 static jsonfunc_t random_jf      = {&abs_jf,         "random",      "val:number", "number", jfn_random};
 static jsonfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
-static jsonfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width:number", "number", jfn_wrap};
+static jsonfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
+static jsonfunc_t sleep_jf        = {&wrap_jf,       "sleep",       "seconds:number|period", "number", jfn_sleep};
 
-static jsonfunc_t count_jf       = {&wrap_jf,        "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&sleep_jf,       "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:mixed", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -2240,6 +2243,53 @@ printf("width=%d, len=%d, str=\"%s\"\n", width, (int)len, str);
 	else
 		len = json_mbs_wrap_word(result->text, str, width);
 	return result;
+}
+
+static json_t *jfn_sleep(json_t *args, void *agdata)
+{
+	struct timespec ts;
+	double	seconds;
+
+	/* Get the sleep duration */
+	if (args->first->type == JSON_NUMBER) {
+		seconds = json_double(args->first);
+	} else if (json_is_period(args->first)) {
+		json_t *jseconds;
+		json_t p, *oldnext;
+
+		/* Build argument array containing args->first and "s". */
+		memset(&p, 0, sizeof p);
+		p.type = JSON_STRING;
+		p.text[0] = 's';
+		oldnext = args->first->next;
+		args->first->next = &p;
+
+		/* Pass that into json_datetime_fn() to get seconds. */
+		jseconds = json_datetime_fn(args, "period");
+		if (json_is_error(jseconds)) {
+			args->first->next = oldnext;
+			return jseconds;
+		}
+		seconds = json_double(jseconds);
+
+		/* Clean up */
+		args->first->next = oldnext;
+		json_free(jseconds);
+	} else {
+		return json_error_null(0, "The %s() function should be passed a number of seconds on an ISO-8601 period string");
+	}
+
+	/* Sanity check */
+	if (seconds < 0.0)
+		return json_error_null(0, "The %s() function's sleep time must be positive", "sleep");
+
+	/* Sleep */
+	ts.tv_sec = (time_t)seconds;
+	ts.tv_nsec = 1000000000 * (seconds - ts.tv_sec);
+	nanosleep(&ts, NULL);
+
+	/* Return null */
+	return json_null();
 }
 
 

@@ -78,9 +78,9 @@
 
       <div class="example">
 	<kbd>function backward</kbd>
-	<samp>function backward(arr)</samp>
+	<samp>function backward(arr:array):array</samp>
 	<kbd>function touppercase</kbd>
-	<samp>builtin function toUpperCase(str)</samp>
+	<samp>builtin function toUpperCase(str:string):string</samp>
 	Invoking <tt>function</tt> with a name but no argument list causes
 	JsonCalc to output what it knows about the named function.
 	This works for both user-defined and built-in functions.
@@ -99,6 +99,9 @@
         we can use it in the actual recursive definition.
         <p>
         Again, please forgive the ugly formatting.
+        And yes, a simple <tt>product(1..n)</tt> computes the factorial in
+        a cleaner, more intuitive way.
+        This is only an example.
       </div>
 
     </details>
@@ -121,7 +124,7 @@
 
 	<li>Although the TypeScript-style type declarations don't do anything
 	    currently, they almost certainly will at some point.
-	    Don't get sloppy with your type declarations.
+	    If you choose to use type declarations, use them accurately.
       </ul>
     </details>
 

@@ -564,6 +564,12 @@ static int match(const char *pattern, const char *str)
 		}
 	}
 
+	/* For "." if there were matching characters we would have handled
+	 * them already.  But "." is optional so just skip it.
+	 */
+	if (*pattern == '.')
+		pattern++;
+
 	/* If pattern still has chars left (except "Z") after str is exhausted,
 	 * no match.  */
 	if (!*str && *pattern && (*pattern != 'Z' || pattern[1]))

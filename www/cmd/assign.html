@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc Assignment - Store a value in a variable">
+    <meta name="keywords" content="command, command reference, Assignment">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>Assignment - Store a value in a variable</h1>
+    <dl>
+      <dt><var>lvalue</var> = <var>expr</var>
+      <br/><var>lvalue[]</var> = <var>expr</var>
+      <br/><var>lvalue</var> =?? <var>expr</var>
+      <dd>
+      Assignments evaluate <var>expr</var> and then store the result in
+      the variable or part of a variable identified by the <var>lvalue</var>.
+      <p>
+      Often the <var>lvalue</var> will simply be the name of a variable,
+      and the result completely replaces whatever value the variable had
+      before the assignment.
+      However, you can also use subscripts to change just one element of
+      an array, or .<var>member</var> notation to change one member of an
+      object.  Basically, anyplace you can store something is a legitimate
+      <var>lvalue</var>.
+      <p>
+      If the <var>lvalue</var> contains an array before the assignment,
+      then you can append an item to the array by placing an empty set
+      of square brackets at the end of the <var>lvalue</var>.
+      This is intended to make up for the fact that JsonCalc doesn't
+      have an <var>array</var>.<tt>push(</tt><var>expr</var><tt>)</tt>
+      function.
+      <p>
+      The <tt>=??</tt> variant of assignment will silently refuse to store
+      <tt>null</tt>.
+      If <var>expr</var> returns <tt>null</tt> then no assignment happens.
+      This is handy when you're building a JSON data structure using data
+      from an outside source.
+      If something is missing from the source, then this offers an easy way
+      for it to also be missing from the constructed JSON data.
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var a = 1</kbd>
+	<kbd>a = a + 1</kbd>
+	<kbd>a</kbd>
+	<samp>2</samp>
+        Start with a new variable named "a" with the value 1.
+        Add 1 to it and output and WOW IT'S 2!
+      </div>
+
+      <div class="example">
+	<kbd>a = [{b:2,c:3},{b:4,c:5}]</kbd>
+	<kbd>a[1].b = "Squirrel!"</kbd>
+	<kbd>a</kbd>
+	<samp>
+<table>
+<tr><th>b</th><th>c</th></tr>
+<tr><td>2</td><td>3</td></tr>
+<tr><td>Squirrel!</td><td>5</td></tr>
+</table>
+</samp>
+        Here's an example where we're changing just part of a variable's value.
+        Since it happens to be an array of objects, it is output as a table.
+      </div>
+
+      <div class="example">
+	<kbd>a[] = {b:6,c:7}</kbd>
+	<kbd>a</kbd>
+	<samp>
+<table>
+<tr><th>b</th><th>c</th></tr>
+<tr><td>2</td><td>3</td></tr>
+<tr><td>Squirrel!</td><td>5</td></tr>
+<tr><td>6</td><td>7</td></tr>
+</table>
+</samp>
+        This is an example of appending to an array.
+      </div>
+
+      <div class="example">
+	<kbd>a =?? 1</kbd>
+	<kbd>a</kbd>
+	<samp>1</samp>
+	<kbd>a =?? null</kbd>
+	<kbd>a</kbd>
+	<samp>1</samp>
+	Playing with the <tt>=??</tt> variant of assignment.
+	First we assign 1, and since 1 is not null it gets assigned.
+	Then we try to assign <tt>null</tt> but that's silently ignored so
+	<tt>a</tt> remains 1.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Assignments are unusual in that there is no "assign" command name.
+            You just put <var>lvalue</var>=<var>expr</var> where a command
+            should be, and assignment happens.  This does make documenting
+            it a little awkward though.
+
+	<li>JavaScript (and many other C-derived languages) supports many
+	    assignments that combine another operator and assignment, such as
+	    <tt>+=</tt> to add <var>expr</var> to <var>lvalue</var>.
+	    At present, JsonCalc <em>does not</em> have those.
+
+	<li>JavaScript has a <tt>??=</tt> operator which is sort of the
+	    opposite of JsonCalc's <tt>=??</tt> operator.
+	    It only performs an assignment if the variable's old value is
+	    <tt>null</tt> or <tt>undefined</tt>.
+	    JsonCalc doesn't have <tt>??=</tt> and JavaScript doesn't have
+	    <tt>=??</tt>.
+
+	<li>In object generators, JsonCalc also has a <tt>:??</tt> notation
+	    for adding a member to the object only if its value would be
+	    non-NULL.
+	    Both <tt>=??</tt> and <tt>:??</tt> are meant to relate to the
+	    <a target="_PARENT" href="../index.html?op=coalesce">??</a>
+	    coalesce operator, which returns its first non-<tt>null</var>
+	    operand.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=coalesce">??</a></td><td>Coalesce operator, returns first non-<tt>null</tt> value</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

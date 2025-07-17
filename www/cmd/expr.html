@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>expr</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc expr - Output the result of an expression">
+    <meta name="keywords" content="command, command reference, <var>expr</var>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1><var>expr</var> - Output the result of an expression</h1>
+    <dl>
+      <dt><var>expr</var>
+      <dd>
+      You don't need to use the
+      <a target="_PARENT" href="../index.html?cmd=print">print</a> command
+      to output a value.
+      Simply use the <var>expr</var> as a command, and the result will be
+      displayed.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>current_time</kbd>
+	<samp>"19:24:17"</samp>
+        The <tt>current_time</tt> symbol returns the current time as an
+        ISO-8601 string.
+        JsonCalc displays that string.
+      </div>
+
+      <div class="example">
+	<kbd>product(2..5)</kbd>
+	<samp>120</samp>
+	Factorials again.
+	Basically, any expression outputs its result, unless you use it as
+	part of some other command in which case that other command decides
+	the result's fate.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JsonCalc uses the <tt>=</tt> operator for both
+            <a target="_PARENT" href="../index.html?cmd=assign">assignment</a>
+            and
+            <a target="_PARENT" href="../index.html?op=equal">case-insensitive equality testing</a>.
+            This rarely causes confusion.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

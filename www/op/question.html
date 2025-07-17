@@ -17,7 +17,7 @@
     If that returns a true value, then the second argument is evaluated and returned as the result of the operator;
     otherwise the third argument is evaluated and returned.
     <p>
-    The <tt>:</tt><var>expr</tt> is optional.
+    The <tt>:</tt><var>expr</var> is optional.
     If you omit it, then <tt>JsonCalc</tt> will act as though you'd
     added <tt>:null</tt>.
     <details open>
@@ -40,7 +40,7 @@
       </div>
 
       <div class="example">
-	<kbd>test.scores @ score < 30 ? name</kbd>
+	<kbd>test.scores @ score &lt; 30 ? name</kbd>
 	<samp>["Peter","Paul","Peter","Paul"]</samp>
         Here's an example without the <tt>:else</tt> clause.
         It scans <tt>test.scores</tt> (in sampledata) for scores under 30,
@@ -58,6 +58,17 @@
             of the expression, then I suggest you wrap the
             <var>test</var><tt>?</tt><var>then<var> subexpression
             in parentheses to avoid a potential "dangling else" ambiguity.
+
+	<li>JavaScript's version of ?: requires the :<var>else</var> clause.
+
+	<li>Jsoncalc, JavaScript, TypeScript, C, C++, C#, Objective C, and
+	    just about any other language that uses <tt>?:</tt> makes it
+	    right-associative so you can easily string to together
+	    if-then-elseif-then-else expressions,
+	    as in the positive/negative/zero example above.
+	    But not all! PHP has <tt>?:</tt> but it's left-associative,
+	    which is <em>really hard</em> to figure out the first time you
+	    stumble on that.  The lesson: <strong>Use parentheses!</strong>
 
       </ul>
     </details>

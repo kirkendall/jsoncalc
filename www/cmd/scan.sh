@@ -25,7 +25,7 @@ do
 			#echo "<tr class=\"$sections\"><td><a href=\"$i\">$f</a></td><td>$description</td></tr>" >>INTRO.html
 
 			# Generate the sidebar's list
-			echo "<a class=\"command\" href=\"../index.html?cmd=$c\" target=\"_PARENT\">$c<a>" >>sidebar.html
+			echo "<a class=\"command\" href=\"../index.html?cmd=${i/.html}\" target=\"_PARENT\">$c<a>" >>sidebar.html
 		done
 		;;
 	esac

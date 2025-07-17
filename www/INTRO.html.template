@@ -7,7 +7,6 @@
     <meta name="keywords" content="jsoncalc, introduction, intro, welcome">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="clipboard.js"></script>
     <script>
 	// Called when a user selects a different section
 	function sectionChanged() {
@@ -28,13 +27,6 @@
 	    // Returning to this page after selecting a section may leave that
 	    // section still selected.  We'd better check.
 	    sectionChanged();
-
-	    // Enable click-to-copy on examples
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
 	});
     </script>
   </head>

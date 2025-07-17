@@ -6,20 +6,6 @@
     <meta name="description" content="jsoncalc function summary">
     <meta name="keywords" content="jsoncalc, function reference">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-    <script src="../clipboard.js"></script>
-    <script>
-	// Initialization
-	$(document).ready(function() {
-
-	    // Enable click-to-copy on examples
-	    $("div.example kbd").css("cursor", "copy")
-				.attr("title", "Click to copy")
-				.on("click", function(){
-					copyToClipboard(this.innerText);
-				});
-	});
-    </script>
   </head>
   <body>
     <h1>JsonCalc Commands</h1>

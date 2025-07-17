@@ -9,9 +9,11 @@ CC=	gcc -fpic -Wall
 
 all:
 	BIN="$(BIN)" INC="$(INC)" LIB="$(LIB)" PLUGIN="$(PLUGIN)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" make -C src -e
+	make -C www
 
 clean:
 	BIN="$(BIN)" LIB="$(LIB)" PLUGIN="$(PLUGIN)" make -C src -e clean
+	make -C www clean
 
 .PHONY: tags
 

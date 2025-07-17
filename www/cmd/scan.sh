@@ -14,8 +14,13 @@ do
 		# Extract info from the file
 		description=$(sed -n 's/.*<meta name="description" content=".* - \([^"]*\)".*/\1/p' $i)
 		commands=$(sed -n 's/.*<meta name="keywords" content=".*, command reference, \([^"]*\)".*/\1/p' $i | tr -d ,)
+		case "$commands" in
+		expr) htmlcmds="<var>expr</var>";;
+		"lvalue=expr") htmlcmds="<var>lvalue</var>=<var>expr</var>";;
+		*) htmlcmds="$commands";;
+		esac
 
-		# Output info for each function name
+		# Output info for each command
 		for c in $commands
 		do
 			# Generate a JavaScript index
@@ -24,9 +29,10 @@ do
 			# Generate the INTRO file's list
 			#echo "<tr class=\"$sections\"><td><a href=\"$i\">$f</a></td><td>$description</td></tr>" >>INTRO.html
 
-			# Generate the sidebar's list
-			echo "<a class=\"command\" href=\"../index.html?cmd=${i/.html}\" target=\"_PARENT\">$c<a>" >>sidebar.html
 		done
+
+		# Generate the sidebar's list
+		echo "<a class=\"command\" href=\"../index.html?cmd=${i/.html}\" title=\"$description\" target=\"_PARENT\">$htmlcmds<a>" >>sidebar.html
 		;;
 	esac
 done

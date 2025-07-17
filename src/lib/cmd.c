@@ -534,6 +534,14 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 			break;
 	}
 
+	/* If followed immediately by a "(" then check to see if its a function.
+	 * Sometimes functions and commands have the same name, and this helps
+	 * us keep them separate.  If it looks like a function call then ignore
+	 * the command.
+	 */
+	if (sn && *end == '(' && json_calc_function_by_name(sn->name))
+		sn = NULL;
+
 	/* If it's a statement, use the statement's parser */
 	if (sn) {
 		src->str += len;

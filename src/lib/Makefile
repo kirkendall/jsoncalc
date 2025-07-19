@@ -15,7 +15,7 @@ LIBOBJ=	by.o calc.o calcfunc.o calcparse.o compare.o config.o context.o \
 CC=gcc -g -fpic -Wall
 CFLAGS=-Wall -DJSON_DEBUG_MEMORY -I$(INCLUDE)
 
-all: $(LIB)/libjson.so
+all: $(LIB)/libjson.so $(LIB)/libjson.a
 
 $(LIBOBJ): $(HDRS)
 

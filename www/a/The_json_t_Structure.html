@@ -47,9 +47,9 @@
     <p>
     The <tt>text</tt> field generally stores string values, and the
     <tt>first</tt> field points to embedded data.
-    I'll explain the details of how they'reused for each JSON data type later
+    I'll explain the details of how they're used for each JSON data type later
     in this article.
-    Spoiler: For long text, JsonCalc allocated a jumbo-sized <tt>json_t</tt>
+    Spoiler: For long text, JsonCalc allocates a jumbo-sized <tt>json_t</tt>
     so the <tt>text</tt> field is big enough.
     <p>
     The <tt>next</tt> field is used for representing array elements or object
@@ -122,7 +122,7 @@
     <p>
     Second, conversion looses precision.
     The value 0.01 can't be exactly represented in floating point.
-    we can avoid that by keeping numbers in text form.
+    We can minimize the consequences of  that by keeping numbers in text form... until we need to do math on them.
 
     <h3>Binary numbers</h3>
 
@@ -146,7 +146,7 @@
     <h3>Optimizations</h3>
     Since arrays don't use the <tt>text</tt> field,
     we can use part of it to store a pointer to the end of the array.
-    This is desirable because it speed up appending to an array
+    This is desirable because it speeds up appending to an array
     <em>a hell of a lot!</em>
     If we had to scan the whole array to add the next element every time,
     then building an array would have complexity of O(n<sup>2</sup>), but

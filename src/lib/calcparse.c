@@ -2189,6 +2189,120 @@ static void shift(stack_t *stack, jsoncalc_t *jc, char *str)
 	dumpstack(stack, "Shift %.1s", str);
 }
 
+/* Check whether JSONOP_COLON is misused anywhere */
+static int parsecolon(jsoncalc_t *jc)
+{
+	/* Defend against NULL */
+	if (!jc)
+		return 0;
+
+	switch (jc->op) {
+	  case JSONOP_COLON:
+		return 1;
+
+	  case JSONOP_SUBSCRIPT:
+		if (parsecolon(jc->LEFT))
+			return 1;
+		if (jc->RIGHT->op == JSONOP_COLON)
+			return parsecolon(jc->RIGHT->RIGHT);
+		else
+			return parsecolon(jc->RIGHT);
+		break;
+
+	  case JSONOP_QUESTION:
+		if (parsecolon(jc->LEFT))
+			return 1;
+		if (jc->RIGHT->op == JSONOP_COLON)
+			return parsecolon(jc->RIGHT->LEFT) || parsecolon(jc->RIGHT->RIGHT);
+		else
+			return parsecolon(jc->RIGHT);
+
+	  case JSONOP_OBJECT:
+		return 0;
+
+	  case JSONOP_LITERAL:
+	  case JSONOP_STRING:
+	  case JSONOP_NUMBER:
+	  case JSONOP_BOOLEAN:
+	  case JSONOP_NULL:
+	  case JSONOP_NAME:
+	  case JSONOP_FROM:
+	  case JSONOP_REGEX:
+		break;
+
+	  case JSONOP_DOT:
+	  case JSONOP_ELIPSIS:
+	  case JSONOP_ARRAY:
+	  case JSONOP_COALESCE:
+	  case JSONOP_MAYBEMEMBER:
+	  case JSONOP_NJOIN:
+	  case JSONOP_LJOIN:
+	  case JSONOP_RJOIN:
+	  case JSONOP_NEGATE:
+	  case JSONOP_ISNULL:
+	  case JSONOP_ISNOTNULL:
+	  case JSONOP_MULTIPLY:
+	  case JSONOP_DIVIDE:
+	  case JSONOP_MODULO:
+	  case JSONOP_ADD:
+	  case JSONOP_SUBTRACT:
+	  case JSONOP_BITNOT:
+	  case JSONOP_BITAND:
+	  case JSONOP_BITOR:
+	  case JSONOP_BITXOR:
+	  case JSONOP_NOT:
+	  case JSONOP_AND:
+	  case JSONOP_OR:
+	  case JSONOP_LT:
+	  case JSONOP_LE:
+	  case JSONOP_EQ:
+	  case JSONOP_NE:
+	  case JSONOP_GE:
+	  case JSONOP_GT:
+	  case JSONOP_ICEQ:
+	  case JSONOP_ICNE:
+	  case JSONOP_LIKE:
+	  case JSONOP_NOTLIKE:
+	  case JSONOP_IN:
+	  case JSONOP_EQSTRICT:
+	  case JSONOP_NESTRICT:
+	  case JSONOP_COMMA:
+	  case JSONOP_BETWEEN:
+	  case JSONOP_ENVIRON:
+	  case JSONOP_ASSIGN:
+	  case JSONOP_APPEND:
+	  case JSONOP_MAYBEASSIGN:
+	  case JSONOP_VALUES:
+	  case JSONOP_EACH:
+	  case JSONOP_GROUP:
+		return parsecolon(jc->LEFT) || parsecolon(jc->RIGHT);
+
+	  case JSONOP_FNCALL:
+		return parsecolon(jc->u.func.args);
+
+	  case JSONOP_AG:
+	  case JSONOP_STARTPAREN:
+	  case JSONOP_ENDPAREN:
+	  case JSONOP_STARTARRAY:
+	  case JSONOP_ENDARRAY:
+	  case JSONOP_STARTOBJECT:
+	  case JSONOP_ENDOBJECT:
+	  case JSONOP_SELECT:
+	  case JSONOP_DISTINCT:
+	  case JSONOP_AS:
+	  case JSONOP_WHERE:
+	  case JSONOP_GROUPBY:
+	  case JSONOP_ORDERBY:
+	  case JSONOP_DESCENDING:
+	  case JSONOP_LIMIT:
+	  case JSONOP_INVALID:
+		/* None of these should appear in a parsed expression */
+		abort();
+	}
+
+	return 0;
+}
+
 
 /* Search for aggregate functions, and add JSONOP_AG to the expression where
  * appropriate.  Return the altered expression.
@@ -2413,6 +2527,12 @@ jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassi
 			err = "Missing operand of postfix operator";
 		break;
 	}
+
+	/* Watch for misuse of a ":".  That token is used for several things,
+	 * and its easier to check after parsing than during parsing.
+	 */
+	if (!err && parsecolon(stack.stack[0]))
+		err = "Misuse of \":\"";
 
 	/* If it compiled cleanly, look for aggregate functions */
 	if (!err && stack.sp == 1)

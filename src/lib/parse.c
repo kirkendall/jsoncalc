@@ -6,7 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Here we need to access the "real" parse functions */
 #ifdef JSON_DEBUG_MEMORY

@@ -9,9 +9,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/stat.h>
-#include "json.h"
-#include "calc.h"
-#include "jsoncalc.h"
+#include <jsoncalc.h>
+#include "jcprog.h"
 #include "version.h"
 
 

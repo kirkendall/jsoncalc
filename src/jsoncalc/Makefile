@@ -1,7 +1,7 @@
 LIB=	../../lib
 INC=	../../include
 BIN=	../../bin
-HDR=	$(INC)/calc.h $(INC)/error.h $(INC)/json.h $(INC)/version.h
+HDR=	$(INC)/jsoncalc.h $(INC)/version.h
 SRC=	jsoncalc.c interact.c batch.c complete.c
 OBJ=	jsoncalc.o interact.o batch.o complete.o
 CC=	gcc -g -fpic

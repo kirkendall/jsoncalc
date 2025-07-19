@@ -8,8 +8,7 @@
 #define _XOPEN_SOURCE
 #define __USE_XOPEN
 #include <wchar.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 /* This file mostly implements the built-in functions.  It also defines
  * the json_calc_function() function for adding user-defined functions.

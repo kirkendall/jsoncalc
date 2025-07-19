@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 /* This is an array of objects describing loaded plugins.  The "plugin"
  * member is name of the plugin.

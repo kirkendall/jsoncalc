@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Compare two objects, given a list of keys.  Return 1 if the first object
  * compares as higher, -1 if the second object compares as higher, or 0 if

@@ -8,8 +8,7 @@
 #include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 /* These are the default settings.  They are added to json_config by the
  * init() function, and then loaded by the main jsoncalc program via

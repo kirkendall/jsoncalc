@@ -3,7 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <ctype.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* This file implements most of JsonCalc's date and time functions.  This is
  * messy!  C has poor date handling abilities, and the purpose of this file

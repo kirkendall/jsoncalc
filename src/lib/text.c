@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 static char *defaultvalue;
 

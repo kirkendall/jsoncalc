@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <json.h>
-#include <calc.h>
-#include "jsoncalc.h"
+#include <jsoncalc.h>
+#include "jcprog.h"
 
 
 void batch(jsoncontext_t **refcontext, jsoncmd_t *initcmds)

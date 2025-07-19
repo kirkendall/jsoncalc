@@ -3,8 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <json.h>
-#include <calc.h>
+#include <jsoncalc.h>
 
 static char *csvsettings = "{"
 	"\"backslash\":true,"	/* Use \x sequences when generating CSV */

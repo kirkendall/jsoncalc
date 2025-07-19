@@ -1,6 +1,6 @@
 LIB=	../../lib
 INCLUDE=../../include
-HDRS=	$(INCLUDE)/calc.h $(INCLUDE)/error.h $(INCLUDE)/json.h $(INCLUDE)/version.h
+HDRS=	$(INCLUDE)/jsoncalc.h $(INCLUDE)/version.h
 LIBS=	-ldl
 LIBSRC=	by.c calc.c calcfunc.c calcparse.c compare.c config.c context.c \
 	copy.c cmd.c datetime.c debug.c equal.c explain.c file.c find.c \

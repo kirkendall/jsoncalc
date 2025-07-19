@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "json.h"
+#include <jsoncalc.h>
 #include "version.h"
 
 static const char *defaultconfig = "{"

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <regex.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* This stores the search criteria and a incremental results */
 typedef struct {

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* This is the default format.  It is used if you pass NULL to functions
  * that use jsonformat_t, especially json_print().

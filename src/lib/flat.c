@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 
 /* Return a new array which merges any embedded arrays into new array propper.

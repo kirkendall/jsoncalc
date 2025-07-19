@@ -3,8 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include <json.h>
-#include <calc.h>
+#include <jsoncalc.h>
 
 /* This module exists to define some Math.xxx() functions. */
 

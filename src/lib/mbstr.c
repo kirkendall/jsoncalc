@@ -5,7 +5,7 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 
 /* This is a collection of functions for dealing with strings of multi-byte

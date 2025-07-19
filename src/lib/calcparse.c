@@ -6,8 +6,7 @@
 #include <locale.h>
 #include <regex.h>
 #include <assert.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 
 /* This is by far the largest single source file in the whole library.

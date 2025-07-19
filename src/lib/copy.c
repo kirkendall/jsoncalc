@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Even if memory debugging is enabled, here we're defining the non-debugging verion
  * of the json_copy() function.

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Here we need to access the "real" allocation/free functions */
 #ifdef JSON_DEBUG_MEMORY
@@ -196,7 +196,7 @@ json_t *json_null(void)
 }
 
 /* Allocate a json_t for a null value, encoding an error message */
-json_t *json_error_null(int code, char *fmt, ...)
+json_t *json_error_null(int code, const char *fmt, ...)
 {
 	char	buf[200], *bigbuf;
 	int	len;

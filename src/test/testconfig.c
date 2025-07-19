@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <locale.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Run a single test */
 static int singletest(char *settings)

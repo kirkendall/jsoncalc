@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 
 /* Compare two json_t values for equality.  Return 1 if equal, 0 if different.

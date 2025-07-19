@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Return the number of elements in an array, or members in an object */
 int json_length(json_t *container)

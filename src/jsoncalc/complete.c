@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <readline/readline.h>
-#include <json.h>
-#include <calc.h>
-#include "jsoncalc.h"
+#include <jsoncalc.h>
+#include "jcprog.h"
 
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */

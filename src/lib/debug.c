@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Debugging flags.  These are globally accessible, but normally you'd only
  * wnt to change them via the json_debug() function.

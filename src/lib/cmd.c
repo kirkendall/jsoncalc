@@ -8,8 +8,7 @@
 #include <locale.h>
 #include <regex.h>
 #include <assert.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 /* This handles commands.  Each script is a series of commands, so this is
  * pretty central.  While expressions use a decent LALR parser with operator

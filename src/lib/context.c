@@ -5,8 +5,7 @@
 #include <time.h>
 #include <assert.h>
 #include <sys/stat.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 #include "error.h"
 
 /* This file defines the context functions.  Contexts are used in json_calc()
@@ -717,24 +716,24 @@ json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **r
 }
 
 /* For a given L-value, find its layer, container, and value.  This is used
- * for assigning or appending to variables.  Return 0 on success, or -1 on
- * success when *refkey needs to be freed, or an error code on failure.
+ * for assigning or appending to variables.  Return NULL on success, or "" on
+ * success when *refkey needs to be freed, or an error format on failure.
  *
- * That "-1" business is a hack.  When assigning to a member of an object,
+ * That "" business is a hack.  When assigning to a member of an object,
  * *refkey should identify the member to be assigned.  But when assigning by
  * a subscript ("object[string]" instead of "object.key") then the key is a
  * computed value, and we evaluate/free the subscript before returning, so we
  * need to make a dynamically-allocated copy of the key.  And then the calling
  * function needs to free it.  I decided to make this function be static just
  * because that hack is so obnoxious, at least this way it's only used by a
- * couple of functions in the same source file.
+ * couple of functions within the same source file.
  */
-static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
+static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **reflayer, json_t **refcontainer, json_t **refvalue, char **refkey)
 {
 	json_t	*value, *t, *v, *m;
 	char	*skey;
 	jsoncalc_t *sub;
-	int	err, ret;
+	const char *err, *ret;
 	jsoncontext_t *layer;
 
 	switch (lvalue->op) {
@@ -742,7 +741,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 	case JSONOP_LITERAL:
 		/* Literal can only be a string, serving as a quoted name */
 		if (lvalue->op == JSONOP_LITERAL && lvalue->u.literal->type != JSON_STRING)
-			return JE_BAD_LVALUE;
+			return "BadLValue:Invalid assignment";
 
 		/* Get the name */
 		if (lvalue->op == JSONOP_NAME)
@@ -759,8 +758,8 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 * distinguish between const and unknown var
 			 */
 			if (json_context_by_key(context, *refkey, NULL))
-				return JE_CONST;
-			return JE_UNKNOWN_VAR;
+				return "Const:Attempt to change const \"%s\"";
+			return "UnknownVar:Unknown variable \"%s\"";
 		}
 		if (reflayer)
 			*reflayer = layer;
@@ -768,22 +767,22 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			*refcontainer = layer->data;
 		if (refvalue)
 			*refvalue = value;
-		return JE_OK;
+		return NULL;
 
 	case JSONOP_DOT:
 		/* Recursively look up the left side of the dot */
-		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) > JE_OK)
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != NULL && *err)
 			return err;
-		if (err < 0) {
+		if (err) { /* "" */
 			free(*refkey);
-			return JE_UNKNOWN_MEMBER;
+			return "UnknownMember:Object has no member \"%s\"";
 		}
 		if (value == NULL)
-			return JE_UNKNOWN_VAR;
+			return "UnknownVar:Unknown variable \"%s\"";
 
 		/* If lhs of dot isn't an object, that's a problem */
 		if (value->type != JSON_OBJECT)
-			return JE_NOT_OBJECT;
+			return "NotObject:Attempt to access member in a non-object";
 
 		/* For DOT, the right parameter should just be a name */
 		if (lvalue->u.param.right->op == JSONOP_NAME)
@@ -793,7 +792,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			*refkey = lvalue->u.param.right->u.literal->text;
 		else
 			/* invalid rhs of a dot */
-			return JE_NOT_KEY;
+			return "NotKey:Attempt to use a non-key as a member key";
 
 		/* Look for the name in this object.  If not found, "t" will
 		 * be null, which is a special type of failure.  This failure
@@ -801,25 +800,25 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 		 */
 		t = json_by_key(value, *refkey);
 		if (!t && !refvalue)
-			return JE_UNKNOWN_MEMBER;
+			return "UnknownMember:Object has no member \"%s\"";
 
 		/* The value becomes the container, and "t" becomes the value */
 		if (refcontainer)
 			*refcontainer = value;
 		if (refvalue)
 			*refvalue = t;
-		return JE_OK;
+		return NULL;
 
 	case JSONOP_SUBSCRIPT:
 		/* Recursively look up the left side of the subscript */
-		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) > JE_OK)
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != NULL && *err)
 			return err;
-		if (err < 0) {
+		if (err) { /* "" */
 			free(*refkey);
-			return JE_UNKNOWN_MEMBER;
+			return "UnknownMember:Object has no member \"%s\"";
 		}
 		if (value == NULL)
-			return JE_UNKNOWN_VAR;
+			return "UnknownVar:Unknown variable \"%s\"";
 
 		/* The [key:value] style of subscripts is handled specially */
 		sub = lvalue->u.param.right;
@@ -833,7 +832,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 && sub->u.param.left->u.literal->type == JSON_STRING)
 				skey = sub->u.param.left->u.literal->text;
 			else /* invalid key */
-				return JE_BAD_SUB_KEY;
+				return "BadSubKey:Invalid key for [key:value] subscript";
 
 			/* Evaluate the value */
 			t = json_calc(sub->u.param.right, context, NULL);
@@ -852,14 +851,14 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 
 			/* If not found, fail */
 			if (!v)
-				return JE_UNKNOWN_SUB;
+				return "UnknownSub:No element found with the requested subscript";
 
 			/* Return what we found */
 			if (refcontainer)
 				*refcontainer = value;
 			if (refvalue)
 				*refvalue = v;
-			return JE_OK;
+			return NULL;
 
 		} else {
 			/* Use json_calc() to evaluate the subscript */
@@ -874,7 +873,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			} else {
 				/* Bad subscript */
 				json_free(t);
-				return JE_BAD_SUB;
+				return "SubType:Subscript has invalid type";
 			}
 
 			/* Okay, we're done with the subscript "t"... EXCEPT
@@ -882,10 +881,10 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 * subscript then we need to keep it the string for
 			 * a while.
 			 */
-			ret = JE_OK;
+			ret = NULL;
 			if (t->type == JSON_STRING && refkey) {
 				*refkey = strdup(t->text);
-				ret = -1;
+				ret = "";
 			}
 			json_free(t);
 
@@ -894,7 +893,7 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 			 * object.
 			 */
 			if (!v && (*refvalue) && value->type != JSON_OBJECT)
-				return JE_UNKNOWN_SUB;
+				return "UnknownSub:No element found with the requested subscript";
 
 			/* Return what we found */
 			if (refcontainer)
@@ -906,28 +905,10 @@ static int jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncontext_t **
 
 	default:
 		/* Invalid operation in an l-value */
-		return JE_BAD_LVALUE;
+		return "BadLValue:Invalid assignment";
 	}
 }
 
-/* Return a "null" json_t for a given error code */
-static json_t *jxerror(int code, char *key)
-{
-	char	*fmt;
-	switch (code) {
-	case JE_BAD_LVALUE:	fmt = "Invalid assignment";	break;
-	case JE_UNKNOWN_VAR:	fmt = "Unknown variable \"%s\"";	break;
-	case JE_NOT_OBJECT:	fmt = "Attempt to access member in a non-object";	break;
-	case JE_NOT_KEY:	fmt = "Attempt to use a non-key as a member label";	break;
-	case JE_UNKNOWN_MEMBER:	fmt = "Object has no member \"%s\"";	break;
-	case JE_BAD_SUB_KEY:	fmt = "Invalid key for [key:value] subscript";	break;
-	case JE_UNKNOWN_SUB:	fmt = "No element found with requested subscript";	break;
-	case JE_BAD_SUB:	fmt = "Subscript as invalid type";	break;
-	case JE_CONST:		fmt = "Attempt to change const \"%s\""; break;
-	default: return json_null();
-	}
-	return json_error_null(code, fmt, key);
-}
 
 /* Assign a variable.  Returns NULL on success, or a json_t "null" with an
  * error message if it fails.
@@ -941,7 +922,7 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	jsoncontext_t	*layer;
 	json_t	*container, *value, *scan;
 	char	*key;
-	int	err;
+	const char	*err;
 
 	/* We can't use a value that's already part of something else. */
 	assert(rvalue->next == NULL);
@@ -949,24 +930,25 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	/* Get the details on what to change.  Note that for new members,
 	 * value may be NULL even if jxlvalue() returns 1.
 	 */
-	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) > JE_OK)
-		return jxerror(err, key);
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL && *err)
+		return json_error_null(0, err, key);
 
 	/* If it's const then fail */
 	if (layer->flags & JSON_CONTEXT_CONST) {
-		if (err < 0)
+		value = json_error_null(0, "Const:Attempt to change const \"%s\"", key);
+		if (err) /* "" */
 			free(key);
-		return jxerror(JE_CONST, key);
+		return value;
 	}
 
 	/* Objects are easy, arrays are hard */
 	if (container->type == JSON_OBJECT) {
 		json_append(container, json_key(key, rvalue));
-		if (err < 0)
+		if (err) /* "" */
 			free(key);
 	} else if (container->type == JSON_ARRAY) {
 		if (!value)
-			return jxerror(JE_UNKNOWN_SUB, key);
+			return json_error_null(0, "UnknownSub:No element found with the requested subscript", key);
 
 		/* Use the tail of the array with the new value */
 		rvalue->next = value->next;
@@ -1013,24 +995,24 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	jsoncontext_t	*layer;
 	json_t	*container, *value;
 	char	*key;
-	int	err;
+	const char *err;
 
 	/* We can't use a value that's already part of something else. */
 	assert(rvalue->next == NULL);
 
 	/* Get the details on what to change */
-	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != JE_OK)
-		return jxerror(err, key);
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
+		return json_error_null(0, err, key);
 	if (value == NULL)
-		return jxerror(JE_UNKNOWN_VAR, key);
+		return json_error_null(0, "UnknownVar:Unknown variable \"%s\"", key);
 
 	/* If it's const then fail */
 	if (layer->flags & JSON_CONTEXT_CONST)
-		return jxerror(JE_CONST, key);
+		return json_error_null(0, "Const:Attempt to change const \"%s\"", key);
 
 	/* We can only append to arrays */
 	if (value->type != JSON_ARRAY)
-		return json_error_null(JE_APPEND, "Can't append to %s \"%s\"", json_typeof(value, 0), key);
+		return json_error_null(0, "Append:Can't append to %s \"%s\"", json_typeof(value, 0), key);
 
 	/* Append! */
 	json_append(value, rvalue);

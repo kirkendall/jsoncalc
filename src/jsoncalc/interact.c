@@ -3,9 +3,8 @@
 #include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <json.h>
-#include <calc.h>
-#include "jsoncalc.h"
+#include <jsoncalc.h>
+#include "jcprog.h"
 
 /* This indicates whether we're running something or reading a command line */
 static int running;

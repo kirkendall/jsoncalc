@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* This type is used only in this file to store a private list of the
  * registers table formats.

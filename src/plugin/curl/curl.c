@@ -3,10 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <json.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <calc.h>
+#include <jsoncalc.h>
 #include <curl/curl.h>
 
 /* This plugin gives access to the "curl" library, for sending requests over

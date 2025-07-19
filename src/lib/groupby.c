@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 
 /* Given a table (array of objects) and a list of member names for grouping

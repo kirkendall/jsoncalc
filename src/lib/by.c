@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Return the value of a named field within an object or array.  If there
  * is no such element, then return NULL.

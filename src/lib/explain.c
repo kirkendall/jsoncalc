@@ -4,8 +4,7 @@
 #include <string.h>
 #include <locale.h>
 #include <assert.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 
 

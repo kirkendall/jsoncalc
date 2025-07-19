@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <locale.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 #define GREEN	"\033[32;1m"
 #define RED	"\033[31;1m"

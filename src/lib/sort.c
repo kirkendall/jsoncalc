@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Elements with the same value in a sort field are collected in a linked list.
  * "arraybuf" is the head of that list, and "value" points to the member that

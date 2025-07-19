@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Predict the size of the string returned by json_serialize.  If buf is passed
  * then also store the actual characters there.  Note that the terminating '\0'

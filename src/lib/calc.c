@@ -6,8 +6,7 @@
 #include <locale.h>
 #include <assert.h>
 #include <regex.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 
 /* BIG NOTE ABOUT MEMORY MANAGEMENT

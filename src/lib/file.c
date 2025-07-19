@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* This can be set to 'o' to make new/unreadable files contain an empty object,
  * or 'a' to make new/unreadable files contain an empty array.  If left to '\0'

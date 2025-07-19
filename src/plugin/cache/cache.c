@@ -8,8 +8,7 @@
 #include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "json.h"
-#include "calc.h"
+#include <jsoncalc.h>
 
 /* This is the name of the file that stores a cache's settings */
 #define SETTINGS ".config"

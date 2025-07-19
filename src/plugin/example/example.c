@@ -4,8 +4,7 @@
 #undef _XOPEN_SOURCE
 #undef __USE_XOPEN
 #include <wchar.h>
-#include <json.h>
-#include <calc.h>
+#include <jsoncalc.h>
 
 /* This plugin demonstrates how to implement settings, functions and commands
  * in a plugin.

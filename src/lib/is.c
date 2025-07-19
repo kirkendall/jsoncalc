@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "json.h"
+#include <jsoncalc.h>
 
 /* Test whether a JSON value is true.  Everything is true except for the
  * symbols "false" and "null", the number 0, an empty string, or an empty

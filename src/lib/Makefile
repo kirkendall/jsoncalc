@@ -9,28 +9,33 @@ LIBSRC=	by.c calc.c calcfunc.c calcparse.c compare.c config.c context.c \
 LIBOBJ=	by.o calc.o calcfunc.o calcparse.o compare.o config.o context.o \
 	copy.o cmd.o datetime.o debug.o equal.o explain.o file.o find.o \
 	flat.o format.o grid.o groupby.o is.o length.o mbstr.o memory.o \
-	parse.o plugin.o print.o serialize.o sort.o text.o walk.o
+	parse.o print.o serialize.o sort.o text.o walk.o
+PLUGINS=-DSTATICPLUGINS=PLUGINCSV+PLUGINLOG
 #CC=gcc -g -pg
 #CC=gcc -g -O
 CC=gcc -g -fpic -Wall
 CFLAGS=-Wall -DJSON_DEBUG_MEMORY -I$(INCLUDE)
 
-all: $(LIB)/libjson.so $(LIB)/libjson.a
+all: $(LIB)/libjsoncalc.so $(LIB)/libjsoncalc.a
 
 $(LIBOBJ): $(HDRS)
 
-$(LIB)/libjson.so: $(LIBOBJ)
-	$(CC) $(LIBOBJ) $(LIBS) -shared -o $(LIB)/libjson.so
+$(LIB)/libjsoncalc.so: $(LIBOBJ) plugin.o
+	$(CC) $(LIBOBJ) plugin.o $(LIBS) -shared -o $(LIB)/libjsoncalc.so
 
-$(LIB)/libjson.a: $(LIBOBJ)
-	$(RM) $(LIB)/libjson.a
-	ar q $(LIB)/libjson.a $(LIBOBJ)
+$(LIB)/libjsoncalc.a: $(LIBOBJ) pluginstatic.o
+	$(RM) $(LIB)/libjsoncalc.a
+	ar q $(LIB)/libjsoncalc.a $(LIBOBJ) pluginstatic.o
+
+pluginstatic.o: plugin.c
+	$(CC) $(CFLAGS) $(PLUGINS) -c plugin.c -o pluginstatic.o
 
 clean:
-	$(RM) $(OBJ)
 	$(RM) $(LIBOBJ)
-	$(RM) $(LIB)/libjson.a
-	$(RM) core
+	$(RM) plugin.o
+	$(RM) pluginstatic.o
+	$(RM) $(LIB)/libjsoncalc.so
+	$(RM) $(LIB)/libjsoncalc.a
 
 tags: $(LIBSRC)
 	ctags $(LIBSRC)

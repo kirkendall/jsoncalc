@@ -8,17 +8,22 @@ CC=	gcc -g -fpic
 CFLAGS=	-Wall -I$(INC) -DJSON_DEBUG_MEMORY
 LDFLAGS=-L$(LIB)
 LDLIBS= -ljsoncalc -lreadline
+LDSTATLIBS=-ljsoncalcplugins -lm -ltinfo
 
 
-all: $(BIN)/jsoncalc
+all: $(BIN)/jsoncalc $(BIN)/jcstatic
 
 $(OBJ): $(HDR)
 
-$(BIN)/jsoncalc: jsoncalc
-	cp jsoncalc $(BIN)
+$(BIN)/jsoncalc $(BIN)/jcstatic: jsoncalc jcstatic
+	cp jsoncalc jcstatic $(BIN)
 
 jsoncalc: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(LDLIBS) -o jsoncalc
+
+jcstatic: $(OBJ)
+	$(CC) -static $(LDFLAGS) $(OBJ) $(LDLIBS) $(LDSTATLIBS) -o jcstatic
+	#strip jcstatic
 
 clean:
 	$(RM) jsoncalc

@@ -22,17 +22,11 @@ static char *config = "{"
 "}";
 
 
-/* Get a boolean config */
-int getbool(char *key)
-{
-	return json_is_true(json_config_get("plugin.cache", key));
-}
-
 /* Generate the name of a cache file.  This incorporates directory name and
  * file extension from config, and optionally a version suffix.  The returned
  * name in a buffer that gets reused, so you may need to make a local copy.
  */
-char *cacheFile(const char *cache, char *index)
+static char *cacheFile(const char *cache, char *index)
 {
 	json_t	*dir;
 	char	*dirstr, *extstr, verstr[20];
@@ -69,7 +63,7 @@ char *cacheFile(const char *cache, char *index)
 /* Test whether a cache or index name is safe.  If safe, return NULL, otherwise
  * return a string indicating why it is unsafe.
  */
-char *safeName(char *name)
+static char *safeName(char *name)
 {
 	/* Must be non-empty, not start with ".", and not contain "/" */
 	if (!*name)
@@ -299,7 +293,7 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 
 
 /* Initialize the plugin */
-char *init(void)
+char *plugincache(void)
 {
 	json_t	*settings, *plugin, *jd;
 	char	*dir;

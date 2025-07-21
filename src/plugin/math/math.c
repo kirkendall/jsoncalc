@@ -330,7 +330,7 @@ static json_t *jfn_pow(json_t *args, void *agdata)
 /* This is the init function.  It registers all of the above functions, and
  * adds some constants to the Math object.
  */
-char *init()
+char *pluginmath()
 {
 	json_t	*math;
 

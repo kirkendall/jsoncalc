@@ -421,7 +421,7 @@ jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t 
  * If you switch files, and there was a previous file you're switching from,
  * and that file is writable, then it'll call json_file_update() on it.
  */
-json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent)
+json_t *json_context_file(jsoncontext_t *context, const char *filename, int writable, int *refcurrent)
 {
 	jsoncontext_t *globals, *datacontext, *thiscontext;
 	json_t	*files, *j, *f;

@@ -480,7 +480,7 @@ typedef struct jsonag_s {
  * must not be freed before the application terminates.
  */
 typedef struct {
-	char	*filename;	/* name of source file, if any */
+	const char *filename;	/* name of source file, if any */
 	char	*buf;		/* buffer, contains entire souce file */
 	char	*str;		/* current parse position within "base" */
 	size_t	size;		/* size of "base" */
@@ -497,7 +497,7 @@ typedef struct {
  */
 typedef struct {
 	json_t	*ret;		/* if really a "return" then this is value */
-	char	*filename;	/* filename where error occurred (if any) */
+	const char*filename;	/* filename where error occurred (if any) */
 	int	lineno;		/* line number where error occurred */
 	int	code;		/* error code */
 	char	text[1];	/* extended as necessary */
@@ -517,7 +517,7 @@ typedef struct jsoncmdname_s {
 
 /* This stores a parsed statement. */
 typedef struct jsoncmd_s {
-	char		   *filename;/* source file, for reporting errors */
+	const char	   *filename;/* source file, for reporting errors */
 	int		   lineno;/* line number, for reporting errors */
 	jsoncmdname_t	   *name;/* command name and other details */
 	char		   var;
@@ -570,7 +570,7 @@ jsoncontext_t *json_context_free(jsoncontext_t *context);
 jsoncontext_t *json_context(jsoncontext_t *context, json_t *data, jsoncontextflags_t flags);
 jsoncontext_t *json_context_insert(jsoncontext_t **refcontext, jsoncontextflags_t flags);
 jsoncontext_t *json_context_std(json_t *data);
-json_t *json_context_file(jsoncontext_t *context, char *filename, int writable, int *refcurrent);
+json_t *json_context_file(jsoncontext_t *context, const char *filename, int writable, int *refcurrent);
 jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t *args);
 json_t *json_context_by_key(jsoncontext_t *context, char *key, jsoncontext_t **reflayer);
 json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
@@ -587,7 +587,7 @@ extern jsoncmd_t JSON_CMD_ERROR[];
 
 void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
 int json_cmd_lineno(jsonsrc_t *src);
-jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...);
+jsoncmdout_t *json_cmd_error(const char *filename, int lineno, int code, const char *fmt, ...);
 jsoncmdout_t *json_cmd_src_error(jsonsrc_t *src, int code, char *fmt, ...);
 void json_cmd_parse_whitespace(jsonsrc_t *src);
 char *json_cmd_parse_key(jsonsrc_t *src, int quotable);
@@ -597,7 +597,7 @@ void json_cmd_free(jsoncmd_t *cmd);
 jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr);
 jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr);
 jsoncmd_t *json_cmd_parse_string(char *str);
-jsoncmd_t *json_cmd_parse_file(char *filename);
+jsoncmd_t *json_cmd_parse_file(const char *filename);
 jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context);
 jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t *context);

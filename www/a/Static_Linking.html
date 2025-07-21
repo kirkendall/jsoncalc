@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Statically-Linked Program</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc Statically-Linked Program">
+    <meta name="keywords" content="jsoncalc, article, Statically-Linked Program">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>Statically-Linked Program</h1>
+    <h4 class="timestamp">2025-07-20</h4>
+    <center>
+    <blockquote class="abstract">
+      "jcstatic" is a statically-linked version of JsonCalc.
+      Statically linked programs are easier to install on remote systems
+      because there's just one file to install and it avoids a lot of
+      dependencies on other libraries.
+      However, the executable file is <em>much</em> larger and it uses more RAM.
+      Their ability to use plugins is severely limited (but not entirely gone).
+      Some library dependencies are unavoidable.
+    </blockquote>
+    </center>
+    <h2>What Is Static Linking?</h2>
+    "jcstatic" is a statically-linked version of the "jsoncalc" program.
+    This refers to the way that libraries are incorporated into the program.
+    <p>
+    Libraries can be either statically linked or dynamically linked.
+    Dynamic linking is generally preferred because it allows different processes
+    to share the same copy of the library in RAM, allowing the RAM to be used
+    more efficiently.
+    (Dynamically-linked libraries are also called shared libraries.)
+    The executable files are much smaller, since the libraries aren't included
+    in them.
+    <p>
+    Static linking, on the other hand, copies the relevant parts of any
+    libraries into the program file.
+    The program thus has its own private copy of each library function that
+    it uses.
+    This makes the executable program <em>much</em> larger, but also makes it
+    less dependent on the libraries installed on the system where you want to
+    run it.
+    <div class="example">
+      <kbd>ls -l bin</kbd>
+      <samp><pre style="font-size: 125%">total 2332
+-rwxr-xr-x 1 steve users 2305240 Jul 20 16:14 jcstatic
+-rwxr-xr-x 1 steve users   81352 Jul 20 13:38 jsoncalc</pre>
+      </samp>
+      The "jcstatic" file is far larger than "jsoncalc" because it includes
+      the jsoncalc library, selected plugins, and any system libraries that
+      any of those depend on.
+    </div>
+
+    <h2>Why Do It</h2>
+    Static linking can solve one very specific problem:
+    When you copy a dynamically-linked program to another host,
+    you sometimes find that the program won't run
+    because it depends a library that isn't installed.
+    If you hunt down that library and install it, then that'll often reveal
+    yet another dependency.
+    <p>
+    In the case of JsonCalc, when you install "jsoncalc" you must also install
+    "libjsoncalc.so" where "jsoncalc" can find it (usually <tt>/usr/lib64/</tt>
+    on Linux systems).
+    Any plugins that you want to use must also be copied over.
+    And since the "curl" plugin depends on the libcurl.so library, you have
+    to hope that a new enough version of that is installed.
+    And it isn't just plugins &mdash; Does the remote host have a new enough
+    version of the <tt>libreadline.so</tt> library? And <tt>libtinfo.so</tt>
+    that it depends on?
+    <p>
+    So installing a dynamically-linked program can be a big time waster,
+    and for a program like JsonCalc you might need it in a hurry.
+    The statically-linked version of JsonCalc includes (nearly) all of the
+    libraries that it depends on, in one big executable.
+    Just copy "jcstatic" to the other host and it will run.
+
+    <h2>Plugins</h2>
+    JsonCalc's plugins are really just dynamically-linked libraries,
+    and the statically-linked "jcstatic" program can't load them at run time.
+    This <em>does not mean</em> you can't use plugins.
+    You just need to have the foresight to include the plugins you need in
+    the "jcstatic" executable.
+    <p>
+    JsonCalc produces a static "libsoncalcplugins.a" library
+    containing all of the plugins.
+    This library is only used linking into "jcstatic", and the linker will
+    only include the plugins that you specifically want.
+    <p>
+    This is separate from the "libjsoncalc.a" library containing the core of
+    JsonCalc, by the way.  Don't get them confused.
+    The version of the <tt>json_plugin_load()</tt> function in the static
+    "libjsoncalc.a" library contains a list of plugins to include in the binary.
+    By adjusting the list, you can make any plugin available to "jcstatic".
+    But there's a catch: Some of the plugins depend on other libraries, which
+    may in turn depend on other libraries, all of which will get sucked into
+    "jcstatic", making it truly huge.
+    <p>
+    Another consideration is that some of the libraries that a plugin depends
+    on might not be available in statically-linked form.
+    For example, my development system doesn't have a "libcurl.a" file anywhere
+    so I can't compile a version of "jcstatic" that includes the "curl" plugin.
+
+    <h2>How to build "jcstatic" with plugins that you choose</h2>
+    You'll need JsonCalc's source code for this.
+    <style>
+      table.referencelist.steps td { vertical-align:top; }
+      table.referencelist.steps td:nth-child(2) { font-family:monospace; font-size:125%; white-space:nowrap; }
+    </style>
+    <table class="referencelist steps">
+      <tr><td>1</td><td>cd src/lib</td><td>Go into the library source directory</td></tr>
+      <tr><td>2</td><td>vi Makefile</td><td>Edit the Makefile.  I'm using vi here, but any text editor will do.</td</tr>
+      <tr><td>3</td><td>/^STATIC=</td><td>Search for the "STATIC=..." line.</td></tr>
+      <tr><td>4</td><td>f=lC-DSTATICCSV -DSTATICLOG&lt;esc&gt;</td><td>
+	Change the text after "=" to list the plugins you want.
+	Each plugin name should be written in uppercase, with "-DSTATIC" before
+	it.
+	The example here would make the "csv" and "log" plugins available in
+	the statically-linked program.
+      </td></tr>
+      <tr><td>5</td><td>ZZ</td><td>Save the changes</td></tr>
+      <tr><td>6</td><td>vi plugin.c<br/>/staticplugins ...</td><td>
+        Most people can skip this step,
+        but <strong>if you've written your own plugins</strong> then
+        you need to add them to the "staticplugins" array in <tt>plugin.c</tt>.
+        All of the standard plugins are already listed there, so this is only
+        needed if you've added custom plugins.
+      </td></tr>
+      <tr><td>7</td><td>cd ../..<br/>make clean<br/>make</td><td>Do a clean "make" in the project top directory.</td></tr>
+      <tr><td>8</td><td>ls -l bin</td><td>
+	Check to see if the "lcstatic" program was generated.
+	If so, then <em>great!</em> you're done!
+	If not, it's probably because one or more plugins that you requested
+	depend on static libraries that aren't available.
+        The next step helps with that.
+      </td></tr>
+      <tr><td>9</td><td>cd src/jsoncalc<br/>make</td><td>
+        If "jcstatic" didn't compile, then go into the source directory of
+        the "jsoncalc" and "jcstatic" programs and run "make".
+        This is likely to generate a lot of output so you'll probably have to
+        scroll back to see the good stuff.
+        Look for one of two things:
+        <ul>
+          <li>Some other library that couldn't be found, required by a plugin.
+            Even if a shared/dynamic version of the library is available,
+            sometimes there is no static version,
+            and we need the static version.  Maybe you can install it?
+            You'd only need to install it on your own computer.
+            Otherwise, go back and deselect the plugin that needs that
+            library.
+	  <li>Clashing symbol definitions.  If two different plugins define
+	    a global symbol using the same name, that's a bug.  Plugins should
+	    ideally reside in a single *.c file and the only non-static
+	    declaration should be for the <tt>plugin</tt><var>name</var><tt>()</tt>
+	    function.
+	    Either fix it, or deselect the offending plugin.
+	</ul>
+      </td></tr>
+    </table>
+    <p>
+    In the end <tt>bin/jcstatic</tt> is the statically-linked JsonCalc that
+    you wanted.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

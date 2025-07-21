@@ -146,7 +146,7 @@ void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(json
 }
 
 /* Generate an error message */
-jsoncmdout_t *json_cmd_error(char *filename, int lineno, int code, char *fmt, ...)
+jsoncmdout_t *json_cmd_error(const char *filename, int lineno, int code, const char *fmt, ...)
 {
 	va_list	ap;
 	size_t	size;
@@ -715,7 +715,7 @@ jsoncmd_t *json_cmd_parse_string(char *text)
  * definitions, so NULL is *not* an error indication; it just means there's
  * nothing to execute or free.
  */
-jsoncmd_t *json_cmd_parse_file(char *filename) 
+jsoncmd_t *json_cmd_parse_file(const char *filename) 
 {
 	char	*buf;
 	size_t	size, offset;

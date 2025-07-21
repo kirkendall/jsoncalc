@@ -15,8 +15,8 @@
     <blockquote class="abstract">
       Start by copying <tt>src/plugins/example/</tt> to another directory
       within <tt>src/plugin/</tt>.
-      Your plugin will need to include &lt;json.h&gt;.
-      It must define a function named <tt>init()</tt> which takes no parameters
+      Your plugin will need to include &lt;jsoncalc.h&gt;.
+      It must define a function named <tt>plugin</tt><var>name</var><tt>()</tt> which takes no parameters
       and returns NULL on success or an error string on failure.
       Compile to position-independent code.
       Link as a shared library; it if needs other libraries such as -lm or
@@ -38,17 +38,17 @@
     </div>
 
     <h2>Source Code</h2>
-    Your plugin's *.c source file will need to include the <json.h> file
-    so it can access JsonCalc's data types and functions.
+    Your plugin's *.c source file will need to include the &lt;jsoncalc.h&gt;
+    file so it can access JsonCalc's data types and functions.
     Some of the functions declared there use (FILE*), you'll also need
-    to include <stdio.h>.
+    to include &lt;stdio.h&gt;.
     You'll almost certainly need to include other headers too, but those
     two are the minimum.
     If your plugin uses multiple *.c files, then all of them will need
     at least those two.
     <p>
-    The other mandatory feature of any plugin is that it must define an
-    <tt>init()</tt> function.
+    The other mandatory feature of any plugin is that it must define a
+    <tt>plugin</tt><var>name</var><tt>()</tt> function.
     This is called when the plugin is first loaded, and it is responsible
     for doing any initialization such as registering new functions or
     commands with JsonCalc.
@@ -60,9 +60,9 @@
 	#include &lt;stdio.h&gt;
 	#include &lt;json.h&gt;
 
-	<b>char</b> *init(<b>void</b>)
+	<b>char</b> *pluginhello(<b>void</b>)
 	{
-	    <b>return</b> "Hello, world!  I am a plugin.";
+	    <b>return</b> "Hello, world!  I am a plugin.  This is an error message.";
 	}
     </pre>
     <p>
@@ -93,9 +93,9 @@
 	    "\"start\":\"Ya\"",
 	    "\"exclamation\":true"
        "}";
-	<b>char</b> *init(<b>void</b>)
+	<b>char</b> *pluginscreamer(<b>void</b>)
 	{
-	    /* Set the settings for the "screamer" plugin */
+	    <i>/* Set the settings for the "screamer" plugin */</i>
 	    json_t	*section, *settings;
 	    section = json_by_name(json_config, "plugin");
 	    settings = json_parse_string(screamer_settings);
@@ -146,7 +146,8 @@
       <li>Finally, scripts start to run or the user sees a "JsonCalc&gt;" prompt.
     </ol>
     <p>
-    One implication of this is, <tt>init()</tt> can't check the config settings.
+    One implication of this is, <tt>plugin</tt><var>name</var><tt>()</tt>
+    can't check the config settings.
     The settings are only available later, when the user or script uses a
     feature of the plugin, e.g. by calling a function that the plugin provides.
       
@@ -177,9 +178,9 @@
 	    }
           </pre>
       <li>Register the function.  This should be done in your plugin's
-	  <tt>init()</tt> function.
+	  <tt>plugin</tt><var>name</var>()</tt> function.
 	  <pre>
-	    <b>char</b> *init(<b>void</b>)
+	    <b>char</b> *pluginposix(<b>void</b>)
 	    {
 	        json_calc_function_hook("getpid", "", "number", jfn_getpid);
 	        <b>return</b> NULL;
@@ -226,39 +227,39 @@
     out to stderr.
 
     <pre>
-	#include <stdio.h>
-	#include <json.h>
+	#include &lt;stdio.h&gt;
+	#include &lt;json.h&gt;
 
-	/* Parse a stderr command */
-	jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_t **referr)
+	<i>/* Parse a stderr command */</i>
+	<b>static</b> jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_t **referr)
 	{
-	    char *text;
+	    <b>char</b> *text;
 	    jsoncmd_t *cmd;
 
 	    /* Parse the parenthesized text */
 	    text = json_cmd_parse_paren(src);
-	    if (!text) {
+	    <b>if</b> (!text) {
 		*referr = json_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
-		return NULL;
+		<b>return</b> NULL;
 	    }
 
 	    /* Build a command */
 	    cmd = json_cmd(src, "stderr");
-	    cmd->key = text;
-	    return cmd;
+	    cmd-&gt;key = text;
+	    <b>return</b> cmd;
 	}
 
-	/* Run a stderr command */
-	jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
+	<i>/* Run a stderr command */</i>
+	<b>static</b> jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
 	{
-	    fprintf(stderr, "%s\n", cmd->key);
+	    fprintf(stderr, "%s\n", cmd-&gt;key);
 	}
 
-	/* ... and later, in the plugin's init() function... */
-	char *init()
+	<i>/* ... and later, in the plugin's initialization function... */</i>
+	<b>char</b> *pluginmyplugin()
 	{
 	    json_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
-	    return NULL;
+	    <b>return</b> NULL;
 	}
     </pre>
     <p>
@@ -303,8 +304,9 @@
 	  <p>
 	  You can create multiple layers if you want, for example one layer
 	  for vars and another for consts.
-      <li>Second, the plugin's <tt>init()</tt> function should register the
-	  context adder function via <tt>json_context_hook()</tt>.
+      <li>Second, the plugin's <tt>plugin</tt><var>name</var>()</tt> function
+          should register the context adder function via
+          <tt>json_context_hook()</tt>.
       <li>Later, your vars and consts will be available for use in any
 	  expression.
     </ul>
@@ -332,10 +334,10 @@
 	    <b>return</b> json_context(context, obj, 0);
 	}
 
-	<b>char</b> *init()
+	<b>char</b> *pluginmyplugin()
 	{
 	    json_context_hook(miContexto);
-	    return NULL;
+	    <b>return</b> NULL;
 	}
     </pre>
     <p>

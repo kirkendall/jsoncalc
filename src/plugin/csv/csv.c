@@ -473,7 +473,7 @@ static json_t *csvparse(const char *buf, size_t len, const char **refend, const 
 /* This is the init function.  It registers all of the above functions, and
  * adds some constants to the Math object.
  */
-char *init()
+char *plugincsv()
 {
 	json_t	*section, *settings;
 

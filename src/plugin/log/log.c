@@ -619,7 +619,7 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 }
 
 /* Initialize the plugin */
-char *init(void)
+char *pluginlog(void)
 {
 	json_t	*settings, *plugin;
 	char	*dir;

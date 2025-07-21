@@ -10,7 +10,8 @@ LIBOBJ=	by.o calc.o calcfunc.o calcparse.o compare.o config.o context.o \
 	copy.o cmd.o datetime.o debug.o equal.o explain.o file.o find.o \
 	flat.o format.o grid.o groupby.o is.o length.o mbstr.o memory.o \
 	parse.o print.o serialize.o sort.o text.o walk.o
-PLUGINS=-DSTATICPLUGINS=PLUGINCSV+PLUGINLOG
+#STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICCURL -DSTATICLOG -DSTATICMATH
+STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH
 #CC=gcc -g -pg
 #CC=gcc -g -O
 CC=gcc -g -fpic -Wall
@@ -28,7 +29,7 @@ $(LIB)/libjsoncalc.a: $(LIBOBJ) pluginstatic.o
 	ar q $(LIB)/libjsoncalc.a $(LIBOBJ) pluginstatic.o
 
 pluginstatic.o: plugin.c
-	$(CC) $(CFLAGS) $(PLUGINS) -c plugin.c -o pluginstatic.o
+	$(CC) $(CFLAGS) $(STATIC) -c plugin.c -o pluginstatic.o
 
 clean:
 	$(RM) $(LIBOBJ)

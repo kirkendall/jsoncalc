@@ -166,7 +166,7 @@ jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 /* This is the init function.  It registers all of the above functions and
  * commands, and adjusts the settings.
  */
-char *init()
+char *pluginexample()
 {
 	json_t	*section, *settings;
 

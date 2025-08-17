@@ -235,9 +235,9 @@ static jsonfunc_t *funclist      = &join_jf;
  * the final result.
  */
 void json_calc_aggregate_hook(
-	char    *name,
-	char	*args,
-	char	*type,
+	const char    *name,
+	const char	*args,
+	const char	*type,
 	json_t *(*fn)(json_t *args, void *agdata),
 	void   (*agfn)(json_t *args, void *agdata),
 	size_t  agsize,
@@ -252,7 +252,7 @@ void json_calc_aggregate_hook(
 	/* If it's already in the table then update it */
 	for (f = funclist; f; f = f->next) {
 		if (!strcmp(f->name, name)) {
-			f->args = args;
+			f->args = (char *)args;
 			f->fn = fn;
 			f->agfn = agfn;
 			f->agsize = agsize;
@@ -263,9 +263,9 @@ void json_calc_aggregate_hook(
 	/* Add it */
 	f = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
 	memset(f, 0, sizeof *f);
-	f->name = name;
-	f->args = args;
-	f->returntype = type;
+	f->name = (char *)name;
+	f->args = (char *)args;
+	f->returntype = (char *)type;
 	f->fn = fn;
 	f->agfn = agfn;
 	f->agsize = agsize;
@@ -280,9 +280,9 @@ void json_calc_aggregate_hook(
  * return type; these are basically just comments.
  */
 void json_calc_function_hook(
-	char    *name,
-	char	*args,
-	char	*type,
+	const char    *name,
+	const char	*args,
+	const char	*type,
 	json_t *(*fn)(json_t *args, void *agdata))
 {
 	/* This is just a simplified interface to the aggregate adder */
@@ -325,10 +325,18 @@ static void free_user_functions()
 }
 
 /* Define or redefine a user function -- one that's defined in JsonCalc's
- * command syntax instead of C code.  Returns 0 normally, or 1 if the function
- * name matches a built-in function (and hence can't be refined).
+ * command syntax instead of C code.  Returns 0 normally, or 1 if the
+ * function name matches a built-in function (and hence can't be refined).
+ *
+ * The name, paramstr, and returntype arguments are expected to be
+ * dynamically-allocated strings.  Use strdup() if necessary.
  */
-int json_calc_function_user(char *name, json_t *params, char *paramstr, char *returntype, jsoncmd_t *body)
+int json_calc_function_user(
+	char *name,
+	json_t *params,
+	char *paramstr,
+	char *returntype,
+	jsoncmd_t *body)
 {
 	jsonfunc_t *fn;
 	static int first = 1;
@@ -379,7 +387,7 @@ int json_calc_function_user(char *name, json_t *params, char *paramstr, char *re
 }
 
 /* Look up a function by name, and return its info */
-jsonfunc_t *json_calc_function_by_name(char *name)
+jsonfunc_t *json_calc_function_by_name(const char *name)
 {
 	jsonfunc_t *scan;
 
@@ -473,11 +481,12 @@ static json_t *jfn_toMixedCase(json_t *args, void *agdata)
 static json_t *jfn_substr(json_t *args, void *agdata)
 {
 	const char    *str;
+	int	istart;
 	size_t  len, start, limit;
 
 	/* If not a string or no other parameters, just return null */
 	if (args->first->type != JSON_STRING || !args->first->next)
-		return json_error_null(1, "substr() requires a string");
+		return json_error_null(NULL, "substrStr:substr() requires a string");
 	str = args->first->text;
 
 	/* Get the length of the string.  We'll need that to adjust bounds */
@@ -485,18 +494,20 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 
 	/* Get the starting position */
 	if (args->first->next->type != JSON_NUMBER)
-		return json_error_null(1, "substr() position must be a number");
-	start = json_int(args->first->next);
-	if (start < 0 && start + len >= 0)
-		start = len + start;
-	else if (start < 0 || start > len)
+		return json_error_null(NULL, "substrPos:substr() position must be a number");
+	istart = json_int(args->first->next);
+	if (istart < 0 && istart + len >= 0)
+		start = len + istart;
+	else if (istart < 0 || istart > len)
 		start = len;
+	else
+		start = istart;
 
 	/* Get the length limit */
 	if (!args->first->next->next)
 		limit = len - start; /* all the way to the end */
 	else if (args->first->next->next->type != JSON_NUMBER)
-		return json_error_null(1, "substr() length must be a number");
+		return json_error_null(NULL, "substrLen:substr() length must be a number");
 	else {
 		limit = json_int(args->first->next->next);
 		if (start + limit > len)
@@ -554,7 +565,7 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 
 		return result;
 	}
-	return json_error_null(1, "hex() only works on numbers or strings");
+	return json_error_null(NULL, "hex:%s() only works on numbers or strings", "hex");
 }
 
 /* toString(arg) converts arg to a string */
@@ -747,7 +758,7 @@ static json_t *help_trim(json_t *args, int start, int end, char *name)
 
 	/* This only works on non-strings */
 	if (args->first->type != JSON_STRING)
-		return json_error_null(1, "The %s function only works on strings", name);
+		return json_error_null(NULL, "trim:The %s function only works on strings", name);
 
 	/* Get the string to trim */
 	substr = args->first->text;
@@ -848,7 +859,7 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 	return result;
 
 BadMix:
-	return json_error_null(1, "concat() works on arrays or strings, not a mixture");
+	return json_error_null(NULL, "concat:%s() works on arrays or strings, not a mixture", "concat");
 }
 
 /* orderBy(arr, sortlist) - Sort an array of objects */
@@ -869,7 +880,7 @@ json_t *jfn_orderBy(json_t *args, void *agdata)
 	 * an array of fields and "true" for descending
 	 */
 	if (!json_is_table(args->first) || !order || order->type != JSON_ARRAY || !order->first)
-		return json_error_null(1, "orderBy() requires a table and an array of keys");
+		return json_error_null(NULL, "orderBy:%s() requires a table and an array of keys", "orderBy");
 
 	/* Sort a copy of the table */
 	result = json_copy(args->first);
@@ -1662,9 +1673,9 @@ static json_t *jfn_includes(json_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 0);
 	if (i == -2)
-		return json_error_null(1, "The %s function requires an array or string, and something to search for", "includes");
+		return json_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "includes");
 	if (i == -3)
-		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "includes");
+		return json_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "includes");
 	return json_bool(i >= 0);
 }
 
@@ -1675,9 +1686,9 @@ static json_t *jfn_indexOf(json_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 0);
 	if (i == -2)
-		return json_error_null(1, "The %s function requires an array or string, and something to search for", "indexOf");
+		return json_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "indexOf");
 	if (i == -3)
-		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "indexOf");
+		return json_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "indexOf");
 	return json_from_int(i);
 }
 
@@ -1688,9 +1699,9 @@ static json_t *jfn_lastIndexOf(json_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 1);
 	if (i == -2)
-		return json_error_null(1, "The %s function requires an array or string, and something to search for", "lastIndexOf");
+		return json_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "lastIndexOf");
 	if (i == -3)
-		return json_error_null(1, "The %s function's ignorecase flag only works when searching for a string", "lastIndexOf");
+		return json_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "lastIndexOf");
 	return json_from_int(i);
 }
 
@@ -1704,7 +1715,7 @@ static json_t *jfn_startsWith(json_t *args, void *agdata)
 	if (args->first->type != JSON_STRING
 	 || !args->first->next
 	 || args->first->next->type != JSON_STRING) {
-		return json_error_null(1, "The %s function requires two strings", "startsWith");
+		return json_error_null(NULL, "startsEndsWith:The %s function requires two strings", "startsWith");
 	}
 	haystack = args->first->text;
 	needle = args->first->next->text;
@@ -1731,7 +1742,7 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 	if (args->first->type != JSON_STRING
 	 || !args->first->next
 	 || args->first->next->type != JSON_STRING) {
-		return json_error_null(1, "The %s function requires two strings", "endsWith");
+		return json_error_null(NULL, "startsEndsWith:The %s function requires two strings", "endsWith");
 	}
 	haystack = args->first->text;
 	needle = args->first->next->text;
@@ -1775,7 +1786,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 
 	/* Check parameters */
 	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "%s() requires a string as its first parameter", "split");
+		return json_error_null(NULL, "splitStr:%s() requires a string as its first parameter", "split");
 	str = args->first->text;
 	djson = args->first->next;
 	if (!djson || (json_is_null(djson) && (!recon->regex || !(recon->regex->u.regex.preg)))) {
@@ -1792,14 +1803,14 @@ static json_t *jfn_split(json_t *args, void *agdata)
 		regex = recon->regex->u.regex.preg;
 	else {
 		if (djson->type != JSON_STRING)
-			return json_error_null(0, "%s() delimiter must be a string or regex", "split");
+			return json_error_null(NULL, "splitDelim:%s() delimiter must be a string or regex", "split");
 		delim = djson->text;
 		delimlen = strlen(delim); /* yes, byte length not char count */
 	}
 	if (!djson->next)
 		limit = 0;
 	else if (djson->next->type != JSON_NUMBER)
-		return json_error_null(0, "%s() third parameter should be a number", "split");
+		return json_error_null(NULL, "splitLimit:%s() third parameter should be a number", "split");
 	else
 		limit = json_int(djson->next);
 	all = 0;
@@ -1924,7 +1935,7 @@ static json_t *jfn_getenv(json_t *args, void *agdata)
 
 	/* If not given a string parameter, then fail */
 	if (!args->first || args->first->type != JSON_STRING || args->first->next)
-		return json_error_null(1, "getenv() expects a string parameter");
+		return json_error_null(NULL, "string:%s() expects a string parameter", "getenv");
 
 	/* Fetch the value of the environment variable.  If no such variable
 	 * exists, then get NULL.
@@ -1971,7 +1982,7 @@ static json_t *jfn_parse(json_t *args, void *agdata)
 
 	/* We can only parse strings */
 	if (data->type != JSON_STRING)
-		return json_error_null(0, "parse() only works on strings");
+		return json_error_null(NULL, "string:%s() only works on strings", "parse");
 
 	/* Parse it */
 	return json_parse_string(data->text);
@@ -2000,7 +2011,7 @@ static json_t *jfn_parseInt(json_t *args, void *agdata)
 	else if (args->first->type == JSON_NUMBER /* text[1] == 'f' */)
 		value = (int)JSON_DOUBLE(args->first);
 	else
-		return json_error_null(1, "%s() expects a string", "parseInt");
+		return json_error_null(NULL, "string:%s() expects a string", "parseInt");
 
 	return json_from_int(value);
 }
@@ -2017,7 +2028,7 @@ static json_t *jfn_parseFloat(json_t *args, void *agdata)
 	else if (args->first->type == JSON_NUMBER /* text[1] == 'f' */)
 		value = JSON_DOUBLE(args->first);
 	else
-		return json_error_null(1, "%s() expects a string", "parseFloat");
+		return json_error_null(NULL, "string:%s() expects a string", "parseFloat");
 	return json_from_double(value);
 }
 
@@ -2041,11 +2052,11 @@ static json_t *jfn_find(json_t *args, void *agdata)
 	} else {
 		haystack = json_context_default_table(recon->context, &defaulttable);
 		if (!haystack)
-			return json_error_null(0, "No default table");
+			return json_error_null(NULL, "noDefTable:No default table");
 		needle = args->first;
 	}
 	if (!needle)
-		return json_error_null(0, "find() needs to know what to search for");
+		return json_error_null(NULL, "find:%s() needs to know what to search for", "find");
 
 	/* Check for optional args after "needle" */
 	ignorecase = 0;
@@ -2056,13 +2067,15 @@ static json_t *jfn_find(json_t *args, void *agdata)
 		else if (other->type == JSON_STRING && !needkey)
 			needkey = other->text;
 		else {
-			return json_error_null(0, "find() was passed an unexpexted extra parameter");
+			return json_error_null(0, "findArg:%s() was passed an unexpected extra parameter", "find");
 		}
 	}
 
 	/* Search! */
 	if (regex)
 		result = json_find_regex(haystack, regex, needkey);
+	else if (json_is_null(needle))
+		result = json_find(haystack, NULL, 0, needkey);
 	else
 		result = json_find(haystack, needle, ignorecase, needkey);
 
@@ -2151,7 +2164,7 @@ static json_t *jfn_abs(json_t *args, void *agdata)
 
 	/* Fail if not a number */
 	if (num->type != JSON_NUMBER)
-		return json_error_null(0, "The %s() function expects a number", "abs");
+		return json_error_null(NULL, "number:The %s() function expects a number", "abs");
 
 	/* Apply the function */
 	d = json_double(num);
@@ -2192,7 +2205,7 @@ static json_t *jfn_sign(json_t *args, void *agdata)
 
 	/* Fail if not a number */
 	if (num->type != JSON_NUMBER)
-		return json_error_null(0, "The %s() function expects a number", "abs");
+		return json_error_null(NULL, "number:The %s() function expects a number", "sign");
 
 	/* Apply the function */
 	d = json_double(num);
@@ -2217,10 +2230,10 @@ static json_t *jfn_wrap(json_t *args, void *agdata)
 
 	/* Check args */
 	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "The %s() function's first argument should be a string to wrap", "wrap");
+		return json_error_null(NULL, "wrapStr:The %s() function's first argument should be a string to wrap", "wrap");
 	str = args->first->text;
 	if (args->first->next && args->first->next->type != JSON_NUMBER)
-		return json_error_null(0, "The %s() function's second argument should be wrap width", "wrap");
+		return json_error_null(NULL, "wrapWidth:The %s() function's second argument should be wrap width", "wrap");
 	if (args->first->next)
 		width = json_int(args->first->next);
 	else
@@ -2275,12 +2288,12 @@ static json_t *jfn_sleep(json_t *args, void *agdata)
 		args->first->next = oldnext;
 		json_free(jseconds);
 	} else {
-		return json_error_null(0, "The %s() function should be passed a number of seconds on an ISO-8601 period string");
+		return json_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string");
 	}
 
 	/* Sanity check */
 	if (seconds < 0.0)
-		return json_error_null(0, "The %s() function's sleep time must be positive", "sleep");
+		return json_error_null(NULL, "sleepSign:The %s() function's sleep time must be positive", "sleep");
 
 	/* Sleep */
 	ts.tv_sec = (time_t)seconds;

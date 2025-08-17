@@ -191,12 +191,13 @@ void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 		} else {
 			if (*json_format_default.escerror)
 				fputs(json_format_default.escerror, stderr);
-			if (result->filename)
-				fprintf(stderr, "%s:%d: %s\n", result->filename, result->lineno, result->text);
-			else if (result->lineno)
-				fprintf(stderr, "Line %d: %s\n", result->lineno, result->text);
-			else
-				fprintf(stderr, "%s\n", result->text);
+			if (result->where) {
+				int lineno;
+				jsonfile_t *jf = json_file_containing(result->where, &lineno);
+				if (jf)
+					fprintf(stderr, "%s:%d: ", jf->filename, lineno);
+			}
+			fprintf(stderr, "%s\n", result->text);
 			if (*json_format_default.escerror)
 				fputs(json_format_color_end, stderr);
 			putc('\n', stderr);
@@ -457,7 +458,7 @@ int main(int argc, char **argv)
 				continue;
 
 			/* load it */
-			err = json_plugin_load(args->text, 0, 0);
+			err = json_plugin_load(args->text);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				json_free(err);
@@ -651,7 +652,7 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 			/* Load the plugin */
-			err = json_plugin_load(plugin, 0, 0);
+			err = json_plugin_load(plugin);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				json_free(err);

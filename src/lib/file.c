@@ -15,6 +15,9 @@
  */
 char json_file_new_type = '\0';
 
+/* This stores a linked list of loaded files */
+static jsonfile_t *loaded;
+
 /* Open a file for reading.  This also locks one byte and maps it into memory */
 jsonfile_t *json_file_load(const char *filename)
 {
@@ -78,15 +81,33 @@ jsonfile_t *json_file_load(const char *filename)
 	/* Return the info */
 	jf = (jsonfile_t *)malloc(sizeof *jf);
 	jf->fd = fd;
+	jf->filename = strdup(filename);
 	jf->isfile = (st.st_mode & S_IFMT) == S_IFREG;
 	jf->size = st.st_size;
 	jf->base = base;
+	jf->next = loaded;
+	loaded = jf;
 	return jf;
 }
 
 /* Close a file that was opened via json_file_load() */
 void json_file_unload(jsonfile_t *jf)
 {
+	/* Remove the jf structure from the loaded list */
+	jsonfile_t *scan, *lag;
+	for (lag = NULL, scan = loaded;
+	     scan && scan != jf;
+	     lag = scan, scan = scan->next) {
+	}
+	if (!scan) {
+		/* Should never happen */
+		abort();
+	} else if (lag) {
+		lag->next = scan->next;
+	} else
+		loaded = scan->next;
+
+	/* Unmap or free the memory */
 	if (jf->isfile) {
 		/* Unmap the file from memory */
 		munmap((void *)jf->base, jf->size);
@@ -95,12 +116,49 @@ void json_file_unload(jsonfile_t *jf)
 		free((void *)jf->base);
 	}
 
+	/* Free the filename */
+	free(jf->filename);
+
 	/* Close the file.  This will also release the file lock */
 	if (jf->fd != 0) /* never close stdin */
 		close(jf->fd);
 
 	/* Free the jf structure */
 	free(jf);
+}
+
+/* Figure out which file contains a given pointer, and return it.  If refline
+ * isn't NULL, then store the line number there.  If no loaded file contains
+ * the given "where" pointer, return NULL. The "where" pointer is never
+ * dereferenced, so you can be a bit sloppy about it.
+ */
+jsonfile_t *json_file_containing(const char *where, int *refline)
+{
+	jsonfile_t *jf;
+	const char *scan;
+	int	line;
+
+	/* Scan for it */
+	for (jf = loaded; jf; jf = jf->next) {
+		if (jf->base <= where && where < jf->base + jf->size) {
+			/* Found it! */
+
+			/* Maybe figure out the line number */
+			if (refline) {
+				line = 1;
+				for (scan = jf->base; scan < where; scan++)
+					if (*scan == '\n')
+						line++;
+				*refline = line;
+			}
+
+			/* Return it */
+			return jf;
+		}
+	}
+
+	/* Not found */
+	return NULL;
 }
 
 /* Open a file for writing.  This locks the whole file -- that's the only
@@ -140,7 +198,7 @@ FILE *json_file_update(const char *filename)
  * writable directory in the path.  If "ext" is non-NULL then append it to
  * the filename.
  */
-char *json_file_path(const char *prefix, const char *name, const char *suffix, int major, int minor)
+char *json_file_path(const char *prefix, const char *name, const char *suffix)
 {
 	char	*pathname;	/* dynamically-allocated pathname */
 	size_t	pathsize;	/* allocated size of pathname */

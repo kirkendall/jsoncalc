@@ -17,7 +17,7 @@ typedef struct jctablefmt_s {
 /* This flag is used to terminate processing, generally in response to a
  * <Ctrl-C> being pressed while running in interactive mode.
  */
-int json_interupt;
+int json_interrupt;
 
 /* Print a json_t tree as JSON text.  "format" controls the format.  */
 static void jcprint(json_t *json, int indent, jsonformat_t *format)
@@ -99,7 +99,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 				byelem.pretty = 0;
 				byelem.elem = 0;
 			}
-                        for (scan = scan->first; scan && !json_interupt; scan = scan->next) {
+                        for (scan = scan->first; scan && !json_interrupt; scan = scan->next) {
                                 if (format->elem && indent + format->tab > 0)
 					fprintf(format->fp, "%*c", indent + format->tab, ' ');
                                 jcprint(scan, indent + format->tab, &byelem);
@@ -156,7 +156,7 @@ static void jcsh(json_t *json, jsonformat_t *format){
 	json_t	*col;
 	char	*s, *t, *frees;
 
-	for (row = json->first; row && !json_interupt; row = row->next) {
+	for (row = json->first; row && !json_interrupt; row = row->next) {
 		for (col = row->first; col; col = col->next) {
 			/* Output the prefix, name, and an = */
 			fprintf(format->fp, "%s%s=", format->prefix, col->text);

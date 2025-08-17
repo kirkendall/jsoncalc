@@ -60,7 +60,8 @@ jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
  */
 jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
-	char	*text, *end, *err;
+	char	*text;
+	const char *end, *err;
 	size_t	len;
 	jsoncalc_t *expr;
 	jsoncmd_t *cmd;
@@ -129,7 +130,7 @@ jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 		/* If error, then return the error */
 		if (result->type == JSON_NULL && *result->text) {
-			out = json_cmd_error(cmd->filename, cmd->lineno, 0, "Error in %s: %s", "example", result->text);
+			out = json_cmd_error(cmd->where, "Error in %s: %s", "example", result->text);
 			json_free(result);
 			return out;
 		}

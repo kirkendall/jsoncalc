@@ -29,13 +29,13 @@
 typedef struct {
 	jsonop_t op;
 	int len;
-	char *full;
+	const char *full;
 } token_t;
 
 /* This is used as the expression parsing stack. */
 typedef struct {
 	jsoncalc_t *stack[100];
-	char	*str[100];
+	const char	*str[100];
 	int	sp;
 	int	canassign;
 	char	errbuf[100];
@@ -361,7 +361,7 @@ void json_calc_dump(jsoncalc_t *calc)
 }
 
 /* Dump all entries in the parsing stack */
-static int dumpstack(stack_t *stack, char *format, char *data)
+static int dumpstack(stack_t *stack, const char *format, const char *data)
 {
 	int     i;
 	char	buf[40];
@@ -475,9 +475,10 @@ IsAssign:
 /* Given a starting point within a text buffer, parse the next token (storing
  * its details in *token) and return a pointer to the character after the token.
  */
-char *lex(char *str, token_t *token, stack_t *stack)
+const char *lex(const char *str, token_t *token, stack_t *stack)
 {
 	jsonop_t op, best;
+	char *end;
 
 	/* Fix the operators[] array, if we haven't already done so.
 	 * This just means counting the lengths of the operators
@@ -524,8 +525,8 @@ char *lex(char *str, token_t *token, stack_t *stack)
 				radix = 2, str += 2;
 			else /* 0nnn, assume octal (deprecated in JavaScript) */
 				radix = 8;
-			(void)strtol(str, &str, radix);
-			token->len = str - token->full;
+			(void)strtol(str, &end, radix);
+			token->len = end - token->full;
 		} else {
 			while (isdigit(token->full[token->len]))
 				token->len++;
@@ -774,7 +775,7 @@ static jsoncalc_t *jcalloc(token_t *token)
 		if (*token->full == '0' && token->full[1] && strchr("0123456789XxOoBb", token->full[1])) {
 			long	value;
 			int	radix;
-			char	*digits = token->full;
+			const char	*digits = token->full;
 			switch (token->full[1]) {
 			case 'x': case 'X': radix = 16;	digits += 2; break;
 			case 'o': case 'O': radix = 8;	digits += 2; break;
@@ -806,7 +807,8 @@ static jsoncalc_t *jcalloc(token_t *token)
 	 */
 	if (token->op == JSONOP_REGEX) {
 		int	ignorecase = 0;
-		char	*tmp, *scan, *build;
+		char	*tmp, *build;
+		const char *scan;
 		int	err;
 
 		/* Allocate a regex_t buffer */
@@ -835,7 +837,7 @@ static jsoncalc_t *jcalloc(token_t *token)
 			regerror(err, (regex_t *)jc->u.regex.preg, buf, sizeof buf);
 			/* Stuff it into a null */
 			jc->op = JSONOP_LITERAL;
-			jc->u.literal = json_error_null(2, "%s", buf);
+			jc->u.literal = json_error_null(NULL, "regex:%s", buf);
 		}
 	}
 
@@ -1092,7 +1094,7 @@ static jsoncalc_t *fixcomma(jsoncalc_t *jc, jsonop_t op)
  * a "expr AS name" operator, or a nameless expression in which case we want
  * to use the expression's source text as the name.
  */
-static jsoncalc_t *fixcolon(stack_t *stack, char *srcend)
+static jsoncalc_t *fixcolon(stack_t *stack, const char *srcend)
 {
 	jsoncalc_t *jc = stack->stack[stack->sp - 1];
 	if (jc->op == JSONOP_AS) {
@@ -1729,7 +1731,7 @@ static int pattern_verbose(stack_t *stack, char *want, jsoncalc_t *next)
  * recent incomplete parenthesis/bracket/brace.  Return NULL if successful,
  * or an error message if error.
  */
-static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
+static char *reduce(stack_t *stack, jsoncalc_t *next, const char *srcend)
 {
 	token_t t;
 	jsoncalc_t *jc, *jn;
@@ -2180,7 +2182,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, char *srcend)
 }
 
 /* Incorporate the next lexical token into the parse state */
-static void shift(stack_t *stack, jsoncalc_t *jc, char *str)
+static void shift(stack_t *stack, jsoncalc_t *jc, const char *str)
 {
 	stack->stack[stack->sp] = jc;
 	stack->str[stack->sp] = str;
@@ -2450,9 +2452,9 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
  * *referr will be set to an error message in a dynamically-allocated string.
  * canassign enables parsing "=" as an assignment operator.
  */
-jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassign)
+jsoncalc_t *json_calc_parse(const char *str, const char **refend, const char **referr, int canassign)
 {
-	char    *c = str;
+	const char    *c = str;
 	jsoncalc_t *jc;
 	char *err;
 	token_t token;

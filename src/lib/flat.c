@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include <jsoncalc.h>
 
 
@@ -84,7 +85,7 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	json_t	*result;	/* Used to accumulate the result array */
 
 	/* If not a table (including null!), just return an empty array */
-	if (!json_is_table(table))
+	if (!table || (!json_is_table(table) && table->type != JSON_OBJECT))
 		return json_array();
 
 	/* We want to treat the nest list as linked list of JSON_STRINGs.
@@ -107,10 +108,21 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	/* Start with an empty response array */
 	result = json_array();
 
+	/* We expect the table argument to be a table.  No surprise there.
+	 * But we also allow it to be a single object, which we treat as
+	 * the only element in a one-element array.  This is partly to help
+	 * work around bad XML conversions, and partly to add the flexibility
+	 * to unroll tables within objects.
+	 */
+	if (table->type == JSON_ARRAY)
+		table = table->first;
+	else
+		assert(table->type == JSON_OBJECT && !table->next);
+
 	/* For each element of the table... */
-	for (table = table->first; table; table = table->next) {
+	for (; table; table = table->next) {
 		/* Fetch the unrolled nested variable */
-		value = json_by_key(table, nestlist->text);
+		value = json_by_expr(table, nestlist->text, NULL);
 		nested = json_unroll(value, nestlist->next);
 
 		/* If nested is empty, either skip it or stuff an empty object

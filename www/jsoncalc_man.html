@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Mon Jul  7 14:57:04 2025 -->
+<!-- CreationDate: Fri Aug  8 15:27:32 2025 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -84,8 +84,8 @@ multiple commands to run.</p>
 
 <p style="margin-left:11%;"><b>-f</b><i>scriptfile</i></p>
 
-<p style="margin-left:22%;">Read an expression from a file,
-and apply it to the JSON data. Again, the JSON data will
+<p style="margin-left:22%;">Read commands from a file, and
+apply them to the JSON data. Again, the JSON data will
 typically come from *.json files named on the command line.
 This option can be repeated to supply multiple script files
 to load. You can also mix it with <b>-c</b><i>command</i> if
@@ -332,7 +332,8 @@ files are named on the command line.</p>
 
 <p style="margin-left:11%; margin-top: 1em">For
 convenience, interactive sessions can set some flags
-<b>(-S</b><i>settings,</i> <b>-F</b><i>script,</i> and
+<b>(-S</b><i>settings,</i> <b>-F</b><i>script,</i>
+<b>-D</b><i>directory,</i> and
 <b>-L</b><i>plugins</i><b>)</b> persistently. If you often
 need the &quot;csv&quot; plugin for your interactive
 sessions, you can invoke <b>jsoncalc</b> once with a
@@ -387,7 +388,7 @@ either say <b>-stable=sh</b> or simply <b>-ssh.</b></p>
 format options are:</p>
 
 
-<p align="center" style="margin-top: 1em"><img src="grohtml-49761.png" alt="Image grohtml-49761.png"></p>
+<p align="center" style="margin-top: 1em"><img src="grohtml-31301.png" alt="Image grohtml-31301.png"></p>
 
 <p style="margin-left:11%; margin-top: 1em">Additionally,
 there are sections to select the color and other attributes
@@ -413,7 +414,7 @@ messages), <b>debug</b> (debugging output), <b>gridhead</b>
 &quot;table=grid&quot;). Their attributes are:</p>
 
 
-<p align="center" style="margin-top: 1em"><img src="grohtml-49762.png" alt="Image grohtml-49762.png"></p>
+<p align="center" style="margin-top: 1em"><img src="grohtml-31302.png" alt="Image grohtml-31302.png"></p>
 
 <p style="margin-left:11%; margin-top: 1em">Most plugins
 support options, stored in an object named
@@ -496,8 +497,8 @@ table</i><b>@&lt;</b><i>table</i> and
 
 <p style="margin-left:15%; margin-top: 1em">database join
 operators. <b>@=</b> is natural join, <b>@&lt;</b> is left
-join, and <b>@&gt;</b> is right join. A table is simply an
-array of objects.</p>
+natural join, and <b>@&gt;</b> is right natural join. A
+table is simply an array of objects.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -552,6 +553,18 @@ avg(</i><b>expr</b><i>)</i> and
 
 
 <p><i>&nbsp;</i> &bull;</p></td>
+<td width="1%"></td>
+<td width="85%">
+
+
+<p>A <i>variable</i><b>[] =</b> <i>value</i> notation for
+appending to an array variable.</p></td></tr>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="3%">
+
+
+<p>&nbsp; &bull;</p></td>
 <td width="1%"></td>
 <td width="85%">
 
@@ -671,11 +684,10 @@ object generator. The result is an array of objects, which
 <b>jsoncalc</b> classifies as a table, so it is output as a
 table.</p>
 
-<p style="margin-left:11%;">&quot;2024-12-25&quot; +
-&quot;P12D&quot;</p>
+<p style="margin-left:11%; margin-top: 1em">This is an
+example of ISO-8601 date/time/period calculation.</p>
 
-<p style="margin-left:22%;">This is an example of ISO-8601
-date/time/period calculation. It adds 12 days to Christmas,
+<p style="margin-left:22%;">It adds 12 days to Christmas,
 returning &quot;2025-01-06&quot;. <b>jsoncalc</b> makes date
 calculation easy. (If the strings didn&rsquo;t look like a
 date and a period, they would have been concatenated just as
@@ -838,7 +850,7 @@ JsonCalc&rsquo;s configuration. It may also store temporary
 files such as caches and logs.</p>
 
 
-<p style="margin-left:11%;"><i>PATH</i>/lib<i>plugin</i>.so</p>
+<p style="margin-left:11%;"><i>PATH</i>/plugin<i>plugin</i>.so</p>
 
 <p style="margin-left:22%;">Where <i>PATH</i> is a
 directory name from $JSONCALCPATH, this is where a binary
@@ -876,7 +888,8 @@ plugin may be found.</p>
 
 <p style="margin-left:22%;">This is a list of directories
 where JsonCalc&rsquo;s supporting files might be found. The
-default value is derived from $LDLIBRARYPATH.</p>
+default value is derived from $LDLIBRARYPATH and also
+includes <i>~/.config/jsoncalc</i>.</p>
 
 <h2>SEE ALSO
 <a name="SEE ALSO"></a>

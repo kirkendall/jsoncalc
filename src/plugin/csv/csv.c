@@ -122,7 +122,7 @@ static void csvprint(json_t *json, jsonformat_t *format)
 	}
 
 	/* For each row... */
-	for (row = json->first; row && !json_interupt; row = row->next) {
+	for (row = json->first; row && !json_interrupt; row = row->next) {
 		/* Output each column.  Do it in header order, for consistency*/
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */

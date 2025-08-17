@@ -39,7 +39,8 @@ char *test(char *str, json_t *names)
         jsoncontext_t *context;
         jsoncalc_t *calc;
         json_t  *result;
-        char    *resultstr, *tail, *err;
+        char    *resultstr;
+        const char *tail, *err;
         int	before, compiled;  
         int	calcleaks, parseleaks;
 

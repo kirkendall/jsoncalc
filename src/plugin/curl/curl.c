@@ -279,7 +279,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 			if (!str || !*str)
 				str = tempcookiejar;
 			if (!str) {
-				str = json_file_path(NULL, NULL, NULL, 0, 0);
+				str = json_file_path(NULL, NULL, NULL);
 				tempcookiejar = (char *)malloc(strlen(str) + 18);
 				strcpy(tempcookiejar, str);
 				strcat(tempcookiejar, "cookiejar.XXXXXX");

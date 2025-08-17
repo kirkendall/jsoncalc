@@ -372,7 +372,8 @@ FILE *switchfile(const char *logname)
 jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	json_t	*setting, *err;
-	char	*setstr, *str;
+	char	*setstr;
+	const char *str;
 	json_cmd_parse_whitespace(src);
 
 
@@ -386,7 +387,7 @@ jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		else
 			defaultname = NULL;
 	} else if (isalpha(*src->str)) {
-		char *before = src->str;
+		const char *before = src->str;
 		char *newname = json_cmd_parse_key(src, 0);
 		if (!newname || *src->str != ':') {
 			src->str = before;
@@ -415,7 +416,7 @@ jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		err = json_config_parse(setting, setstr, NULL);
 		free(setstr);
 		if (err) {
-			*referr = json_cmd_error(src->filename, json_cmd_lineno(src), (int)(size_t)err->next, "%s", err->text);
+			*referr = json_cmd_error(src->str, "%s", err->text);
 			json_free(err);
 		}
 	}
@@ -436,7 +437,7 @@ jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	char	*name = NULL;
 	int	detail = 1;
 	jsoncalc_t	*list;
-	char	*err;
+	const char	*err;
 	jsoncmd_t *cmd;
 
 	/* If the defaultname hasn't been set yet, then set it now */
@@ -485,7 +486,7 @@ jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 				json_calc_free(list);
 			if (item)
 				json_calc_free(item);
-			*referr = json_cmd_error(start.filename, json_cmd_lineno(src), 1, err ? err : "Syntax error in \"%s\" expression", "log");
+			*referr = json_cmd_error(start.str, err ? err : "Syntax error in \"%s\" expression", "log");
 			return NULL;
 		}
 		list = json_calc_list(list, item);
@@ -555,16 +556,19 @@ jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			putc(' ', out);
 		fprintf(out, "[%5d]", (int)getpid());
 	}
-	if (showfile) {
-		if (showdate || showtime || showpid)
-			putc(' ', out);
-		fputs(cmd->filename, out);
-		if (showline)
-			fprintf(out, ":%d", cmd->lineno);
-	} else if (showline) {
-		if (showdate || showtime)
-			putc(' ', out);
-		fprintf(out, "%d", cmd->lineno);
+	if (showfile || showline) {
+		int lineno;
+		jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
+		if (jf) { 
+			if (showdate || showtime || showpid)
+				putc(' ', out);
+			if (showfile)
+				fputs(jf->filename, out);
+			if (showfile && showline)
+				fputc(':', out);
+			if (showline)
+				fprintf(out, "%d", lineno);
+		}
 	}
 	if (showdate || showtime || showfile || showline)
 		fputc('\t', out);
@@ -634,7 +638,7 @@ char *pluginlog(void)
 	/* Most default options are hardcoded, but the "dir" setting should
 	 * be the first writable directory in the JSONCALCPATH.
 	 */
-	dir = json_file_path(NULL, NULL, NULL, 0, 0);
+	dir = json_file_path(NULL, NULL, NULL);
 	json_config_set("plugin.log", "dir", json_string(dir, -1));
 	free(dir);
 

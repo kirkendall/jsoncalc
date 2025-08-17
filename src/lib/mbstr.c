@@ -972,7 +972,6 @@ size=nbytes;
                                 if (mbsize > 0)
                                         dst += mbsize;
                                 else {
-abort();
                                         *dst++ = '?';
                                         mbsize = 1;
                                 }

@@ -107,15 +107,22 @@ extern json_debug_t json_debug_flags;
 extern jsonformat_t json_format_default;
 extern char json_format_color_end[20];
 
-/* This represents a file that is open for reading JSON data.  The file is
- * mapped into memory starting at "base", and can be accessed like a giant
- * string.
+/* This represents a file that is open for reading JSON data or scripts.
+ * The file is mapped into memory starting at "base", and can be accessed
+ * like a giant string.
+ *
+ * For data files, the reference count is 0 unless it contains a deferred
+ * array, in which case the reference count is 1.  For script files, it the
+ * number of functions or vars/consts defined in the script.
  */
-typedef struct {
+typedef struct jsonfile_s {
+	struct jsonfile_s *next;/* Used to for a linked list */
 	int		fd;	/* File descriptor of the open file */
 	int		isfile;	/* Boolean: is this a regular file (not pipe, etc) */
+	int		refs;	/* Reference count */
 	size_t		size;	/* Size of the file, in bytes */
 	const char	*base;	/* Contents of the file, as a giant string */
+	char		*filename; /* Name of the file */
 } jsonfile_t;
 
 #define JSON_PATH_DELIM		':'
@@ -126,14 +133,15 @@ BEGIN_C
 char json_file_new_type;
 jsonfile_t *json_file_load(const char *filename);
 void json_file_unload(jsonfile_t *jf);
+jsonfile_t *json_file_containing(const char *where, int *refline);
 FILE *json_file_update(const char *filename);
-char *json_file_path(const char *prefix, const char *name, const char *suffix, int major, int minor);
+char *json_file_path(const char *prefix, const char *name, const char *suffix);
 
 /* Error handling */
 extern char *json_debug(char *flags);
 
-/* This flag indicates whether computations have been interupted */
-extern int json_interupt;
+/* This flag indicates whether computations have been interrupted */
+extern int json_interrupt;
 
 /* Manipulation */
 extern void json_free(json_t *json);
@@ -143,7 +151,7 @@ extern json_t *json_string(const char *str, size_t len);
 extern json_t *json_number(const char *str, size_t len);
 extern json_t *json_bool(int boolean);
 extern json_t *json_null(void);
-extern json_t *json_error_null(int code, const char *fmt, ...);
+extern json_t *json_error_null(const char *where, const char *fmt, ...);
 extern json_t *json_from_int(int i);
 extern json_t *json_from_double(double f);
 extern json_t *json_key(const char *key, json_t *value);
@@ -292,7 +300,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 
 /* Plugins */
 json_t *json_plugins;
-json_t *json_plugin_load(const char *name, int major, int minor);
+json_t *json_plugin_load(const char *name);
 
 
 #ifndef FALSE
@@ -407,7 +415,11 @@ typedef struct jsoncalc_s{
 
 
 /* Functions are stored in a linked list of these.  If a function is *not* an
- * aggregate function then agfn is NULL and storeagesize is 0.
+ * aggregate function then agfn is NULL and storeagesize is 0.  Also, the
+ * name, args, and returntype will generally be (const char *) literals for
+ * compiled C functions, but dynamically-allocated strings for user-defined
+ * (jsoncalc script) functions; the latter prevents us from declaring those
+ * fields as "const" here.
  */
 typedef struct jsonfunc_s {
         struct jsonfunc_s *next;
@@ -480,10 +492,9 @@ typedef struct jsonag_s {
  * must not be freed before the application terminates.
  */
 typedef struct {
-	const char *filename;	/* name of source file, if any */
-	char	*buf;		/* buffer, contains entire souce file */
-	char	*str;		/* current parse position within "base" */
-	size_t	size;		/* size of "base" */
+	const char	*buf;	/* buffer, contains entire source text */
+	const char	*str;	/* current parse position within "base" */
+	size_t	size;		/* size of "buf" */
 } jsonsrc_t;
 
 /* This is used for returning the result of a command.  A NULL pointer means
@@ -497,9 +508,7 @@ typedef struct {
  */
 typedef struct {
 	json_t	*ret;		/* if really a "return" then this is value */
-	const char*filename;	/* filename where error occurred (if any) */
-	int	lineno;		/* line number where error occurred */
-	int	code;		/* error code */
+	const char *where;	/* where error detected */
 	char	text[1];	/* extended as necessary */
 } jsoncmdout_t;
 extern json_t json_cmd_break, json_cmd_continue;
@@ -517,8 +526,7 @@ typedef struct jsoncmdname_s {
 
 /* This stores a parsed statement. */
 typedef struct jsoncmd_s {
-	const char	   *filename;/* source file, for reporting errors */
-	int		   lineno;/* line number, for reporting errors */
+	const char	   *where;/* pointer into source text, for reporting errors */
 	jsoncmdname_t	   *name;/* command name and other details */
 	char		   var;
 	char		   *key; /* Name of a variable, if the cmd uses one */
@@ -538,17 +546,17 @@ typedef struct jsoncmd_s {
 
 /* Function declarations */
 void json_calc_aggregate_hook(
-        char    *name,
-        char	*args,
-        char	*type,
+        const char    *name,
+        const char	*args,
+        const char	*type,
         json_t *(*fn)(json_t *args, void *agdata),
         void   (*agfn)(json_t *args, void *agdata),
         size_t  agsize,
         int	jfoptions);
 void json_calc_function_hook(
-	char	*name,
-	char	*args,
-	char	*type,
+	const char	*name,
+	const char	*args,
+	const char	*type,
         json_t *(*fn)(json_t *args, void *agdata));
 int json_calc_function_user(
 	char *name,
@@ -556,10 +564,10 @@ int json_calc_function_user(
 	char *paramstr,
 	char *returntype,
 	jsoncmd_t *cmd);
-jsonfunc_t *json_calc_function_by_name(char *name);
+jsonfunc_t *json_calc_function_by_name(const char *name);
 char *json_calc_op_name(jsonop_t op);
 void json_calc_dump(jsoncalc_t *calc);
-jsoncalc_t *json_calc_parse(char *str, char **refend, char **referr, int canassign);
+jsoncalc_t *json_calc_parse(const char *str, const char **refend, const char **referr, int canassign);
 jsoncalc_t *json_calc_list(jsoncalc_t *list, jsoncalc_t *item);
 void json_calc_free(jsoncalc_t *calc);
 void *json_calc_ag(jsoncalc_t *calc, void *agdata);
@@ -587,7 +595,7 @@ extern jsoncmd_t JSON_CMD_ERROR[];
 
 void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
 int json_cmd_lineno(jsonsrc_t *src);
-jsoncmdout_t *json_cmd_error(const char *filename, int lineno, int code, const char *fmt, ...);
+jsoncmdout_t *json_cmd_error(const char *where, const char *fmt, ...);
 jsoncmdout_t *json_cmd_src_error(jsonsrc_t *src, int code, char *fmt, ...);
 void json_cmd_parse_whitespace(jsonsrc_t *src);
 char *json_cmd_parse_key(jsonsrc_t *src, int quotable);

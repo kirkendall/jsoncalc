@@ -29,6 +29,13 @@
       and it generates a larger array where layer info is removed,
       returning a simple <strong>(but large!)</strong> table
       that you can generate your report from.
+      <p>
+      The list can also include the names of objects, which will be treated
+      like a the only element in a single-element array.
+      This is partly to deal with data converted from XML (in which an array
+      of length one is often indistinguishable from a single object),
+      and partly just for the sake of flexibility.
+      It can be handy if you have nested objects that you wish weren't nested.
     </dl>
     <details open>
       <summary>Examples</summary>

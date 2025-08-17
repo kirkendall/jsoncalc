@@ -103,8 +103,12 @@ void json_free(json_t *json)
 
 	/* Iteratively free this node and its siblings */
 	while (json) {
-		/* Recursively free contained data */
-		json_free(json->first);
+		/* Recursively free contained data.  Note that JSON_NULL nodes
+		 * abuse the ->first field to store a pointer into source text
+		 * instead of a json_t.
+		 */
+		if (json->type != JSON_NULL)
+			json_free(json->first);
 
 		/* Free this json_t struct */
 		next = json->next;
@@ -196,7 +200,7 @@ json_t *json_null(void)
 }
 
 /* Allocate a json_t for a null value, encoding an error message */
-json_t *json_error_null(int code, const char *fmt, ...)
+json_t *json_error_null(const char *where, const char *fmt, ...)
 {
 	char	buf[200], *bigbuf;
 	int	len;
@@ -209,8 +213,10 @@ json_t *json_error_null(int code, const char *fmt, ...)
 	va_end(ap);
 	if (len < 0)
 		return json_null();
-	if (len <= sizeof buf)
-		return json_simple(buf, len, JSON_NULL);
+	if (len <= sizeof buf - 1) {
+		result = json_simple(buf, len, JSON_NULL);
+		result->first = (json_t *)where;
+	}
 
 	/* Allocate a larger buffer to hold the string, and use it */
 	bigbuf = (char *)malloc(len);
@@ -219,6 +225,7 @@ json_t *json_error_null(int code, const char *fmt, ...)
 	va_end(ap);
 	result = json_simple(buf, len, JSON_NULL);
 	free(bigbuf);
+	result->first = (json_t *)where;
 	return result;
 }
 
@@ -351,8 +358,12 @@ void json_debug_free(const char *file, int line, json_t *json)
 		else if (memory_tracker)
 			memory_tracker[slot].count--;
 
-		/* Free the ->first link recursively */
-		json_debug_free(file, line, json->first);
+		/* Free the ->first link recursively... except that an error
+		 * "null" uses ->first for the position of the error, so we
+		 * don't want to free that.
+		 */
+		if (!json_is_error(json))
+			json_debug_free(file, line, json->first);
 
 		/* Free this node */
 		json->first = json->next = NULL;

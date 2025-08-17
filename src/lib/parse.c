@@ -460,7 +460,7 @@ json_t *json_parse_string(const char *str)
 
 	/* If error, then return a "null" json_t with an error message */
 	if (!result)
-		return json_error_null(1, "%s", error);
+		return json_error_null(NULL, "%s", error);
 	return result;
 }
 
@@ -487,7 +487,7 @@ json_t *json_parse_file(const char *filename)
 
 	/* If error, then return a "null" json_t with an error message */
 	if (!result)
-		return json_error_null(1, "%s", error);
+		return json_error_null(NULL, "%s", error);
 	return result;
 }
 

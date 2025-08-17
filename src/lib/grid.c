@@ -141,7 +141,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 	}
 
 	/* For each row... */
-	for (row = json->first; row && !json_interupt; row = row->next) {
+	for (row = json->first; row && !json_interrupt; row = row->next) {
 		/* Find the height of the tallest cell.  All cells are 1
 		 * except for strings that contain newlines.
 		 */

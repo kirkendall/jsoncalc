@@ -100,7 +100,7 @@ char *dlerror(void)
 
 
 /* Load a plugin.  Returns NULL on success, or an error null on failure */
-json_t *json_plugin_load(const char *name, int major, int minor)
+json_t *json_plugin_load(const char *name)
 {
 	char	*binfile;
 	char	*scriptfile;
@@ -126,13 +126,13 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 		binfile = NULL;
 	}
 #else
-	binfile = json_file_path("plugin",name,".so", 0, 0);
+	binfile = json_file_path("plugin",name,".so");
 	if (!binfile)
-		binfile = json_file_path("plugin",name,".so", 0, 0);
+		binfile = json_file_path("plugin",name,".so");
 #endif
 
 	/* Look for a script file */
-	scriptfile = json_file_path("plugin",name,".jc", 0, 0);
+	scriptfile = json_file_path("plugin",name,".jc");
 
 	/* If neither was found, fail */
 	if (!binfile && !scriptfile)
@@ -194,8 +194,6 @@ json_t *json_plugin_load(const char *name, int major, int minor)
 	/* Add it to the json_plugin object */
 	info = json_object();
 	json_append(info, json_key("name", json_string(name, -1)));
-	json_append(info, json_key("major", major ? json_from_int(major) : json_null()));
-	json_append(info, json_key("minor", minor ? json_from_int(minor) : json_null()));
 	json_append(info, json_key("binary", binfile ? json_string(binfile, -1) : json_null()));
 	json_append(info, json_key("script", scriptfile ? json_string(scriptfile, -1) : json_null()));
 	json_append(json_plugins, info);

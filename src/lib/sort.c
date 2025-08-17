@@ -90,7 +90,7 @@ static void jcsort(json_t *array, json_t *orderby)
 	 */
 	while (array->first) {
 		/* If user aborted, then quit */
-		if (json_interupt)
+		if (json_interrupt)
 			return;
 
 		/* Pull the element out of the array */

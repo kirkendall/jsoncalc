@@ -81,9 +81,11 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				/* Wrong key.  The only reason we're scanning
 				 * this array is that it might have an element
 				 * that's an object with needkey, but this
-				 * element isn't and object/array.
+				 * element isn't an object/array.
 				 */
 				continue;
+			} else if (!find->needle && !find->regex) {
+				/* Any value will do */
 			} else if (scan->type == JSON_STRING && find->regex) {
 				/* Compare against the regexp */
 				regmatch_t matches[10];
@@ -244,7 +246,7 @@ static json_t *find(json_t *haystack, json_t *needle, int ignorecase, regex_t *r
 	/* Check parameters */
 	if (haystack->type != JSON_ARRAY && haystack->type != JSON_OBJECT)
 		return json_error_null(0, "Can only find within an object or array");
-	if (!regex && (needle->type != JSON_STRING && needle->type != JSON_NUMBER))
+	if (!regex && needle && (needle->type != JSON_STRING && needle->type != JSON_NUMBER))
 		return json_error_null(0, "Can only find string, number, or regex");
 
 	/* Fill in the find argument block */

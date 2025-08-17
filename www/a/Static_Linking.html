@@ -17,7 +17,7 @@
       because there's just one file to install and it avoids a lot of
       dependencies on other libraries.
       However, the executable file is <em>much</em> larger and it uses more RAM.
-      Their ability to use plugins is severely limited (but not entirely gone).
+      The ability to use plugins is severely limited (but not entirely gone).
       Some library dependencies are unavoidable.
     </blockquote>
     </center>
@@ -26,7 +26,7 @@
     This refers to the way that libraries are incorporated into the program.
     <p>
     Libraries can be either statically linked or dynamically linked.
-    Dynamic linking is generally preferred because it allows different processes
+    Dynamic linking is generally preferred because it allows different programs
     to share the same copy of the library in RAM, allowing the RAM to be used
     more efficiently.
     (Dynamically-linked libraries are also called shared libraries.)
@@ -38,7 +38,7 @@
     The program thus has its own private copy of each library function that
     it uses.
     This makes the executable program <em>much</em> larger, but also makes it
-    less dependent on the libraries installed on the system where you want to
+    less dependent on the libraries that are installed on the system where you want to
     run it.
     <div class="example">
       <kbd>ls -l bin</kbd>

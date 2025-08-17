@@ -10,18 +10,18 @@
 static int running;
 
 /* This catches the SIGINT signal, and uses it to abort an ongoing computation
- * by setting the json_interupt flag.
+ * by setting the json_interrupt flag.
  */
-static void catchinterupt(int signo)
+static void catchinterrupt(int signo)
 {
 	if (running) {
-		json_interupt = 1;
+		json_interrupt = 1;
 		fprintf(stderr, "Stopping...\n");
 	}
 }
 
 /* This is called by readline() when it receives a ^C */
-static void catchRLinterupt()
+static void catchRLinterrupt()
 {
 	/* Wipe out the partially-entered line */
 	rl_free_line_state();
@@ -42,7 +42,7 @@ static char *historyfile(void)
 	/* First time, generate it */
 	if (!buf) {
 		/* Get the config directory */
-		char *dir = json_file_path(NULL, NULL, NULL, 0, 0);
+		char *dir = json_file_path(NULL, NULL, NULL);
 		if (!dir)
 			return ".jsoncalc_history";
 
@@ -122,9 +122,9 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 	 * If <Ctrl-C> occurs while entering a line, it'll discard the line
 	 * and give you a new prompt.
 	 */
-	signal(SIGINT, catchinterupt);
+	signal(SIGINT, catchinterrupt);
 	rl_catch_signals = 1;
-	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterupt;
+	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterrupt;
 
 	/* Run the initcmds once.  (Not once for each file.) */
 	result = json_cmd_run(initcmds, contextref);
@@ -146,7 +146,7 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 		free(expr);
 		if (jc != JSON_CMD_ERROR) {
 			/* Execute */
-			json_interupt = 0;
+			json_interrupt = 0;
 			run(jc, contextref);
 
 			/* Clean up */

@@ -34,7 +34,7 @@ This option can be repeated to supply multiple commands to run.
 
 .TP
 .BI -f scriptfile
-Read an expression from a file, and apply it to the JSON data.
+Read commands from a file, and apply them to the JSON data.
 Again, the JSON data will typically come from *.json files named on the command line.
 This option can be repeated to supply multiple script files to load.
 You can also mix it with
@@ -276,6 +276,7 @@ This doesn't affect writing to stdout when no files are named on the command lin
 For convenience, interactive sessions can set some flags
 .BI (-S settings,
 .BI -F script,
+.BI -D directory,
 and
 .BI -L plugins )
 persistently.
@@ -449,9 +450,9 @@ database join operators.
 .B @=
 is natural join,
 .B @<
-is left join, and
+is left natural join, and
 .B @>
-is right join.
+is right natural join.
 A table is simply an array of objects.
 .IP \ \(bu 3n
 .IB table .orderBy( columns ),
@@ -473,6 +474,10 @@ Aggregate functions including
 .IB avg( expr )
 and
 .IB count( expr ).
+.IP \ \(bu 3n
+A 
+.IB variable "[] = " value
+notation for appending to an array variable.
 .IP \ \(bu 3n
 A rather full-featured SQL "SELECT" statement.
 .P
@@ -578,7 +583,7 @@ classifies as a table,
 so it is output as a table.
 
 .TP
-"2024-12-25" + "P12D"
+\"2024-12-25\" + \"P12D\"
 This is an example of ISO-8601 date/time/period calculation.
 It adds 12 days to Christmas, returning "2025-01-06".
 .B jsoncalc
@@ -707,7 +712,7 @@ This directory stores JsonCalc's configuration.
 It may also store temporary files such as caches and logs.
 
 .TP
-.IR PATH /lib plugin .so
+.IR PATH /plugin plugin .so
 Where
 .I PATH
 is a directory name from $JSONCALCPATH,
@@ -732,7 +737,9 @@ directory.
 $JSONCALCPATH
 This is a list of directories where JsonCalc's supporting files might be
 found.
-The default value is derived from $LDLIBRARYPATH.
+The default value is derived from $LDLIBRARYPATH
+and also includes
+.IR ~/.config/jsoncalc .
 
 .SH "SEE ALSO"
 .BR json_calc (3),

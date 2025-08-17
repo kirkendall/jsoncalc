@@ -169,7 +169,7 @@
     or CSV or even a series of shell script records.
 
     <div class="example">
-      <kbd>jsoncalc -s sh -c test.scores</kbd>
+      <kbd>jsoncalc -s sh -c test.scores -d sampledata</kbd>
       <samp>
 name=Peter run=1 score=10<br/>
 name=Paul run=1 score=20<br/>
@@ -189,10 +189,18 @@ name=Mary run=3 score=40
       such quoting would be automatically added.
       You can also tweak the variable names by adding a <tt>-sprefix="my_"</tt> flag
       to JsonCalc, if necessary.
+      <p>
+      This uses the same "test.scores" table as earlier examples.
+      Those earlier examples were all interactive, and we assumed jsoncalc
+      was configured to automatically load files from the "sampledata"
+      directory.
+      Yo acieve the same autoload functionality in batch mode
+      (non-interactive like we're doing here)
+      you need to add "-d sampledata" to the command line.
     </div>
 
     <div class="example">
-      <kbd>jsoncalc -s sh -c test.scores | while read row<br/>
+      <kbd>jsoncalc -s sh -c test.scores -d sampledata | while read row<br/>
       do<div style="padding-left: 2em;">
       eval $row<br/>
       echo "$name scored $score in run# $run"
@@ -334,7 +342,7 @@ name=Mary run=3 score=40
     If an existing plugin satisfies your needs, then that's an easy win.
     If you need to write your own, the plugins included with the source code
     should serve as good examples.
-    Technically, each plugin is a shared library which must define an "init"
+    Technically, each plugin is a shared library which must define a "plugin<var>name</var>()"
     function.
     That function will then call JsonCalc C functions to register "hooks" for
     things like autoloading data, adding commands, and... lots of stuff.

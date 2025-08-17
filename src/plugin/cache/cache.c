@@ -308,7 +308,7 @@ char *plugincache(void)
 	/* Most default options are hardcoded, but the "dir" setting should
 	 * be the first writable directory in the JSONCALCPATH.
 	 */
-	dir = json_file_path(NULL, NULL, NULL, 0, 0);
+	dir = json_file_path(NULL, NULL, NULL);
 	jd = json_string(dir, strlen(dir) + 6);
 	if (dir[strlen(dir) - 1] == '/')
 		strcat(jd->text, "cache");

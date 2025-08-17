@@ -113,12 +113,12 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 
 	/* For each row from the left table... */
 	for (; jl; jl = jl-> next) {
-		/* If interupted, then discard any result so far and return
+		/* If interrupted, then discard any result so far and return
 		 * an error null.
 		 */
-		if (json_interupt) {
+		if (json_interrupt) {
 			json_free(result);
-			return json_error_null(1, "Interupted");
+			return json_error_null(NULL, "intr:Interrupted");
 		}
 
 		/* Skip if not an object */
@@ -193,13 +193,13 @@ static json_t *jcvalues(json_t *keys, json_t *values)
 				break;
 	}
 	if (key || !keys->first)
-		return json_error_null(0, "Left of VALUES must be an array of strings");
+		return json_error_null(NULL, "valuesL:Left of VALUES must be an array of strings");
 
 	/* Right argument may be either an array of values, or any array of
 	 * arrays of values.  If all elements are arrays then assume the latter.
 	 */
 	if (values->type != JSON_ARRAY)
-		return json_error_null(0, "Right of VALUES must be array of values, or array of arrays of values");
+		return json_error_null(NULL, "valuesR:Right of VALUES must be array of values, or array of arrays of values");
 	for (value = values->first; value; value = value->next) {
 		if (value->type != JSON_ARRAY) {
 			/* Do the single object version */
@@ -375,15 +375,15 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 
 		/* STEP 3: Loop over the array to generate aggregate data. */
 		for (g = 0, scan = first; scan; scan = scan->next) {
-			if (json_interupt)
-				return json_error_null(1, "Interupted");
+			if (json_interrupt)
+				return json_error_null(NULL, "intr:Interrupted");
 
 			/* Is this element a nested array? */
 			if (scan->type == JSON_ARRAY) {
 				/* Loop over the array elements */
 				for (gscan = scan->first; gscan; gscan = gscan->next) {
-					if (json_interupt)
-						return json_error_null(1, "Interupted");
+					if (json_interrupt)
+						return json_error_null(NULL, "intr:Interrupted");
 					/* Invoke the aggregators on "this" */
 					local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
@@ -419,9 +419,9 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 				/* If interupted then discard results so far
 				 * and return an error null.
 				 */
-				if (json_interupt) {
+				if (json_interrupt) {
 					json_free(result);
-					return json_error_null(1, "Interupted");
+					return json_error_null(NULL, "intr:Interrupted");
 				}
 
 				/* Evaluate with element as "this" */
@@ -444,12 +444,12 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 			/* Prepare for the next group */
 			g++;
 		} else {
-			/* If interupted then discard results so far
+			/* If interrupted then discard results so far
 			 * and return an error null.
 			 */
-			if (json_interupt) {
+			if (json_interrupt) {
 				json_free(result);
-				return json_error_null(1, "Interupted");
+				return json_error_null(NULL, "intr:Interrupted");
 			}
 
 			local = json_context(context, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
@@ -505,8 +505,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	jsonfuncextra_t recon;
 
 	/* If interrupted then simply return an error null */
-	if (json_interupt)
-		return json_error_null(1, "Interupted");
+	if (json_interrupt)
+		return json_error_null(NULL, "intr:Interrupted");
 
 	/* Start with freeleft and freeleft set to NULL.  The USE_LEFT_OPERAND
 	 * and USE_RIGHT_OPERAND macros will set them if appropriate.
@@ -1074,11 +1074,11 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			if (calc->op == JSONOP_MULTIPLY)
 				result = json_from_double(nl * nr);
 			else if (nr == 0.0)
-				result = json_error_null(1, "division by 0");
+				result = json_error_null(NULL, "div0:division by 0");
 			else if (calc->op == JSONOP_DIVIDE)
 				result = json_from_double(nl / nr);
 			else if ((int)nr == 0)
-				result = json_error_null(1, "modulo by 0");
+				result = json_error_null(NULL, "mod0:modulo by 0");
 			else /* JSONOP_MODULO */
 				result = json_from_double((int)nl % (int)nr);
 		}
@@ -1179,7 +1179,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		 */
 		if (left->type == JSON_ARRAY || left->type == JSON_OBJECT
 		 || right->type == JSON_ARRAY || right->type == JSON_OBJECT) {
-			result = json_error_null(0, "Can't compare objects/arrays except via === or !==");
+			result = json_error_null(NULL, "cmpObjArr:Can't compare objects/arrays except via === or !==");
 			break;
 		}
 
@@ -1350,7 +1350,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			if (nl < nr)
 				result = json_bool(0);
 		} else
-			result = json_error_null(1, "BETWEEN only works on strings and numbers");
+			result = json_error_null(NULL, "between:BETWEEN only works on strings and numbers");
 
 		if (freeright) {
 			json_free(freeright);
@@ -1396,7 +1396,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 					}
 				}
 			} else
-				result = json_error_null(1, "BETWEEN only works on strings and numbers");
+				result = json_error_null(NULL, "between:BETWEEN only works on strings and numbers");
 		}
 
 		/* If no result, I guess we're okay */
@@ -1488,7 +1488,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		if (result)
 			result = json_copy(result);
 		else
-			result = json_error_null(1, "There is no default table for SELECT");
+			result = json_error_null(NULL, "noDefTable:There is no default table for SELECT");
 		break;
 
 	  case JSONOP_VALUES:

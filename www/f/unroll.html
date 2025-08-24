@@ -10,7 +10,7 @@
   <body>
     <h1>unroll - Convert nested tables into a single-layer table</h1>
     <dl>
-      <dt>unroll(<var>table</var>, <var>nestList</var>)
+      <dt>unroll( <var>table</var><span class="type">:table</span>, <var>nestList</var><span class="type">:string|string[]</span> ) <span class="type">:table</span>
       <dd>
       JSON data often uses nested data structures to more accurately model the
       real-world phenomena that the data is meant to represent.
@@ -23,7 +23,7 @@
       But if you want to generate a table containing cust#, custname,
       order#, order date, item part#, and quantity, then the nested structure
       becomes a problem.  You need a way to combine those fields into a single row.
-      That's what <tt>unroll</tt> does.
+      That's what <tt>unroll()</tt> does.
       <p>
       You pass it a table (array of objects) and a list of nested table names,
       and it generates a larger array where layer info is removed,

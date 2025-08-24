@@ -11,10 +11,8 @@
     <h1>cache - Configure or access a cache</h1>
     <dl>
       <dt>plugin cache;
-      <br/>cache(<var>cacheName</var>)
-      <br/>cache(<var>cacheName</var>, <var>settings</var>)
-      <br/>cache(<var>cacheName</var>, <var>index</var>)
-      <br/>cache(<var>cacheName</var>, <var>index</var>, <var>data</var>)
+      <br/>cache( <var>cacheName</var><span class="type">:string</span>, <var>settings</var><span class="type">?:object</span> ) <span class="type">:object</span>
+      <br/>cache( <var>cacheName</var><span class="type">:string</span>, <var>index</var><span class="type">:string</span>, <var>data</var><span class="type">?:any</span> ) <span class="type">:any</span>
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=cache">cache</a> plugin.
       You must load the plugin via either -lcache on the shell command line,
@@ -35,7 +33,7 @@
       This will store the new settings for the cache.
       <p>
       Alternatively, if you give an <var>index</var> string argument instead of
-      <var>settings</var>, then it will look for an item in the
+      a <var>settings</var> object, then it will look for an item in the
       <var>cacheName</var> cache associated with the given <var>index</var>
       value.
       If no such item is found, or it has expired, then <tt>null</tt>

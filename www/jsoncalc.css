@@ -144,6 +144,10 @@ dt {
 	font-weight: bold;
 }
 
+span.type {
+	font-weight: normal;
+}
+
 .sidebar a {
 	display: block;
 	margin-left: 1.5em;

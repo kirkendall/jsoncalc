@@ -10,9 +10,9 @@
   <body>
     <h1>getenv - Fetch the value of an environment variable</h1>
     <dl>
-      <dt>getenv(<var>str</var>)
+      <dt>getenv( <var>str</var><span class="type">:string</span> ) <span class="type">:string</span>
       <dd>
-      Fetch the value of an enviroment variable.
+      Fetch the value of an environment variable.
       The <var>str</var> parameter is an expression providing the name of
       variable to fetch.
       The name must be a string, and the value will also always be a string
@@ -46,7 +46,7 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>The value is always a string.  You can use
+        <li>The returned value is always a string.  You can use
             <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
             to convert a string to an integer.
             <div class="example">

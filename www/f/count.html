@@ -10,8 +10,8 @@
   <body>
     <h1>count - Count items</h1>
     <dl>
-      <dt>count(<var>arg</var>)
-      <br/>count(*)
+      <dt>count( <var>arg</var><span class="type">:any</span> ) <span class="type">:number</span>
+      <br/>count(*) <span class="type">:number</span>
       <dd>
       Return a count of instances where <var>arg</var> is not
       <tt>null</tt> or <tt>false</tt>.
@@ -72,8 +72,8 @@
 	<li>SQL's <tt>COUNT()</tt> aggregate function is slightly different though.
 	    It only excludes <tt>NULL</tt>;
 	    <tt>FALSE</tt> values will be included in the tally.
-	    I chose to make JsonCalc be incompatible so you could use
-	    conditional expressions in the <tt>count()</tt> argument.
+	    I chose to make JsonCalc be incompatible in this way so you could
+	    use conditional expressions in the <tt>count()</tt> argument.
 	    <div class="example">
 	      <kbd>[this.scores] @ count(score &lt; 30)</kbd>
 	      <samp>[4]</samp>

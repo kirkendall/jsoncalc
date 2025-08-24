@@ -10,8 +10,8 @@
   <body>
     <h1>stringify - Convert data to a JSON string</h1>
     <dl>
-      <dt>stringify(<var>data</var>)
-      <br/>stringify(JSON, <var>data</var>)
+      <dt>stringify( <var>data</var><span class="type">:any</span> ) <span class="type">:string</span>
+      <br/>JSON.stringify( <var>data</var><span class="type">:any</span> ) <span class="type">:string</span>
       <dd>
       This converts any data to a JSON string.
     </dl>
@@ -42,8 +42,11 @@
       <ul>
 
         <li>This is sensitive to the "digits" and "ascii" attributes of the
-	    default formatting settings.  You can adjust those settings via
-	    the -O<var>format</var> command-line flag. Other attributes of
+	    default formatting settings.
+	    You can adjust those settings via the
+	    -s<var>format</var> command-line flag or
+	    <a target="_PARENT" href="../index.html?cmd=set">set</a> command.
+	    Other attributes of
 	    the default format are ignored, including "pretty".
 
         <li>The main difference between <tt>stringify()</tt> and
@@ -60,6 +63,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../index.html?f=parse">parse()</td><td>Convert a JSON string to data</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=toString">toString()</td><td>Convert any non-string data to a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=set">set</td><td>Command for adjusting settings</td></tr>
       </table>
     </details>
 

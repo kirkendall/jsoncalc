@@ -10,9 +10,7 @@
   <body>
     <h1>period - Transform a period</h1>
     <dl>
-      <dt>period(<var>str</var>, <var>args</var>)
-      <br/>period(<var>obj</var>, <var>args</var>)
-      <br/>period(<var>args</var>)
+      <dt>period( <var>period</var><span class="type">:string|object|number</span>, <var>args</var><span class="type">?:string|number</span>, ... ) <span class="type">:string|object|number</span> 
       <dd>
       This returns a period.
       <p>
@@ -30,11 +28,9 @@
         <tr><th>Argument Value</th><th>What it does</th></tr>
         <tr><td><tt>true</tt></td><td>Return the period as an object.</td></tr>
         <tr><td>"year" or "y",<br/>"month" or "mo",<br/>"day" or "d",<br/>"hour"or "h",<br/>"minute" or "mi",<br/>"second" or "s"</td><td>Return just the given field of the period as a number, or if used with a <var>number</var> argument then change that field in the period.  You may also pluralize the field names by appending "s".</td></tr>
+        <tr><td>"time_t" or "t"</td><td>Same as "second" or "s".</td></tr>
         <tr><td><var>number</var></td><td>With one of the field names, change a field in the period to <var>number</var>. If no field name is given, "second" is assumed.</td></tr>
       </table>
-      <p>
-      When changing time zones, the hour (and possibly other fields) will change
-      so that the returned value represents the same point in time.
     </dl>
     <details open>
       <summary>Examples</summary>

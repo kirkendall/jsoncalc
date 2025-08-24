@@ -10,16 +10,11 @@
   <body>
     <h1>split - Split a string into an array of substrings</h1>
     <dl>
-      <dt>split(<var>str</var>)
-      <br/>split(<var>str</var>, <var>delim</var>)
-      <br/>split(<var>str</var>, <var>delim</var>, <var>limit</var>)
-      <br/>split(<var>str</var>, <var>regex</var>)
-      <br/>split(<var>str</var>, <var>regex</var>, <var>limit</var>)
+      <dt>split( <var>str</var><span class="type">:string</span>, <var>delim</var><span class="type">?:string|regex</span>, <var>limit</var><span class="type">?:number</span> ) <span class="type">:array</span>
       <dd>
       The <tt>split()</tt> function divides <var>str</var> (a string)
-      into an array of substrings,
-      using either <var>delim</var> (a string)
-      or <var>regex</var> (a regular expression) as the delimiter.
+      into an array of substrings, using
+      <var>delim</var> (a string or a regular expression) as the delimiter.
       <p>
       If no delimiter is specified, then <var>str</var> is simply wrapped
       in an array.

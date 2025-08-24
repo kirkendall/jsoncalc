@@ -11,7 +11,7 @@
     <h1>curlPost - Send an HTTP/HTTPS "POST" request</h1>
     <dl>
       <dt>plugin curl;
-      <br/>curlPost(<var>url</var>, <var>content</var>, <var>flag?</var>...)
+      <br/>curlPost( <var>url</var><span class="type">:string</span>, <var>content</var><span class="type">:string|any</span>, <var>flags</var>?<span class="type">:array</span>, <var>flag</var>?<span class="type">:number</span>, ... ) <span class="type">:string|any</span>
       
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
@@ -21,9 +21,39 @@
       This sends an HTTP or HTTPS "POST" request, and returns the response.
       POST requests differ from GET in that any added data is sent as the
       content of the request, instead of being built into the URL.
-      This allows POST requests to sent larger data with a complex structure.
+      This allows POST requests to send larger data with a complex structure.
+      The MIME "Content-type:" is chosen as follows:
+      <ul>
+        <li>You can use the <tt>CURL.reqcontenttype_</tt> flag to explicitly
+            declare the MIME type of the content, usually one of
+            "application/x-www-form-urlencoded", "application/json" or
+            "application/xml".
+            If the content is passed as a string, it'll be sent unmodified.
+            If the content is passed as any other JSON data type, it'll be
+            converted to HTML form data or JSON depending on the declared type.
+            Note that if you're sending XML data, you must convert it
+            to a string yourself and pass that as the data.
+	<li>If you don't explicitly declare the content type,
+	    then <tt>curlPost</tt> will try to guess the type.
+	  <ul>
+	    <li>If the content is a string, it will
+	        guess "application/json" if the string starts with "{" or "[", or
+	        guess "application/xml" if the string starts with "<", or
+	        guess "application/x-www-form-urlencoded" otherwise.
+	    <li>If the content is an array, it will be serialized as JSON
+	        and sent as "application/json".
+            <li>If the content is an object, then the object's members are
+                inspected and if their values are all simple strings or numbers,
+                then it'll be converted to an HTML query string and sent as
+                "application/x-www-form-urlencoded";
+	        Otherwise it'll be serialized as JSON and sent as
+	        "application/json".
+	  </ul>
+	<li>If none of the above resolves the type, or if you request a type that can't represent the given data, then the function fails.
+      </ul>
       <p>
       The <tt>url</tt> and <tt>content</tt> arguments are required.
+      Other parameters (flags) are optional.
       <p>
       Any arguments after that should be a flag as listed in the
       "Other Features" section of the 
@@ -34,6 +64,11 @@
       their names end with a "_" character as a clue that more info is needed.
       For example, the <tt>CURL.bearer_</tt> flag should always be followed
       by the bearer token string.
+      <p>
+      You can pass the flags (and their extra parameter, if any) either as
+      separate parameters to the function, or in an array, or a mixture.
+      Often, shared flags will be collected in an array, and then any
+      request-specific flags are added after that as separate arguments.
     </dl>
     <details open>
       <summary>Examples</summary>

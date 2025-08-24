@@ -10,13 +10,10 @@
   <body>
     <h1>min - Find the smallest value</h1>
     <dl>
-      <dt>min(<var>num</var>)
-      <br/>min(<var>str</var>)
-      <br/>min(<var>num</var>, <var>marker</var>)
-      <br/>min(<var>str</var>, <var>marker</var>)
+      <dt>min( <var>value</var><span class="type">:string|number</span>, <var>marker</var><span class="type">?:any</span>) <span class="type">:string|number|any</span>
       <dd>
-      This returns the smallest value of number <var>num</var> or the alphabetically
-      earliest value string <var>str</var>,
+      This returns the smallest value of number <var>value</var> or the
+      alphabetically earliest value string,
       or the <var>marker</var> associated with it.
       <p>
       When called with one argument, this holds no surprises.
@@ -24,10 +21,10 @@
       for the extreme value of another field.
       The <var>marker</var> can be any value, even an array or object.
       <p>
-      This is an aggregate function, meaning it accumulates the count over a series
-      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
-      You may also pass it an array to have it accumulate results across the elements
-      of that array.
+      This is an aggregate function, meaning it accumulates its result
+      over a series of table elements when used with the @ operator, or
+      a <tt>SELECT</tt> clause.  You may also pass it an array to have it
+      accumulate results across the elements of that array.
     </dl>
     <details open>
       <summary>Examples</summary>

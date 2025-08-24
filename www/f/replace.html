@@ -10,9 +10,8 @@
   <body>
     <h1>replace - Replace the first matching text in a string</h1>
     <dl>
-      <dt>replace(<var>str</var>, <var>searchstr</var>, <var>replacestr</var>)
-      <br/>replace(<var>str</var>, <var>searchstr</var>, <var>replacestr</var>, true)
-      <br/>replace(<var>str</var>, <var>regex</var>, <var>replacepattern</var>)
+      <dt>replace( <var>str</var><span class="type">:string</span>, <var>searchstr</var><span class="type">:string</span>, <var>replacestr</var><span class="type">:string</span>, <var>ignoreCase</var><span class="type">?:true</span> ) <span class="type">:string</span>
+      <br/>replace( <var>str</var><span class="type">:string</span>, <var>regex</var><span class="type">:regex</span>, <var>replacepattern</var><span class="type">:string</span> ) <span class="type">:string</span>
       <dd>
       Return a version of string <var>str</var> in which the first instance of
       substring <var>searchstr</var> has been replaced by <var>replacestr</var>.

@@ -10,7 +10,7 @@
   <body>
     <h1>rowNumber - Generate a series of incrementing numbers</h1>
     <dl>
-      <dt>rowNumber(<var>arg</var>)
+      <dt>rowNumber( <var>arg</var><span class="type">:number|string|null</span> ) <span class="type">:number|string</span> 
       <dd>
       Each call returns the next number in a series.
       <p>
@@ -22,10 +22,12 @@
       If it is "a" or "A" then counting is done via letters.
       Otherwise it returns numbers starting at 1.
       <p>
-      This is an aggregate function, meaning it accumulates the count over a series
-      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      This is an aggregate function, meaning it accumulates the count over a
+      series of table elements when used with the
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
+      <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators.
       Most aggregates also allow you to pass an array to accumulate results over the
-      array, but that isn't useful for <tt>rowNumber()</tt>; you need to use @ or @@.
+      array, but that isn't useful for <tt>rowNumber()</tt>.
     </dl>
     <details open>
       <summary>Examples</summary>

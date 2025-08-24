@@ -10,14 +10,12 @@
   <body>
     <h1>random - Return a random number</h1>
     <dl>
-      <dt>random()
-      <br/>random(<var>num</var>)
-      <br/>Math.random()
-      <br/>Math.random(<var>num</var>)
+      <dt>random( <var>num</var><span class="type">?:number</span> ) <span class="type">:number</span>
+      <br/>Math.random( <var>num</var><span class="type">?:number</span> ) <span class="type">:number</span>
       <dd>
       This returns a random number.
-      Without a <var>num</var> argument, it returns a random number
-      between 0.0 and 1.0 (though never exactly 1.0).
+      Without a <var>num</var> argument, it returns a random floating point
+      number between 0.0 and 1.0 (though never exactly 1.0).
       With <var>num</var>, it returns an integer from 0 to <var>num</var>-1.
       <p>
       For the sake of compatibility with JavaScript, you may also pass the
@@ -49,8 +47,12 @@
             to use <tt>Math.floor(Math.random() * </tt><var>num</var><tt>)</tt>.
             JsonCalc's <tt>random()</tt> function was extended to support a
             <var>num</var> argument because that's a common use pattern but
-            JsonCalc doesn't have a <tt>floor()</tt> function by iself;
-            <tt>floor()</tt> is part of the <tt>-lmath</tt> plugin.
+            JsonCalc doesn't have a
+            <a target="_PARENT" href="../index.html?f=math/floor">floor()</a>
+            function by itself;
+            <a target="_PARENT" href="../index.html?f=math/floor">floor()</a>
+            is part of the
+            <a target="_PARENT" href="../index.html?p=math">-lmath</a> plugin.
 
       </ul>
     </details>

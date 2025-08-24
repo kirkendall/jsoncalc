@@ -10,8 +10,7 @@
   <body>
     <h1>substr - Extract part of a string</h1>
     <dl>
-      <dt>substr(<var>str</var>, <var>start</var>, <var>length</var>)
-      <br/>substr(<var>str</var>, <var>start</var>)
+      <dt>substr( <var>str</var><span class="type">:string</span>, <var>start</var><span class="type">:number</span>, <var>length</var><span class="type">?:number</span>) <span class="type">:string</span>
       <dd>
       This returns part of string <var>str</var>.
       <p>
@@ -37,12 +36,13 @@
       <div class="example">
 	<kbd>substr("portion", 1, 3)</kbd>
 	<samp>"ort"</samp>
+	Since character positions start at 0, position 1 is actually "o", not "p".
       </div>
 
       <div class="example">
 	<kbd>"portion".substr(-2)</kbd>
 	<samp class="result">"on"</samp>
-	This uses JavaScript's "arg.function()" notation.
+	This uses JavaScript-like "arg.function()" notation.
 	The start position is -2, and no length is specified,
 	so it returns the last 2 characters of "portion".
       </div>

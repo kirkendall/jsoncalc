@@ -11,8 +11,7 @@
     <h1>curlGet - Send an HTTP GET request</h1>
     <dl>
       <dt>plugin curl;
-      <br/>curlGet(<var>url</var>)
-      <br/>curlGet(<var>url</var>, <var>query?</var>, <var>flag?</var>, ...)
+      <br/>curlGet( <var>url</var><span class="type">:string</span>, <var>query</var><span class="type">?:string|object|null</span>, <var>flags</var><span class="type">?:array</span>, <var>flag</var><span class="type">?:number</span>, ... ) <span class="type">:string|any</span>
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
       You must load the plugin via either -lcurl on the shell command line,
@@ -22,9 +21,7 @@
       other protocols such as "sftp:" are supported too.
       <p>
       The <tt>url</tt> argument is required.
-      All other arguments are optional, and may be given in any order.
-      As luck would have it, each possible argument has a different data type
-      so <tt>curlGet()</tt> can figure out which argument is what.
+      All other arguments are optional.
       <p>
       If the <tt>url</tt> is followed by a string or object, it is taken to
       be a query to append to the URL.
@@ -34,14 +31,24 @@
       from an HTML form, with URL encoding done automatically.
       For example, <tt>{season:"All Season"}</tt> would append
       "?season=All%20Season" to the URL.
+      If you don't want to send query data but to want to use flags,
+      then you should pass an explicit <tt>null</tt> as the query parameter.
       <p>
-      This may be followed by one or more flag arguments.
+      The remaining parameters are all flags, or arguments associated with
+      flags.
       The flags are numbers, but there's a <tt>CURL</tt> object which
-      defines symbolic names for the numbers, so you'll generally want to use
-      <tt>CURL.bearer_</tt> instead of its number (which happens to be 4).
+      defines symbolic names for the numbers,
+      so you'll generally want to use those.
+      For example, use <tt>CURL.bearer_</tt> instead of its number
+      (which happens to be 4).
       The underscore at the end of the symbolic name is a clue that this
       flag requires an extra parameter, specifically a bearer token in
       this case.
+      <p>
+      You can pass flags( and their extra parameter if they use one) either
+      as separate function parameters, or in an array, or a mixture.
+      In practice, it is often convenient to collect common flags in an
+      array, and then pass request-specific flags as extra parameters.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -61,9 +68,10 @@
 	First we build an object containing data to append to the URL.
 	Then we run <tt>curlGet()</tt> passing it the URL, the data, and some
 	flags.
-	The flags define the user name and password and imply that
-	"Authentication: Basic" should be used, and also to decode the response
-	text, so we get an object instead of a big string.
+	The flags define the user name and password (and imply that
+	"Authentication: Basic" should be used),
+	and also ask for the response text to be decoded
+	so we get an object instead of a big string.
       </div>
 
     </details>

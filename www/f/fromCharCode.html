@@ -10,7 +10,7 @@
   <body>
     <h1>fromCharCode - Convert character codepoints (numbers) to a string</h1>
     <dl>
-      <dt>fromCharCode(<var>arg</var>...)
+      <dt>fromCharCode( <var>arg</var><span class="type">:number|string|array</span>, ... ) <span class="type">:string</span>
       <dd>
       Convert character codepoint numbers to a string.
       <p>
@@ -18,7 +18,7 @@
       All are converted and integrated into the returned string.
       They may be:
       <ul>
-        <li>Numbers.  Each number is converted to a single character.
+        <li>Numbers.  Each number is a Unicode codepoint, converted to a single character.
         <li>Strings.  Strings are just concatenated into the result string.
         <li>Arrays.  Each element may be a number or string, processed as above.
       </ul>

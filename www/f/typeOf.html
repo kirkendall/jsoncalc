@@ -10,9 +10,7 @@
   <body>
     <h1>typeOf - Return a string describing the argument's data type</h1>
     <dl>
-      <dt>typeOf(<var>arg</var>)
-      <br/>typeOf(<var>arg</var>, true)
-      <br/>typeOf(<var>arg</var>, <var>typestr</var>)
+      <dt>typeOf( <var>arg</var><span class="type">:any</span>, <var>mixType</var><span class="type">:string|boolean</span> ) <span class="type">:string</span>
       <dd>
       This returns a string describing the data type of its argument.
       <p>
@@ -152,6 +150,10 @@
 	while <strong>JsonCalc</strong> uses an uppercase "O"
 	for the sake of consistency
 	(though <strong>JsonCalc</strong> is case-insensitive so all lowercase works too).
+
+	<li>JavaScript's <tt>typeof</tt> is actually a prefix unary operator,
+	not a function, so you don't need parentheses there.
+	JsonCalc's <tt>typeof()</tt> is a function and does need parentheses.
 
       </ul>
     </details>

@@ -10,13 +10,19 @@
   <body>
     <h1>toString - Convert any value to a string</h1>
     <dl>
-      <dt>toString(<var>arg</var>)
+      <dt>toString( <var>arg</var><span class="type">:any</span> ) <span class="type">:string</span>
       <dd>
       Returns a string version of <var>arg</var>.
       <p>
       If <var>arg</var> is already a string, it is returned unchanged.
-      Conversion of a number, or the symbols <tt>true</tt>, <tt>false</tt> or <tt>null</tt> is also trivial.
-      For arrays and objects, it converts it to JSON text.
+      In particular, quotes will <em>not</em> be added, and no backslash
+      escapes will be used.
+      <p>
+      Conversion of anything else is converted as JSON text,
+      similar to the <a target="_PARENT" href="../index.html?f=stringify">stringify()</a>
+      function.
+      For numbers, booleans, and <tt>null</tt> this is trivial, but it can also
+      handle objects and arrays.
     </dl>
     <details open>
       <summary>Examples</summary>

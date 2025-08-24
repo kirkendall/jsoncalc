@@ -11,8 +11,7 @@
     <h1>curlOther - Send an HTTP request other than GET or POST</h1>
     <dl>
       <dt>plugin curl;
-      <br/>curlOther(<var>verb</var>, <var>url</var>)
-      <br/>curlOther(<var>url</var>, <var>query?</var>, <var>flag?</var>, ...)
+      <br/>curlOther( <var>verb</var><span class="type">:string</span>, <var>url</var><span class="type">:string</span>, <var>query</var><span class="type">?:string|object</span>, <var>flags</var><span class="type">?:array</span>, <var>flag</var><span class="type">?:number</span>, ... ) <span class="type">:string|any</span>
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
       You must load the plugin via either -lcurl on the shell command line,
@@ -43,10 +42,18 @@
       This may be followed by one or more flag arguments.
       The flags are numbers, but there's a <tt>CURL</tt> object which
       defines symbolic names for the numbers, so you'll generally want to use
-      <tt>CURL.bearer_</tt> instead of its number (which happens to be 4).
+      those.
+      For example, use <tt>CURL.bearer_</tt> instead of its number
+      (which happens to be 4).
       The underscore at the end of the symbolic name is a clue that this
       flag requires an extra parameter, specifically a bearer token in
       this case.
+      <p>
+      You can list the flags and their parameters as separate function
+      parameters, or you combine them into an array and pass the array, or
+      a mixture of the two.
+      It is often convenient to construct an array of common parameters,
+      and then pass extensions as individual parameters.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -83,7 +90,7 @@
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a></td><td>Send an HTTP/HTTPS "POST" request</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</a></td><td>Send an HTTP/HTTPS "GET" request</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/encodeURIComponent">encodeURIComponent()</a></td><td>Make a string safe to pass as part of a URL</td></tr>
-        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME64</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME Base64</td></tr>
       </table>
     </details>
 

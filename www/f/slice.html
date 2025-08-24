@@ -10,22 +10,19 @@
   <body>
     <h1>slice - Return part of an array or string</h1>
     <dl>
-      <dt>slice(<var>arr</var>, <var>start</var>)
-      <br/>slice(<var>arr</var>, <var>start</var>, <var>end</var>)
-      <br/>slice(<var>str</var>, <var>start</var>)
-      <br/>slice(<var>str</var>, <var>start</var>, <var>end</var>)
+      <dt>slice( <var>subject</var><span class="type">:array|string</span>, <var>start</var><span class="type">:number</span>, <var>end</var><span class="type">:number</span> ) <span class="type">:array|string</span>
       <dd>
       The <tt>slice()</tt> function returns a new array filled with a portion of
-      the given <var>arr</var> array, or a substring from string <var>str</var>.
+      the given <var>subject</var> array, or a substring from a string.
       <p>
       If the <var>start</var> argument is 0 or more, then it indicates how many
-      elements to skip from the start of <var>arr</var>, or characters from <var>str</var>.
-      If <var>start</var> is negative, then it counts from the end of <var>arr</var> or <var>str</var>.
+      elements or characters to skip from the <var>subject</var>.
+      If <var>start</var> is negative, then it counts from the end of <var>subject</var>.
       <p>
-      If <var>end</var> is omitted, then the slice extends to the end of <var>arr</var> or <var>str</var>.
-      Otherwise, if 0 or positive then it indicates where the slice ends in <var>arr</var> or <var>str</var>;
-      i.e., it is the index of the first element of <var>arr</var> to omit from the slice, or the first character of <var>str</var> to omit.
-      If it is negative, then it counts from the end of <var>arr</var> or <var>str</var> instead of the beginning.
+      If <var>end</var> is omitted, then the slice extends to the end of <var>subject</var>.
+      Otherwise, if 0 or positive then it indicates where the slice ends in <var>subject</var>;
+      i.e., it is the index of the first element of <var>subject</var> to omit from the slice, or the first character to omit.
+      If it is negative, then it counts from the end of <var>subject</var> instead of the beginning.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -51,6 +48,25 @@
         Just a quick example to demonstrate that it works on strings.
       </div>
 
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>If the end point is before the start point, then an empty array
+            or string is returned.
+
+        <li>For strings, the main difference between <tt>slice</tt> and
+            <a target="_PARENT" href="../index.html?f=substr">substr()</a>
+            is the way they indicate the end of the returned substring.
+            <tt>slice()</tt> is passed the position to end at, while
+            <tt>substr()</tt> is passed the desired length.
+
+	<li>Why do we have JavaScript's <tt>slice()</tt> function but not
+	    <tt>splice()</tt>?  It's because JsonCalc's expressions don't
+	    have side-effects.  <tt>splice()</tt> is all side-effect.
+
+      </ul>
     </details>
 
     <details>

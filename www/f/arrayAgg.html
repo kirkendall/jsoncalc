@@ -10,12 +10,12 @@
   <body>
     <h1>arrayAgg - Build an array one element at a time</h1>
     <dl>
-      <dt>arrayAgg(<var>arg</var>)
+      <dt>arrayAgg( <var>arg</var><span class="type">:any</span> ) <span class="type">:array</span>
       <dd>
       This accumulates <var>arg</var> values in an array, and returns the array.
       If <var>arg</var> is <tt>null</tt> it will be skipped.
       <p>
-      This is an aggregate function, meaning it accumulates the count over a series
+      This is an aggregate function, meaning it accumulates its result over a series
       of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
       You may also pass it an array to have it accumulate results across the elements
       of that array.

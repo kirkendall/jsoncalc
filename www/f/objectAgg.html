@@ -10,12 +10,16 @@
   <body>
     <h1>objectAgg - Collect key/value pairs into a single new object</h1>
     <dl>
-      <dt>objectAgg(<var>key</var>, <var>value</var>)
+      <dt>objectAgg( <var>key</var><span class="type">:string</span>, <var>value</var><span class="type">:any</span> ) <span class="type">:object</span>
       <dd>
       This accumulates key/value pairs into a new object, which it then returns.
       <p>
-      This is an aggregate function, meaning it accumulates data over a series
-      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      This is an aggregate function, meaning it accumulates its result over a
+      series of table elements when used with the
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
+      <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators.
+      You may also pass it an array to have it accumulate results across the
+      elements of that array, but it is rather quirky as explained in the first example below.
     </dl>
     <details open>
       <summary>Examples</summary>

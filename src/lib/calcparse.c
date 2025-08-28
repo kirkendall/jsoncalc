@@ -499,6 +499,11 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 	while (isspace(*str))
 		str++;
 
+	/* Start with some common defaults */
+	token->op = JSONOP_INVALID;
+	token->full = str;
+	token->len = 1;
+
 	/* If no tokens, return NULL */
 	if (!*str) {
 		if (json_debug_flags.calc)
@@ -506,15 +511,10 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 		return NULL;
 	}
 
-	/* Start with some common defaults */
-	token->op = JSONOP_INVALID;
-	token->full = str;
-	token->len = 1;
-
 	/* Numbers */
 	if (isdigit(*str) || (*str == '.' && isdigit(str[1]))) {
 		token->op = JSONOP_NUMBER;
-		if (*str == '0' && strchr("0123456789XxOoBb", str[1])) {
+		if (*str == '0' && str[1] && strchr("0123456789XxOoBb", str[1])) {
 			int	radix;
 			token->full = str;
 			if (str[1] == 'x' || str[1] == 'X')
@@ -527,6 +527,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 				radix = 8;
 			(void)strtol(str, &end, radix);
 			token->len = end - token->full;
+			str = end;
 		} else {
 			while (isdigit(token->full[token->len]))
 				token->len++;

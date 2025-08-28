@@ -170,10 +170,22 @@
       Once we've converted the array of row arrays to a table
       (array of objects), we first output it in the usual "grid" format,
       and then select "csv" and CSV's "headless" and output it that way.
-      <p>
+    </div>
+
+    <div class="example">
+      <kbd>function addHead(row:array[]):table { return (1..(row[0].length) @ rowNumber("A")) values row; }</kbd>
+      <kbd>addHead(rgbn)</kbd>
+      <samp>
+        <table>
+	  <tr><th>A</th><th>B</th><th>C</th><th>D</th></tr>
+	  <tr><td>0</td><td>0</td><td>0</td><td>black</td></tr>
+	  <tr><td>255</td><td>255</td><td>255</td><td>white</td></tr>
+	  <tr><td>255</td><td>255</td><td>0</td><td>yellow</td></tr>
+	</table>
+      </samp>
       If you don't really care about the assigned names, then you can
       generate them automatically via an expression such as
-      <tt>1..row[0].length @ rowNumber("A")</tt> wh
+      <tt>1..(row[0].length) @ rowNumber("A")</tt>.
     </div>
     <p>
     The above example is only relevant if you're working with headless CSV

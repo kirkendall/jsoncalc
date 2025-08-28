@@ -42,16 +42,13 @@
 
       <div class="example">
 	<kbd>1.2e2</kbd>
-	<samp>1.2e2</samp>
-	<kbd>1.2e2 + 0</kbd>
 	<samp>120</samp>
-        The first example shows that numbers aren't converted to/from binary
-        unless they have to be.
-        In the second example, it has to be converted so we can perform math
-        on it, and then convert it back for output.
-        Both examples return the same number, but the first leaves the number
-        formatted as it was found, while the second one formats it the way
-        JsonCalc wants.
+        Numbers in scripts, or entered interactively at JsonCalc's prompt,
+        are converted to binary.
+        When output, they're converted back to text.
+        If the number <tt>1.2e2</tt> was encountered in a JSON data file,
+        it would <em>not</em> be converted to binary, and would be output
+        exactly as it was given &mdash; <tt>1.2e2</tt> in this case.
       </div>
 
       <div class="example">

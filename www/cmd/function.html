@@ -52,7 +52,7 @@
 
       <div class="example">
 	<kbd>function backward(arr:array): array { var out=[]; for (arr) out = concat([this], out); return out; }</kbd>
-	<kbd>backward(1..5)</kbd>
+	<kbd>backward(1...5)</kbd>
 	<samp>[5,4,3,2,1]</samp>
         This defines a function that reverses the elements of an array.
         It's pretty basic &mdash; it just uses a
@@ -99,7 +99,7 @@
         we can use it in the actual recursive definition.
         <p>
         Again, please forgive the ugly formatting.
-        And yes, a simple <tt>product(1..n)</tt> computes the factorial in
+        And yes, a simple <tt>product(1...n)</tt> computes the factorial in
         a cleaner, more intuitive way.
         This is only an example.
       </div>

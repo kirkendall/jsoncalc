@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ellipsis operator</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Ellipsis operator">
+    <meta name="keywords" content="number, array, jsoncalc, operator reference, ...">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>Ellipsis operator</h1>
+    <table class="opList">
+      <tr><td class="left">number</td><td class="op">...</td><td class="right">number</td><td class="opdesc">Return an array of integers</td></tr>
+    </table>
+    The <tt>...</tt> operator returns an array of integers
+    between the two numbers.
+    The endpoints are included.
+    If the left operand is larger than the right operand, then an empty
+    array is returned.
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>1...10</kbd>
+	<samp>[1,2,3,4,5,6,7,8,9,10]</samp>
+	An array of integers from 1 to 10 is returned.  Pretty simple.
+      </div>
+
+      <div class="example">
+	<kbd>10...1</kbd>
+	<samp>[]</samp>
+	If the left operand is greater than the right,
+	then an empty array is returned.
+      </div>
+
+      <div class="example">
+	<kbd>for (i = 1 ... 5) 7 - i</kbd>
+	<samp>6<br/>5<br/>4<br/>3<br/>2</samp>
+	The <tt>...</tt> operator is often used with the <a target="_PARENT" href="../index.html?cmd=for">for</a> command.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>The <tt>...</tt> operator has a very low precedence, so you
+	    rarely need to put parentheses around either argument expression.
+	    For example, the expression <tt>0...arr.length-1</tt> will return
+	    an array of subscript values for array <var>arr</var>.
+	    This works even if <var>arr</var> is empty.
+
+  </body>
+</html>

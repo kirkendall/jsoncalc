@@ -30,16 +30,16 @@
       </div>
 
       <div class="example">
-	<kbd>product(2..7)</kbd>
+	<kbd>product(2...7)</kbd>
 	<samp>5040</samp>
-	The <tt>2..7</tt> expression returns an array of integers connecting
+	The <tt>2...7</tt> expression returns an array of integers connecting
 	the two endpoints.
 	Multiplying those together gives us 5040, which happens to be 7 factorial.
-	In general, <tt>product(2..<var>n</var>)</tt> will return <var>n</var> factorial.
+	In general, <tt>product(2...<var>n</var>)</tt> will return <var>n</var> factorial.
       </div>
 
       <div class="example">
-	<kbd>0..10 @ {n:this, "n!":product(2..this)}</kbd>
+	<kbd>0...10 @ {n:this, "n!":product(2...this)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>n</th><th>n!</th></tr>
@@ -57,7 +57,7 @@
 	  </table>
 	</samp>
 	A nice factorial table for you.
-	The <tt>2..this</tt> expression returns an empty array when this is 0 or 1,
+	The <tt>2...this</tt> expression returns an empty array when this is 0 or 1,
 	so <tt>product()</tt> returns 1 in those cases.
 	<p>
 	Usually an aggregate function such as <tt>product()</tt> would be applied to

@@ -85,7 +85,7 @@
       functions.
     </div>
     <div class="example">
-      <kbd>1..10 @ $partno[this]</kbd>
+      <kbd>1...10 @ $partno[this]</kbd>
       <samp>["10017","12565-B"]</samp>
       This collects <tt>$partno1</tt> through <tt>$partno10</tt> into an array.
       Any missing $partno<var>N</var> variables will be omitted from the array,
@@ -127,7 +127,7 @@
     {
        custno: $custno,
        po: $pono,
-       detail: (1..10 @ $partno[this] ? {partno:$partno[this], desc:$desc[this], qty:parseInt($qty[this]))
+       detail: (1...10 @ $partno[this] ? {partno:$partno[this], desc:$desc[this], qty:parseInt($qty[this]))
      }"
     </pre>
     When run, this should produce output similar to the following:

@@ -96,8 +96,9 @@ static struct {
 	{"DISTINCT",	"DIS",	2,	1,	JCOP_OTHER},
 	{"DIVIDE",	"/",	220,	0,	JCOP_INFIX},
 	{"DOT",		".",	270,	0,	JCOP_INFIX},
+	{"DOTDOT",	"..",	270,	0,	JCOP_INFIX}, /*!!!*/
 	{"EACH",	"@@",	115,	0,	JCOP_INFIX}, /*!!!*/
-	{"ELIPSIS",	"..",	270,	0,	JCOP_INFIX}, /*!!!*/
+	{"ELLIPSIS",	"...",	127,	0,	JCOP_INFIX},
 	{"ENDARRAY",	"]",	0,	1,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	1,	JCOP_OTHER},
 	{"ENDPAREN",	")",	0,	1,	JCOP_OTHER},
@@ -242,7 +243,8 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_RJOIN:
 	  case JSONOP_SUBSCRIPT:
 	  case JSONOP_DOT:
-	  case JSONOP_ELIPSIS:
+	  case JSONOP_DOTDOT:
+	  case JSONOP_ELLIPSIS:
 	  case JSONOP_COALESCE:
 	  case JSONOP_QUESTION:
 	  case JSONOP_COLON:
@@ -940,7 +942,8 @@ void json_calc_free(jsoncalc_t *jc)
 		break;
 
 	  case JSONOP_DOT:
-	  case JSONOP_ELIPSIS:
+	  case JSONOP_DOTDOT:
+	  case JSONOP_ELLIPSIS:
 	  case JSONOP_ARRAY:
 	  case JSONOP_OBJECT:
 	  case JSONOP_SUBSCRIPT:
@@ -1142,7 +1145,8 @@ static int jcisag(jsoncalc_t *jc)
 		return 0;
 
 	  case JSONOP_DOT:
-	  case JSONOP_ELIPSIS:
+	  case JSONOP_DOTDOT:
+	  case JSONOP_ELLIPSIS:
 	  case JSONOP_ARRAY:
 	  case JSONOP_OBJECT:
 	  case JSONOP_SUBSCRIPT:
@@ -2233,7 +2237,8 @@ static int parsecolon(jsoncalc_t *jc)
 		break;
 
 	  case JSONOP_DOT:
-	  case JSONOP_ELIPSIS:
+	  case JSONOP_DOTDOT:
+	  case JSONOP_ELLIPSIS:
 	  case JSONOP_ARRAY:
 	  case JSONOP_COALESCE:
 	  case JSONOP_MAYBEMEMBER:
@@ -2338,7 +2343,8 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 		break;
 
 	  case JSONOP_DOT:
-	  case JSONOP_ELIPSIS:
+	  case JSONOP_DOTDOT:
+	  case JSONOP_ELLIPSIS:
 	  case JSONOP_ARRAY:
 	  case JSONOP_OBJECT:
 	  case JSONOP_SUBSCRIPT:

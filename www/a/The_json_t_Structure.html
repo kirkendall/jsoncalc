@@ -181,7 +181,7 @@
     <p>
     Deferred arrays aren't used only for large arrays from JSON documents.
     They can be produced by other sources.  For example, the expression
-    <tt>1..1000000</tt> does not immediately allocate a million <tt>json_t</tt>
+    <tt>1...1000000</tt> does not immediately allocate a million <tt>json_t</tt>
     structures to store the array; it returns a deferred array that can step
     through the whole range, one integer at a time.
 

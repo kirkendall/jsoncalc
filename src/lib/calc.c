@@ -817,23 +817,21 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		}
 		break;
 
-	  case JSONOP_ELIPSIS:
-		/* The elipsis is used two ways: 0..5 returns an array of
-		 * integers from 0 to 5, [0,1,2,3,4,5].  object..name does
-		 * a "deep search" for name within object.
-		 */
+	  case JSONOP_DOTDOT:
 		USE_LEFT_OPERAND(calc);
-		if (left->type == JSON_OBJECT && calc->RIGHT->op == JSONOP_NAME) {
+		if (left->type != JSON_OBJECT && calc->RIGHT->op == JSONOP_NAME)
 			result = json_copy(json_by_deep_key(left, calc->RIGHT->u.text));
-		} else {
-			USE_RIGHT_OPERAND(calc);
-			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
-				result = json_array();
-				il = json_int(left);
-				ir = json_int(right);
-				for (; il <= ir; il++) {
-					json_append(result, json_from_int(il));
-				}
+		break;
+
+	  case JSONOP_ELLIPSIS:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
+			result = json_array();
+			il = json_int(left);
+			ir = json_int(right);
+			for (; il <= ir; il++) {
+				json_append(result, json_from_int(il));
 			}
 		}
 		break;

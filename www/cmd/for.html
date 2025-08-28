@@ -33,13 +33,13 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>for (var i = 1..5) { i * 2; }</kbd>
+	<kbd>for (var i = 1...5) { i * 2; }</kbd>
 	<samp>2<br/>
 	4<br/>
 	6<br/>
 	8<br/>
 	10</samp>
-        The expression "<tt>1..5</tt>" returns the array <tt>[1,2,3,4,5]</tt>
+        The expression "<tt>1...5</tt>" returns the array <tt>[1,2,3,4,5]</tt>
         The <tt>for</tt> command loops over that array, setting <tt>i</tt> to
         each element's value while it executes the body of the loop.
         The body just outputs <tt>i*2</tt>.
@@ -52,17 +52,17 @@
       <ul>
 
         <li>If you want to loop over a range of integers, consider using
-	    the <a target="_PARENT" href="../index.html?op=dot">i..j</a>
+	    the <a target="_PARENT" href="../index.html?op=dot">i...j</a>
 	    operator.
 	    <div class="example">
-	      <kbd>for (var i = 1 .. 5) i</kbd>
+	      <kbd>for (var i = 1 ... 5) i</kbd>
 	      <samp>1
 	        <br/>2
 	        <br/>3
 	        <br/>4
 	        <br/>5
 	      </samp>
-	      The <tt>1..5</tt> expression returns the array
+	      The <tt>1...5</tt> expression returns the array
 	      <tt>[1,2,3,4,5]</tt>, so the statement loops over that.
 	    </div>
 
@@ -84,7 +84,7 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?cmd=while">while()...</a></td><td>Loop until a condition becomes false</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=dot">i..j</a></td><td>Return an array of integers over a given range</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=dot">i...j</a></td><td>Return an array of integers over a given range</td></tr>
       </table>
     </details>
 

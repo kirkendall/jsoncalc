@@ -12,19 +12,13 @@
     <table class="opList">
       <tr><td class="left">object</td><td class="op">.</td><td class="right">key</td><td class="opdesc">Access a member of an object by key (name)</td></tr>
       <tr><td class="left">object</td><td class="op">..</td><td class="right">key</td><td class="opdesc">Access a deeply nested member</td></tr>
-      <tr><td class="left">number</td><td class="op">..</td><td class="right">number</td><td class="opdesc">Return an array of integers</td></tr>
     </table>
     The <tt>.</tt> operator lets you access a member of an object by its key (name).
     <p>
-    The <tt>..</tt> operator does two entirely different things.
-    When used with an object and a key as its arguments, then it does "deep"
-    lookup, meaning if the object doesn't have a member with the given key but
-    does contain members whose values are objects, then it will search for the key
-    in those objects too.
-    <p>
-    But when the arguments are numbers, <tt>..</tt> returns an array of integers
-    between the two numbers.
-    The endpoints are included.
+    The <tt>..</tt> operator is similar but it does "deep" lookup,
+    meaning if the object doesn't have a member with the given key but
+    does contain members whose values are objects, then it will search for the
+    key in those objects too.
     <details open>
       <summary>Examples</summary>
 
@@ -45,24 +39,14 @@
         Then we get the same result using the <tt>..</tt> operator once.
       </div>
 
-      <div class="example">
-	<kbd>1..10</kbd>
-	<samp>[1,2,3,4,5,6,7,8,9,10]</samp>
-	Using <tt>..</tt> with numbers as arguments causes it to generate an array
-	of integers.
-      </div>
-
     </details>
 
     <details>
       <summary>Notes</summary>
       <ul>
-        <li>The <var>object</var><tt>..</tt><var>key</var> operator is only smart
-            about descending into nested objects.
+        <li>The <var>object</var><tt>..</tt><var>key</var> operator is only
+            smart about descending into nested objects.
             It is not smart enough to scan arrays for a match.
-	<li>For the <var>number</var><tt>..</tt><var>number</var> operator,
-	    if the left number is larger than the right number,
-	    then an empty array is returned.
       </ul>
     </details>
 

@@ -283,7 +283,7 @@ static json_t *stdcurrent(char *key)
  */
 jsoncontext_t *json_context_std(json_t *args)
 {
-	json_t	*base, *global, *vars, *consts, *thisdata, *thisvalue;
+	json_t	*base, *global, *vars, *consts, *thisdata;
 	jsoncontext_t *context = NULL;
 	contexthook_t *hook;
 	int	assignable;

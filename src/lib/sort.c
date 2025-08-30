@@ -59,7 +59,7 @@ static int cmpdescending(const void *v1, const void *v2)
 /* This helper function does the real sorting, after parameters have been
  * checked.
  */
-static void jcsort(json_t *array, json_t *orderby)
+static void jcsort(json_t *array, json_t *orderby, int grouping)
 {
 	json_t	*elem, *value;
 	int	descending;
@@ -77,9 +77,19 @@ static void jcsort(json_t *array, json_t *orderby)
 	if (!orderby)
 		return;
 
-	/* Empty arrays and single-element arrays are inherently sorted */
-	if (!array->first || !array->first->next)
+	/* Empty arrays and single-element arrays are inherently sorted. */
+	if (!array->first || !array->first->next) {
+		/* If we're grouping, then we need to convert a single-element
+		 * array into a nested subarray though, making it a group of 1.
+		 */
+		if (grouping && array->first) {
+			elem = array->first;
+			array->first = json_array();
+			json_append(array->first, elem);
+			JSON_END_POINTER(array) = array->first;
+		}
 		return;
+	}
 
 	/* Start with an empty bucket array */
 	nbuckets = used = 0;
@@ -172,15 +182,33 @@ static void jcsort(json_t *array, json_t *orderby)
 	/* If there are more sort keys, then recursively sort each bucket */
 	if (orderby->next) {
 		for (b = 0; b < used; b++)
-			jcsort(&bucket[b].arraybuf, orderby->next);
+			jcsort(&bucket[b].arraybuf, orderby->next, grouping);
 	}
 
-	/* Merge the buckets back into the array again */
-	array->first = bucket[0].arraybuf.first;
-	JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[0].arraybuf);
-	for (b = 1; b < used; b++) {
-		JSON_END_POINTER(array)->next = bucket[b].arraybuf.first;
-		JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[b].arraybuf);
+	/* Merge the buckets back into the array again.  For a non-grouping
+	 * sort, we append all items into a single array.  For grouping, we
+	 * add the groups to the result array instead of their elements, but
+	 * that's slightly tricky if there were more keys to sort/group by.
+	 */
+	if (!grouping || orderby->next) {
+		/* normal non-grouping sort */
+		array->first = bucket[0].arraybuf.first;
+		JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[0].arraybuf);
+		for (b = 1; b < used; b++) {
+			JSON_END_POINTER(array)->next = bucket[b].arraybuf.first;
+			JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[b].arraybuf);
+		}
+	} else {
+		/* grouping, and this is the last sort/group key */
+		JSON_END_POINTER(array) = NULL;
+		for (b = 0; b < used; b++) {
+			elem = json_array();
+			elem->first = bucket[b].arraybuf.first;
+			for (value = elem->first; value->next; value = value->next) {
+			}
+			JSON_END_POINTER(elem) = value;
+			json_append(array, elem);
+		}
 	}
 
 	/* Clean up */
@@ -191,8 +219,10 @@ static void jcsort(json_t *array, json_t *orderby)
 /* Sort a JSON table (array of objects) in place, given a list of fields.
  * The orderby list should be an array of strings; you may also include
  * a boolean "true" before any field name to make it use descending sort.
+ * The "grouping" parameter should be 0 for a normal sort, or 1 to group
+ * items via nested arrays.
  */
-void json_sort(json_t *array, json_t *orderby)
+void json_sort(json_t *array, json_t *orderby, int grouping)
 {
 	json_t	*check;
 	int	anykeys;
@@ -225,10 +255,6 @@ void json_sort(json_t *array, json_t *orderby)
 		return;
 	}
 
-	/* An empty array is always sorted.  So is a 1-element array. */
-	if (!array->first || !array->first->next)
-		return;
-
 	/* Do the real sort */
-	jcsort(array, orderby);
+	jcsort(array, orderby, grouping);
 }

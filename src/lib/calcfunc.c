@@ -884,7 +884,7 @@ json_t *jfn_orderBy(json_t *args, void *agdata)
 
 	/* Sort a copy of the table */
 	result = json_copy(args->first);
-	json_sort(result, order);
+	json_sort(result, order, 0);
 	return result;
 }
 
@@ -900,10 +900,11 @@ json_t *jfn_groupBy(json_t *args, void *agdata)
 	 || !args->first->next
 	 || (args->first->next->type != JSON_ARRAY && args->first->next->type != JSON_STRING))
 		return NULL;
-	result = json_array_group_by(args->first, args->first->next);
+	result = json_copy(args->first);
+	json_sort(result, args->first->next, 1);
 
-	/* If a third arg is given and true, then append an empty object to
-	 * trigger a totals line when the @ ot @@ operator is used.
+	/* If a third arg is given, then append an empty object to trigger a
+	 * totals line when the @ ot @@ operator is used.
 	 */
 	if (result
 	 && result->type == JSON_ARRAY

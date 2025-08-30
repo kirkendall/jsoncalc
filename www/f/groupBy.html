@@ -30,22 +30,21 @@
       For the sake of convenience, if you just want to group by a single column,
       you can just pass its name as a string, instead of an array of strings.
       <p>
-      This doesn't sort the items;
-      it is assumed that all items to be grouped are already in consecutive rows.
-      If that assumption isn't true, then you should sort then via
-      <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a> before calling <tt>groupBy()</tt>.
-      You can use the same <var>columns</var> parameter for both.
-      (<tt>groupBy()</tt> only compares for equality so it doesn't need <tt>true</tt>
-      to denote descending sorts, but it is smart enough to skip over <tt>true</tt>
-      if it appears in the <var>columns</var> argument.)
+      In order to form the groups, this function sorts the table.
+      The main difference between <tt>groupBy()</tt> and
+      <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a>
+      is that <tt>groupBy()</tt> forms subarrays that contain rows that share
+      the same values for the named <var>columns</var>, while
+      <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a>
+      keeps them separate.
       <p>
-      If you pass a <var>totals</var> parameter, then <tt>groupBy()</tt> will append an
-      extra object to the end of the response array, containing a single member with
-      first name from the <var>columns</var> parameter as the member's key (name), and
-      the <var>totals</var> value as its value.
-      Due to the way @ and @@ interact with aggregates, this causes any columns that
-      use aggregate functions to apply those functions across all rows instead of
-      splitting by the group.
+      If you pass a <var>totals</var> parameter, then <tt>groupBy()</tt> will
+      append an extra object to the end of the response array, containing a
+      single member with first name from the <var>columns</var> parameter as
+      the member's key (name), and the <var>totals</var> value as its value.
+      Due to the way @ and @@ interact with aggregates, this causes any columns
+      that use aggregate functions to apply those functions across all rows
+      instead of splitting by the group.
       This makes it easy to get combined totals.
     </dl>
     <details open>
@@ -61,14 +60,13 @@
 	    <tr><td>3</td><td>31.6666666667</td></tr>
 	  </table>
 	</samp>
-	The "test.scores" table is already sorted by "run" so we don't need to
-	explicitly sort it.
+	Group "test.scores" table rows by "run".
 	The @ operator outputs one record per group, in this case containing the
 	run number and the average score within that run.
       </div>
 
       <div class="example">
-	<kbd>test.scores.orderBy("name").groupBy("name","OVERALL")@{name,avg(score)}</kbd>
+	<kbd>test.scores.groupBy("name","OVERALL")@{name,avg(score)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>name</th><th>avg(score)</th></tr>
@@ -78,8 +76,9 @@
 	    <tr><td>OVERALL</td><td>27.2222222222</td></tr>
 	  </table>
 	</samp>
-	This time we're fetching the averages by name, so we need to sort and group
-	by name.
+	This time we're grouping by "name" instead of "run".
+	Although "test.scores" is sorted by "run", the <tt>groupBy()</tt>
+	function will sort it by "name" for the sake of grouping.
 	Also, we added "OVERALL" as a <var>totals</var> label,
 	so we got a row for the overall average too.
       </div>
@@ -109,10 +108,19 @@
       <ul>
 
         <li>The result of <tt>groupBy()</tt> is no longer a table.
-        Instead, it is an array of tables,
-        possibly with an oddball "totals" object added in.
-        The @ and @@ operators work with this, and will reassemble the results as a
-        table again.
+            Instead, it is an array of tables, possibly with an oddball
+            "totals" object added in.
+            The @ and @@ operators work with this, and will reassemble the
+            results as a table again.
+
+        <li>If you're using the
+            <a target="_PARENT" href="../index.html?f=count">count()</a>
+            aggregate function together with a "totals" line, then for the
+            argument to <tt>count()</tt> you should use the name of a
+            column (member) that will be null for the totals row but not
+            for any actual data rows.
+            If you just use <tt>count(*)</tt> then the total row will be
+            included in the count.
 
       </ul>
     </details>

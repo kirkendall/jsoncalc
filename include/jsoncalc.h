@@ -161,7 +161,7 @@ extern char *json_append(json_t *container, json_t *more);
 extern size_t json_sizeof(json_t *json);
 extern char *json_typeof(json_t *json, int extended);
 extern char *json_mix_types(char *oldtype, char *newtype);
-extern void json_sort(json_t *array, json_t *orderby);
+extern void json_sort(json_t *array, json_t *orderby, int grouping);
 extern json_t *json_copy_filter(json_t *json, int (*filter)(json_t *));
 extern json_t *json_copy(json_t *json);
 extern json_t *json_array_flat(json_t *array, int depth);

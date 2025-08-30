@@ -25,7 +25,7 @@ typedef struct contexthook_s {
 
 static contexthook_t *extralayers = NULL;
 
-/* Add a function which may add 0 ot more layers to the standard context.
+/* Add a function which may add 0 or more layers to the standard context.
  * This is mostly intended to allow plugs to define symbols that should
  * be globally accessible to jsoncalc.  The jsoncalc program itself may
  * use it for adding the autoload directory.
@@ -294,13 +294,12 @@ jsoncontext_t *json_context_std(json_t *args)
 	context = json_context(context, json_system, JSON_CONTEXT_CONST|JSON_CONTEXT_NOFREE);
 
 	/* Generate the data for the base context.  This is an object of the
-	 * form {global:{vars:{},consts:{},args{},files:[],data:null}
+	 * form {global:{vars:{},consts:{},args:{},files:[],data:null}
 	 */
 	base = json_object();
 	global = json_object();
 	vars = json_object();
 	consts = json_object();
-	json_append(consts, json_key("JSON", json_object() ));
 	json_append(global, json_key("vars", vars));
 	json_append(global, json_key("consts", consts));
 	if (args)
@@ -317,6 +316,7 @@ jsoncontext_t *json_context_std(json_t *args)
 	 */
 	context->autoload = stdcurrent;
 	context->flags |= JSON_CONTEXT_NOCACHE;
+	json_append(base, json_key("now", json_null()));
 	json_append(base, json_key("current_date", json_null()));
 	json_append(base, json_key("current_time", json_null()));
 	json_append(base, json_key("current_datetime", json_null()));
@@ -327,19 +327,15 @@ jsoncontext_t *json_context_std(json_t *args)
 	for (hook = extralayers; hook; hook = hook->next)
 		context = (*hook->addcontext)(context);
 
-	/* Create a layer to contain the "data" variable, and a layer above
-	 * that to store its value as "this".  These layers should be assignable
-	 * if json_system contains "update:true".
+	/* Create a layer to contain the "data" variable.  The layers should be
+	 * assignable (JSON_CONTEXT_VAR) if json_system contains "update:true".
 	 */
 	assignable = 0; 
 	if (json_is_true(json_by_key(json_system, "update")))
 		assignable = JSON_CONTEXT_VAR;
 	thisdata = json_object();
-	thisvalue = json_null();
-	json_append(thisdata, json_key("data", thisvalue));
+	json_append(thisdata, json_key("data", json_null()));
 	context = json_context(context, thisdata, JSON_CONTEXT_GLOBAL | assignable | JSON_CONTEXT_DATA);
-	context->modified = data_modified;
-	context = json_context(context, thisvalue, JSON_CONTEXT_GLOBAL | assignable | JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 	context->modified = data_modified;
 
 	/* Create a layer above that for the contents of "global", mostly the

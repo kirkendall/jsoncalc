@@ -358,6 +358,10 @@ int main(int argc, char **argv)
 		case 'i':
 			interactive = 1;
 			break;
+		case 'u':
+			allow_update = 1;
+			json_append(json_system, json_key("update", json_bool(1)));
+			break;
 		case 'L':
 			/* Adjust the list of persistent plugins but DON'T LOAD
 			 * YET!  We'll load the whole persistent list after
@@ -610,10 +614,6 @@ int main(int argc, char **argv)
 		case 'r':
 			restricted = 1;
 			break;
-		case 'u':
-			allow_update = 1;
-			json_append(json_system, json_key("update", json_bool(1)));
-			break;
 		case 'o':
 			json_file_new_type = 'o';
 			break;
@@ -714,6 +714,7 @@ int main(int argc, char **argv)
 		case 'D':
 		case 'S':
 		case 'i':
+		case 'u':
 			/* already handled */
 			break;
 		case '?':

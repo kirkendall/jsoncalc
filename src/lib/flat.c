@@ -4,7 +4,7 @@
 #include <jsoncalc.h>
 
 
-/* Return a new array which merges any embedded arrays into new array propper.
+/* Return a new array which merges any embedded arrays into new array proper.
  * For example, [1,[2,3],4] would become [1,2,3,4].  Depth can be 0 to just
  * copy without changing anything, 1 for a single layer, 2 for 2 layers deep,
  * or as a special case, -1 means unlimited depth.

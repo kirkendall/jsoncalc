@@ -90,34 +90,40 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 	json_t  *scan, *result, *merge, *lmem, *rmem;
 	int	leftmatch;
 	char	*rightmatch, *r;
-	int	rightlen;
 
-	/* Move to the first element of each array.  If not an array, then it
-	 * effectively *is* the first and only element.
+	/* We normally loop over the left argument in the outer loop, and the
+	 * right argument in the inner loop.  If right is deferred and left
+	 * isn't, then it's more efficient to use the right in the outer loop
+	 * so switch the.
 	 */
-	if (jl->type == JSON_ARRAY)
-		jl = jl->first;
-	if (jr->type == JSON_ARRAY) {
-		rightlen = json_length(jr);
-		jr = jr->first;
-	} else
-		rightlen = 1;
+	if (!json_is_deferred_array(jl) && json_is_deferred_array(jr)) {
+		/* Swap pointers */
+		scan = jl;
+		jl = jr;
+		jr = scan;
+
+		/* Swap left/right flags */
+		leftmatch = left;
+		left = right;
+		right = leftmatch;
+	}
 
 	/* If we're doing right join, then we need a list of flags to
 	 * keep track of which right elements never matched any left
 	 */
-	rightmatch = right ? (char *)calloc(rightlen, sizeof(char)) : NULL;
+	rightmatch = right ? (char *)calloc(json_length(jr), sizeof(char)) : NULL;
 
 	/* Start with an empty result array */
 	result = json_array();
 
 	/* For each row from the left table... */
-	for (; jl; jl = jl-> next) {
+	for (jl = json_first(jl); jl; jl = json_next(jl)) {
 		/* If interrupted, then discard any result so far and return
 		 * an error null.
 		 */
 		if (json_interrupt) {
 			json_free(result);
+			json_break(jl);
 			return json_error_null(NULL, "intr:Interrupted");
 		}
 
@@ -127,13 +133,13 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 
 		/* For each row from the right table... */
 		leftmatch = 0;
-		for (scan = jr, r = rightmatch; scan; scan = scan->next, r++) {
+		for (scan = json_first(jr), r = rightmatch; scan; scan = json_next(scan), r++) {
 			/* Skip if not an object */
 			if (scan->type != JSON_OBJECT)
 				continue;
 
 			/* If any members clash, skip this pairing */
-			for (lmem = jl->first; lmem; lmem = lmem->next) {
+			for (lmem = jl->first; lmem; lmem = lmem->next) { /* object */
 				rmem = json_by_key(scan, lmem->text);
 				if (rmem && !json_equal(lmem->first, rmem))
 					break;
@@ -143,7 +149,7 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 
 			/* Merge the objects */
 			merge = json_copy(jl);
-			for (rmem = scan->first; rmem; rmem = rmem->next) {
+			for (rmem = scan->first; rmem; rmem = rmem->next) { /* object */
 				lmem = json_by_key(merge, rmem->text);
 				if (!lmem)
 					json_append(merge, json_copy(rmem));
@@ -169,7 +175,7 @@ json_t *jcnjoin(json_t *jl, json_t *jr, int left, int right)
 	 * anything from the left.
 	 */
 	if (right) {
-		for (scan = jr, r = rightmatch; scan; scan = scan->next, r++) {
+		for (scan = json_first(jr), r = rightmatch; scan; scan = json_next(scan), r++) {
 			if (!*r)
 				json_append(result, json_copy(scan));
 		}
@@ -188,9 +194,12 @@ static json_t *jcvalues(json_t *keys, json_t *values)
 	if (keys->type != JSON_ARRAY)
 		key = keys; /* not NULL marking the end of happy scan */
 	else {
-		for (key = keys->first; key; key = key->next)
-			if (key->type != JSON_STRING)
+		for (key = json_first(keys); key; key = json_next(key)) {
+			if (key->type != JSON_STRING) {
+				json_break(key);
 				break;
+			}
+		}
 	}
 	if (key || !keys->first)
 		return json_error_null(NULL, "valuesL:Left of VALUES must be an array of strings");
@@ -200,22 +209,36 @@ static json_t *jcvalues(json_t *keys, json_t *values)
 	 */
 	if (values->type != JSON_ARRAY)
 		return json_error_null(NULL, "valuesR:Right of VALUES must be array of values, or array of arrays of values");
-	for (value = values->first; value; value = value->next) {
+	for (value = json_first(values); value; value = json_next(value)) {
 		if (value->type != JSON_ARRAY) {
+			/* Stop scanning the outer for-loop */
+			json_break(value);
+
 			/* Do the single object version */
 			result = json_object();
-			for (key = keys->first, value = values->first; key && value; key = key->next, value = value->next)
+			for (key = json_first(keys), value = json_first(values); key && value; key = json_next(key), value = json_next(value))
 				json_append(result, json_key(key->text, json_copy(value)));
+
+			/* If the number keys doesn't match number of values,
+			 * then one of the first/next loops ended prematurely.
+			 * Clean up!
+			 */
+			json_break(key);
+			json_break(value);
 			return result;
 		}
 	}
 
 	/* We'll be doing the table version. */
 	result = json_array();
-	for (vrow = values->first; vrow; vrow = vrow->next) {
+	for (vrow = json_first(values); vrow; vrow = json_next(vrow)) {
 		rowobj = json_object();
-		for (key = keys->first, value = vrow->first; key && value; key = key->next, value = value->next)
+		for (key = json_first(keys), value = json_first(vrow);
+		     key && value;
+		     key = json_next(key), value = json_next(value))
 			json_append(rowobj, json_key(key->text, json_copy(value)));
+		json_break(key);
+		json_break(value);
 		json_append(result, rowobj);
 	}
 	return result;
@@ -335,12 +358,12 @@ void json_calc_ag_row(jsoncalc_t *calc, jsoncontext_t *context, void *agdata, js
 	json_context_free(local);
 }
 
-/* This implements the @ and @@ operators.  "first" is the first element of
- * the array to apply it to, "expr" is an expression to apply to each member
- * of the array (which may include aggregate functions), and op is either
- * JSONOP_EACH or JSONOP_GROUP.
+/* This implements the @ and @@ operators.  "arr" is normally an array of items
+ * to loop over, but it can also be a single item to treat as a singleton array.
+ * "expr" is an expression to apply to each member of the array (which may
+ * include aggregate functions), and op is either JSONOP_EACH or JSONOP_GROUP.
  */
-json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t op)
+json_t *jceach(json_t *arr, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t op)
 {
 	json_t	*scan, *gscan;
 	json_t	*result, *tmp;
@@ -359,7 +382,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 	ag = json_calc_ag(calc, NULL);
 	if (ag) {
 		/* STEP 1: Count groups, and watch for any ungrouped elements */
-		for (ngroups = nongroup = 0, scan = first; scan; scan = scan->next) {
+		for (ngroups = nongroup = 0, scan = json_first(arr); scan; scan = json_next(scan)) {
 			if (scan->type == JSON_ARRAY)
 				ngroups++;
 			else
@@ -374,16 +397,22 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 		}
 
 		/* STEP 3: Loop over the array to generate aggregate data. */
-		for (g = 0, scan = first; scan; scan = scan->next) {
-			if (json_interrupt)
+		for (g = 0, scan = json_first(arr); scan; scan = json_next(scan)) {
+			if (json_interrupt) {
+				json_break(scan);
 				return json_error_null(NULL, "intr:Interrupted");
+			}
 
 			/* Is this element a nested array? */
 			if (scan->type == JSON_ARRAY) {
 				/* Loop over the array elements */
-				for (gscan = scan->first; gscan; gscan = gscan->next) {
-					if (json_interrupt)
+				for (gscan = json_first(scan); gscan; gscan = json_next(gscan)) {
+					if (json_interrupt) {
+						json_break(gscan);
+						json_break(scan);
 						return json_error_null(NULL, "intr:Interrupted");
+					}
+
 					/* Invoke the aggregators on "this" */
 					local = json_context(context, gscan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
@@ -408,19 +437,21 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 	 * array.
 	 */
 	result = json_array();
-	for (g = 0, scan = first; scan; scan = scan->next) {
+	for (g = 0, scan = json_first(arr); scan; scan = json_next(scan)) {
 		/* Is it a group (nested array) ? */
 		if (scan->type == JSON_ARRAY) {
 			/* Process the group using the group's own aggregate
 			 * data.  For EACH process all of them, for GROUP only
 			 * process the first.
 			 */
-			for (gscan = scan->first; gscan; gscan = (op == JSONOP_EACH ? gscan->next : NULL)) {
-				/* If interupted then discard results so far
+			for (gscan = json_first(scan); gscan; gscan = (op == JSONOP_EACH ? json_next(gscan) : NULL)) {
+				/* If interrupted then discard results so far
 				 * and return an error null.
 				 */
 				if (json_interrupt) {
 					json_free(result);
+					json_break(gscan);
+					json_break(scan);
 					return json_error_null(NULL, "intr:Interrupted");
 				}
 
@@ -440,6 +471,7 @@ json_t *jceach(json_t *first, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t
 					json_append(result, tmp);
 				}
 			}
+			json_break(gscan); /* since JSONOP_GROUP stops early */
 
 			/* Prepare for the next group */
 			g++;
@@ -611,12 +643,13 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			str = calc->RIGHT->LEFT->u.text;
 
 			/* Scan array for element with that member name:value */
-			for (scan = left->first; scan; scan = scan->next) {
+			for (scan = json_first(left); scan; scan = json_next(scan)) {
 				if (scan->type != JSON_OBJECT)
 					continue;
 				found = json_by_key(scan, str);
 				if (found && json_equal(found, right)) {
 					result = json_copy(scan);
+					json_break(scan);
 					break;
 				}
 			}
@@ -672,20 +705,21 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * have already been calculated.
 			 */
 			found = json_array();
-			for (scan = left->first->first; scan; scan = scan->next) {
+			for (scan = json_first(left->first); scan; scan = json_next(scan)) { /* undeferred */
 				/* Create a new argument list.  The first is an
 				 * element from the array, and any other args
-				 * are used unchanged.
+				 * are used unchanged. To accomplish this, we
+				 * will temporarily mangle scan's "next".
 				 */
-				json_t *scannext = scan->next;
-				scan->next = left->first->next;
+				json_t *scannext = scan->next; /* undeferred */
+				scan->next = left->first->next; /* undeferred */
 				found->first = scan;
 
 				/* Invoke the aggregator */
 				(*jf->agfn)(found, localag);
 
-				/* Restore the scan->next pointer */
-				scan->next = scannext;
+				/* Restore scan's "next" pointer */
+				scan->next = scannext; /* undeferred */
 			}
 			found->first = NULL;
 			json_free(found);
@@ -768,10 +802,9 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			result = json_array();
 			break;
 		}
-		scan = (left->type == JSON_ARRAY ? left->first : left);
 
 		/* Do the thing */
-		result = jceach(scan, calc->RIGHT, context, calc->op);
+		result = jceach(left, calc->RIGHT, context, calc->op);
 		break;
 
 	  case JSONOP_NJOIN:
@@ -827,12 +860,16 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
-			result = json_array();
 			il = json_int(left);
 			ir = json_int(right);
+#if 0
+			result = json_array();
 			for (; il <= ir; il++) {
 				json_append(result, json_from_int(il));
 			}
+#else
+			result = json_defer_ellipsis(il, ir);
+#endif
 		}
 		break;
 
@@ -1109,20 +1146,20 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			if (calc->op == JSONOP_BITAND) {
 				/* Keep left keys/values only if same key is in right */
 				result = json_object();
-				for (scan = left->first; scan; scan = scan->next) {
+				for (scan = left->first; scan; scan = scan->next) { /* object */
 					if (json_by_key(right, scan->text))
 						json_append(result, json_copy(scan));
 				}
 			} else if (calc->op == JSONOP_BITOR) {
 				/* Merge right keys/values into left */
 				result = json_copy(left);
-				for (scan = right->first; scan; scan = scan->next) {
+				for (scan = right->first; scan; scan = scan->next) { /* object */
 					json_append(result, json_copy(scan));
 				}
 			} else { /* JSONOP_BITOR */
 				/* Keep left keys/values only if key is NOT in right */
 				result = json_object();
-				for (scan = left->first; scan; scan = scan->next) {
+				for (scan = left->first; scan; scan = scan->next) { /* object */
 					if (!json_by_key(right, scan->text))
 						json_append(result, json_copy(scan));
 				}
@@ -1437,16 +1474,16 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				/* Is "right" a single-column table? */
 				if (json_is_table(right)) {
 					/* If single column, check value */
-					for (scan = right->first; scan; scan = scan->next) {
+					for (scan = json_first(right); scan; scan = json_next(scan)) {
 						if (scan->first->first
 						 && scan->first->first->type == JSON_STRING
-						 && scan->first->next == NULL
+						 && scan->first->next == NULL /* object */
 						 && !json_mbs_casecmp(left->text, scan->first->first->text))
 							break;
 					}
 				} else {
 					/* compare strings to strings */
-					for (scan = right->first; scan; scan = scan->next) {
+					for (scan = json_first(right); scan; scan = json_next(scan)) {
 						if (scan->type == JSON_STRING
 						 && !json_mbs_casecmp(left->text, scan->text))
 							break;
@@ -1455,18 +1492,23 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 			} else if (left->type == JSON_NUMBER && json_is_table(right)) {
 				/* If single column, compare to value */
-				for (scan = right->first; scan; scan = scan->next) {
-					if (scan->first->next == NULL
+				for (scan = json_first(right); scan; scan = json_next(scan)) {
+					if (scan->first->next == NULL /* object */
 					 && json_equal(left, scan->first->first))
 						break;
 				}
 			} else {
-				for (scan = right->first; scan; scan = scan->next) {
+				for (scan = json_first(right); scan; scan = json_next(scan)) {
 					if (json_equal(left, scan))
 						break;
 				}
 			}
 			result = json_bool(scan != NULL);
+
+			/* Just in case right is a deferred array, and we ended
+			 * the scan prematurely...
+			 */
+			json_break(scan);
 		}
 		break;
 

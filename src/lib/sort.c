@@ -70,7 +70,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	descending = 0;
 	if (orderby && orderby->type == JSON_BOOL) {
 		descending = json_is_true(orderby);
-		orderby = orderby->next;
+		orderby = orderby->next; /* undeferred */
 	}
 
 	/* If no more keys to sort by, then do nothing */
@@ -78,7 +78,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 		return;
 
 	/* Empty arrays and single-element arrays are inherently sorted. */
-	if (!array->first || !array->first->next) {
+	if (!array->first || !array->first->next) { /* undeferred */
 		/* If we're grouping, then we need to convert a single-element
 		 * array into a nested subarray though, making it a group of 1.
 		 */
@@ -105,8 +105,8 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 
 		/* Pull the element out of the array */
 		elem = array->first;
-		array->first = elem->next;
-		elem->next = NULL;
+		array->first = elem->next; /* undeferred */
+		elem->next = NULL; /* undeferred */
 
 		/* Fetch its sort value. */
 		value = json_by_expr(elem, orderby->text, NULL);
@@ -171,7 +171,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 		 && bucket[b2].value->type == JSON_STRING
 		 && !json_mbs_casecmp(bucket[b].value->text, bucket[b2].value->text)) {
 			/* Same, case-insensitively.  Append b2 to b */
-			JSON_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first;
+			JSON_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first; /* undeferred */
 			JSON_END_POINTER(&bucket[b].arraybuf) = JSON_END_POINTER(&bucket[b2].arraybuf);
 		} else {
 			b++;
@@ -180,9 +180,9 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	used = b + 1;
 
 	/* If there are more sort keys, then recursively sort each bucket */
-	if (orderby->next) {
+	if (orderby->next) { /* undeferred */
 		for (b = 0; b < used; b++)
-			jcsort(&bucket[b].arraybuf, orderby->next, grouping);
+			jcsort(&bucket[b].arraybuf, orderby->next, grouping); /* undeferred */
 	}
 
 	/* Merge the buckets back into the array again.  For a non-grouping
@@ -190,12 +190,12 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	 * add the groups to the result array instead of their elements, but
 	 * that's slightly tricky if there were more keys to sort/group by.
 	 */
-	if (!grouping || orderby->next) {
+	if (!grouping || orderby->next) { /* undeferred */
 		/* normal non-grouping sort */
 		array->first = bucket[0].arraybuf.first;
 		JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[0].arraybuf);
 		for (b = 1; b < used; b++) {
-			JSON_END_POINTER(array)->next = bucket[b].arraybuf.first;
+			JSON_END_POINTER(array)->next = bucket[b].arraybuf.first; /* undeferred */
 			JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[b].arraybuf);
 		}
 	} else {
@@ -204,7 +204,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 		for (b = 0; b < used; b++) {
 			elem = json_array();
 			elem->first = bucket[b].arraybuf.first;
-			for (value = elem->first; value->next; value = value->next) {
+			for (value = elem->first; value->next; value = value->next) { /* undeferred */
 			}
 			JSON_END_POINTER(elem) = value;
 			json_append(array, elem);
@@ -235,17 +235,21 @@ void json_sort(json_t *array, json_t *orderby, int grouping)
 		/* EEE "json_sort() should be passed an array of objects" */
 		return;
 	}
+	if (json_is_deferred_array(orderby)) {
+		/* EEE "json_sort() orderby should be an in-memory array (not deferred) */
+		return;
+	}
 	if (orderby->type == JSON_ARRAY)
 		orderby = orderby->first;
 	anykeys = 0;
-	for (check = orderby; check; check = check->next) {
+	for (check = orderby; check; check = check->next) { /* undeferred */
 		if (check->type == JSON_STRING)
 			anykeys++;
 		else if (check->type != JSON_BOOL) {
 			/* EEE json_sort() key list must be strings and booleans */
 			return;
 		}
-		else if (!check->next) {
+		else if (!check->next) { /* undeferred */
 			/* EEE json_sort() key list can't end with a boolean */
 			return;
 		}
@@ -254,6 +258,9 @@ void json_sort(json_t *array, json_t *orderby, int grouping)
 		/* EEE Empty orderby list */
 		return;
 	}
+
+	/* Sorting only works on in-memory tables (not deferred) */
+	json_undefer(array);
 
 	/* Do the real sort */
 	jcsort(array, orderby, grouping);

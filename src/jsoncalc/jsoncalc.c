@@ -23,7 +23,7 @@ extern int optind, opterr, optopt;
 /* -i -- Force interactive mode */
 int interactive = 0;
 
-/* -r -- Restricted -- Limit file access to named files, inhibit shell access */
+/* -r -- Restricted -- Try to be more secure */
 int restricted = 0;
 
 /* -u -- Update -- Allow files named on the command line to be rewritten */
@@ -67,12 +67,11 @@ static void usage(char *fmt, char *data)
 	puts("       -o                Object - Assume new files contain an empty object.");
 	puts("       -a                Array - Assume new files contain an empty array.");
 	puts("       -u                Update - Write back any modified files.");
-	puts("       -s/-S config      Adjust the configuration this session or persistently.");
+	puts("       -s/-S settings    Adjust the settings, this session or persistently.");
 	puts("       -p                Pretty-print, same as -sjson,pretty,oneline=0.");
-	puts("       -l/-L plugin,conf Load&configure a plugin, this session or persistently.");
+	puts("       -l/-L plugin,set  Load & adjust a plugin, this session or persistently.");
 	puts("       -d/-D directory   Autoload from directory, this session or persistently.");
 	puts("       -j debugflags     Debugging settings, use -j? for details.");
-	puts("       -r                Restricted.  Inhibits some sensitive actions.");
 	puts("This program manipulates JSON data. Without one of -ccalc or -ffile, it will");
 	puts("assume -c\"this\" or -c\"select\" if -sconfig is given, or -i if no -sconfig.");
 	puts("Any name=value parameters on the command line will be added to the context");
@@ -418,6 +417,8 @@ int main(int argc, char **argv)
 			break;
 
 		case '?':
+			json_free(omitplugins);
+			json_free(omitscripts);
 			usage(NULL, NULL);
 			break;
 		}

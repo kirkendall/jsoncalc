@@ -30,7 +30,7 @@ json_t *json_array_flat(json_t *array, int depth)
 	result = json_array();
 
 	/* For each element of the array... */
-	for (lag = NULL, scan = array->first; scan; scan = scan->next) {
+	for (lag = NULL, scan = array->first; scan; scan = scan->next) { /* undeferred */
 		/* If depth is 0 or this element isn't array, copy it */
 		if (depth == 0 || scan->type != JSON_ARRAY) {
 			lag = json_copy(scan);
@@ -46,10 +46,10 @@ json_t *json_array_flat(json_t *array, int depth)
 		 */
 		copy = json_array_flat(scan, depth - 1);
 		if (lag)
-			lag->next = copy->first;
+			lag->next = copy->first; /* undeferred */
 		else
 			result->first = copy->first;
-		for (lag = copy->first; lag && lag->next; lag = lag->next) {
+		for (lag = copy->first; lag && lag->next; lag = lag->next) { /* undeferred */
 		}
 		JSON_END_POINTER(result) = lag;
 
@@ -94,11 +94,11 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	 * encounter a boolean, set the skipempty flag accordingly.
 	 */
 	if (nestlist && nestlist->type == JSON_ARRAY)
-		nestlist = nestlist->first;
+		nestlist = nestlist->first; /* undeferred */
 	while (nestlist && nestlist->type != JSON_STRING) {
 		if (nestlist->type == JSON_BOOL)
 			skipempty = json_is_true(nestlist);
-		nestlist = nestlist->next;
+		nestlist = nestlist->next; /* undeferred */
 	}
 
 	/*  If nesting list is empty, return a copy of the table */
@@ -108,22 +108,11 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	/* Start with an empty response array */
 	result = json_array();
 
-	/* We expect the table argument to be a table.  No surprise there.
-	 * But we also allow it to be a single object, which we treat as
-	 * the only element in a one-element array.  This is partly to help
-	 * work around bad XML conversions, and partly to add the flexibility
-	 * to unroll tables within objects.
-	 */
-	if (table->type == JSON_ARRAY)
-		table = table->first;
-	else
-		assert(table->type == JSON_OBJECT && !table->next);
-
 	/* For each element of the table... */
-	for (; table; table = table->next) {
+	for (table = json_first(table); table; table = json_next(table)) {
 		/* Fetch the unrolled nested variable */
 		value = json_by_expr(table, nestlist->text, NULL);
-		nested = json_unroll(value, nestlist->next);
+		nested = json_unroll(value, nestlist->next); /* undeferred */
 
 		/* If nested is empty, either skip it or stuff an empty object
 		 * into it.
@@ -137,12 +126,12 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 		}
 
 		/* For each element of nested... */
-		for (nrow = nested->first; nrow; nrow = nrow->next) {
+		for (nrow = json_first(nested); nrow; nrow = json_next(nrow)) {
 			/* Create a new object which combines members of the
 			 * table row and the current nested row.
 			 */
 			row = json_object();
-			for (tmember = table->first; tmember; tmember = tmember->next) {
+			for (tmember = json_first(table); tmember; tmember = json_next(tmember)) {
 				/* Is this the unrolled element? */
 				if (tmember->first == value) {
 					/* Yes!  Replace it with copies of the
@@ -154,16 +143,16 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 					 * recycle the members, but for other
 					 * rows we need to make copies.
 					 */
-					if (nrow->next) {
+					if (!json_is_last(nrow) || json_is_deferred_element(nrow)) {
 						/* Append copies of the nested members */
-						for (nmember = nrow->first; nmember; nmember = nmember->next)
+						for (nmember = nrow->first; nmember; nmember = nmember->next) /* object */
 							json_append(row, json_copy(nmember));
 					} else {
 						/* Last row, move nested members */
 						json_t *next;
 						for (nmember = nrow->first; nmember; nmember = next) {
-							next = nmember->next;
-							nmember->next = NULL;
+							next = nmember->next; /* object */
+							nmember->next = NULL; /* object */
 							json_append(row, nmember);
 						}
 						nrow->first = NULL;/* so members won't be freed */

@@ -285,6 +285,123 @@ size_t json_mbs_wrap_char(char *buf, const char *s, int width)
 }
 
 
+/* Generate a simplified version of a string.  This is used mostly to implement
+ * "loose" member key matching.  The simplified string will be all uppercase,
+ * with control characters and whitespace stripped out.  It will also strip out
+ * "_" and "-" characters within the string, but not at the beginning or end.
+ * It will also remove XML-style namespaces.
+ *
+ * "dest" is the location to write the canonized string to, and it may be NULL
+ * to only count the length of the canonized string, but not return the string.
+ * It may also be the same as "src".  "src" is the original string.  It returns
+ * the length of the canonized string in bytes, not counting the terminating
+ * '\0' character (which it will add, just not count).
+ */
+size_t json_mbs_canonize(char *dest, const char *src)
+{
+	size_t len, dashlen;
+	wchar_t wc;
+        int     in, out;
+        mbstate_t state;
+        char    dummy[MB_CUR_MAX];
+        const char	*dash;
+
+	/* Initialize the multibyte character state */
+	memset(&state, 0, sizeof state);
+
+	/* Copy all printable characters up to the first alphanumeric */
+	for (len = 0; *src; ) {
+                in = mbrtowc(&wc, src, MB_CUR_MAX, &state);
+		if (iswalnum(wc))
+			break;
+                src += in;
+                if (iswcntrl(wc) || iswspace(wc))
+			continue;
+		if (dest && in >= (out = wctomb(dummy, wc)))
+			wctomb(dest + len, wc);
+		len += out;
+	}
+
+	/* Copy all printable characters except "-" or "_", and keep track of
+	 * where the last string of "-" or "_" started.  Also, if a ":" is
+	 * encountered other than at the end of the string, then remove it
+	 * and everything before it.
+	 */
+	for (dash = NULL, dashlen = len; *src; ) {
+                in = mbrtowc(&wc, src, MB_CUR_MAX, &state);
+                src += in;
+		if (wc == '-' || wc == '_') {
+			if (!dash) {
+				dash = src - in;
+				dashlen = len;
+			}
+			continue;
+		}
+                if (iswcntrl(wc) || iswspace(wc))
+			continue; /* skip unprintable */
+		if (wcwidth(wc) == 0)
+			continue; /* skip diacritics */
+		if (wc == ':' && *src) {
+			len = 0;
+			continue; /* skip XML namespace */
+		}
+		if (iswalnum(wc)) {
+			dash = NULL;
+
+			/* Convert precomposed diacritics to simple letters */
+			if (wc >= 0xc0 && wc <= 0xd6)
+				wc = "AAAAAAECEEEEIIIIDNOOOOO"[wc - 0xc0];
+			else if (wc >= 0xd8 && wc <= 0xdd)
+				wc = "OUUUUY"[wc - 0xd8];
+			else if (wc == 0xdf) {
+				/* German "ss", convert to "SS" */
+				if (dest)
+					dest[len++] = 'S';
+				wc = 'S';
+			}
+			else if (wc >= 0xe0 && wc <= 0xf6)
+				wc = "aaaaaaeceeeeiiiidnooooo"[wc - 0xe0];
+			else if (wc >= 0xf8 && wc <= 0xfd)
+				wc = "ouuuuy"[wc - 0xd8];
+			else if (wc == 0xff)
+				wc = 'y';
+			else if (wc >= 0x100 && wc <= 0x11f)
+				wc = "AaAaAaCcCcCcCcDdDdEeEeEeEeEeGgGg"[wc - 0x100];
+			else if (wc >= 0x120 && wc <= 0x13f)
+				wc = "GgGgHhHhIiIiIiIiIiIiJjKkkLlLlLlL"[wc - 0x120];
+			else if (wc >= 0x140 && wc <= 0x15f)
+				wc = "lLlNnNnNnnNnOoOoOoOoRrRrRrSsSsSs"[wc - 0x140];
+			else if (wc >= 0x160 && wc <= 0x17e)
+				wc = "SsTtTtTtUuUuUuUuUuUuWwYyYZzZzZz"[wc - 0x160];
+			else if (wc >= 0x1c4 && wc <= 0x1ed)
+				wc = "ZZzLLlNNnAaIiOoUuUuUuUuUueAaAaAaGgKkOoOo"[wc - 0x1c4];
+
+			/* Convert to uppercase */
+			wc = towupper(wc);
+		}
+		if (dest && in >= (out = wctomb(dummy, wc)))
+			wctomb(dest + len, wc);
+		len += out;
+	}
+
+	/* Restore any "-" or "_" characters from the end of the string */
+	if (dash) {
+		for (len = dashlen; *dash; ) {
+			in = mbrtowc(&wc, dash, MB_CUR_MAX, &state);
+			dash += in;
+			if (iswcntrl(wc) || iswspace(wc))
+				continue;
+			if (dest && in >= (out = wctomb(dummy, wc)))
+				wctomb(dest + len, wc);
+			len += out;
+		}
+	}
+
+	/* Mark the end with a "\0', but don't include it in the count */
+	dest[len] = '\0';
+	return len;
+}
+
 /* Find the endpoints of a substring within s.  start is the character count
  * to the start of the substring, and if reflimit is non-NULL then it is a
  * character count coming in, and a byte count going out for the end of the
@@ -491,7 +608,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 	 * exceptions by scanning the exceptions list for the symbol "true".
 	 */
 	capfirst = 0;
-	for (ex = exceptions->first; ex && !capfirst; ex = ex->next)
+	for (ex = json_first(exceptions); ex && !capfirst; ex = json_next(ex))
 		if (ex->type == JSON_BOOL && json_is_true(ex))
 			capfirst = 1;
 
@@ -518,7 +635,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		if (capfirst && firstword)
 			ex = NULL;
 		else {
-			for (ex = exceptions->first; ex; ex = ex->next) {
+			for (ex = json_first(exceptions); ex; ex = json_next(ex)) {
 				if (ex->type == JSON_STRING && !json_mbs_ncasecmp(ex->text, s, wlen))
 					break;
 

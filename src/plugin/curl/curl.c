@@ -361,14 +361,14 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	if (err) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return json_error_null(0, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
+		return err;
 	}
 
 	/* If we're supposed to send content but have no data, fail */
 	if (flags.content && !data) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return json_error_null(0, "The %s() needs data to send", fn);
+		return json_error_null(0, "The %s() function needs data to send", fn);
 	}
 
 	/* If a content type was given, and the content isn't a string, then
@@ -515,6 +515,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
  */
 static json_t *jfn_curlGet(json_t *args, void *agdata)
 {
+	{char *s=json_serialize(args, NULL); fprintf(stderr, "curlGet%s\n", s); free(s);}
 	return curlHelper("curlGet", "GET", args->first);
 }
 

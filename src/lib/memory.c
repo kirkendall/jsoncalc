@@ -25,6 +25,7 @@
 # undef json_array
 # undef json_key
 # undef json_object
+# undef json_defer
 # undef json_parse_string
 # undef json_copy
 # undef json_copy_filter
@@ -61,12 +62,19 @@ size_t json_sizeof(json_t *json)
                   case JSON_BOOL:
                   case JSON_NULL:
                   case JSON_KEY:
-                        /* Add the text length including the termating \0,
+                        /* Add the text length including the terminating \0,
                          * tweaked for alignment
                          */
                         len = ((strlen(json->text) - sizeof(json->text)) | 0x1f) + 1;
                         size += len;
                         break;
+
+                  case JSON_DEFER:
+			/* Rough guess: twice the size of a json_t.  We count
+			 * one json_t after this switch, so we just add 1 here.
+			 */
+			size += sizeof(json_t);
+			break;
 
                   case JSON_ARRAY:
                   case JSON_OBJECT:
@@ -81,7 +89,7 @@ size_t json_sizeof(json_t *json)
                 size += json_sizeof(json->first);
 
                 /* Iteratively add the "next" data */
-                json = json->next;
+                json = json->next; /* undeferred */
         }
 
         return size;
@@ -101,8 +109,28 @@ void json_free(json_t *json)
          */
 	assert(json->memslot == 0 || memory_tracker[json->memslot].line != 0);
 
+	/* If ->next points to a JSON_DEFER, that means this json_t is an
+	 * element of a deferred array, currently being scanned.  Free the
+	 * resources used for this scan session.
+	 */
+	if (json->next && json->next->type == JSON_DEFER) {
+		jsondeffns_t *fns = (jsondeffns_t *)json->next;
+		if (fns->free)
+			(*fns->free)(json);
+	}
+
 	/* Iteratively free this node and its siblings */
 	while (json) {
+
+		/* If this is a JSON_DEFER array, then free its resources
+		 * specially
+		 */
+		if (json->first && json->first->type == JSON_DEFER) {
+			jsondeffns_t *fns = (jsondeffns_t *)json->next;
+			if (fns->free)
+				(*fns->free)(json);
+		}
+
 		/* Recursively free contained data.  Note that JSON_NULL nodes
 		 * abuse the ->first field to store a pointer into source text
 		 * instead of a json_t.
@@ -111,7 +139,7 @@ void json_free(json_t *json)
 			json_free(json->first);
 
 		/* Free this json_t struct */
-		next = json->next;
+		next = json->next; /* undeferred */
 		free(json);
 		json_debug_count--;
 		json = next;
@@ -252,6 +280,25 @@ json_t *json_array()
 	return json_simple(NULL, 0, JSON_ARRAY);
 }
 
+/* Allocate a JSON_DEFER node */
+json_t *json_defer(jsondeffns_t *fns)
+{
+	json_t *json;
+	size_t	size;
+
+	/* Allocate it, with extra space */
+	size = fns->size - sizeof json->text;
+	json = json_simple(NULL, size, JSON_DEFER);
+
+	/* Store the fns pointer, with this deferred array's implementation
+	 * functions.  The rest of the jsondef_t is already initialized to 0's
+	 */
+	((jsondef_t *)json)->fns = fns; 
+
+	/* Return it */
+	return json;
+}
+
 /******************************************************************************/
 
 /* For debugging memory issues, this function is called when the program exits
@@ -335,7 +382,7 @@ void json_debug_free(const char *file, int line, json_t *json)
         /* Iterate over the ->next links */
         for (; json; json = next)
         {
-		next = json->next;
+		next = json->next; /* undeferred */
 
 		/* If it looks like it was already freed, then complain.
 		 * This isn't reliable!  It won't reject valid free's but it
@@ -366,7 +413,7 @@ void json_debug_free(const char *file, int line, json_t *json)
 			json_debug_free(file, line, json->first);
 
 		/* Free this node */
-		json->first = json->next = NULL;
+		json->first = json->next = NULL; /* undeferred */
 		json->memslot = memory_slot(file, -line);
 		json_free(json);
 	}
@@ -475,6 +522,25 @@ json_t *json_debug_object(const char *file, int line)
 json_t *json_debug_array(const char *file, int line)
 {
 	return json_debug_simple(file, line, NULL, 0, JSON_ARRAY);
+}
+
+/* Allocate a JSON_DEFER node */
+json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns)
+{
+	json_t *json;
+	size_t	size;
+
+	/* Allocate it, with extra space for an overall size of fns->size */
+	size = fns->size - sizeof json->text;
+	json = json_debug_simple(file, line, "", size, JSON_DEFER);
+
+	/* Store the fns pointer, with this deferred array's implementation
+	 * functions.  The rest of the jsondef_t is already initialized to 0's
+	 */
+	((jsondef_t *)json)->fns = fns; 
+
+	/* Return it */
+	return json;
 }
 
 

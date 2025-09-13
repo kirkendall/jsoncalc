@@ -10,7 +10,7 @@ OBJ=	log.o
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
 
-$(ALL): pluginlog.so docs
+$(ALL): pluginlog.so
 	cp pluginlog.so $(PLUGIN)/pluginlog.so
 
 pluginlog.so: $(OBJ)

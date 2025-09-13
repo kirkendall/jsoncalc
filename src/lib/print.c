@@ -9,7 +9,7 @@
  * registers table formats.
  */
 typedef struct jctablefmt_s {
-	struct jctablefmt_s *next;
+	struct jctablefmt_s *other;
 	char *name;
 	void (*fn)(json_t *json, jsonformat_t *format);
 } jctablefmt_t;
@@ -75,13 +75,13 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
                 putc('{', format->fp);
 		if (format->pretty || format->elem) {
                         putc('\n', format->fp);
-                        for (scan = scan->first; scan; scan = scan->next) {
+                        for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, indent + format->tab, format);
 			}
                         if (indent > 0)
                                 fprintf(format->fp, "%*s", indent, "");
                 } else {
-                        for (scan = scan->first; scan; scan = scan->next) {
+                        for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, 0, format);
 			}
                 }
@@ -99,20 +99,28 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 				byelem.pretty = 0;
 				byelem.elem = 0;
 			}
-                        for (scan = scan->first; scan && !json_interrupt; scan = scan->next) {
+                        for (scan = json_first(scan); scan && !json_interrupt; scan = json_next(scan)) {
                                 if (format->elem && indent + format->tab > 0)
 					fprintf(format->fp, "%*c", indent + format->tab, ' ');
                                 jcprint(scan, indent + format->tab, &byelem);
 				if (format->elem)
 					putc('\n', format->fp);
 			}
+
+			/* If we didn't finish scanning a deferred array, then
+			 * we may need to do extra cleanup.
+			 */
+			if (scan)
+				json_break(scan);
                         if (indent > 0)
                                 fprintf(format->fp, "%*s", indent, "");
                 } else {
-                        for (scan = scan->first; scan; scan = scan->next) {
+                        for (scan = json_first(scan); scan && !json_interrupt; scan = json_next(scan)) {
                                 jcprint(scan, indent + format->tab, format);
 			}
 		}
+		if (scan)
+			json_break(scan);
 		putc(']', format->fp);
 		break;
 
@@ -144,7 +152,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 	  	; /* shouldn't happen */
 	}
 
-	if (json->next)
+	if (!json_is_last(json))
 		putc(',', format->fp);
 	if (format->pretty || format->elem)
 		putc('\n', format->fp);
@@ -156,8 +164,8 @@ static void jcsh(json_t *json, jsonformat_t *format){
 	json_t	*col;
 	char	*s, *t, *frees;
 
-	for (row = json->first; row && !json_interrupt; row = row->next) {
-		for (col = row->first; col; col = col->next) {
+	for (row = json_first(json); row && !json_interrupt; row = json_next(row)) {
+		for (col = row->first; col; col = col->next) { /* object */
 			/* Output the prefix, name, and an = */
 			fprintf(format->fp, "%s%s=", format->prefix, col->text);
 
@@ -206,11 +214,17 @@ static void jcsh(json_t *json, jsonformat_t *format){
 				free(frees);
 
 			/* If not the last, then output a space */
-			if (col->next)
+			if (col->next) /* object */
 				putc(' ', format->fp);
 		}
 		putc('\n', format->fp);
 	}
+
+	/* If we stopped before the end of a deferred array, there could be
+	 * extra cleanup.
+	 */
+	if (row)
+		json_break(row);
 }
 
 
@@ -231,7 +245,7 @@ void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *fo
 	json_t	*list;
 
 	/* Scan to see if this format is already in the list */
-	for (t = tablefmts; t; t = t->next) {
+	for (t = tablefmts; t; t = t->other) {
 		if (!json_mbs_casecmp(name, t->name)) {
 			/* Yes, we know it.  Just change the function pointer */
 			t->fn = fn;
@@ -243,7 +257,7 @@ void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *fo
 	t = (jctablefmt_t *)malloc(sizeof(jctablefmt_t));
 	t->name = name;
 	t->fn = fn;
-	t->next = tablefmts;
+	t->other = tablefmts;
 	tablefmts = t;
 
 	/* Also add it to the list of preferred values for config "table". */
@@ -312,7 +326,7 @@ void json_print(json_t *json, jsonformat_t *format)
 	/* Table output? */
 	if (json_is_table(json)){
 		/* Scan for this format */
-		for (t = tablefmts; t; t = t->next) {
+		for (t = tablefmts; t; t = t->other) {
 			/* If not the one we want, keep looking */
 			if (json_mbs_casecmp(t->name, tweaked.table))
 				continue;

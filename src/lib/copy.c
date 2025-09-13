@@ -34,10 +34,28 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 	{
 	  case JSON_OBJECT:
 		copy = json_object();
+		for (tail = NULL, scan = json->first; scan; scan = scan->next) /* object */
+		{
+			sub = json_copy_filter(scan, test);
+			if (!sub)
+				continue;
+			if (tail)
+				tail->next = sub; /* object */
+			else
+				copy->first = sub;
+			tail = sub;
+		}
 		break;
 
 	  case JSON_ARRAY:
 		copy = json_array();
+		for (scan = json_first(json); scan; scan = json_next(scan))
+		{
+			sub = json_copy_filter(scan, test);
+			if (!sub)
+				continue;
+			json_append(copy, sub);
+		}
 		break;
 
 	  case JSON_KEY:
@@ -59,26 +77,9 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 			return json_from_int(JSON_INT(json));
 		return json_from_double(JSON_DOUBLE(json));
 
+	  case JSON_DEFER:
 	  default:
 	  	return NULL; /* should never happen */
-	}
-
-	/* We only get here for arrays and objects, either of which could have
-	 * a long list of elements/members to copy.  We use iteration to find
-	 * them, and recursion to copy them.
-	 */
-	for (tail = NULL, scan = json->first; scan; scan = scan->next)
-	{
-		sub = json_copy_filter(scan, test);
-		if (!sub)
-			continue;
-		if (tail)
-		{
-			tail->next = sub;
-			tail = tail->next;
-		} else {
-			tail = copy->first = sub;
-		}
 	}
 
 	/* Return the whole array or object */

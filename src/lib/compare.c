@@ -27,7 +27,7 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 		key = orderby->first;
 	else
 		key = orderby;
-	for (;key; key = key->next) {
+	for (;key; key = key->next) { /* object */
 		// If this is a "descending" flag, then just do that
 		if (key->type == JSON_BOOL) {
 			descending = json_is_true(key);

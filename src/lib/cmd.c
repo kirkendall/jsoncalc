@@ -126,7 +126,7 @@ void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(json
 	sn->run = run;
 
 	/* Add it to the list */
-	sn->next = names;
+	sn->other = names;
 	names = sn;
 }
 
@@ -442,7 +442,7 @@ void json_cmd_free(jsoncmd_t *cmd)
 		json_calc_free(cmd->calc);
 	json_cmd_free(cmd->sub);
 	json_cmd_free(cmd->more);
-	json_cmd_free(cmd->next);
+	json_cmd_free(cmd->nextcmd);
 
 	/* Free the cmd itself */
 	free(cmd);
@@ -475,7 +475,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	 * and output expressions.  Start by comparing the start of this
 	 * command to all known command names.
 	 */
-	for (sn = names; sn; sn = sn->next) {
+	for (sn = names; sn; sn = sn->other) {
 		len = strlen(sn->name);
 		end = src->str + len;
 		if (!json_mbs_ncasecmp(sn->name, src->str, len)
@@ -561,10 +561,10 @@ jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
 		src->str++;
 		cmd = current = json_cmd_parse_single(src, referr);
 		while (*referr == NULL && *src->str != '}') {
-			current->next = json_cmd_parse_single(src, referr);
+			current->nextcmd = json_cmd_parse_single(src, referr);
 			json_cmd_parse_whitespace(src);
-			if (current->next)
-				current = current->next;
+			if (current->nextcmd)
+				current = current->nextcmd;
 			if (*referr)
 				break;
 		}
@@ -584,7 +584,7 @@ jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
 jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 {
 	jsoncmdout_t *result = NULL;
-	jsoncmd_t *cmd, *first, *next;
+	jsoncmd_t *cmd, *firstcmd, *nextcmd;
 	jsonfile_t *jf;
 	int	lineno;
 
@@ -596,10 +596,10 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 
 	/* For each statement... */
 	json_cmd_parse_whitespace(src);
-	first = cmd = NULL;
+	firstcmd = cmd = NULL;
 	while (src->str < src->buf + src->size && *src->str) {
 		/* Parse it */
-		next = json_cmd_parse_single(src, &result);
+		nextcmd = json_cmd_parse_single(src, &result);
 
 		/* If error then report it and quit */
 		if (result) {
@@ -614,22 +614,22 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 				fputs(json_format_color_end, stderr);
 
 			free(result);
-			json_cmd_free(first);
+			json_cmd_free(firstcmd);
 			return JSON_CMD_ERROR;
 		}
 
 		/* It could be NULL, which is *NOT* an error.  That would be
 		 * for things like function definitions, which are processed
 		 * by the parser and not at run-time.  Skip NULL */
-		if (!next)
+		if (!nextcmd)
 			continue;
 
 		/* Anything else gets added to the statement chain */
 		if (cmd)
-			cmd->next = next;
+			cmd->nextcmd = nextcmd;
 		else
-			first = next;
-		cmd = next;
+			firstcmd = nextcmd;
+		cmd = nextcmd;
 
 		/* Also, store the filename and line number of this command */
 		cmd->where = src->str;
@@ -639,7 +639,7 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 	}
 
 	/* Return the commands.  Might be NULL. */
-	return first;
+	return firstcmd;
 }
 
 /* Parse a string as jsoncalc commands.  If an error is detected then an
@@ -726,7 +726,7 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			result = NULL;
 
 			/* Skip to the next "case" or "default" statement */
-			while ((cmd = cmd->next) != NULL
+			while ((cmd = cmd->nextcmd) != NULL
 			    && cmd->name != &jcn_case 
 			    && cmd->name != &jcn_default) {
 			}
@@ -735,7 +735,7 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			 * some other value, such as a "return", then we'll
 			 * exit the loop so changing "cmd" here is harmless.
 			 */
-			cmd = cmd->next;
+			cmd = cmd->nextcmd;
 		}
 	}
 	return result;
@@ -789,7 +789,7 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
  */
 jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t *context)
 {
-	jsoncmd_t *next, *end;
+	jsoncmd_t *nextcmd, *end;
 #if 0
 	jsoncmdout_t *result;
 #endif
@@ -813,14 +813,14 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 	/* If "existing" is non-NULL then move to the end of the list */
 	if (existing) {
 		end = existing;
-		while (end->next)
-			end = end->next;
+		while (end->nextcmd)
+			end = end->nextcmd;
 	}
 
 	/* For each command from "added"... */
-	for (; added; added = next) {
-		next = added->next;
-		added->next = NULL;
+	for (; added; added = nextcmd) {
+		nextcmd = added->nextcmd;
+		added->nextcmd = NULL;
 
 #if 0
 		/* Maybe execute "const" and "var" now */
@@ -834,7 +834,7 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 
 		/* Append this command to "existing" */
 		if (existing)
-			end->next = added;
+			end->nextcmd = added;
 		else
 			existing = added;
 		end = added;
@@ -1083,7 +1083,7 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		}
 
 		/* Okay, we have an existing variable! */
-		for (scan = array->first; scan; scan = scan->next) {
+		for (scan = json_first(array); scan; scan = json_next(scan)) {
 			/* Store the value in the variable */
 			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
 
@@ -1097,15 +1097,17 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 				free(result);
 				result = NULL;
 			}
-			if (result)
+			if (result) {
+				json_break(scan);
 				break;
+			}
 		}
 	} else if (cmd->key) {
 		/* Add a context for store the variable */
 		layer = json_context(*refcontext, json_object(), 0);
 
 		/* Loop over the elements */
-		for (scan = array->first; scan; scan = scan->next) {
+		for (scan = json_first(array); scan; scan = json_next(scan)) {
 			/* Store the value in the variable */
 			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
 
@@ -1119,8 +1121,10 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 				free(result);
 				result = NULL;
 			}
-			if (result)
+			if (result) {
+				json_break(scan);
 				break;
+			}
 		}
 
 		/* Clean up */
@@ -1128,7 +1132,7 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 	} else { /* Anonymous loop */
 		/* Loop over the elements */
-		for (scan = array->first; scan; scan = scan->next) {
+		for (scan = json_first(array); scan; scan = json_next(scan)) {
 			/* Add a "this" layer */
 			layer = json_context(*refcontext, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 
@@ -1142,8 +1146,10 @@ static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 				free(result);
 				result = NULL;
 			}
-			if (result)
+			if (result) {
+				json_break(scan);
 				break;
+			}
 
 			/* Remove the "this" layer */
 			json_context_free(layer);
@@ -1596,8 +1602,8 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			printf("(%s)", f->args);
 		else {
 			putchar('(');
-			for (params = f->userparams->first; params; params = params->next)
-				printf("%s%s", params->text, params->next ? ", " : "");
+			for (params = f->userparams->first; params; params = params->next) /* undeferred */
+				printf("%s%s", params->text, params->next ? ", " : ""); /* undeferred */
 			putchar(')');
 		}
 		if (f->returntype)
@@ -2134,7 +2140,7 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* Output the explain results, unless the parameter text was just "?" */
 	columns = NULL;
 	if (!cmd->var) {
-		for (table = table->first; table; table = table->next)
+		for (table = json_first(table); table; table = json_next(table))
 			columns = json_explain(columns, table, 0);
 		json_print(columns, NULL);
 	}
@@ -2503,7 +2509,7 @@ static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	 * added spaces or anything.  For strings, output the string literally.
 	 */
 	lastchar = '\n';
-	for (scan = list->first; scan; scan = scan->next) {
+	for (scan = json_first(list); scan; scan = json_next(scan)) {
 		if (scan->type == JSON_STRING) {
 			fputs(scan->text, stdout);
 			if (*scan->text)

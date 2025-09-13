@@ -186,10 +186,10 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 	if (*cursor == '"') {
 		/* Find the closing quote */
 		for (clen = 1; &cursor[clen] != &buf[len]; clen++) {
-			if (cursor[clen] == '"' && cursor[clen + 1] == '"')
-				clen++;
-			else if (cursor[clen] == '"')
+			if (cursor[clen] == '"' && cursor[clen + 1] != '"')
 				break;
+			else if (cursor[clen] == '"') /* && [clen + 1] == '"' */
+				clen++;
 			else if (cursor[clen] == '\\')
 				clen++;
 			else if (cursor[clen] == '\0')
@@ -202,13 +202,14 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 
 		/* Allocate a string to hold it.  The clen is actually at least
 		 * one character too high (for quotes).  Backslash escapes and
-		 * double-quotes may also added but not enough to worry about.
+		 * double-quotes may also included in clen, but the excess is
+		 * not enough to worry about.
 		 */
 		cell = json_string("", clen - 1);
 
 		/* Copy the text into the string */
 		for (i = 1, j = 0; i < clen; ) {
-			if (cursor[i] == '"' && cursor[i + i] == '"') {
+			if (cursor[i] == '"' && cursor[i + 1] == '"') {
 				cell->text[j++] = '"';
 				i += 2;
 			} else if (cursor[i] == '\\') {

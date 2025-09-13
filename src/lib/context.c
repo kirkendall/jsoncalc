@@ -19,7 +19,7 @@
  * json_context_std().
  */
 typedef struct contexthook_s {
-	struct contexthook_s *next;
+	struct contexthook_s *other;
 	jsoncontext_t *(*addcontext)(jsoncontext_t *context);
 } contexthook_t;
 
@@ -34,7 +34,7 @@ void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
 {
 	contexthook_t *hook = (contexthook_t *)malloc(sizeof(contexthook_t));
 	hook->addcontext = addcontext;
-	hook->next = extralayers;
+	hook->other = extralayers;
 	extralayers = hook;
 }
 
@@ -324,7 +324,7 @@ jsoncontext_t *json_context_std(json_t *args)
 	json_append(base, json_key("current_tz", json_null()));
 
 	/* Allow plugins or applications to add their own layers */
-	for (hook = extralayers; hook; hook = hook->next)
+	for (hook = extralayers; hook; hook = hook->other)
 		context = (*hook->addcontext)(context);
 
 	/* Create a layer to contain the "data" variable.  The layers should be
@@ -372,11 +372,18 @@ jsoncontext_t *json_context_func(jsoncontext_t *context, jsonfunc_t *fn, json_t 
 
 	/* Build an object containing the actual arguments */
 	cargs = json_copy(fn->userparams);
-	for (name = fn->userparams->first, value = args->first;
+	for (name = fn->userparams->first, value = json_first(args);
 	     name && value;
-	     name = name->next, value = value->next) {
+	     name = name->next, value = json_next(value)) { /* object */
 		json_append(cargs, json_key(name->text, json_copy(value)));
 	}
+
+	/* It's possible that we hit the end of names before values or
+	 * vice-versa.  It's also possible that one of the lists is a
+	 * deferred array.  We need to clean up.
+	 */
+	json_break(name);
+	json_break(value);
 
 	/* Also "vars" and "consts" to the arguments object */
 	vars = json_object();
@@ -465,7 +472,7 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 	 */
 	if (filename) {
 		/* Scan the files table for this filename */
-		for (i = 0, j = files->first; j; j = j->next, i++)
+		for (i = 0, j = files->first; j; j = j->next, i++) /* undeferred */
 			if ((f = json_by_key(j, "filename")) != NULL
 			 && f->type == JSON_STRING
 			 && !strcmp(f->text, filename))
@@ -837,7 +844,7 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 			/* Scan the array for an element with that member key
 			 * and value.
 			 */
-			for (v = value->first; v; v = v->next) {
+			for (v = json_first(value); v; v = json_next(v)) {
 				if (v->type == JSON_OBJECT) {
 					m = json_by_key(v, skey);
 					if (m && json_equal(m, t))
@@ -921,7 +928,7 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	const char	*err;
 
 	/* We can't use a value that's already part of something else. */
-	assert(rvalue->next == NULL);
+	assert(rvalue->next == NULL); /* undeferred */
 
 	/* Get the details on what to change.  Note that for new members,
 	 * value may be NULL even if jxlvalue() returns 1.
@@ -946,8 +953,11 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 		if (!value)
 			return json_error_null(0, "UnknownSub:No element found with the requested subscript", key);
 
+		/* If it's a deferred array, convert to undeferred */
+		json_undefer(container);
+
 		/* Use the tail of the array with the new value */
-		rvalue->next = value->next;
+		rvalue->next = value->next; /* undeferred */
 
 		/* Replace either the head of the array or a later element */
 		if (value == container->first) {
@@ -955,15 +965,15 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 			container->first = rvalue;
 		} else {
 			/* Scan for the element before the changed one */
-			for (scan = container->first; scan->next != value; scan = scan->next) {
+			for (scan = container->first; scan->next != value; scan = scan->next) { /* undeferred */
 			}
 
 			/* Replace the element after it with a new one */
-			scan->next = rvalue;
+			scan->next = rvalue; /* undeferred */
 		}
 
 		/* Free the old value (but not its siblings) */
-		value->next = NULL;
+		value->next = NULL; /* undeferred */
 		json_free(value);
 	} else {
 		/* Not something that can be assigned */
@@ -994,7 +1004,7 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	const char *err;
 
 	/* We can't use a value that's already part of something else. */
-	assert(rvalue->next == NULL);
+	assert(rvalue->next == NULL); /* undeferred */
 
 	/* Get the details on what to change */
 	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
@@ -1009,6 +1019,9 @@ json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 	/* We can only append to arrays */
 	if (value->type != JSON_ARRAY)
 		return json_error_null(0, "Append:Can't append to %s \"%s\"", json_typeof(value, 0), key);
+
+	/* If its a deferred array, convert to undeferred */
+	json_undefer(value);
 
 	/* Append! */
 	json_append(value, rvalue);
@@ -1114,7 +1127,7 @@ json_t *json_context_default_table(jsoncontext_t *context, char **refexpr)
 
 		/* If it's an object, scan it for a table */
 		if (found->type == JSON_OBJECT) {
-			for (found = found->first; found; found = found->next) {
+			for (found = found->first; found; found = found->next) { /* object */
 				if (json_is_table(found->first)) {
 					if (refexpr) {
 						*refexpr = (char *)malloc(6 + strlen(found->text));

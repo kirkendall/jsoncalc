@@ -40,7 +40,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 
 	/* Collect statistics about the columns */
 	explain = NULL;
-	for (row = json->first; row; row = row->next)
+	for (row = json_first(json); row; row = json_next(row))
 		explain = json_explain(explain, row, 0);
 
 	/* Allocate arrays to hold padding tips. */
@@ -52,7 +52,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 	 * Also, output the column headings while we're at it.
 	 */
 	rowheight = 1;
-	for (c = 0, col = explain->first; col; c++, col = col->next) {
+	for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
 		/* For columns that can contain arrays or objects, make sure
 		 * it's wide enough to show "[array]" or "{object}".
 		 */
@@ -114,7 +114,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 		}
 
 		/* Output this line of this column's heading */
-		for (c = 0, col = explain->first; col; c++, col = col->next) {
+		for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
 			/* Get this line of the heading, and its width */
 			width = widths[c] + pad[c];
 			text = json_text_by_key(col, "key");
@@ -130,7 +130,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 				fwrite(text, 1, size, format->fp);
 			for (; i < (width - wdata); i++)
 				putc(hdrpad, format->fp);
-			if (col->next)
+			if (!json_is_last(col))
 				fputs(bar, format->fp);
 		}
 
@@ -141,12 +141,12 @@ void json_grid(json_t *json, jsonformat_t *format)
 	}
 
 	/* For each row... */
-	for (row = json->first; row && !json_interrupt; row = row->next) {
+	for (row = json_first(json); row && !json_interrupt; row = json_next(row)) {
 		/* Find the height of the tallest cell.  All cells are 1
 		 * except for strings that contain newlines.
 		 */
 		rowheight = 1;
-		for (c = 0, col = explain->first; col; c++, col = col->next) {
+		for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
 			cell = json_by_key(row, json_text_by_key(col, "key"));
 			if (cell && cell->type == JSON_STRING) {
 				cellheight = json_mbs_height(cell->text);
@@ -159,7 +159,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 		for (line = 0; line < rowheight; line++) {
 
 			/* Output this line of the row */
-			for (c = 0, col = explain->first; col; c++, col = col->next) {
+			for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
 				/* Fetch the cell */
 				cell = json_by_key(row, json_text_by_key(col, "key"));
 				/* Get its text and width.  Since strings can
@@ -232,7 +232,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 					putc(' ', format->fp);
 
 				/* Delimiter between columns */
-				if (col->next)
+				if (!json_is_last(col))
 					fputs(delim, format->fp);
 
 			}

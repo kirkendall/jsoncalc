@@ -18,21 +18,37 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 	switch (json->type)
 	{
 	  case JSON_OBJECT:
-	  case JSON_ARRAY:
-		if (buf) *buf++ = json->type == JSON_OBJECT ? '{' : '[';
+		if (buf) *buf++ = '{';
 		len = 2; /* for the opening and closing brackets/braces */
-		for (scan = json->first; scan; scan = scan->next)
+		for (scan = json->first; scan; scan = scan->next) /* object */
 		{
 			sublen = jcseriallen(scan, buf, format);
 			if (buf) buf += sublen;
 			len += sublen;
-			if (scan->next)
+			if (!json_is_last(scan))
+			{
+				len++; /* for the comma between members */
+				if (buf) *buf++ = ',';
+			}
+		}
+		if (buf) *buf++ = '}';
+		break;
+
+	  case JSON_ARRAY:
+		if (buf) *buf++ = '[';
+		len = 2; /* for the opening and closing brackets/braces */
+		for (scan = json_first(json); scan; scan = json_next(scan))
+		{
+			sublen = jcseriallen(scan, buf, format);
+			if (buf) buf += sublen;
+			len += sublen;
+			if (!json_is_last(scan))
 			{
 				len++; /* for the comma between elements */
 				if (buf) *buf++ = ',';
 			}
 		}
-		if (buf) *buf++ = json->type == JSON_OBJECT ? '}' : ']';
+		if (buf) *buf++ = ']';
 		break;
 
 	  case JSON_KEY:

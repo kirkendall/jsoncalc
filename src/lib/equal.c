@@ -45,9 +45,12 @@ int json_equal(json_t *j1, json_t *j2)
                 /* Compare length, and values of elements. */
                 if (json_length(j1) != json_length(j2))
                         return 0;
-                for (j1 = j1->first, j2 = j2->first; j1 && j2; j1 = j1->next, j2 = j2->next) {
-                        if (!json_equal(j1, j2))
+                for (j1 = json_first(j1), j2 = json_first(j2); j1 && j2; j1 = json_next(j1), j2 = json_next(j2)) {
+                        if (!json_equal(j1, j2)) {
+				json_break(j1);
+				json_break(j2);
                                 return 0;
+			}
                 }
                 return 1;
 
@@ -58,7 +61,7 @@ int json_equal(json_t *j1, json_t *j2)
                  */
                 if (json_length(j1) != json_length(j2))
                         return 0;
-                for (j1 = j1->first; j1; j1 = j1->next) {
+                for (j1 = j1->first; j1; j1 = j1->next) { /* object */
                         tmp = json_by_key(j2, j1->text);
                         if (!tmp || !json_equal(j1->first, tmp))
                                 return 0;

@@ -59,7 +59,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 	/* Arrays and objects are treated a bit differently */
 	if (haystack->type == JSON_ARRAY) {
 		/* For each element... */
-		for (i = 0, scan = haystack->first; scan; i++, scan = scan->next) {
+		for (i = 0, scan = json_first(haystack); scan; i++, scan = json_next(scan)) {
 			/* If the value is an object or array, recurse */
 			if (scan->type == JSON_OBJECT || scan->type == JSON_ARRAY) {
 				/* Append this element's index to expr */
@@ -143,7 +143,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 		}
 	} else /* JSON_OBJECT */ {
 		/* For each member... */
-		for (scan = haystack->first; scan; scan = scan->next) {
+		for (scan = haystack->first; scan; scan = scan->next) { /* object */
 			/* If the value is an object or array, recurse */
 			if (scan->first->type == JSON_OBJECT || scan->first->type == JSON_ARRAY) {
 				/* Append this member's key to expr */

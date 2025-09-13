@@ -25,14 +25,14 @@ json_t *json_by_key(const json_t *container, const char *key)
 	}
 
 	/* Scan for it.  If found, return its value */
-	for (scan = container->first; scan; scan = scan->next)
+	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
 		if (scan->type == JSON_KEY && !strcmp(scan->text, key))
 			return scan->first;
 	}
 
 	/* Not found, but try again case-insensitively */
-	for (scan = container->first; scan; scan = scan->next)
+	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
 		if (scan->type == JSON_KEY && !strcasecmp(scan->text, key))
 			return scan->first;
@@ -59,7 +59,7 @@ json_t *json_by_deep_key(json_t *container, char *key)
 
         /* Next try any containers within this object */
         result = NULL;
-        for (scan = container->first; scan && !result; scan = scan->next) {
+        for (scan = container->first; scan && !result; scan = scan->next) { /* object */
                 if (scan->type == JSON_KEY && (scan->first->type == JSON_OBJECT || scan->first->type == JSON_ARRAY))
                         result = json_by_deep_key(scan->first, key);
                 else if (scan->type == JSON_OBJECT || scan->type == JSON_ARRAY)
@@ -97,7 +97,7 @@ json_t *json_by_index(json_t *container, int idx)
 	}
 
 	/* Scan for it.  If found, return its value */
-	for (scan = container->first, scanidx = 0; scan; scan = scan->next)
+	for (scan = json_first(container), scanidx = 0; scan; scan = json_next(scan))
 	{
 		/* skip named elements */
 		if (scan->type == JSON_KEY)

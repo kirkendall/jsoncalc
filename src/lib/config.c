@@ -150,7 +150,7 @@ static void merge(json_t *old, json_t *newload)
 		return;
 
 	/* For each new member */
-	for (newkey = newload->first; newkey; newkey = newkey->next) {
+	for (newkey = newload->first; newkey; newkey = newkey->next) { /* object */
 		/* Look for a corresponding old member */
 		oldmem = json_by_key(old, newkey->text);
 
@@ -660,7 +660,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 			 * list.  The list could only be in "config", not at
 			 * the top-level "json_config".  Look for lists!
 			 */
-			for (list = config->first; list; list = list->next) {
+			for (list = config->first; list; list = list->next) { /* object */
 				/* Skip if not "somename-list" array */
 				len = strlen(list->text);
 				if (len <= 5
@@ -669,7 +669,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					continue;
 
 				/* For each element in the list... */
-				for (found = list->first->first; found; found = found->next) {
+				for (found = json_first(list->first); found; found = json_next(found)) {
 					/* Skip if not a string */
 					if (found->type != JSON_STRING)
 						continue;
@@ -709,6 +709,13 @@ BreakBreak:
 
 			/* Store the setting as a string */
 			json_append(config, json_key(name, json_string(found->text, -1)));
+
+			/* If the list was deferred (unlikely!) then let the
+			 * library know that we abandoned the scanning loop
+			 * before its end.  The "found" pointer will be invalid
+			 * after this.
+			 */
+			json_break(found);
 
 			/* Move past the enumerated value */
 			settings += strlen(found->text);

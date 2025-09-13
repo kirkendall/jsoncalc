@@ -940,7 +940,7 @@ json_t *json_datetime_fn(json_t *args, char *typename)
 		normalize(&jdt);
 
 	/* Process any other arguments. */
-	for (scan = args->first->next; scan; scan = scan->next) {
+	for (scan = args->first->next; scan; scan = scan->next) { /* undeferred */
 		if (scan->type == JSON_NUMBER) {
 			/* If we already had a number, interpret it as seconds*/
 			if (havenum)

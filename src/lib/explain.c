@@ -151,14 +151,14 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 	}
 
 	/* For each column of the row ... */
-	for (col = row->first; col; col = col->next) {
+	for (col = row->first; col; col = col->next) { /* object */
 		assert(col->type == JSON_KEY);
 
 		/* Derive the type by examining the key's value */
 		newtype = json_typeof(col->first, 1);
 
 		/* Locate the columns entry for this line, if any */
-		for (stats = columns->first; stats; stats = stats->next) {
+		for (stats = columns->first; stats; stats = stats->next) { /* undeferred */
 			if ((t = json_by_key(stats, "key")) != NULL
 			 && t->type == JSON_STRING
 			 && !strcmp(t->text, col->text))
@@ -227,7 +227,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 					json_append(stats, json_key("explain", t2));
 			} else if (!strcmp(newtype, "table") && col->first->type == JSON_ARRAY) {
 				t = json_by_key(stats, "explain");
-				for (t2 = col->first->first; t2; t2 = t2->next) {
+				for (t2 = col->first->first; t2; t2 = t2->next) { /* undeferred */
 					t = json_explain(t, t2, depth - 1);
 				}
 				if (json_by_key(stats, "explain") != t)
@@ -240,7 +240,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 	/* If any known columns are missing from this row, assume the column
 	 * is nullable.
 	 */
-	for (stats = columns->first; stats; stats = stats->next) {
+	for (stats = columns->first; stats; stats = stats->next) { /* undeferred */
 		if (json_by_key(row, json_text_by_key(stats, "key")) == NULL)
 			json_append(stats, json_key("nullable", json_bool(1)));
 	}

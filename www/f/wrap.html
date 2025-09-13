@@ -33,9 +33,10 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>"Now is the time for all good men to come to the aid of their country".wrap(20)</kbd>
+	<kbd>const t="Now is the time for all good men to come to the aid of their country"</kbd>
+	<kbd>t.wrap(20)</kbd>
 	<samp>"Now is the time for\nall good men to come\nto the aid of their\ncountry"</samp>
-	<kbd>print "Now is the time for all good men to come to the aid of their country".wrap(20)</kbd>
+	<kbd>print t.wrap(20)</kbd>
 	<samp>Now is the time for
 <br/>all good men to come
 <br/>to the aid of their
@@ -47,7 +48,7 @@
       </div>
 
       <div class="example">
-	<kbd>print "Now is the time for all good men to come to the aid of their country".wrap(-17)</kbd>
+	<kbd>print t.wrap(-17)</kbd>
 	<samp>Now is the time f
 <br/>or all good men t
 <br/>o come to the aid
@@ -75,11 +76,25 @@
 	    <a target="_PARENT" href="../index.html?f=split">split("\n")</a>
 	    to the result.
 	    <div class="example">
-	      <kbd>"Now is the time for all good men to come to the aid of their country".wrap(20).split("\n")</kbd>
+	      <kbd>t.wrap(20).split("\n")</kbd>
 	      <samp>["Now is the time for","all good men to come","to the aid of their","country"]</samp>
 	    </div>
 
 	<li>The "grid" table format can handle wrapped strings.
+	    <div class="example">
+	      <kbd>[{"#":1, "word wrap":t.wrap(20), "char wrap":t.wrap(-17)}]</kbd>
+	      <samp>
+		<table>
+		  <tr><th>#</th><th>word wrap</th><th>char wrap</th></tr>
+		  <tr>
+		    <td style="vertical-align:top">1</td>
+		    <td>Now is the time for<br/>all good men to come<br/>to the aid of their<br/>country</td>
+		    <td>Now is the time f<br/>or all good men t</br>o come to the aid<br/>&nbsp;of their country</td>
+		  </tr>
+		</table>
+	      </samp>
+	      We created a one-row table that contains wrapped text in two columns.
+	    </div>
 
       </ul>
     </details>

@@ -19,14 +19,14 @@ static int jcwalk(json_t *json, int (*callback)(json_t *, void *), void *data)
 			return quit;
 
 		/* If ->first is non-NULL, walk there too (recursively) */
-		if (json->first) {
+		if (json->first) { /* undeferred */
 			quit = json_walk(json->first, callback, data);
 			if (quit != 0)
 				return quit;
 		}
 
 		/* Move to the next node */
-		json = json->next;
+		json = json->next; /* undeferred */
 	}
 
 	/* If we get here, then we didn't quit before the end */
@@ -52,6 +52,10 @@ int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data)
 	/* Defend against NULL */
 	if (!json)
 		return 0;
+
+	/* If applied to a deferred array, convert it to undeferred */
+	if (json_is_deferred_array(json))
+		json_undefer(json);
 
 	/* Call the function for this node */
 	quit = (*callback)(json, data);

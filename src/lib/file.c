@@ -85,7 +85,7 @@ jsonfile_t *json_file_load(const char *filename)
 	jf->isfile = (st.st_mode & S_IFMT) == S_IFREG;
 	jf->size = st.st_size;
 	jf->base = base;
-	jf->next = loaded;
+	jf->other = loaded;
 	loaded = jf;
 	return jf;
 }
@@ -97,15 +97,15 @@ void json_file_unload(jsonfile_t *jf)
 	jsonfile_t *scan, *lag;
 	for (lag = NULL, scan = loaded;
 	     scan && scan != jf;
-	     lag = scan, scan = scan->next) {
+	     lag = scan, scan = scan->other) {
 	}
 	if (!scan) {
 		/* Should never happen */
 		abort();
 	} else if (lag) {
-		lag->next = scan->next;
+		lag->other = scan->other;
 	} else
-		loaded = scan->next;
+		loaded = scan->other;
 
 	/* Unmap or free the memory */
 	if (jf->isfile) {
@@ -139,7 +139,7 @@ jsonfile_t *json_file_containing(const char *where, int *refline)
 	int	line;
 
 	/* Scan for it */
-	for (jf = loaded; jf; jf = jf->next) {
+	for (jf = loaded; jf; jf = jf->other) {
 		if (jf->base <= where && where < jf->base + jf->size) {
 			/* Found it! */
 
@@ -233,7 +233,7 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix)
 
 	/* For each entry in the path... */
 	first = 1;
-	for (path = path->first; path; path = path->next) {
+	for (path = path->first; path; path = path->next) { /* undeferred */
 		/* Generate the filename in this directory.  If the directory
 		 * starts with "~" then use $HOME instead.
 		 */

@@ -56,23 +56,36 @@ int json_is_error(json_t *json)
 int json_is_table(json_t *json)
 {
 	int	anydata;
+	json_t	*elem;
 
         /* Must be an array */
         if (!json || json->type != JSON_ARRAY)
                 return 0;
 
-        /* Every element must be an object.  Must contain some data */
-        anydata = 0;
-        for (json = json->first; json; json = json->next) {
-                if (json->type != JSON_OBJECT)
-                        return 0;
-		if (json->first)
-			anydata = 1;
-	}
-	if (!anydata)
+	/* If we already have an answer in ->text[1], use it */
+	if (json->text[1] == 't')
+		return 1;
+	else if (json->text[1] == 'n')
 		return 0;
 
-        /* Looks good.  Might be an empty array, but that's okay */
+        /* Every element must be a non-empty object. */
+        anydata = 0;
+        for (elem = json_first(json); elem; elem = json_next(elem)) {
+                if (elem->type != JSON_OBJECT) {
+			json_break(elem);
+			json->text[1] = 'n';
+                        return 0;
+		}
+		if (elem->first)
+			anydata = 1;
+	}
+	if (!anydata) {
+		json->text[1] = 'n';
+		return 0;
+	}
+
+        /* Looks good. */
+        json->text[1] = 't';
         return 1;
 }
 
@@ -86,6 +99,10 @@ static size_t shorthelper(json_t *json, size_t oneline)
         size_t size = 0;
 
         while (json && size < oneline) {
+		/* Assume deferred arrays are long */
+		if (json_is_deferred_array(json))
+			return oneline;
+
                 /* Text and punctuation */
                 switch (json->type) {
                   case JSON_STRING:
@@ -137,7 +154,7 @@ static size_t shorthelper(json_t *json, size_t oneline)
 
                 /* Handle "next" iteratively */
                 size++; /* for "," */
-                json = json->next;
+                json = json->next; /* undeferred */
         }
         return size;
 }

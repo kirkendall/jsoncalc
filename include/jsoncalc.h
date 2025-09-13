@@ -19,7 +19,7 @@
 typedef enum {
 	JSON_BADTOKEN, JSON_NEWLINE,
 	JSON_OBJECT, JSON_ENDOBJECT,
-	JSON_ARRAY, JSON_ENDARRAY,
+	JSON_ARRAY, JSON_ENDARRAY, JSON_DEFER,
 	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_NULL, JSON_BOOL
 } jsontype_t;
 
@@ -59,9 +59,37 @@ typedef struct json_s {
  */
 #define JSON_END_POINTER(j)	(((json_t **)((j) + 1))[-1])
 
+/* In arrays, we use the 4 bytes before JSON_END_POINTER to store the length */
+#define JSON_ARRAY_LENGTH(j)	(((__uint32_t *)&JSON_END_POINTER(j))[-1])
+
 /* These are used to stuff a binary double or int into a JSON_NUMBER*/
 #define JSON_DOUBLE(j)	(((double *)((j) + 1))[-1])
 #define JSON_INT(j)	(((int *)((j) + 1))[-1])
+
+/* This stores info about the implementation of different types of deferred
+ * arrays. It's basically a collection of function pointers, plus a size_t
+ * indicating how much storage space it needs.
+ */
+typedef struct {
+	size_t	size;
+	char	*desc;
+	json_t	*(*first)(json_t *array);
+	json_t	*(*next)(json_t *elem);
+	int	(*islast)(const json_t *elem);
+	void	(*free)(json_t *array_or_elem);
+	json_t	*(*byindex)(json_t *array, int index);
+	json_t	*(*bykey)(json_t *array, char *key, json_t *value);
+} jsondeffns_t;
+
+/* This is the generic part of a JSON_DEFER node.  It starts with plain json_t,
+ * and adds some extra fields.  An actual JSON_DEFER note will generally have
+ * other information, as its own data type.  The functions that jsondeffns_t
+ * points to know the actual data type.
+ */
+typedef struct {
+	json_t	json; /* Standard stuff, with ->type=JSON_DEFER */
+	jsondeffns_t *fns; /* pointer to a group of function pointers */
+} jsondef_t;
 
 /* This stores info about formatting -- mostly output formatting, since for
  * input we take whatever we're given.
@@ -116,7 +144,7 @@ extern char json_format_color_end[20];
  * number of functions or vars/consts defined in the script.
  */
 typedef struct jsonfile_s {
-	struct jsonfile_s *next;/* Used to for a linked list */
+	struct jsonfile_s *other;/* Used to for a linked list */
 	int		fd;	/* File descriptor of the open file */
 	int		isfile;	/* Boolean: is this a regular file (not pipe, etc) */
 	int		refs;	/* Reference count */
@@ -157,6 +185,8 @@ extern json_t *json_from_double(double f);
 extern json_t *json_key(const char *key, json_t *value);
 extern json_t *json_object();
 extern json_t *json_array();
+extern json_t *json_defer(jsondeffns_t *fns);
+extern json_t *json_defer_ellipsis(int from, int to);
 extern char *json_append(json_t *container, json_t *more);
 extern size_t json_sizeof(json_t *json);
 extern char *json_typeof(json_t *json, int extended);
@@ -183,12 +213,13 @@ extern void json_print(json_t *json, jsonformat_t *format);
 extern void json_grid(json_t *json, jsonformat_t *format);
 extern void json_format_set(jsonformat_t *format, json_t *config);
 extern void json_format_esc(char *esc, const char *name, int nounderlined);
+extern void json_undefer(json_t *arr);
 
 /* Accessing */
 extern json_t *json_by_key(const json_t *container, const char *key);
 extern json_t *json_by_deep_key(json_t *container, char *key);
 extern json_t *json_by_index(json_t *container, int idx);
-extern json_t *json_by_expr(json_t *container, const char *expr, const char **next);
+extern json_t *json_by_expr(json_t *container, const char *expr, const char **after);
 extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey);
 #ifdef REG_ICASE /* skip this if <regex.h> not included */
 extern json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey);
@@ -197,6 +228,12 @@ extern char *json_default_text(char *newdefault);
 extern char *json_text(json_t *json);
 extern double json_double(json_t *json);
 extern int json_int(json_t *json);
+extern json_t *json_first(json_t *arr);
+extern json_t *json_next(json_t *elem);
+extern void json_break(json_t *elem);
+extern int json_is_last(const json_t *elem);
+
+/* Testing */
 extern int json_length(json_t *container);
 extern int json_is_true(json_t *json);
 extern int json_is_null(json_t *json);
@@ -207,13 +244,15 @@ extern int json_is_date(json_t *json);
 extern int json_is_time(json_t *json);
 extern int json_is_datetime(json_t *json);
 extern int json_is_period(json_t *json);
+extern int json_is_deferred_array(const json_t *arr);
+extern int json_is_deferred_element(const json_t *elem);
 extern int json_equal(json_t *j1, json_t *j2);
 extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
 #define json_text_by_key(container, key) json_text(json_by_key((container), (key)))
 #define json_text_by_deep_key(container, key) json_text(json_by_deep_key((container), (key)))
 #define json_text_by_index(container, index) json_text(json_by_index((container), (index)))
 /* The next parameter may be NULL.  See json_by_expr() for more details. */
-#define json_text_by_expr(container, expr, next) json_text(json_by_expr((container), (expr), (next)))
+#define json_text_by_expr(container, expr, after) json_text(json_by_expr((container), (expr), (after)))
 
 /* The following are for debugging memory leaks.  They're only used if your
  * program defined JSON_DEBUG_MEMORY.
@@ -231,6 +270,7 @@ extern json_t *json_debug_from_double(const char *file, int line, double f);
 extern json_t *json_debug_key(const char *file, int line, const char *key, json_t *value);
 extern json_t *json_debug_object(const char *file, int line);
 extern json_t *json_debug_array(const char *file, int line);
+extern json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns);
 extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
 extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*filter)(json_t *item));
@@ -247,6 +287,7 @@ extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, 
 #define json_key(key, value)		json_debug_key(__FILE__, __LINE__, key, value)
 #define json_object()			json_debug_object(__FILE__, __LINE__)
 #define json_array()			json_debug_array(__FILE__, __LINE__)
+#define json_defer(fns)			json_debug_defer(__FILE__, __LINE__, (fns))
 #define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
 #define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
 #define json_copy_filter(json, filter)	json_debug_copy_filter(__FILE__, __LINE__, json, filter)
@@ -259,6 +300,7 @@ int json_mbs_height(const char *s);
 size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth);
 size_t json_mbs_wrap_char(char *buf, const char *s, int width);
 size_t json_mbs_wrap_word(char *buf, const char *s, int width);
+size_t json_mbs_canonize(char *dest, const char *src);
 int json_mbs_cmp(const char *s1, const char *s2);
 int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
 const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);
@@ -423,7 +465,7 @@ typedef struct jsoncalc_s{
  * fields as "const" here.
  */
 typedef struct jsonfunc_s {
-        struct jsonfunc_s *next;
+        struct jsonfunc_s *other;
         char    *name;
         char	*args;		/* Argument list, as text */
         char	*returntype;	/* Return value type, as text */
@@ -518,7 +560,7 @@ extern json_t json_cmd_break, json_cmd_continue;
  * built in, but plugins can add new command names too.
  */
 typedef struct jsoncmdname_s {
-	struct jsoncmdname_s *next;
+	struct jsoncmdname_s *other;
 	char	*name;
 	struct jsoncmd_s *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr);
 	jsoncmdout_t *(*run)(struct jsoncmd_s *cmd, jsoncontext_t **refcontext);
@@ -535,7 +577,7 @@ typedef struct jsoncmd_s {
 	jsoncontextflags_t flags;/* Context flags for "key" */
 	struct jsoncmd_s   *sub; /* For "then" in "if-then-else" for example */
 	struct jsoncmd_s   *more;/* For "else" in "if-then-else" for example */
-	struct jsoncmd_s   *next;/* in a series of statements, "next" is next */
+	struct jsoncmd_s   *nextcmd;/* in a series of statements, "nextcmd" is next */
 } jsoncmd_t;
 
 /* These are magic values for json_context_file() "current" argument.  They

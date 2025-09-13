@@ -42,8 +42,8 @@
     The most important field is <tt>type</tt>.
     It identifies the JSON data type that this <tt>json_t</tt> contains,
     and will be one of the following symbols:
-    JSON_BOOL, JSON_NULL, JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_OBJECT,
-    or JSON_KEY.
+    JSON_BOOL, JSON_NULL, JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_DEFER,
+    JSON_OBJECT, or JSON_KEY.
     <p>
     The <tt>text</tt> field generally stores string values, and the
     <tt>first</tt> field points to embedded data.
@@ -142,6 +142,12 @@
 
     <h2>Arrays</h2>
     Arrays are stored as linked lists.
+    The head of the list is a <strong>json_t</strong> with -&gt;type=JSON_ARRAY,
+    and the -&gt;first field points to the first element of the array.
+    Each element's -&gt;next field points to the next element; the last
+    element's -&gt;next field is NULL.
+    <p>
+    Except for deferred arrays, described below.
 
     <h3>Optimizations</h3>
     Since arrays don't use the <tt>text</tt> field,
@@ -153,8 +159,42 @@
     with a tail pointer it's just O(n).
     And JSON data often contains large arrays, so this really means something.
     <p>
-    There is a JSON_END_POINTER(json) macro which lets you access the last
-    8 bytes of the <tt>text</tt> field as a pointer to the last element.
+    There is a JSON_END_POINTER(<var>json</var>) macro which lets you access
+    the last 8 bytes of the <tt>text</tt> field as a pointer to the last
+    element.
+    The json_append(<var>array</var>, <var>elem</var>) function uses this to
+    append a new element without having to scan the whole array each time.
+    <p>
+    Arrays abuse the -&gt;text field in two other ways.
+    -&gt;text[1] indicates whether the array is a table ('t' for table, 'n'
+    for non-table, or '\0' for unknown).
+    Bytes 2 through 5 of -&gt;text store a 32-bit length count; if the count
+    is 0 but the -&gt;first pointer is non-NULL, then it is invalid.
+    These allow the json_is_table(<var>array</var>) and
+    json_length(<var>array</var>) functions to return values immediately,
+    without having to scan the whole array.
+    <p>
+    The -&gt;text field is 14 bytes long, and its offset within the
+    <strong>json_t</strong> is 18 bytes.
+    This means we're using (abusing) all bytes of -&gt;text, but the length
+    is aligned on a 4-byte boundary and the end pointer is aligned on an
+    8-byte boundary.
+    <table class="referencelist">
+      <tr><td>-&gt;text[0]</td><td>Always '\0'</td></tr>
+      <tr><td>-&gt;text[1]</td><td>'t' for table, 'n' for non-table, else unknown</td></tr>
+      <tr><td>-&gt;text[2]<br/>
+              -&gt;text[3]<br/>
+              -&gt;text[4]<br/>
+              -&gt;text[5]</td><td>array length, or 0 if unknown</td></tr>
+      <tr><td>-&gt;text[6]<br/>
+              -&gt;text[7]<br/>
+              -&gt;text[8]<br/>
+              -&gt;text[9]<br/>
+              -&gt;text[10]<br/>
+              -&gt;text[11]<br/>
+              -&gt;text[12]<br/>
+              -&gt;text[13]</td><td>pointer to the last element, or NULL</td></tr>
+    </table>
 
     <h3>Deferred Arrays</h3>
     The JsonCalc library supports deferred arrays.
@@ -162,7 +202,7 @@
     the parser just does a quick scan to find its end (so it can parse whatever
     comes after the array), count its length, and check whether it is a table
     (array of objects).
-    For deferred arrays, the <tt>array->first->type</tt> will be JSON_DEFERRED
+    For deferred arrays, the <tt>array->first->type</tt> will be JSON_DEFER
     instead of a normal data type.
     <p>
     When C code wants to scan an array, it normally does so by calling the
@@ -178,6 +218,13 @@
     and then freeing that element before moving to the next one.
     This is actually slower than parsing the big table once,
     but it saves RAM so it can be worth doing because of that.
+    <p>
+    If, while stepping through an array (deferred or not), you decide to stop
+    scanning it before the end
+    (i.e., before json_next(<var>elem</var>) returns NULL)
+    then you must call json_break(<var>elem</var>) so the library can free any
+    resources that it was using to support the array scan.
+    It's safe to call json_break(<var>elem</var>) on non-deferred arrays too.
     <p>
     Deferred arrays aren't used only for large arrays from JSON documents.
     They can be produced by other sources.  For example, the expression

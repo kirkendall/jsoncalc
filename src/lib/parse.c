@@ -17,7 +17,7 @@
  * table formats.
  */
 typedef struct jsonparser_s {
-	struct jsonparser_s *next;
+	struct jsonparser_s *other;
 	const char	*name;
 	int	(*tester)(const char *str, size_t len);
 	json_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
@@ -35,15 +35,18 @@ static void jappendarray(json_t *container, json_t *more)
 		container->first = more;
 	} else if ((scan = JSON_END_POINTER(container)) != NULL) {
 		/* Next element, optimized via JSON_POINTER_END() */
-		assert(scan->next == NULL);
-		scan->next = more;
+		assert(scan->next == NULL); /* undeferred */
+		scan->next = more; /* undeferred */
 	} else {
 		/* Next element, unoptimized */
-		for (scan = container->first; scan->next; scan = scan->next) {
+		for (scan = container->first; scan->next; scan = scan->next) { /* undeferred */
 		}
-		scan->next = more;
+		scan->next = more; /* undeferred */
 	}
 	JSON_END_POINTER(container) = more;
+	JSON_ARRAY_LENGTH(container)++;
+	if (container->text[1] == 't' && (more->type != JSON_OBJECT || more->first == NULL))
+		container->text[1] = 'n';
 }
 
 /* Append a member to an object.  This version is only useable in the parser
@@ -56,10 +59,10 @@ static void jappendobject(json_t *container, json_t *more)
 	if (!container->first) {
 		container->first = more;
 	} else {
-		for (scan = container->first; strcmp(scan->text, more->text); scan = scan->next) {
-			if (!scan->next) {
+		for (scan = container->first; strcmp(scan->text, more->text); scan = scan->next) { /* object */
+			if (!scan->next) { /* object */
 				/* adding a new name */
-				scan->next = more;
+				scan->next = more; /* object */
 				JSON_END_POINTER(container) = more;
 				return;
 			}
@@ -378,11 +381,11 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 				else {
 					if (tail == NULL) {
 						for (tail = stack[sp]->first;
-						     tail->next;
-						     tail = tail->next) {
+						     tail->next; /* object */
+						     tail = tail->next) { /* object */
 						}
 					}
-					tail->next = jk;
+					tail->next = jk; /* object */
 				}
 				tail = jk;
 			} else {
@@ -437,7 +440,7 @@ static json_t *parse(const char *str, size_t len, const char **refend, const cha
 	jsonparser_t *jp;
 
 	/* If any add-on parser wants it, let it parse try */
-	for (jp = parsers; jp; jp = jp->next) {
+	for (jp = parsers; jp; jp = jp->other) {
 		if (jp->tester(str, len))
 			return jp->parser(str, len, refend, referr);
 	}
@@ -508,6 +511,6 @@ void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len
 	jp->parser = parser;
 
 	/* Add it to the list */
-	jp->next = parsers;
+	jp->other = parsers;
 	parsers = jp;
 }

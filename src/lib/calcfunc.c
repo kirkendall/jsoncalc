@@ -39,6 +39,7 @@ typedef struct { char *ag; size_t size;} agjoindata_t;
 static json_t *jfn_toUpperCase(json_t *args, void *agdata);
 static json_t *jfn_toLowerCase(json_t *args, void *agdata);
 static json_t *jfn_toMixedCase(json_t *args, void *agdata);
+static json_t *jfn_canonize(json_t *args, void *agdata);
 static json_t *jfn_substr(json_t *args, void *agdata);
 static json_t *jfn_hex(json_t *args, void *agdata);
 static json_t *jfn_toString(json_t *args, void *agdata);
@@ -134,7 +135,8 @@ static void    jag_join(json_t *args, void *agdata);
 static jsonfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str:string", "string",	jfn_toUpperCase};
 static jsonfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str:string", "string",	jfn_toLowerCase};
 static jsonfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str:string, exceptions?:string[]",	"string",	jfn_toMixedCase};
-static jsonfunc_t substr_jf      = {&toMixedCase_jf, "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
+static jsonfunc_t canonize_jf = {&toMixedCase_jf,    "canonize",    "str:string",	"string",	jfn_canonize};
+static jsonfunc_t substr_jf      = {&canonize_jf,    "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
 static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         "val:string|number, length?:number", "string",	jfn_hex};
 static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    "val:any", "string",		jfn_toString};
 static jsonfunc_t String_jf      = {&toString_jf,    "String",      "val:any", "string",		jfn_toString};
@@ -250,7 +252,7 @@ void json_calc_aggregate_hook(
 		agsize = ((agsize - 1) | 0x7) + 1;
 
 	/* If it's already in the table then update it */
-	for (f = funclist; f; f = f->next) {
+	for (f = funclist; f; f = f->other) {
 		if (!strcmp(f->name, name)) {
 			f->args = (char *)args;
 			f->fn = fn;
@@ -270,7 +272,7 @@ void json_calc_aggregate_hook(
 	f->agfn = agfn;
 	f->agsize = agsize;
 	f->jfoptions = jfoptions;
-	f->next = funclist;
+	f->other = funclist;
 	funclist = f;
 }
 
@@ -295,12 +297,12 @@ void json_calc_function_hook(
  */
 static void free_user_functions()
 {
-	jsonfunc_t	*scan, *lag, *next;
+	jsonfunc_t	*scan, *lag, *other;
 
 	/* For each function in the list... */
-	for (scan = funclist, lag = NULL; scan; scan = next) {
+	for (scan = funclist, lag = NULL; scan; scan = other) {
 		/* Skip if not user-defined */
-		next = scan->next;
+		other = scan->other;
 		if (!scan->user) {
 			lag = scan;
 			continue;
@@ -308,9 +310,9 @@ static void free_user_functions()
 
 		/* Remove it from the list */
 		if (lag)
-			lag->next = next;
+			lag->other = other;
 		else
-			funclist = next;
+			funclist = other;
 
 		/* Free its resources */
 		free(scan->name);
@@ -355,7 +357,7 @@ int json_calc_function_user(
 		/* Allocate a new jsonfunc_t and link it into the table */
 		fn = (jsonfunc_t *)malloc(sizeof(jsonfunc_t));
 		memset(fn, 0, sizeof(jsonfunc_t));
-		fn->next = funclist;
+		fn->other = funclist;
 		funclist = fn;
 	} else if (fn->fn) {
 		/* Can't redefine built-ins */
@@ -392,20 +394,20 @@ jsonfunc_t *json_calc_function_by_name(const char *name)
 	jsonfunc_t *scan;
 
 	/* Try case-sensitive */
-	for (scan = funclist; scan; scan = scan->next) {
+	for (scan = funclist; scan; scan = scan->other) {
 		if (!strcmp(name, scan->name))
 			return scan;
 	}
 
 	/* Try case-insensitive */
-	for (scan = funclist; scan; scan = scan->next) {
+	for (scan = funclist; scan; scan = scan->other) {
 		if (!json_mbs_casecmp(name, scan->name))
 			return scan;
 	}
 
 	/* Try abbreviation, if the name is more than 1 letter long */
 	if (json_mbs_len(name) > 1) {
-		for (scan = funclist; scan; scan = scan->next) {
+		for (scan = funclist; scan; scan = scan->other) {
 			if (!json_mbs_abbrcmp(name, scan->name))
 				return scan;
 		}
@@ -469,11 +471,29 @@ static json_t *jfn_toMixedCase(json_t *args, void *agdata)
 		tmp = jfn_toString(args, agdata);
 
 	/* Convert to mixedcase */
-	json_mbs_tomixed(tmp->text, args->first->next);
+	json_mbs_tomixed(tmp->text, args->first->next); /* undeferred */
 
 	/* Return it */
 	return tmp;
 
+}
+
+/* canonize(str) returns a canonized version of str */
+static json_t *jfn_canonize(json_t *args, void *agdata)
+{
+	json_t  *tmp;
+
+	/* If string, make a copy.  If not a string then use toString on it. */
+	if (args->first->type == JSON_STRING)
+		tmp = json_string(args->first->text, -1);
+	else
+		tmp = jfn_toString(args, agdata);
+
+	/* Canonize it */
+	json_mbs_canonize(tmp->text, tmp->text);
+
+	/* Return it */
+	return tmp;
 }
 
 
@@ -485,7 +505,7 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 	size_t  len, start, limit;
 
 	/* If not a string or no other parameters, just return null */
-	if (args->first->type != JSON_STRING || !args->first->next)
+	if (args->first->type != JSON_STRING || !args->first->next) /* undeferred */
 		return json_error_null(NULL, "substrStr:substr() requires a string");
 	str = args->first->text;
 
@@ -493,9 +513,9 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 	len = json_mbs_len(str);
 
 	/* Get the starting position */
-	if (args->first->next->type != JSON_NUMBER)
+	if (args->first->next->type != JSON_NUMBER) /* undeferred */
 		return json_error_null(NULL, "substrPos:substr() position must be a number");
-	istart = json_int(args->first->next);
+	istart = json_int(args->first->next); /* undeferred */
 	if (istart < 0 && istart + len >= 0)
 		start = len + istart;
 	else if (istart < 0 || istart > len)
@@ -504,12 +524,12 @@ static json_t *jfn_substr(json_t *args, void *agdata)
 		start = istart;
 
 	/* Get the length limit */
-	if (!args->first->next->next)
+	if (!args->first->next->next) /* undeferred */
 		limit = len - start; /* all the way to the end */
-	else if (args->first->next->next->type != JSON_NUMBER)
+	else if (args->first->next->next->type != JSON_NUMBER) /* undeferred */
 		return json_error_null(NULL, "substrLen:substr() length must be a number");
 	else {
-		limit = json_int(args->first->next->next);
+		limit = json_int(args->first->next->next); /* undeferred */
 		if (start + limit > len)
 			limit = len - start;
 	}
@@ -547,8 +567,8 @@ static json_t *jfn_hex(json_t *args, void *agdata)
 		/* Get the args, including length */
 		n = json_int(args->first);
 		len = 0;
-		if (args->first->next && args->first->next->type == JSON_NUMBER)
-			len = json_int(args->first->next);
+		if (args->first->next && args->first->next->type == JSON_NUMBER) /* undeferred */
+			len = json_int(args->first->next); /* undeferred */
 		if (len < 0)
 			len = 0;
 
@@ -660,12 +680,12 @@ static json_t *jfn_isPeriod(json_t *args, void *agdata)
 static json_t *jfn_typeOf(json_t *args, void *agdata)
 {
 	char	*type, *mixed;
-	if (!args->first->next || (args->first->next->type == JSON_BOOL && *args->first->next->text == 'f'))
+	if (!args->first->next || (args->first->next->type == JSON_BOOL && *args->first->next->text == 'f')) /* undeferred */
 		type = json_typeof(args->first, 0);
 	else {
 		type = json_typeof(args->first, 1);
-		if (args->first->next->type == JSON_STRING) {
-			mixed = json_mix_types(args->first->next->text, type);
+		if (args->first->next->type == JSON_STRING) { /* undeferred */
+			mixed = json_mix_types(args->first->next->text, type); /* undeferred */
 			if (mixed)
 				type = mixed;
 		}
@@ -726,6 +746,7 @@ static json_t *jfn_heightOf(json_t *args, void *agdata)
 	case JSON_NEWLINE:
 	case JSON_ENDOBJECT:
 	case JSON_ENDARRAY:
+	case JSON_DEFER:
 	case JSON_KEY:
 		/* can't happen */
 		abort();
@@ -742,7 +763,7 @@ static json_t *jfn_keys(json_t *args, void *agdata)
 	/* This only really works on objects */
 	if (args->first->type == JSON_OBJECT) {
 		/* For each member... */
-		for (scan = args->first->first; scan; scan = scan->next) {
+		for (scan = args->first->first; scan; scan = scan->next) { /* undeferred */
 			assert(scan->type == JSON_KEY);
 			/* Append its name to the result as a string */
 			json_append(result, json_string(scan->text, -1));
@@ -809,7 +830,7 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 	/* Are we doing arrays or strings? */
 	if (args->first->type == JSON_ARRAY) {
 		/* Arrays -- make sure everything is an array */
-		for (scan = args->first->next; scan; scan = scan->next) {
+		for (scan = args->first->next; scan; scan = scan->next) { /* undeferred */
 			if (scan->type != JSON_ARRAY && scan->type != JSON_NULL)
 				goto BadMix;
 		}
@@ -818,17 +839,17 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 		result = json_array();
 
 		/* Append the elements of all arrays */
-		for (scan = args->first; scan; scan = scan->next) {
+		for (scan = args->first; scan; scan = scan->next) { /* undeferred */
 			if (scan->type == JSON_NULL)
 				continue;
-			for (elem = scan->first; elem; elem = elem->next)
+			for (elem = json_first(scan); elem; elem = json_next(elem))
 				json_append(result, json_copy(elem));
 		}
 	} else {
 		/* Strings -- Can't handle objects/arrays but other types okay.
 		 * Also, count the length of the combined string, in bytes.
 		 */
-		for (len = 0, scan = args->first; scan; scan = scan->next) {
+		for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
 			if (scan->type == JSON_ARRAY || scan->type == JSON_OBJECT)
 				goto BadMix;
 			if (scan->type == JSON_STRING || scan->type == JSON_BOOL || (scan->type == JSON_NUMBER && *scan->text))
@@ -841,7 +862,7 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 		result = json_string("", len);
 
 		/* Append all of the strings together */
-		for (build = result->text, scan = args->first; scan; scan = scan->next) {
+		for (build = result->text, scan = args->first; scan; scan = scan->next) { /* undeferred */
 			if (scan->type == JSON_NULL)
 				continue;
 			else if (scan->type == JSON_NUMBER && !*scan->text) {
@@ -869,7 +890,7 @@ json_t *jfn_orderBy(json_t *args, void *agdata)
 	json_t arraybuf;
 
 	/* Extract "order" from args */
-	order = args->first->next;
+	order = args->first->next; /* undeferred */
 	if (order && order->type == JSON_STRING) {
 		arraybuf.type = JSON_ARRAY;
 		arraybuf.first = order;
@@ -897,33 +918,33 @@ json_t *jfn_groupBy(json_t *args, void *agdata)
 	 * Second must be array, hopefully of strings
 	 */
 	if (!json_is_table(args->first)
-	 || !args->first->next
-	 || (args->first->next->type != JSON_ARRAY && args->first->next->type != JSON_STRING))
+	 || !args->first->next /* undeferred */
+	 || (args->first->next->type != JSON_ARRAY && args->first->next->type != JSON_STRING)) /* undeferred */
 		return NULL;
 	result = json_copy(args->first);
-	json_sort(result, args->first->next, 1);
+	json_sort(result, args->first->next, 1); /* undeferred */
 
 	/* If a third arg is given, then append an empty object to trigger a
 	 * totals line when the @ ot @@ operator is used.
 	 */
 	if (result
 	 && result->type == JSON_ARRAY
-	 && args->first->next->next) {
+	 && args->first->next->next) { /* undeferred */
 		json_t *totals = json_object();
-		if (args->first->next->next->type == JSON_STRING) {
+		if (args->first->next->next->type == JSON_STRING) { /* undeferred */
 			/* find the first field name */
-			json_t *name = args->first->next;
+			json_t *name = args->first->next; /* undeferred */
 			char *text, *dot;
 			if (name->type == JSON_ARRAY)
 				name = name->first;
 			while (name && name->type != JSON_STRING)
-				name = name->next;
+				name = name->next; /* undeferred */
 			dot = strrchr(name->text, '.');
 			text = dot ? dot + 1 : name->text;
 			if (name)
-				json_append(totals, json_key(text, json_copy(args->first->next->next)));
+				json_append(totals, json_key(text, json_copy(args->first->next->next))); /* undeferred */
 			json_append(result, totals);
-		} else if (json_is_true(args->first->next->next))
+		} else if (json_is_true(args->first->next->next)) /* undeferred */
 			json_append(result, totals);
 		else
 			json_free(totals);
@@ -937,8 +958,8 @@ json_t *jfn_groupBy(json_t *args, void *agdata)
 json_t *jfn_flat(json_t *args, void *agdata)
 {
 	int	depth;
-	if (args->first->next && args->first->next->type == JSON_NUMBER)
-		depth = json_int(args->first->next);
+	if (args->first->next && args->first->next->type == JSON_NUMBER) /* undeferred */
+		depth = json_int(args->first->next); /* undeferred */
 	else
 		depth = -1;
 	return json_array_flat(args->first, depth);
@@ -961,22 +982,22 @@ json_t *jfn_slice(json_t *args, void *agdata)
 		return NULL;
 
 	/* Get the start and end parameters */
-	if (!args->first->next || args->first->next->type != JSON_NUMBER) {
+	if (!args->first->next || args->first->next->type != JSON_NUMBER) { /* undeferred */
 		/* No endpoints, why bother? */
 		start = 0, end = srclength; /* the whole array/string */
 	} else {
 		/* We at least have a start */
-		start = json_int(args->first->next);
+		start = json_int(args->first->next); /* undeferred */
 		if (start < 0)
 			start += srclength;
 		if (start < 0)
 			start = 0;
 
 		/* Do we also have an end? */
-		if (!args->first->next->next || args->first->next->next->type != JSON_NUMBER) {
+		if (!args->first->next->next || args->first->next->next->type != JSON_NUMBER) { /* undeferred */
 			end = srclength;
 		} else {
-			end = json_int(args->first->next->next);
+			end = json_int(args->first->next->next); /* undeferred */
 			if (end < 0)
 				end += srclength;
 			if (end < start)
@@ -988,7 +1009,7 @@ json_t *jfn_slice(json_t *args, void *agdata)
 	if (args->first->type == JSON_ARRAY) {
 		/* Copy the slice to a new array */
 		result = json_array();
-		for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = scan->next) {
+		for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = scan->next) { /* undeferred */
 			json_append(result, json_copy(scan));
 		}
 	} else { /* JSON_STRING */
@@ -1009,11 +1030,11 @@ static json_t *jfn_repeat(json_t *args, void *agdata)
 	char	*end;
 
 	/* Requires a string and a number */
-	if (args->first->type != JSON_STRING || !args->first->next || args->first->next->type != JSON_NUMBER)
+	if (args->first->type != JSON_STRING || !args->first->next || args->first->next->type != JSON_NUMBER) /* undeferred */
 		return NULL;
 
 	/* Get the quantity */
-	count = json_int(args->first->next);
+	count = json_int(args->first->next); /* undeferred */
 	if (count < 0)
 		return NULL;
 
@@ -1039,11 +1060,11 @@ static json_t *jfn_toFixed(json_t *args, void *agdata)
 	char	buf[100];
 
 	/* Requires two numbers */
-	if (args->first->type != JSON_NUMBER || !args->first->next || args->first->next->type != JSON_NUMBER)
+	if (args->first->type != JSON_NUMBER || !args->first->next || args->first->next->type != JSON_NUMBER) /* undeferred */
 		return NULL;
 
 	num = json_double(args->first);
-	digits = json_int(args->first->next);
+	digits = json_int(args->first->next); /* undeferred */
 	snprintf(buf, sizeof buf, "%.*f", digits, num);
 	return json_string(buf, -1);
 }
@@ -1061,11 +1082,11 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 		return json_copy(args->first);
 
 	/* Check for a "strict" flag or field list as the second parameter */
-	fieldlist = args->first->next;
+	fieldlist = args->first->next; /* undeferred */
 	if (fieldlist) {
 		if (fieldlist->type == JSON_BOOL && json_is_true(fieldlist)) {
 			bestrict = 1;
-			fieldlist = fieldlist->next;
+			fieldlist = fieldlist->next; /* undeferred */
 		}
 		if (fieldlist && fieldlist->type == JSON_STRING) {
 			/* Fieldlist is supposed to be an array of strings.
@@ -1078,12 +1099,8 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 		}
 	}
 
-	/* Start building a new array with unique items.  The first item is
-	 * always included.
-	 */
+	/* Start building a new array with unique items. */
 	result = json_array();
-	prev = args->first->first;
-	json_append(result, json_copy(prev));
 
 	/* Separate methods for strict vs. non-strict */
 	if (bestrict) {
@@ -1091,10 +1108,15 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 		 * all elements currently in the result, and add only if new.
 		 */
 
+		/* First element is always added */
+		scan = json_first(args->first);
+		prev = json_copy(scan);
+		json_append(result, prev);
+
 		/* For each element after the first... */
-		for (scan = prev->next; scan; prev = scan, scan = scan->next) {
+		for (scan = json_next(scan); scan; scan = json_next(scan)) {
 			/* Check for a match anywhere in the result so far */
-			for (prev = result->first; prev; prev = prev->next) {
+			for (prev = json_first(result); prev; prev = json_next(prev)) {
 				if (fieldlist && prev->type == JSON_OBJECT && scan->type == JSON_OBJECT) {
 					if (json_compare(prev, scan, fieldlist) == 0)
 						break;
@@ -1103,6 +1125,7 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 						break;
 				}
 			}
+			json_break(prev);
 
 			/* If nothing already in the list matched, add it */
 			if (!prev)
@@ -1112,8 +1135,14 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 		/* Non-strict!  We just compare each prospective element
 		 * against the one that preceded it.
 		 */
+
+		/* First element is always added */
+		scan = json_first(args->first);
+		prev = json_copy(scan);
+		json_append(result, prev);
+
 		/* for each element after the first... */
-		for (scan = prev->next; scan; prev = scan, scan = scan->next) {
+		for (scan = json_next(scan); scan; scan = json_next(scan)) {
 			/* If it matches the previous item, skip */
 			if (fieldlist && prev->type == JSON_OBJECT && scan->type == JSON_OBJECT) {
 				if (json_compare(prev, scan, fieldlist) == 0)
@@ -1124,7 +1153,8 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 			}
 
 			/* New, so add it */
-			json_append(result, json_copy(scan));
+			prev = json_copy(scan);
+			json_append(result, prev);
 		}
 	}
 
@@ -1135,7 +1165,7 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 /* Unroll nested tables */
 json_t *jfn_unroll(json_t *args, void *agdata)
 {
-	return json_unroll(args->first, args->first->next);
+	return json_unroll(args->first, args->first->next); /* undeferred */
 }
 
 json_t *jfn_nameBits(json_t *args, void *agdata)
@@ -1148,17 +1178,17 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 
 	/* Check the args */
 	if (args->first->type != JSON_NUMBER
-	 || !args->first->next
-	 || args->first->next->type != JSON_ARRAY)
+	 || !args->first->next /* undeferred */
+	 || args->first->next->type != JSON_ARRAY) /* undeferred */
 		return NULL;
 
 	/* Extract arguments */
 	inbits = json_int(args->first);
-	names = args->first->next;
+	names = args->first->next; /* undeferred */
 	delim = NULL;
-	if (args->first->next->next
-	 && args->first->next->next->type == JSON_STRING)
-		delim = args->first->next->next->text;
+	if (args->first->next->next /* undeferred */
+	 && args->first->next->next->type == JSON_STRING) /* undeferred */
+		delim = args->first->next->next->text; /* undeferred */
 
 	/* If the bits value is negative, use all-1's */
 	if (inbits < 0)
@@ -1168,7 +1198,7 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 	result = json_object();
 
 	/* Scan the bits... */
-	for (pos = 0, names = names->first; names; pos += nbits, names = names->next) {
+	for (pos = 0, names = json_first(names); names; pos += nbits, names = json_next(names)) {
 		/* Single bit? */
 		if (names->type == JSON_STRING) {
 			nbits = 1;
@@ -1208,17 +1238,17 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 		size_t	len = 0;
 		size_t	delimlen = strlen(delim);
 		json_t	*member, *str;
-		for (member = result->first; member; member = member->next) {
+		for (member = result->first; member; member = member->next) { /* object */
 			len += strlen(member->text);
-			if (member->next)
+			if (member->next) /* object */
 				len += delimlen;
 		}
 
 		/* Collect the names in a string */
 		str = json_string("", len);
-		for (member = result->first; member; member = member->next) {
+		for (member = result->first; member; member = member->next) { /* object */
 			strcat(str->text, member->text);
-			if (member->next)
+			if (member->next) /* object */
 				strcat(str->text, delim);
 		}
 
@@ -1239,7 +1269,7 @@ static json_t *keysValuesHelper(json_t *obj)
 	array = json_array();
 
 	/* Add a {name,value} pair for each member of obj */
-	for (scan = obj->first; scan; scan = scan->next) {
+	for (scan = obj->first; scan; scan = scan->next) { /* object */
 		pair = json_object();
 		json_append(pair, json_key("key", json_string(scan->text, -1)));
 		json_append(pair, json_key("value", json_copy(scan->first)));
@@ -1267,7 +1297,7 @@ static json_t *jfn_keysValues(json_t *args, void *agdata)
 		 * single row from the argument table.
 		 */
 		result = json_array();
-		for (scan = args->first->first; scan; scan = scan->next)
+		for (scan = args->first->first; scan; scan = scan->next) /* undeferred */
 			json_append(result, keysValuesHelper(scan));
 		return result;
 	}
@@ -1285,11 +1315,11 @@ static json_t *jfn_charAt(json_t *args, void *agdata)
 		return NULL;
 
 	/* Single number?  No subscript given? */
-	if (!args->first->next || args->first->next->type == JSON_NUMBER) {
+	if (!args->first->next || args->first->next->type == JSON_NUMBER) { /* undeferred */
 		/* Get the position of the character */
 		size = 1;
-		if (args->first->next)
-			pos = json_mbs_substr(args->first->text, json_int(args->first->next), &size);
+		if (args->first->next) /* undeferred */
+			pos = json_mbs_substr(args->first->text, json_int(args->first->next), &size); /* undeferred */
 		else /* no character offset given, so use first character */
 			pos = json_mbs_substr(args->first->text, 0, &size);
 
@@ -1316,10 +1346,10 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 		return NULL;
 
 	/* Single number?  No subscript given? */
-	if (!args->first->next || args->first->next->type == JSON_NUMBER) {
+	if (!args->first->next || args->first->next->type == JSON_NUMBER) { /* undeferred */
 		/* Get the position of the character */
-		if (args->first->next)
-			pos = json_mbs_substr(args->first->text, json_int(args->first->next), NULL);
+		if (args->first->next) /* undeferred */
+			pos = json_mbs_substr(args->first->text, json_int(args->first->next), NULL); /* undeferred */
 		else /* no character offset given, so use first character */
 			pos = args->first->text;
 
@@ -1336,7 +1366,7 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 		result = json_array();
 
 		/* Scan the arg2 array for numbers. */
-		for (scan = args->first->next->first; scan; scan = scan->next) {
+		for (scan = json_first(args->first->next); scan; scan = json_next(scan)) { /* undeferred */
 			if (scan->type == JSON_NUMBER) {
 				/* Find the position of the character */
 				pos = json_mbs_substr(args->first->text, json_int(scan), NULL);
@@ -1368,13 +1398,13 @@ static json_t *jfn_fromCharCode(json_t *args, void *agdata)
 	char	*s;
 
 	/* Count the length.  Note that some codepoints require multiple bytes */
-	for (len = 0, scan = args->first; scan; scan = scan->next) {
+	for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
 		if (scan->type == JSON_NUMBER) {
 			in = wctomb(dummy, json_int(scan));
 			if (in > 0)
 				len += in;
 		} else if (scan->type == JSON_ARRAY) {
-			for (elem = scan->first; elem; elem = elem->next) {
+			for (elem = json_first(scan); elem; elem = json_next(elem)) {
 				in = wctomb(dummy, json_int(elem));
 				if (in > 0)
 					len += in;
@@ -1390,13 +1420,13 @@ static json_t *jfn_fromCharCode(json_t *args, void *agdata)
 	result = json_string("", len);
 
 	/* Loop through the args again, building the result */
-	for (s = result->text, scan = args->first; scan; scan = scan->next) {
+	for (s = result->text, scan = args->first; scan; scan = scan->next) { /* undeferred */
 		if (scan->type == JSON_NUMBER) {
 			in = wctomb(s, json_int(scan));
 			if (in > 0)
 				s += in;
 		} else if (scan->type == JSON_ARRAY) {
-			for (elem = scan->first; elem; elem = elem->next) {
+			for (elem = json_first(scan); elem; elem = json_next(elem)) {
 				in = wctomb(s, json_int(elem));
 				if (in > 0)
 					s += in;
@@ -1445,17 +1475,17 @@ static json_t *help_replace(json_t *args, regex_t *preg, int globally)
 
 	/* Check parameters */
 	if (args->first->type != JSON_STRING
-	 || args->first->next == NULL
-	 || (!preg && args->first->next->type != JSON_STRING)
-	 || args->first->next->next == NULL
-	 || args->first->next->next->type != JSON_STRING)
+	 || args->first->next == NULL /* undeferred */
+	 || (!preg && args->first->next->type != JSON_STRING) /* undeferred */
+	 || args->first->next->next == NULL /* undeferred */
+	 || args->first->next->next->type != JSON_STRING) /* undeferred */
 		return NULL;
 
 	/* Copy parameter strings into variables */
 	subject = args->first->text;
-	search = (preg ? NULL : args->first->next->text);
-	replace = args->first->next->next->text;
-	ignorecase = json_is_true(args->first->next->next->next);
+	search = (preg ? NULL : args->first->next->text); /* undeferred */
+	replace = args->first->next->next->text; /* undeferred */
+	ignorecase = json_is_true(args->first->next->next->next); /* undeferred */
 
 	/* Start building a replacement string */
 	bufsize = 128;
@@ -1603,17 +1633,17 @@ int help_indexOf(json_t *args, int last)
 	int	ignorecase;
 
 	/* We need at least 2 arguments.  Third may be ignorecase flag */
-	if (!args->first->next)
+	if (!args->first->next) /* undeferred */
 		return -2;
-	ignorecase = json_is_true(args->first->next->next);
-	if (ignorecase && args->first->next->type != JSON_STRING)
+	ignorecase = json_is_true(args->first->next->next); /* undeferred */
+	if (ignorecase && args->first->next->type != JSON_STRING) /* undeferred */
 		return -3;
 
 	/* Array version?  String version? */
 	if (args->first->type == JSON_ARRAY) {
 		/* Array version! */
 		json_t	*haystack = args->first;
-		json_t	*needle = args->first->next;;
+		json_t	*needle = args->first->next;; /* undeferred */
 		json_t	*scan;
 		int	i;
 
@@ -1637,16 +1667,20 @@ int help_indexOf(json_t *args, int last)
 			}
 		} else {
 			/* Scan the array forward.  Much better! */
-			for (i = 0, scan = haystack->first; scan; i++, scan = scan->next) {
+			for (i = 0, scan = json_first(haystack); scan; i++, scan = json_next(scan)) {
 
 				if (ignorecase) {
 					/* Case-insensitive search for a string */
-					if (scan->type == JSON_STRING && json_mbs_casecmp(scan->text, needle->text) == 0)
+					if (scan->type == JSON_STRING && json_mbs_casecmp(scan->text, needle->text) == 0) {
+						json_break(scan);
 						return i;
+					}
 				} else {
 					/* Search for anything, case-sensitive */
-					if (json_equal(scan, needle))
+					if (json_equal(scan, needle)) {
+						json_break(scan);
 						return i;
+					}
 				}
 			}
 		}
@@ -1654,7 +1688,7 @@ int help_indexOf(json_t *args, int last)
 		/* String version! */
 
 		char *haystack = args->first->text;
-		char *needle = args->first->next->text;
+		char *needle = args->first->next->text; /* undeferred */
 		size_t	position;
 
 		if (json_mbs_str(haystack, needle, &position, NULL, last, ignorecase))
@@ -1714,15 +1748,15 @@ static json_t *jfn_startsWith(json_t *args, void *agdata)
 
 	/* Requires two strings */
 	if (args->first->type != JSON_STRING
-	 || !args->first->next
-	 || args->first->next->type != JSON_STRING) {
+	 || !args->first->next /* undeferred */
+	 || args->first->next->type != JSON_STRING) { /* undeferred */
 		return json_error_null(NULL, "startsEndsWith:The %s function requires two strings", "startsWith");
 	}
 	haystack = args->first->text;
-	needle = args->first->next->text;
+	needle = args->first->next->text; /* undeferred */
 
 	/* Compare the leading part of the first string to the second */
-	if (json_is_true(args->first->next->next)) {
+	if (json_is_true(args->first->next->next)) { /* undeferred */
 		/* Case-insensitive version */
 		len = json_mbs_len(needle);
 		return json_bool(json_mbs_ncasecmp(haystack, needle, len) == 0);
@@ -1741,15 +1775,15 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 
 	/* Requires two strings */
 	if (args->first->type != JSON_STRING
-	 || !args->first->next
-	 || args->first->next->type != JSON_STRING) {
+	 || !args->first->next /* undeferred */
+	 || args->first->next->type != JSON_STRING) { /* undeferred */
 		return json_error_null(NULL, "startsEndsWith:The %s function requires two strings", "endsWith");
 	}
 	haystack = args->first->text;
-	needle = args->first->next->text;
+	needle = args->first->next->text; /* undeferred */
 
 	/* Compare the leading part of the first string to the second */
-	if (json_is_true(args->first->next->next)) {
+	if (json_is_true(args->first->next->next)) { /* undeferred */
 		/* Case-insensitive version */
 		haylen = json_mbs_len(haystack);
 		len = json_mbs_len(needle);
@@ -1774,8 +1808,8 @@ static json_t *jfn_split(json_t *args, void *agdata)
 {
 	jsonfuncextra_t *recon = (jsonfuncextra_t *)agdata;
 	char	*str, *next;
-	json_t	*djson;
-	char	*delim;
+	json_t	*djson;		/* delimiter, as a json_t */
+	char	*delim;		/* delimiter if djson is a JSON_STRING */
 	size_t	delimlen;
 	regex_t *regex;
 	regmatch_t matches[10];
@@ -1789,7 +1823,7 @@ static json_t *jfn_split(json_t *args, void *agdata)
 	if (args->first->type != JSON_STRING)
 		return json_error_null(NULL, "splitStr:%s() requires a string as its first parameter", "split");
 	str = args->first->text;
-	djson = args->first->next;
+	djson = args->first->next; /* undeferred */
 	if (!djson || (json_is_null(djson) && (!recon->regex || !(recon->regex->u.regex.preg)))) {
 		/* If no delimiter (not even a regex) then return the string
 		 * as the only member of an array.
@@ -1808,12 +1842,12 @@ static json_t *jfn_split(json_t *args, void *agdata)
 		delim = djson->text;
 		delimlen = strlen(delim); /* yes, byte length not char count */
 	}
-	if (!djson->next)
+	if (!djson->next) /* undeferred */
 		limit = 0;
-	else if (djson->next->type != JSON_NUMBER)
+	else if (djson->next->type != JSON_NUMBER) /* undeferred */
 		return json_error_null(NULL, "splitLimit:%s() third parameter should be a number", "split");
 	else
-		limit = json_int(djson->next);
+		limit = json_int(djson->next); /* undeferred */
 	all = 0;
 	if (limit < 0) {
 		all = 1;
@@ -1935,7 +1969,7 @@ static json_t *jfn_getenv(json_t *args, void *agdata)
 	char	*value;
 
 	/* If not given a string parameter, then fail */
-	if (!args->first || args->first->type != JSON_STRING || args->first->next)
+	if (!args->first || args->first->type != JSON_STRING || args->first->next) /* undeferred */
 		return json_error_null(NULL, "string:%s() expects a string parameter", "getenv");
 
 	/* Fetch the value of the environment variable.  If no such variable
@@ -1958,8 +1992,8 @@ static json_t *jfn_stringify(json_t *args, void *agdata)
 	 * argument instead.
 	 */
 	json_t *data = args->first;
-	if (data->next && data->type == JSON_OBJECT)
-		data = data->next;
+	if (data->next && data->type == JSON_OBJECT) /* undeferred */
+		data = data->next; /* undeferred */
 
 	/* Convert to string */
 	str = json_serialize(data, NULL);
@@ -1978,8 +2012,8 @@ static json_t *jfn_parse(json_t *args, void *agdata)
 	 * argument instead.
 	 */
 	json_t *data = args->first;
-	if (data->next && data->type == JSON_OBJECT)
-		data = data->next;
+	if (data->next && data->type == JSON_OBJECT) /* undeferred */
+		data = data->next; /* undeferred */
 
 	/* We can only parse strings */
 	if (data->type != JSON_STRING)
@@ -2048,7 +2082,7 @@ static json_t *jfn_find(json_t *args, void *agdata)
 	 */
 	if (args->first->type == JSON_OBJECT || args->first->type == JSON_ARRAY) {
 		haystack = args->first;
-		needle = args->first->next;
+		needle = args->first->next; /* undeferred */
 		defaulttable = NULL;
 	} else {
 		haystack = json_context_default_table(recon->context, &defaulttable);
@@ -2062,7 +2096,7 @@ static json_t *jfn_find(json_t *args, void *agdata)
 	/* Check for optional args after "needle" */
 	ignorecase = 0;
 	needkey = NULL;
-	for (other = needle->next; other; other = other->next) {
+	for (other = needle->next; other; other = other->next) { /* undeferred */
 		if (other->type == JSON_BOOL)
 			ignorecase = json_is_true(other);
 		else if (other->type == JSON_STRING && !needkey)
@@ -2080,11 +2114,11 @@ static json_t *jfn_find(json_t *args, void *agdata)
 	else
 		result = json_find(haystack, needle, ignorecase, needkey);
 
-	/* If we were searching through the default table, then prepend the
-	 * its expression to the "expr" members of the results.  Note that
-	 * since the default table is always an array, "expr" currently
-	 * begins with a subscript, not a member name, so we don't need to
-	 * add a "." between them.
+	/* If we were searching through the default table, then prepend its
+	 * expression to the "expr" members of the results.  Note that since
+	 * the default table is always an array, "expr" currently begins with
+	 * a subscript, not a member name, so we don't need to * add a "."
+	 * between them.
 	 */
 	if (result->type == JSON_ARRAY && defaulttable) {
 		char *buf = NULL;
@@ -2092,7 +2126,7 @@ static json_t *jfn_find(json_t *args, void *agdata)
 		size_t	bufsize = 0;
 		size_t	dtlen = strlen(defaulttable);
 		size_t	totlen;
-		for (other = result->first; other; other = other->next) {
+		for (other = json_first(result); other; other = json_next(other)) {
 			expr = json_text_by_key(other, "expr");
 			assert(expr && *expr == '[');
 			totlen = dtlen + strlen(expr);
@@ -2161,7 +2195,7 @@ static json_t *jfn_abs(json_t *args, void *agdata)
 	/* Get the number, skipping an optional "Math" argument */
 	json_t	*num = args->first;
 	if (num->type == JSON_OBJECT)
-		num = num->next;
+		num = num->next; /* undeferred */
 
 	/* Fail if not a number */
 	if (num->type != JSON_NUMBER)
@@ -2183,7 +2217,7 @@ static json_t *jfn_random(json_t *args, void *agdata)
 	int	limit;
 	json_t	*num = args->first;
 	if (num->type == JSON_OBJECT)
-		num = num->next;
+		num = num->next; /* undeferred */
 	if (num && num->type == JSON_NUMBER && (limit = json_int(num)) >= 2) {
 		/* Return an int in the range [0,limit-1] */
 		return json_from_int((int)lrand48() % limit);
@@ -2202,7 +2236,7 @@ static json_t *jfn_sign(json_t *args, void *agdata)
 	/* Get the number, skipping an optional "Math" argument */
 	json_t	*num = args->first;
 	if (num->type == JSON_OBJECT)
-		num = num->next;
+		num = num->next; /* undeferred */
 
 	/* Fail if not a number */
 	if (num->type != JSON_NUMBER)
@@ -2233,10 +2267,10 @@ static json_t *jfn_wrap(json_t *args, void *agdata)
 	if (args->first->type != JSON_STRING)
 		return json_error_null(NULL, "wrapStr:The %s() function's first argument should be a string to wrap", "wrap");
 	str = args->first->text;
-	if (args->first->next && args->first->next->type != JSON_NUMBER)
+	if (args->first->next && args->first->next->type != JSON_NUMBER) /* undeferred */
 		return json_error_null(NULL, "wrapWidth:The %s() function's second argument should be wrap width", "wrap");
-	if (args->first->next)
-		width = json_int(args->first->next);
+	if (args->first->next) /* undeferred */
+		width = json_int(args->first->next); /* undeferred */
 	else
 		width = 0;
 
@@ -2249,7 +2283,6 @@ static json_t *jfn_wrap(json_t *args, void *agdata)
 		len = json_mbs_wrap_char(NULL, str, -width);
 	else
 		len = json_mbs_wrap_word(NULL, str, width);
-printf("width=%d, len=%d, str=\"%s\"\n", width, (int)len, str);
 	result = json_string("", len);
 	if (width < 0)
 		len = json_mbs_wrap_char(result->text, str, -width);
@@ -2274,19 +2307,19 @@ static json_t *jfn_sleep(json_t *args, void *agdata)
 		memset(&p, 0, sizeof p);
 		p.type = JSON_STRING;
 		p.text[0] = 's';
-		oldnext = args->first->next;
-		args->first->next = &p;
+		oldnext = args->first->next; /* undeferred */
+		args->first->next = &p; /* undeferred */
 
 		/* Pass that into json_datetime_fn() to get seconds. */
 		jseconds = json_datetime_fn(args, "period");
 		if (json_is_error(jseconds)) {
-			args->first->next = oldnext;
+			args->first->next = oldnext; /* undeferred */
 			return jseconds;
 		}
 		seconds = json_double(jseconds);
 
 		/* Clean up */
-		args->first->next = oldnext;
+		args->first->next = oldnext; /* undeferred */
 		json_free(jseconds);
 	} else {
 		return json_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string");
@@ -2401,8 +2434,8 @@ static void jag_min(json_t *args, void *agdata)
 				json_free(data->json);
 				data->json = NULL;
 			}
-			if (args->first->next)
-				data->json = json_copy(args->first->next);
+			if (args->first->next) /* undeferred */
+				data->json = json_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	} else if (args->first->type == JSON_STRING) {
@@ -2414,8 +2447,8 @@ static void jag_min(json_t *args, void *agdata)
 				json_free(data->json);
 				data->json = NULL;
 			}
-			if (args->first->next)
-				data->json = json_copy(args->first->next);
+			if (args->first->next) /* undeferred */
+				data->json = json_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	}
@@ -2451,8 +2484,8 @@ static void jag_max(json_t *args, void *agdata)
 				json_free(data->json);
 				data->json = NULL;
 			}
-			if (args->first->next)
-				data->json = json_copy(args->first->next);
+			if (args->first->next) /* undeferred */
+				data->json = json_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	} else if (args->first->type == JSON_STRING) {
@@ -2464,8 +2497,8 @@ static void jag_max(json_t *args, void *agdata)
 				json_free(data->json);
 				data->json = NULL;
 			}
-			if (args->first->next)
-				data->json = json_copy(args->first->next);
+			if (args->first->next) /* undeferred */
+				data->json = json_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	}
@@ -2587,7 +2620,7 @@ static void jag_explain(json_t *args, void *agdata)
 	/* If second parameter is given and is true, then recursively explain
 	 * any embedded objects or arrays of objects.
 	 */
-	if (args->first->next && json_is_true(args->first->next))
+	if (args->first->next && json_is_true(args->first->next)) /* undeferred */
 		depth = -1;
 	stats = json_explain(stats, args->first, depth);
 
@@ -2600,13 +2633,16 @@ static void jag_explain(json_t *args, void *agdata)
 static json_t *jfn_writeArray(json_t *args, void *agdata)
 {
 	FILE *fp = *(FILE **)agdata;
+	long int size;
 	if (fp) {
 		fputs("\n]\n", fp);
+		size = ftell(fp);
 		if (fp != stdout)
 			fclose(fp);
 		*(FILE **)agdata = NULL;
+		return json_from_int((int)size);
 	}
-	return json_null();
+	return json_from_int(0);
 }
 
 static void jag_writeArray(json_t *args, void *agdata)
@@ -2625,8 +2661,8 @@ static void jag_writeArray(json_t *args, void *agdata)
 			return;
 	}
 	if (!fp) {
-		if (args->first->next && args->first->next->type == JSON_STRING)
-			fp = fopen(args->first->next->text, "w");
+		if (args->first->next && args->first->next->type == JSON_STRING) /* undeferred */
+			fp = fopen(args->first->next->text, "w"); /* undeferred */
 		else
 			fp = stdout;
 		*(FILE **)agdata = fp;
@@ -2673,8 +2709,8 @@ static void  jag_objectAgg(json_t *args, void *agdata)
 	json_t *result = *(json_t **)agdata;
 	if (!result)
 		result = json_object();
-	if (args->first->type == JSON_STRING && *args->first->text && args->first->next)
-		json_append(result, json_key(args->first->text, json_copy(args->first->next)));
+	if (args->first->type == JSON_STRING && *args->first->text && args->first->next) /* undeferred */
+		json_append(result, json_key(args->first->text, json_copy(args->first->next))); /* undeferred */
 	*(json_t **)agdata = result;
 }
 
@@ -2730,8 +2766,8 @@ static void  jag_join(json_t *args, void *agdata)
 		strcpy(data->ag, text);
 	} else {
 		/* Get the delimiter, default to "," */
-		if (args->first->next && args->first->next->type == JSON_STRING)
-			delim = args->first->next->text;
+		if (args->first->next && args->first->next->type == JSON_STRING) /* undeferred */
+			delim = args->first->next->text; /* undeferred */
 		else
 			delim = ",";
 

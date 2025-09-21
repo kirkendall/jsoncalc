@@ -15,6 +15,9 @@
 static char *settings = "{"
 	"\"buffer\":0,"
 	"\"cookiejar\":\"\""
+	"\"warn\":{"
+		"\"badparse\":true"
+	"}"
 "}";
 
 /* These bits are used to select boolean options */
@@ -26,10 +29,11 @@ typedef enum {
 	OPT_REQCONTENT, 	/* Send content with the request */
 	OPT_REQCONTENTTYPE_,	/* (mimetype) Define the Content-Type of the request content */
 	OPT_REQHEADER_,		/* (headerlines) Add header request lines */
+	OPT_REQHEADERS,		/* Return request headers along with response */
 	OPT_COOKIES,		/* Allow cookies to be sent/received */
 	OPT_FOLLOWLOCATION,	/* Follow HTTP 3xx redirects */
 	OPT_DECODE,		/* Try to decode the response content */
-	OPT_HEADERS		/* Return headers along with content */
+	OPT_HEADERS		/* Return response headers along with content */
 } opt_t;
 
 /* This data type is used as a read buffer */
@@ -59,6 +63,16 @@ static size_t receive(char *data, size_t size, size_t nmemb, void *clientp)
 	return size * nmemb;
 }
 
+/* This is a callback function for CURL to return debugging info, such as
+ * the request headers.
+ */
+static int receive_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *clientp)
+{
+	if (type == CURLINFO_HEADER_OUT)
+		receive(data, 1, size, clientp);
+	return 0;
+}
+ 
 /* This stores the name of a temporary cookie jar (file) */
 static char *tempcookiejar;
 
@@ -142,6 +156,9 @@ static size_t urlencode(json_t *data, char *buf, int component)
 		len = urlencode(scan, buf, 1);
 		json_free(scan);
 		return len;
+	} else if (data->type == JSON_NULL) {
+		/* ignore it */
+		return 0;
 	} else if (data->type == JSON_OBJECT) {
 		/* Convert to a series of name=value strings */
 		len = 0;
@@ -193,6 +210,7 @@ typedef struct {
 	char	*reqcontenttype;	/* MIME type of the request content */
 	int	content;		/* Send data as content? */
 	int	decode;			/* Decode the response? */
+	int	reqheaders;		/* Return the request headers too? */
 	int	headers;		/* Return the response headers too? */
 } curlflags_t;
 
@@ -273,6 +291,10 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
 			flags->slist = curl_slist_append(flags->slist, more->text);
 			break;
+		case OPT_REQHEADERS:
+			flags->reqheaders = 1;
+			break;
+
 		case OPT_COOKIES:
 			/* If cookiejar is "" then make one up */
 			str = json_config_get("plugin.curl", "cookiejar")->text;
@@ -323,7 +345,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	json_t	*data, *err;
 	curlflags_t flags;
 	size_t	arglen;
-	receiver_t rcv = {0}, hdr = {0};
+	receiver_t rcv = {0}, hdr = {0}, reqhdr = {0};
 	json_t	*more, *scan, *response;
 
 	/* Allocate a CURL handle */
@@ -355,7 +377,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 */
 	flags.reqcontenttype = NULL;
 	flags.content = !strcmp(request, "POST");
-	flags.decode = flags.headers = 0;
+	flags.decode = flags.reqheaders = flags.headers = 0;
 	flags.slist = NULL;
 	err = doFlags(fn, curl, data, &flags, more);
 	if (err) {
@@ -406,7 +428,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		 * form otherwise assume JSON
 		 */
 		for (scan = data->first; scan; scan = scan->next) {
-			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER)
+			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOL && scan->first->type != JSON_NULL)
 				break;
 		}
 		if (scan) {
@@ -461,6 +483,11 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, str);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
+	if (flags.reqheaders) {
+		curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, receive_debug);
+		curl_easy_setopt(curl, CURLOPT_DEBUGDATA, (void *)&reqhdr);
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+	}
 	if (flags.headers) {
 		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, receive);
 		curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&hdr);
@@ -487,17 +514,31 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 * embarrassing.
 	 */
 	response = NULL;
-	if (flags.decode && rcv.buf)
+	if (flags.decode && rcv.buf) {
+		/* Try to decode it.  If that returns an error, then maybe
+		 * display the error message as a warning and fall back on
+		 * returning the response as a string.
+		 */
 		response = json_parse_string(rcv.buf);
+		if (json_is_error(response)) {
+			if (json_is_true(json_by_expr(json_config, "plugin.curl.warn.badparse", NULL)))
+				fprintf(stderr, "%s: %s\n", url, response->text);
+			json_free(response);
+			response = NULL;
+		}
+	}
 	if (!response)
 		response = json_string(rcv.buf ? rcv.buf : "", rcv.used);
 
 	/* If supposed to return headers, then build an object containing
-	 * both the headers and the response
+	 * both the headers and the response.
 	 */
-	if (flags.headers) {
+	if (flags.reqheaders || flags.headers) {
 		json_t *obj = json_object();
-		json_append(obj, json_key("headers", headerArray(hdr.buf)));
+		if (flags.reqheaders)
+			json_append(obj, json_key("reqHeaders", headerArray(reqhdr.buf)));
+		if (flags.headers)
+			json_append(obj, json_key("headers", headerArray(hdr.buf)));
 		json_append(obj, json_key("response", response));
 		response = obj;
 	}
@@ -510,16 +551,15 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	return response;
 }
 
-/* curlGet(url:string, data?:string|object, headers?:string[], decode:?boolean):any
+/* curlGet(url:string, data?:string|object, flags?:number|string|array,...):any
  * Read a URL using HTTP "GET"
  */
 static json_t *jfn_curlGet(json_t *args, void *agdata)
 {
-	{char *s=json_serialize(args, NULL); fprintf(stderr, "curlGet%s\n", s); free(s);}
 	return curlHelper("curlGet", "GET", args->first);
 }
 
-/* curlPost(url:string, data:string|object|array, ...):any
+/* curlPost(url:string, data:any|null, flags?:number|string|array,...):any
  * Send data via an HTTP "POST" request, and return the response string.
  */
 static json_t *jfn_curlPost(json_t *args, void *agdata)
@@ -699,7 +739,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 
 
 /* This is the init function.  It registers all of the above functions, and
- * adds some constants to the Math object.
+ * adds a CURL object with some constants in it.
  */
 char *plugincurl()
 {
@@ -718,6 +758,7 @@ char *plugincurl()
 	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
 	json_append(curl, json_key("reqContentType_", json_from_int(OPT_REQCONTENTTYPE_)));
 	json_append(curl, json_key("reqHeader_", json_from_int(OPT_REQHEADER_)));
+	json_append(curl, json_key("reqHeaders", json_from_int(OPT_REQHEADERS)));
 	json_append(curl, json_key("cookies", json_from_int(OPT_COOKIES)));
 	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
 	json_append(curl, json_key("decode", json_from_int(OPT_DECODE)));

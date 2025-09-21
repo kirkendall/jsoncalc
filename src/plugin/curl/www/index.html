@@ -75,6 +75,19 @@
               function call.
 	  </td>
 	</tr>
+	<tr>
+	  <td>warn</td>
+	  <td>object</td>
+	  <td>nobadparse</td>
+	  <td>This is a collection of things to issue warnings about.
+	      This can sometimes be helpful when debugging comms.
+	      Currently the only warning that can be enabled is
+	      <tt>badparse</tt>.
+	      Typically you'd do this by appending "<tt>,warn=badparse</tt>"
+	      to the end of the <tt>-lcurl</tt> flag or <tt>plugin curl</tt>
+	      command.
+	  </td>
+	</tr>
       </tbody>
     </table>
 
@@ -264,6 +277,21 @@
         <td>CURLOPT_HTTPHEADER</td>
       </tr>
       <tr>
+	<td>CURL.reqHeaders</td>
+	<td></td>
+	<td>
+	  As a debugging aid, this causes the function to return the request
+	  headers along with an response data.
+	  The returned value will be an object with
+	  a "reqHeaders" member containing an array of request header lines,
+	  and a "response" member containing the response data.
+	  If <tt>CURL.headers</tt> is also used, then the response object
+	  will also contain "headers" member containing an array of response
+	  header lines.
+	</td>
+        <td>CURLOPT_DEBUGFUNCTION, CURLOPT_DEBUGDATA, CURLOPT_VERBOSE</td>
+      </tr>
+      <tr>
         <td>CURL.cookies</td>
         <td></td>
         <td>
@@ -307,6 +335,8 @@
           issues.
           The function will return an object with "header" and "response"
           members.
+          If <tt>CURL.reqHeaders</tt> is also used, there will also be a
+          "reqHeaders" member.
 	</td>
 	<td>CURLOPT_HEADERFUNCTION, CURLOPT_HEADERDATA</td>
       </tr>

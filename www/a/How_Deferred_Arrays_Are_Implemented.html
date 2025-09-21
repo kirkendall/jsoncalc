@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>How Deferred Arrays Are Implemented</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc subj">
+    <meta name="keywords" content="array, aggregate, jsoncalc, article, How Deferred Arrays Are Implemented">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>How Deferred Arrays Are Implemented</h1>
+    <h4 class="timestamp">2025-09-20</h4>
+    <center>
+    <blockquote class="abstract">
+      This article is for people who want to implement a new type of deferred
+      array, or simply use potentially-deferred arrays in their C code.
+      Deferred arrays are like normal arrays in many ways, and there are
+      library functions for handling arrays in general which hide most of
+      added complexity for typical use.
+      Case studies of specific types of deferred arrays are presented.
+    </blockquote>
+    </center>
+
+    Deferred arrays are arrays whose elements don't all reside in memory at
+    the same time.
+    They offer a way to process extremely large JSON files, or in some
+    special cases where large data could be generated from smaller data
+    such as a <tt>1 ... 1000000</tt> integer array generator.
+    <p>
+    This article describes the challenges to implementing deferred arrays,
+    and the solutions used.
+    <p>
+    Most people can ignore this, since deferred arrays are intended to act
+    as much like normal on-memory arrays as possible.
+    The information here might be useful if you're implementing a plugin
+    to access a database, and want tables to be represented by deferred arrays.
+
+    <h2>"Normal" Arrays</h2>
+    Non-deferred arrays are represented by linked lists of
+    <a target="_PARENT" href="../index.html?a=The_json_t_Structure">json_t</a>
+    nodes.
+    There's a <tt>json_t</tt> with <tt>-&gt;type=JSON_ARRAY</tt>, and its
+    <tt>-&gt;first</tt> points to the first element.
+    To step from one element to the next,
+    follow the element's <tt>-&gt;next</tt> pointer.
+    To iterate over a non-deferred array, you can...
+    <pre>		
+	<i>/* This only works for non-deferred arrays! */</i>
+	<b>json_t</b> *array = json_parse("[1,true,\"hello\"]");
+	<b>json_t</b> *element;
+	<b>for</b> (element = array->first; element; element = element->next) {
+	    <i>/* do something with element here */</i>
+	}
+    </pre>
+    <p>
+    Quick and easy!
+    We want something similar for deferred arrays.
+
+    <h2>The Basics of Deferred Arrays</h2>
+
+    Deferred arrays are also represented by a <tt>json_t</tt> with
+    <tt>-&gt;type=JSON_ARRAY</tt>, but instead of having <tt>-&gt;first</tt>
+    point to the <tt>json_t</tt> of the first element, it points to a
+    <tt>JSON_DEFER</tt>.
+    In other words, for any deferred array, its
+    <tt>-&gt;first-&gt;->type=JSON_DEFER</tt>.
+    <p>
+    Internally, though, there's some funny business going on.
+    Instead of pointing to a real <tt>json_t</tt>, it actually points to a
+    <tt>jsondef_t</tt>.
+    <tt>jsondef_t</tt> is a struct which starts in which the first member
+    is a <tt>json_t</tt>, but there are other members tacked on too.
+    There's a <tt>fns</tt> member which points to a collection of function
+    pointers that implement this particular deferred array's behavior, and
+    a <tt>file</tt> member which points to the file that deferred data is
+    being read from (if any).
+    If a other storage is needed, then yet another layer of type-spoofing
+    may be present to add that storage.
+    <p>
+    Still, since it starts with <tt>json_t</tt> data, the <tt>-&gt;type</tt>
+    field is valid, and will always be <tt>JSON_DEFER</tt>.
+    <p>
+    The collection of function pointers includes one for finding the first
+    element, or for the next element, and possibly some others for optimizing
+    things like finding the <var>n'th</var> element.
+
+    <h2>json_is_deferred_array() and json_is_deferred_element()</h2>
+
+    If a non-deferred array happens to be empty then the above test would be
+    dangerous since it'd involve dereferencing NULL.
+    The <tt>json_is_deferred_array()</tt> function does the test in a safe way.
+    It's also less cryptic.
+    However, the design of deferred arrays is intended to allow the same code
+    to work on normal and deferred arrays with (almost) equal ease, so you
+    rarely need to know this.
+    <p>
+    Similarly, json_is_deferred_element() tests whether an element was read
+    from a deferred array.
+    This can be significant because when you step from one element to the next,
+    then the old element is freed.
+    If you need to save an element's value, or even just part of its value,
+    then you need to copy it using <tt>json_copy()</tt>.
+
+    <h2>json_first() and json_next()</h2>
+
+    The <tt>json_first(</tt><var>array</var><tt>)</tt>
+    and <tt>json_next(</tt><var>element</var><tt>)</tt> functions are used for
+    iterating over the elements of an array.
+    They work for both "normal" and deferred arrays.
+    For "normal" arrays they use <var>array</var><tt>-&gt;first</tt>
+    and <var>element</var><tt>-&gt;next</tt>, just like the above loop.
+    <p>
+    But for deferred arrays, json_first() invokes the deferred array's
+    function for finding the first element (which could return NULL if the
+    deferred array turns out to be empty).
+    The first element's <tt>-&gt;next</tt> pointer will point to a
+    <strong>copy</strong> of the array's <tt>-&gt;first</tt> data describing
+    the deferred array, to facilitate stepping to the next element,
+    along with any other data necessary for scanning the array.
+    <p>
+    Similarly, for elements from a deferred array, the json_next() function
+    will invoke the array's function for finding the next element.
+    It frees the old element, reuses the <tt>jsondef_t</tt> data as the
+    next element's <tt>-&gt;next</tt> pointer value.
+    If there is no next element, then it will free the <tt>jsondef_t</tt>
+    and any other resources involved in the scan, and return NULL.
+    <p>
+    This means no extra cleanup is required if your loop always continues
+    until <tt>json_next()</tt> returns NULL.
+
+    <pre>		
+	<i>/* This works for any array */</i>
+	<b>json_t</b> *array = json_parse("[1,true,\"hello\"]");
+	<b>json_t</b> *element;
+	<b>for</b> (element = json_first(array; element; element = json_next(element)) {
+	    <i>/* do something with element here */</i>
+	}
+    </pre>
+    <p>
+    One big "gotcha!" is that since <tt>json_next()</tt> frees the current
+    element before moving onto the, you can't save a pointer to it, or any
+    other <tt>json_t</tt> node within the element.
+    If you need to save an element, or part of an element, that is scanned
+    this way then you need to make a copy of it via <tt>json_copy()</tt>.
+    You can use the <tt>json_is_deferred_element()</tt> function to decide
+    wither copying is necessary... or just always copy.
+    <p>
+    Another thing to watch out for is that if you have nested arrays and
+    the outer is deferred but the inner one isn't, then applying
+    <tt>json_is_deferred_element()</tt> on the inner array's element will
+    return <tt>false</tt>, but when <tt>json_next()</tt> is called on the
+    outer array's element, then inner element will be automatically freed
+    because it was  part of the outer element.
+
+    <h2>json_break()</h2>
+
+    If your array scanning loop exits before <tt>json_next()</tt> returns NULL,
+    then you need to call <tt>json_break()</tt> to free the last element and
+    all data that was allocated to support the scan.
+    <p>
+    For simplicity's sake, if you can json_break() with an element that didn't
+    come from a deferred array, or for a NULL pointer, then it does nothing.
+    You can safely call <tt>json_break()</tt> after breaking out of any
+    array-scanning loop.
+
+    <h2>Effects on json_by_index(), json_by_key_value(), and json_by_expr()</h2>
+
+    You need to call <tt>json_break()</tt> on the value returned by any of
+    these functions.
+    <p>
+    The <tt>json_by_index()</tt> and <tt>json_by_key_value()</tt> functions
+    use <tt>json_first()/json_next()</tt> to loop over the array, and return
+    the requested element.
+    This is exactly the kind of thing that <tt>json_break()</tt> is meant to
+    clean up for deferred arrays.
+    <p>
+    The situation with json_by_expr() is more complex.
+    It can involve finding an element of an array, and that array could be
+    deferred, but the returned value isn't necessarily the whole element.
+    For example...
+    <pre>
+	json_t *result = json_by_expr(data, "address[0].zipcode", NULL);
+    </pre>
+    ... will look for "address" in data, element 0 from the address array,
+    and then "zipcode" in that element.
+    If "address" is a deferred array then "address[0]" will be a deferred
+    element but "address[0].zipcode" is not.
+    So <tt>json_by_expr()</tt> shuffles things around to make
+    "address[0].zipcode" look like an element of that same deferred array.
+    Kind of wacky, but necessary to avoid leaking the memory used to keep
+    track of that deferred array scan.
+
+    <h2>Effects on json_length() and json_is_table()</h2>
+
+    The <tt>json_length()</tt> and <tt>json_is_table()</tt> functions
+    work for both normal and deferred arrays.
+    <p>
+    The <var>array</var><tt>-&gt;text</tt> member is abused for the sake
+    of efficiency.
+    Instead of requiring an array to be scanned completely to determine its
+    length, or whether it is a table, that data is rammed into the
+    <var>array</var><tt>-&gt;text</tt> field.
+    This is true for both normal and deferred arrays, but it is especially
+    helpful for deferred arrays because scanning them could involve a lot
+    or parsing or I/O.
+    <p>
+    The <var>array</var><tt>-&gt;text[1]</tt> character is used to store a
+    table flag.
+    This is 't' if the array is a table, 'n' if it is not a table, or
+    anything else (usually '\0') if unknown.
+    For unknown, we do indeed to scan the whole array.
+    <p>
+    The length is stored in <var>array</var><tt>-&gt;text[2]</tt> through
+    <tt>[5]</tt>.
+    There's a <tt>JSON_ARRAY_LENGTH(</tt><var>array</var><tt>)</tt> macro
+    for accessing those four bytes as an unsigned integer.
+    If the length is unknown then
+    <tt>JSON_ARRAY_LENGTH(</tt><var>array</var><tt>)</tt> will be 0.
+    If the length of a normal array is 0, then its <tt>-&gt;first</tt>
+    pointer will be NULL so the length can be counted instantly.
+    For deferred arrays, this could get slow... but all of the current
+    types of deferred arrays avoid creating an empty deferred array, and
+    try hard to set the <tt>JSON_ARRAY_LENGTH(</tt><var>array</var><tt>)</tt>
+    to the proper value to avoid forcing a scan for <tt>json_length()</tt>.
+
+    <h2>Effects on json_is_last()</h2>
+
+    The <tt>json_is_last()</tt> function detects whether a given element is
+    the last element; i.e. whether <tt>json_last<tt> will return NULL.
+    Usually you don't need to know this, but every so often you do.
+    For example, if you're generating a text form of the array and don't
+    want an extra comma after the last element.
+    <p>
+    For non-deferred arrays this is easy.
+    The last element is the one where <tt>-&gt;next</tt> is NULL.
+    For deferred arrays, that doesn't work but there are three other good
+    techniques that do, and <tt>json_is_last()</tt> knows them.
+    <ol>
+      <li>Keep track of the index number for each element as it is returned by
+          <tt>json_first()</tt> or <tt>json_next()</tt>.
+          If it's one less than the array length, then that's the last one.
+          This only works if the array length is known.
+      <li>One of the function pointers in <tt>jsondeffns_t</tt> is
+          <tt>islast<tt>.
+          Not all types of deferred arrays define that function, but if they
+          do then that's the solution.
+      <li>Start a copy of the scan, and try <tt>json_next()</tt> on the copy.
+          If it returns NULL then the actual scan element is the last.
+    </ol>
+    <p>
+    Honestly none of those three "good" ways are perfect though.
+
+    <h2>Nested Arrays</h2>
+
+    The JSON parser only considers deferring an array if it isn't nested
+    inside another array.
+    So for parsed data, an outer array may be deferred but any inner arrays
+    will be entirely in memory.
+    <p>
+    Even so, it is possible to generate a <tt>json_t</tt> tree that has
+    nested deferred arrays.
+    It's best to assume that any array could be nested unless you know
+    exactly where the data comes from, and can trust it to only generate
+    in-memory arrays.
+    <p>
+    One insidious problem is that when you're scanning nested arrays, even
+    if the inner array is not deferred (and hence its elements are not
+    from 
+
+
+    <h2>The ... Operator</h2>
+
+    JsonCalc's <a target="_PARENT" href="../index.html?op=ellipsis">...</a>
+    operator returns a deferred array of integers between two numbers.
+    It's just about the simplest case, so lets look at it in detail.
+    It's implemented in the <tt>defer.c</tt> file.
+    <p>
+    The <tt>json_defer_ellipsis()</tt> function creates the deferred array.
+    It starts by calling the usual <tt>json_array()</tt> to allocate an array;
+    if the endpoint is smaller than the start, then it returns the empty
+    array, no deferring needed.
+    <p>
+    Otherwise, though, it converts the empty array into a deferred array
+    by allocating an instance of a private <tt>jell_t</tt> data type,
+    which is a struct that starts with a <tt>jsondef_t</tt>.
+    All fields are initialized as needed, including
+    <var>jell</var><tt>-&gt;basic-&gt;json-&gt;type = JSON_DEFER</tt>,
+    <var>jell</var><tt>-&gt;basic-&gt;fns = &amp;jell_fns</tt>,
+    <var>jell</var><tt>-&gt;from = from</tt>, and
+    <var>jell</var><tt>-&gt;to = to</tt>.
+    <p>
+    The <tt>jell_fns</tt> struct
+    (which <var>jell</var><tt>-&gt;basic-&gt;fns</tt> points to)
+    contains function pointers to private <tt>jell_first()</tt> and
+    <tt>jell_next()</tt> functions.
+    Those functions return a <tt>json_t</tt> for each successive integer,
+    with the <tt>-&gt;next</tt> pointing to a copy of the array's
+    <tt>-&gt;first<tt>.
+    <p>
+    It also defines <tt>jell_islast()</tt> and <tt>jell_byindex</tt> functions.
+    It does <strong>not</strong> define a function for doing extra freeing
+    because none is needed; that's mostly for things like database access
+    where you need to free the result set when you're done with it.
+    It also does <strong>not</strong> define a function for searching by a
+    key and value because integers aren't objects and hence have no keys.
+
+    <h2>Parsing Large JSON Files</h2>
+
+    I haven't done this yet.  Soon!
+
+<h2>Where Deferred Arrays Can't Happen</h2>
+    The <tt>json_first()</tt>/<tt>json_next()</tt> functions are used throughout
+    jsoncalc, with one big exception:
+    In the <tt>calcfunc.c</tt> file, which implements the built-in functions,
+    arrays are used to store the function arguments.
+    These are generated internally and are never deferred, so functions
+    can use <tt>-&gt;first</tt> and <tt>-&gt;next</tt> safely.
+    They often do a lot of validation of their arguments, so this is convenient.
+    I've tried to mark most such instances (at least for <tt>-&gt;next</tt>)
+    with a <i>/* non-deferred */</i> comment.
+    <p>
+    Another thing to consider is that objects also use linked lists to store
+    their members, and they certainly aren't deferred arrays.
+    You can still see many <tt>-&gt;first</tt>/<tt>-&gt;next</tt> loops over
+    object members in the library code.
+    I've tried to mark them all with a <i>/* object */</i> comment.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?a=The_json_t_Structure">json_t</a></td><td>Broader discussion of the <tt>json_t</tt> data type</td></tr>
+    
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -14,15 +14,16 @@
       <dd>
       JSON data often uses nested data structures to more accurately model the
       real-world phenomena that the data is meant to represent.
-      For example, customer records might contain a table of purchase orders,
-      and each purchase order might contain a table of items purchased.
-      The JSON data might have an array of "customer" objects, with each "customer"
-      containing an array of "order" objects, and each of those containing an array
-      of "item" objects.
+      For example, if customer have purchase orders, and purchase orders have
+      a table of items purchased,
+      then the corresponding JSON data structure might 
+      have an array of "customer" objects, with each "customer"
+      containing an array of "purchaseOrder" objects, and each of those
+      containing an array of "lineItem" objects.
       <p>
-      But if you want to generate a table containing cust#, custname,
-      order#, order date, item part#, and quantity, then the nested structure
-      becomes a problem.  You need a way to combine those fields into a single row.
+      But if you want to generate a report showing which customers have
+      purchased a given item, then the nested structure becomes a problem.
+      You need a way to combine those fields into a single row.
       That's what <tt>unroll()</tt> does.
       <p>
       You pass it a table (array of objects) and a list of nested table names,
@@ -36,18 +37,27 @@
       of length one is often indistinguishable from a single object),
       and partly just for the sake of flexibility.
       It can be handy if you have nested objects that you wish weren't nested.
+      <p>
+      Normally, if a member that you're trying to unroll doesn't exist or
+      it's value isn't a a table or object, then the rest of the object is
+      still added to the result table but without the columns that the
+      unrolled member was supposed to provide.
+      You can change this behavior by adding a <tt>true</tt> value before
+      the member name in the <var>nestList</var>; this will make the incomplete
+      row be omitted instead.
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>customer.unroll(["order","item"])</kbd>
-        This example would unroll the customer table, down through <tt>order</tt>
-        to <tt>item</tt>.
-        This is likely to be very large &mdash; If there are 1000 customers, each
-        with 100 orders with 10 items each, that'd be a 1,000,000-row table and each
-        row of the table would contain all of the customer members, all of the order
-        members, and all of the item members so it'd be a very wide table too.
+	<kbd>customer.unroll(["purchaseOrder","lineItem"])</kbd>
+        This example would unroll the customer table, down through
+        <tt>purchaseOrder</tt> to <tt>lineItem</tt>.
+        This is likely to be very large &mdash; If there are 1000 customers,
+        each with 100 orders with 10 items each, that'd be a 1,000,000-row
+        table and each row of the table would contain all of the customer
+        members, all of the order members, and all of the item members
+        so it'd be a very wide table too.
       </div>
 
       <div class="example">
@@ -87,8 +97,9 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Because the resulting table could potentially be huge, you'd be wise to
-        reduce the argument <var>table</var> it before calling <tt>unroll()</tt>.
+        <li>For the sake of convenience, if you only need to unroll a single
+            layer, you can give the name of the table as a string instead of
+            an array of strings.
 
       </ul>
     </details>

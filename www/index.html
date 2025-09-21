@@ -32,27 +32,27 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		switch (namevalue[1]) {
 		case 'lit': // Literals
 		    $("#main").prop("src", "lit/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "lit/sidebar.html");
+		    $("#sidebar").prop("src", "lit/sidebar.html?lit="+namevalue[2]);
 		    break;
 		case 'f': // Functions (JsonCalc, not C)
 		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "f/sidebar.html");
+		    $("#sidebar").prop("src", "f/sidebar.html?f="+namevalue[2]);
 		    break;
 		case 'op': // Operators
 		    $("#main").prop("src", "op/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "op/sidebar.html");
+		    $("#sidebar").prop("src", "op/sidebar.html?op="+namevalue[2]);
 		    break;
 		case 'cmd': // Commands
 		    $("#main").prop("src", "cmd/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "cmd/sidebar.html");
+		    $("#sidebar").prop("src", "cmd/sidebar.html?cmd="+namevalue[2]);
 		    break;
 		case 'p': // Plugins
 		    $("#main").prop("src", "plugin/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "plugin/sidebar.html");
+		    $("#sidebar").prop("src", "plugin/sidebar.html?p="+namevalue[2]);
 		    break;
 		case 'a': // Articles
 		    $("#main").prop("src", "a/" + namevalue[2] + ".html");
-		    $("#sidebar").prop("src", "a/sidebar.html");
+		    $("#sidebar").prop("src", "a/sidebar.html?a="+encodeURIComponent(namevalue[2]));
 		    break;
 		case 'quick': // Quick intro
 		    $("#main").prop("src", "quick.html");

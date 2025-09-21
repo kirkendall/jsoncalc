@@ -9,4 +9,21 @@
       @@@
     </div>
   </body>
+  <script>
+    // If passed a plugin name, try to find it and highlight it.
+    var pname = window.location.search;
+    if (pname) {
+	pname = pname.replace(/^\?p=/, "");
+	var link = document.getElementById(pname);
+	if (link) {
+		link.classList.toggle("current");
+
+		// Also scroll it into view.  This is trickier than it
+		// should be because scrollIntoView() also wants to scroll
+		// horizontally to center it, which we don't want.
+		link.scrollIntoView();
+		document.getElementsByTagName("html")[0].scrollLeft = 0;
+	}
+    }
+  </script>
 </html>

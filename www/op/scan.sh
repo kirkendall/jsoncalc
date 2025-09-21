@@ -18,7 +18,7 @@ do
 
 
 		# Generate the sidebar's list
-		echo "<a class=\"$sections operator\" href=\"../index.html?op=${i/.html}\" target=\"_PARENT\" title=\"$htmlops\">$description<a>" >>sidebar.html
+		echo "<a id=\"${i/.html/}\" class=\"$sections operator\" href=\"../index.html?op=${i/.html}\" target=\"_PARENT\" title=\"$htmlops\">$description<a>" >>sidebar.html
 
 		# Output info for each function name
 		for op in $operators

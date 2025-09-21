@@ -32,7 +32,7 @@ do
 		done
 
 		# Generate the sidebar's list
-		echo "<a class=\"command\" href=\"../index.html?cmd=${i/.html}\" title=\"$description\" target=\"_PARENT\">$htmlcmds<a>" >>sidebar.html
+		echo "<a id=\"${i/.html/}\" class=\"command\" href=\"../index.html?cmd=${i/.html}\" title=\"$description\" target=\"_PARENT\">$htmlcmds<a>" >>sidebar.html
 		;;
 	esac
 done

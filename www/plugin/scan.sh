@@ -27,7 +27,7 @@ do
 
 	# Add it to the sidebar.html
 	(
-		echo "<a target=\"_PARENT\" class=\"plugin\" href=\"../index.html?p=$plugin\" title=\"$title\">$plugin</a>"
+		echo "<a id=\"$plugin\" target=\"_PARENT\" class=\"plugin\" href=\"../index.html?p=$plugin\" title=\"$title\">$plugin</a>"
 	) >>sidebar.html
 done
 sed '1,/@@@/d' INTRO.html.template >>INTRO.html

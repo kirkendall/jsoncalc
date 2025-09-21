@@ -69,7 +69,7 @@ sed '1,/@@@/d' INTRO.html.template >>INTRO.html
 sed '/@@@/,$d' sidebar.html.template >sidebar.html
 sort -k2 articles$$ | while read timestamp filename
 do
-    echo -n "<a target=\"_PARENT\" href=\"../index.html?a=${filename/.html/}\">"
+    echo -n "<a id=\"${filename/.html/}\" target=\"_PARENT\" href=\"../index.html?a=${filename/.html/}\">"
 
     # Extract the title from the article
     sed -n 's/ *<h1>\(.*\)<\/h1>/\1<\/a>/p' $filename

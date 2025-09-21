@@ -9,5 +9,22 @@
       @@@
     </div>
   </body>
+  <script>
+    // If passed an operator page name, try to find it and highlight it.
+    var opname = window.location.search;
+    if (opname) {
+	opname = opname.replace(/^\?op=/, "").replace(/^.*\//, "");
+	var link = document.getElementById(opname);
+	if (link) {
+		link.classList.toggle("current");
+
+		// Also scroll it into view.  This is trickier than it
+		// should be because scrollIntoView() also wants to scroll
+		// horizontally to center it, which we don't want.
+		link.scrollIntoView();
+		document.getElementsByTagName("html")[0].scrollLeft = 0;
+	}
+    }
+  </script>
 </html>
 

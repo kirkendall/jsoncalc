@@ -2239,7 +2239,7 @@ static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
-	json_t *files;
+	json_t *files, *elem;
 	int	current = JSON_CONTEXT_FILE_SAME;
 
 	/* Determine what type of "file" invocation this is */
@@ -2285,12 +2285,14 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* After all that, display the current file's name */
-	files = json_by_index(files, current);
-	files = json_by_key(files, "filename");
+	elem = json_by_index(files, current);
+	files = json_by_key(elem, "filename");
 	if (!files || files->type != JSON_STRING)
 		puts("(no files)");
 	else
 		puts(files->text);
+	json_break(files);
+	json_break(elem);
 
 	/* Return success always */
 	return NULL;

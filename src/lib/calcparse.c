@@ -474,6 +474,26 @@ IsAssign:
 	return op;
 }
 
+/* Skip whitespace and comments */
+static const char *skipwhitespace(const char *str)
+{
+	/* Skip comment, if any */
+	if (str[0] == '/' && str[1] == '/') {
+		while (*str && *str != '\n')
+			str++;
+	}
+	while (isspace(*str)) {
+		str++;
+
+		/* Maybe another comment? */
+		if (str[0] == '/' && str[1] == '/') {
+			while (*str && *str != '\n')
+				str++;
+		}
+	}
+	return str;
+}
+
 /* Given a starting point within a text buffer, parse the next token (storing
  * its details in *token) and return a pointer to the character after the token.
  */
@@ -498,8 +518,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 	}
 
 	/* Skip whitespace */
-	while (isspace(*str))
-		str++;
+	str = skipwhitespace(str);
 
 	/* Start with some common defaults */
 	token->op = JSONOP_INVALID;
@@ -2572,8 +2591,7 @@ jsoncalc_t *json_calc_parse(const char *str, const char **refend, const char **r
 		}
 
 		/* Skip past any trailing whitespace */
-		while (isspace(**refend))
-			(*refend)++;
+		*refend = skipwhitespace(*refend);
 	}
 
 	/* Clean up any extra stack items */

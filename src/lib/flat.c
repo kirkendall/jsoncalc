@@ -131,7 +131,7 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 			 * table row and the current nested row.
 			 */
 			row = json_object();
-			for (tmember = json_first(table); tmember; tmember = json_next(tmember)) {
+			for (tmember = table->first; tmember; tmember = tmember->next) { /* object */
 				/* Is this the unrolled element? */
 				if (tmember->first == value) {
 					/* Yes!  Replace it with copies of the

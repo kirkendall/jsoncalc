@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <jsoncalc.h>
 
 /* This can be set to 'o' to make new/unreadable files contain an empty object,
@@ -90,9 +91,44 @@ jsonfile_t *json_file_load(const char *filename)
 	return jf;
 }
 
+/* Connect an open file with a deferred array.  This increments the deferred
+ * count of the file, and stores the file's pointer in the array's jsondef_t.
+ */
+void json_file_defer(jsonfile_t *jf, json_t *array)
+{
+	assert(array->type == JSON_ARRAY && array->first && array->first->type == JSON_DEFER);
+
+	jf->refs++;
+	((jsondef_t *)(array->first))->file = jf;
+}
+
+/* If a deferred array uses a file, disconnect it from the file.  If that was
+ * the last deferred array using the file, then unload the file.  This is used
+ * while free freeing a deferred array.
+ */
+void json_file_defer_free(json_t *array)
+{
+	jsonfile_t *jf;
+
+	assert(array->type == JSON_ARRAY && array->first && array->first->type == JSON_DEFER);
+
+	jf = ((jsondef_t *)(array->first))->file;
+	if (jf) {
+		assert(jf->refs > 0);
+		jf->refs--;
+		if (jf->refs == 0)
+			json_file_unload(jf);
+	}
+}
+
+
 /* Close a file that was opened via json_file_load() */
 void json_file_unload(jsonfile_t *jf)
 {
+	/* Can't actually unload if the refs is non-zero */
+	if (jf->refs > 0)
+		return;
+
 	/* Remove the jf structure from the loaded list */
 	jsonfile_t *scan, *lag;
 	for (lag = NULL, scan = loaded;

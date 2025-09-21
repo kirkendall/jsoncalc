@@ -1009,9 +1009,10 @@ json_t *jfn_slice(json_t *args, void *agdata)
 	if (args->first->type == JSON_ARRAY) {
 		/* Copy the slice to a new array */
 		result = json_array();
-		for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = scan->next) { /* undeferred */
+		for (scan = json_by_index(args->first, start); scan && start < end; start++, scan = json_next(scan)) { /* undeferred */
 			json_append(result, json_copy(scan));
 		}
+		json_break(scan);
 	} else { /* JSON_STRING */
 		str = json_mbs_substr(args->first->text, start, NULL);
 		strend = json_mbs_substr(args->first->text, end, NULL);
@@ -1225,6 +1226,7 @@ json_t *jfn_nameBits(json_t *args, void *agdata)
 			elem = json_by_index(names, i);
 			if (elem && elem->type == JSON_STRING)
 				json_append(result, json_key(elem->text, json_from_int(inbits & (mask << pos))));
+			json_break(elem);
 		} else /* basically a placeholder for a "do not care" bit */ {
 			nbits = 1;
 		}
@@ -1645,26 +1647,28 @@ int help_indexOf(json_t *args, int last)
 		json_t	*haystack = args->first;
 		json_t	*needle = args->first->next;; /* undeferred */
 		json_t	*scan;
-		int	i;
+		int	i, found;
 
-		/* If looking for last, start at end */
 		if (last) {
-			/* Scan the array backwards.  This is awkward and
-			 * inefficient since the array is stored as a linked
-			 * list.
+			/* Scan the entire array.  Remember the index of the
+			 * most recent match.
 			 */
-			for (i = json_length(haystack) - 1; i >= 0; i--) {
-				scan = json_by_index(haystack, i);
+			found = -1;
+			for (i = 0, scan = json_first(haystack); scan; i++, scan = json_next(scan)) {
 				if (ignorecase) {
 					/* Case-insensitive search for a string */
 					if (scan->type == JSON_STRING && json_mbs_casecmp(scan->text, needle->text) == 0)
-						return i;
+						found = i;
 				} else {
 					/* Search for anything, case-sensitive */
 					if (json_equal(scan, needle))
-						return i;
+						found = i;
 				}
 			}
+
+			/* Return the last match */
+			if (found != -1)
+				return found;
 		} else {
 			/* Scan the array forward.  Much better! */
 			for (i = 0, scan = json_first(haystack); scan; i++, scan = json_next(scan)) {

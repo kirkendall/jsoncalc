@@ -74,6 +74,7 @@ void json_break(json_t *elem)
  */
 int json_is_last(const json_t *elem)
 {
+	/* If not deferred, this is easy */
 	if (!json_is_deferred_element(elem))
 		return elem->next ? 0 : 1; /* undeferred */
 
@@ -145,6 +146,7 @@ typedef struct {
 static json_t *jell_first(json_t *defarray);
 static json_t *jell_next(json_t *defelem);
 static int jell_islast(const json_t *defelem);
+static json_t *jell_byindex(json_t *defarray, int idx);
 
 static jsondeffns_t jell_fns = {
 	/* size */	sizeof(jell_t),
@@ -153,7 +155,7 @@ static jsondeffns_t jell_fns = {
 	/* next */	jell_next,
 	/* islast */	jell_islast,
 	/* free */	NULL,
-	/* byindex */	NULL,
+	/* byindex */	jell_byindex,
 	/* bykey */	NULL
 };
 
@@ -202,6 +204,29 @@ static int jell_islast(const json_t *defelem)
 	/* If it exceeds "to" then free it and return NULL */
 	return (JSON_INT(defelem) >= ((jell_t *)defelem->next)->to);
 }
+
+static json_t *jell_byindex(json_t *defarray, int idx)
+{
+	jell_t	*jell, *jell2;
+	json_t	*result;
+	assert(defarray->type == JSON_ARRAY && defarray->first && defarray->first->type == JSON_DEFER);
+
+	/* If outside of array bounds, return NULL */
+	jell = (jell_t *)(defarray->first);
+	if (idx < 0 || idx >= json_length(defarray))
+		return NULL;
+
+	/* Allocate a new json_t to store the element.  Mark it as deferred */
+	result = json_from_int(jell->from + idx);
+	result->next = json_defer(&jell_fns);
+	jell2 = (jell_t *)(defarray->first);
+	jell2->from = jell->from;
+	jell2->to = jell->to;
+
+	/* Return it. */
+	return result;
+}
+
 
 /* Allocate a deferred array for a range of integers */
 json_t *json_defer_ellipsis(int from, int to)

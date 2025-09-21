@@ -65,32 +65,6 @@ typedef struct json_s {
 /* These are used to stuff a binary double or int into a JSON_NUMBER*/
 #define JSON_DOUBLE(j)	(((double *)((j) + 1))[-1])
 #define JSON_INT(j)	(((int *)((j) + 1))[-1])
-
-/* This stores info about the implementation of different types of deferred
- * arrays. It's basically a collection of function pointers, plus a size_t
- * indicating how much storage space it needs.
- */
-typedef struct {
-	size_t	size;
-	char	*desc;
-	json_t	*(*first)(json_t *array);
-	json_t	*(*next)(json_t *elem);
-	int	(*islast)(const json_t *elem);
-	void	(*free)(json_t *array_or_elem);
-	json_t	*(*byindex)(json_t *array, int index);
-	json_t	*(*bykey)(json_t *array, char *key, json_t *value);
-} jsondeffns_t;
-
-/* This is the generic part of a JSON_DEFER node.  It starts with plain json_t,
- * and adds some extra fields.  An actual JSON_DEFER note will generally have
- * other information, as its own data type.  The functions that jsondeffns_t
- * points to know the actual data type.
- */
-typedef struct {
-	json_t	json; /* Standard stuff, with ->type=JSON_DEFER */
-	jsondeffns_t *fns; /* pointer to a group of function pointers */
-} jsondef_t;
-
 /* This stores info about formatting -- mostly output formatting, since for
  * input we take whatever we're given.
  */
@@ -155,10 +129,39 @@ typedef struct jsonfile_s {
 
 #define JSON_PATH_DELIM		':'
 
+/* This stores info about the implementation of different types of deferred
+ * arrays. It's basically a collection of function pointers, plus a size_t
+ * indicating how much storage space it needs.
+ */
+typedef struct {
+	size_t	size;	/* Size of jsondef_t plus any other needed storage */
+	char	*desc;	/* basically the "class" of deferred items */
+	json_t	*(*first)(json_t *array);
+	json_t	*(*next)(json_t *elem);
+	int	(*islast)(const json_t *elem);
+	void	(*free)(json_t *array_or_elem);
+	json_t	*(*byindex)(json_t *array, int index);
+	json_t	*(*bykey)(json_t *array, char *key, json_t *value);
+} jsondeffns_t;
+
+/* This is the generic part of a JSON_DEFER node.  It starts with plain json_t,
+ * and adds some extra fields.  An actual JSON_DEFER note will generally have
+ * other information, as its own data type.  The functions that jsondeffns_t
+ * points to know the actual data type.
+ */
+typedef struct {
+	json_t	json; /* Standard stuff, with ->type=JSON_DEFER */
+	jsondeffns_t *fns; /* pointer to a group of function pointers */
+	jsonfile_t *file; /* if non-NULL, it indicates which file to read */
+} jsondef_t;
+
+
 BEGIN_C
 
 /* Files */
 char json_file_new_type;
+void json_file_defer(jsonfile_t *jf, json_t *array);
+void json_file_defer_free(json_t *array);
 jsonfile_t *json_file_load(const char *filename);
 void json_file_unload(jsonfile_t *jf);
 jsonfile_t *json_file_containing(const char *where, int *refline);

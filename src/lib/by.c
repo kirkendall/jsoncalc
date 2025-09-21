@@ -70,10 +70,15 @@ json_t *json_by_deep_key(json_t *container, char *key)
 
 /* Return the value of an indexed element within an array.  If there
  * is no such element, then return NULL.
+ *
+ * IMPORTANT NOTE: If container is a deferred array, then you must call
+ * json_break() on the returned element when you're done with it.  If not a
+ * deferred array, then json_break() is still safe to call on the element.
  */
 json_t *json_by_index(json_t *container, int idx)
 {
 	json_t *scan;
+	jsondef_t *def;
 	int	scanidx;
 
 	/* Defend against NULL */
@@ -95,6 +100,14 @@ json_t *json_by_index(json_t *container, int idx)
 		if (idx < 0)
 			return NULL;
 	}
+
+	/* If this is a deferred array, and it has a quick way to jump to a
+	 * given index, then use that.
+	 */
+	if (container->first
+	 && container->first->type == JSON_DEFER
+	 && (def = (jsondef_t *)(container->first))->fns->byindex)
+		return (*def->fns->byindex)(container, idx);
 
 	/* Scan for it.  If found, return its value */
 	for (scan = json_first(container), scanidx = 0; scan; scan = json_next(scan))
@@ -130,6 +143,7 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 {
 	char	key[100];
 	int	i, deep, quote;
+	json_t	*step;
 
 	/* Defend against NULL */
 	if (!container)
@@ -154,9 +168,11 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			        /* EEE if (json_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
 			        return NULL;
 			}
-			container = json_by_index(container, atoi(expr));
-			if (!container)
+			step = json_by_index(container, atoi(expr));
+			if (!step) {
+				json_break(container); /* in case deferred */
 				return NULL;
+			}
 			while (isdigit(*expr))
 				expr++;
 		}
@@ -165,21 +181,23 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			if (container->type != JSON_OBJECT)
 			{
 			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
+				json_break(container); /* in case deferred */
 			        return NULL;
 			}
 			for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
 				key[i] = *expr++;
 			key[i] = '\0';
 			if (deep)
-				container = json_by_deep_key(container, key);
+				step = json_by_deep_key(container, key);
 			else
-				container = json_by_key(container, key);
+				step = json_by_key(container, key);
 		}
 		else if (*expr == '"' || *expr == '`')
 		{
 			if (container->type != JSON_OBJECT)
 			{
 			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
+				json_break(container); /* in case deferred */
 			        return NULL;
 			}
 			quote = *expr++;
@@ -188,9 +206,9 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			key[i] = '\0';
 			expr++;
 			if (deep)
-				container = json_by_deep_key(container, key);
+				step = json_by_deep_key(container, key);
 			else
-				container = json_by_key(container, key);
+				step = json_by_key(container, key);
 		}
 		else
 		{
@@ -202,9 +220,14 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 		 * parsing the expression anyway so we can find the end of it
 		 * if there's a "next" pointer.
 		 */
-		if (!container && !next)
+		if (!step && !next)
 			break;
+		json_break(container);
+		container = step;
 	} while (*expr && strchr("[].~", *expr));
+
+	/* clean up, in case the last element came from a deferred array */
+	json_break(container);
 
 	/* return the result */
 	if (next)

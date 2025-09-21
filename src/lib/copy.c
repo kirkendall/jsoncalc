@@ -88,5 +88,6 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 
 json_t *json_copy(json_t *json)
 {
+	/* !!! It'd be nice if a deferred array was copied as deferred too */
 	return json_copy_filter(json, NULL);
 }

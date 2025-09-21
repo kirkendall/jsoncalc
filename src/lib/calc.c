@@ -616,6 +616,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			found = json_calc(calc->LEFT->RIGHT, context, agdata);
 			if (calc->LEFT->op != JSONOP_MAYBEMEMBER || !json_is_null(found))
 				json_append(result, json_key(tmp->u.text, found));
+			else
+				json_free(found);
 		}
 		for (calc = calc->RIGHT; calc; calc = calc->RIGHT) {
 			/* calc->LEFT is the next name:value.
@@ -626,6 +628,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			found = json_calc(calc->LEFT->RIGHT, context, agdata);
 			if (calc->LEFT->op != JSONOP_MAYBEMEMBER || !json_is_null(found))
 				json_append(result, json_key(tmp->u.text, found));
+			else
+				json_free(found);
 		}
 		return result;
 
@@ -676,7 +680,13 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				}
 			}
 		}
-		result = json_copy(result);
+
+		/* Use a copy of the result.  Also, call json_break() on it,
+		 * just in case it came from a deferred array.
+		 */
+		found = json_copy(result);
+		json_break(result);
+		result = found;
 		break;
 
 	  case JSONOP_FNCALL:

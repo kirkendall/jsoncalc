@@ -24,6 +24,17 @@ typedef struct jsonparser_s {
 } jsonparser_t;
 
 
+/* This is used to store the details of a deferred array */
+typedef struct {
+	jsondef_t basic; /* normal stuff */
+	char	*start;
+	char	*end;
+} jdefarray_t;
+
+static json_t *jdefarray_first(json_t *defarray);
+static json_t *jdefarray_next(json_t *defelem);
+static json_t *jdefarray_islast(const json_t *defelem);
+
 /* Append an element to an array */
 static void jappendarray(json_t *container, json_t *more)
 {
@@ -114,6 +125,73 @@ char *json_append(json_t *container, json_t *more)
 	return NULL;
 }
 
+/* This scans an array's source to determine whether it is worth deferring.
+ * Quickly moves past an array without storing it, and returns a pointer to
+ * the first character after the array.  If refcount is non-NULL then store
+ * the count of elements there.  If reftable is non-NULL then it stores a
+ * flag indicating whether it is a table (non-empty array of objects).
+ */
+const char *jskim(const char *str, const char *end, int *refcount, int *reftable)
+{
+        int     nest = 1;	/* Nesting depth for [] and {} */
+        int	count = 0;	/* number of elements */
+        int	nonobject = 0;	/* boolean: any non-object elements? */
+
+        /* Skip the '[' and trailing whitespace, to find the first element */
+        do {
+		str++;
+	} while (isspace(*str));
+	if (*str != ']') {
+		count++;
+		if (*str != '{')
+			nonobject = 1;
+	}
+
+        /* Skip over data, counting array elements.  Initially, "str" should
+         * point to the '[' at the start of an array.
+         */
+        for (; nest > 0 && str < end; str++) {
+                switch (*str) {
+                  case '"':
+			/* Skip past the string, minding backslashes */
+			str++;
+			while (*str != '"')
+				if (*str++ == '\\')
+					str++;
+			break;
+		  case ',':
+			/* If top-level, then count an element */
+			if (nest == 1) {
+				do {
+					str++;
+				} while (isspace(*str));
+				if (*str != ']') {
+					count++;
+					if (*str != '{')
+						nonobject = 1;
+				}
+				str--;
+			}
+			break;
+                  case '[':
+                  case '{':
+			nest++;
+			break;
+                  case ']':
+                  case '}':
+			nest--;
+			break;
+                }
+        }
+
+	/* Return the results. */
+	if (refcount)
+		*refcount = count;
+	if (reftable)
+		*reftable = (count > 0 && !nonobject);
+        return str;
+}
+
 /* Parse an in-memory JSON document.  This could be a string, or an mmap()ed
  * file.
  */
@@ -131,12 +209,13 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 	char	*emptyobject = "object";
 	int	defersize = 0;
 
+char *start = str;
 	/* Get parser config */
 	jc = json_by_key(json_config, "emptyobject");
 	if (jc && jc->type == JSON_STRING)
 		emptyobject = jc->text;
 	jc = json_by_key(json_config, "defersize");
-	if (jc && jc->type == JSON_STRING)
+	if (jc && jc->type == JSON_NUMBER)
 		defersize = json_int(jc);
 
 	/* Start with a stack containing an empty array.  We expect parsing to
@@ -295,6 +374,17 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 		case '[':
 			/* Start of an array  -- maybe deferred? */
 			jc = json_array();
+			if (defersize > 0 && (end - str) >= defersize) {
+				/* Find the end of the array */
+				int count, istable;
+				const char *endarray = jskim(str, end, &count, &istable);
+				/* Is it big enough to be worth deferring? */
+				if ((endarray - str) >= defersize) {
+					/* Yes, defer it */
+					/*!!!*/
+				}
+			}
+
 			str++;
 			break;
 
@@ -350,7 +440,12 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 
 		default:
 			/* Unexpected character */
-			error = "Unexpected character";
+#if 0
+			error = "Unexpected character in JSON data";
+#else
+{static char buf[200]; sprintf(buf, "Unexpected character 0x%02x at offset %d, start=%.25s", *str & 0xff, (int)(str - start), start); error = buf; }
+fprintf(stderr, "%.*s\n", len, start);
+#endif
 			goto Error;
 		}
 

@@ -141,7 +141,7 @@ typedef struct {
 	int	(*islast)(const json_t *elem);
 	void	(*free)(json_t *array_or_elem);
 	json_t	*(*byindex)(json_t *array, int index);
-	json_t	*(*bykey)(json_t *array, char *key, json_t *value);
+	json_t	*(*bykey)(json_t *array, const char *key, json_t *value);
 } jsondeffns_t;
 
 /* This is the generic part of a JSON_DEFER node.  It starts with plain json_t,

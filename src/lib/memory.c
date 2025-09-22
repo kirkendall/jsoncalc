@@ -280,11 +280,37 @@ json_t *json_array()
 	return json_simple(NULL, 0, JSON_ARRAY);
 }
 
-/* Allocate a JSON_DEFER node */
+/* This is a dummy type of deferred array which is always empty.  It is used
+ * when json_defer() is called with NULL instead of a real list of deferred
+ * functions.
+ */
+static json_t *dummy(json_t *node)
+{
+	return NULL;
+};
+static jsondeffns_t dummyfns = {
+	sizeof(jsondeffns_t),	/* size */
+	"dummy",	/* desc */
+	dummy,		/* first */
+	dummy,		/* next */
+	NULL,		/* islast */
+	NULL,		/* free */
+	NULL,		/* byindex */
+	NULL		/* bykey */
+};
+
+/* Allocate a JSON_DEFER node.  "fns" is a collection of function pointers
+ * that implement the desired type of deferred array, or NULL to use a
+ * dummy set of functions.
+ */
 json_t *json_defer(jsondeffns_t *fns)
 {
 	json_t *json;
 	size_t	size;
+
+	/* If no "fns" then use dummy */
+	if (!fns)
+		fns = &dummyfns;
 
 	/* Allocate it, with extra space */
 	size = fns->size - sizeof json->text;
@@ -530,6 +556,10 @@ json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns)
 	json_t *json;
 	size_t	size;
 
+	/* If no "fns" then use dummy */
+	if (!fns)
+		fns = &dummyfns;
+		
 	/* Allocate it, with extra space for an overall size of fns->size */
 	size = fns->size - sizeof json->text;
 	json = json_debug_simple(file, line, "", size, JSON_DEFER);

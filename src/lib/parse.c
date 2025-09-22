@@ -24,16 +24,52 @@ typedef struct jsonparser_s {
 } jsonparser_t;
 
 
+/******************************************************************************/
+/* This next section of code is all in support of deferred arrays.            */
+
 /* This is used to store the details of a deferred array */
 typedef struct {
-	jsondef_t basic; /* normal stuff */
-	char	*start;
-	char	*end;
+	jsondef_t *basic; /* normal stuff */
+	char	*start;	  /* position within that file where array starts */
+	char	*end;	  /* where it ends */
 } jdefarray_t;
 
-static json_t *jdefarray_first(json_t *defarray);
-static json_t *jdefarray_next(json_t *defelem);
-static json_t *jdefarray_islast(const json_t *defelem);
+/* Parse the first element of the array, and return it.  This also involves
+ * making a copy of the array's JSON_DEFER node and related data.
+ */
+static json_t *jdefarray_first(json_t *array)
+{
+	return NULL;
+}
+
+/* Parse the next element of the array and return it.  This also frees the
+ * previous element but reuses its JSON_DEFER node.  If there is no next
+ * element then also free the JSON_DEFER node and return NULL.
+ */
+static json_t *jdefarray_next(json_t *elem)
+{
+	return NULL;
+}
+
+/* Test whether the current element is the last element. */
+static int jdefarray_islast(const json_t *elem)
+{
+	return 0;
+}
+
+static jsondeffns_t jdefarrayfns = {
+	sizeof(jdefarray_t),	/* size */
+	"json_parse",		/* desc */
+	jdefarray_first,	/* first */
+	jdefarray_next,		/* next */
+	jdefarray_islast,	/* islast */
+	NULL,			/* free */
+	NULL,			/* byindex */
+	NULL			/* bykey */
+};
+
+/******************************************************************************/
+
 
 /* Append an element to an array */
 static void jappendarray(json_t *container, json_t *more)
@@ -209,7 +245,6 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 	char	*emptyobject = "object";
 	int	defersize = 0;
 
-char *start = str;
 	/* Get parser config */
 	jc = json_by_key(json_config, "emptyobject");
 	if (jc && jc->type == JSON_STRING)
@@ -440,12 +475,7 @@ char *start = str;
 
 		default:
 			/* Unexpected character */
-#if 0
 			error = "Unexpected character in JSON data";
-#else
-{static char buf[200]; sprintf(buf, "Unexpected character 0x%02x at offset %d, start=%.25s", *str & 0xff, (int)(str - start), start); error = buf; }
-fprintf(stderr, "%.*s\n", len, start);
-#endif
 			goto Error;
 		}
 

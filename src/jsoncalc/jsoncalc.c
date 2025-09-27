@@ -86,6 +86,20 @@ static void usage(char *fmt, char *data)
 	exit(1);
 }
 
+/* Return 1 if a given name refers to an existing directory.  If it doesn't
+ * exist, or is something other than a directory, then return 0.
+ */
+int isdirectory(const char *filename)
+{
+	struct stat st;
+
+	if (stat(filename, &st) < 0)
+		return 0;
+	if ((st.st_mode & S_IFMT) != S_IFDIR)
+		return 0;
+	return 1;
+}
+
 /* This function is called if you use an unrecognized name in a statement.
  * If the name is "files" then it returns an array of JSON files in the
  * sampledata directory.  If it is the name of one of those files, then it
@@ -787,9 +801,10 @@ int main(int argc, char **argv)
 		json_t *tmp;
 
 		/* If it looks like a file, then add it to the list of files */
-		if (strchr(argv[i], '.')
-		 || !strcmp(argv[i], "-")
-		 || 0 == access(argv[i], F_OK)) {
+		if (((strchr(argv[i], '.') && json_file_new_type != '\0')
+		  || !strcmp(argv[i], "-")
+		  || 0 == access(argv[i], F_OK))
+		 && !isdirectory(argv[i])) {
 			/* If it doesn't exist and no -a/-o was given, fail */
 			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && json_file_new_type == '\0'){
 				perror(argv[i]);

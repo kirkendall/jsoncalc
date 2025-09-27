@@ -26,13 +26,14 @@ typedef enum {
 	OPT_USERNAME_,		/* (user) Use Authentication: Basic */
 	OPT_PASSWORD_,		/* (pass) Password to pair with OPT_USERNAME_ */
 	OPT_BEARER_,		/* (token) Use Authentication: Bearer */
-	OPT_REQCONTENT, 	/* Send content with the request */
-	OPT_REQCONTENTTYPE_,	/* (mimetype) Define the Content-Type of the request content */
-	OPT_REQHEADER_,		/* (headerlines) Add header request lines */
+	OPT_CONTENT,	 	/* Send content with the request */
+	OPT_CONTENTTYPE_,	/* (mimetype) Define the Content-Type of the request content */
+	OPT_HEADER_,		/* (headerlines) Add header request lines */
 	OPT_REQHEADERS,		/* Return request headers along with response */
+	OPT_REQCONTENT,		/* Return request content along with response */
 	OPT_COOKIES,		/* Allow cookies to be sent/received */
 	OPT_FOLLOWLOCATION,	/* Follow HTTP 3xx redirects */
-	OPT_DECODE,		/* Try to decode the response content */
+	OPT_PARSE,		/* Try to parse the response content */
 	OPT_HEADERS		/* Return response headers along with content */
 } opt_t;
 
@@ -209,8 +210,9 @@ typedef struct {
 	struct curl_slist *slist;	/* List of request headers to add */
 	char	*reqcontenttype;	/* MIME type of the request content */
 	int	content;		/* Send data as content? */
-	int	decode;			/* Decode the response? */
+	int	parse;			/* Parse the response? */
 	int	reqheaders;		/* Return the request headers too? */
+	int	reqcontent;		/* Return the request content too? */
 	int	headers;		/* Return the response headers too? */
 } curlflags_t;
 
@@ -270,12 +272,12 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
 			break;
-		case OPT_REQCONTENT:
+		case OPT_CONTENT:
 			if (!data)
 				return json_error_null(0, "In %s(), CURL.reqContent only works if content is given after URL", fn);
 			flags->content = 1;
 			break;
-		case OPT_REQCONTENTTYPE_:
+		case OPT_CONTENTTYPE_:
 			if (!more->next
 			 || more->next->type != JSON_STRING
 			 || strchr(more->next->text, ':')
@@ -285,7 +287,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 			more = more->next;
 			flags->reqcontenttype = more->text;
 			break;
-		case OPT_REQHEADER_:
+		case OPT_HEADER_:
 			more = more->next;
 			if (!more || more->type != JSON_STRING || !strchr(more->text, ':'))
 				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
@@ -294,7 +296,9 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 		case OPT_REQHEADERS:
 			flags->reqheaders = 1;
 			break;
-
+		case OPT_REQCONTENT:
+			flags->reqcontent = 1;
+			break;
 		case OPT_COOKIES:
 			/* If cookiejar is "" then make one up */
 			str = json_config_get("plugin.curl", "cookiejar")->text;
@@ -318,8 +322,8 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 		case OPT_FOLLOWLOCATION:
 			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 			break;
-		case OPT_DECODE:
-			flags->decode = 1;
+		case OPT_PARSE:
+			flags->parse = 1;
 			break;
 		case OPT_HEADERS:
 			flags->headers = 1;
@@ -377,7 +381,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 */
 	flags.reqcontenttype = NULL;
 	flags.content = !strcmp(request, "POST");
-	flags.decode = flags.reqheaders = flags.headers = 0;
+	flags.parse = flags.reqheaders = flags.reqcontent = flags.headers = 0;
 	flags.slist = NULL;
 	err = doFlags(fn, curl, data, &flags, more);
 	if (err) {
@@ -460,6 +464,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		if (mustfree)
 			free(mustfree);
 		mustfree = url = newurl;
+		str = NULL;
 	}
 
 	/* If sending data as content, and we have a content-type, then add
@@ -497,8 +502,6 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	result = curl_easy_perform(curl);
 	curl_easy_cleanup(curl);
 	curl_slist_free_all(flags.slist);
-	if (mustfree)
-		free(mustfree);
 
 	/* Detect errors */
 	if (result != CURLE_OK) {
@@ -506,6 +509,8 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 			free(rcv.buf);
 		if (hdr.buf)
 			free(hdr.buf);
+		if (mustfree)
+			free(mustfree);
 		return json_error_null(0, "CURL error: %s", curl_easy_strerror(result));
 	}
 
@@ -514,8 +519,8 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 * embarrassing.
 	 */
 	response = NULL;
-	if (flags.decode && rcv.buf) {
-		/* Try to decode it.  If that returns an error, then maybe
+	if (flags.parse && rcv.buf) {
+		/* Try to parse it.  If that returns an error, then maybe
 		 * display the error message as a warning and fall back on
 		 * returning the response as a string.
 		 */
@@ -533,10 +538,18 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	/* If supposed to return headers, then build an object containing
 	 * both the headers and the response.
 	 */
-	if (flags.reqheaders || flags.headers) {
+	if (flags.reqheaders || flags.reqcontent || flags.headers) {
 		json_t *obj = json_object();
 		if (flags.reqheaders)
 			json_append(obj, json_key("reqHeaders", headerArray(reqhdr.buf)));
+		if (flags.reqcontent) {
+			json_t *value;
+			if (str && flags.content)
+				value = json_string(str, -1);
+			else
+				value = json_null();
+			json_append(obj, json_key("reqContent", value));
+		}
 		if (flags.headers)
 			json_append(obj, json_key("headers", headerArray(hdr.buf)));
 		json_append(obj, json_key("response", response));
@@ -544,6 +557,8 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	}
 
 	/* Return the response */
+	if (mustfree)
+		free(mustfree);
 	if (rcv.buf)
 		free(rcv.buf);
 	if (hdr.buf)
@@ -755,13 +770,14 @@ char *plugincurl()
 	json_append(curl, json_key("username_", json_from_int(OPT_USERNAME_)));
 	json_append(curl, json_key("password_", json_from_int(OPT_PASSWORD_)));
 	json_append(curl, json_key("bearer_", json_from_int(OPT_BEARER_)));
-	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
-	json_append(curl, json_key("reqContentType_", json_from_int(OPT_REQCONTENTTYPE_)));
-	json_append(curl, json_key("reqHeader_", json_from_int(OPT_REQHEADER_)));
+	json_append(curl, json_key("content", json_from_int(OPT_CONTENT)));
+	json_append(curl, json_key("contentType_", json_from_int(OPT_CONTENTTYPE_)));
+	json_append(curl, json_key("header_", json_from_int(OPT_HEADER_)));
 	json_append(curl, json_key("reqHeaders", json_from_int(OPT_REQHEADERS)));
+	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
 	json_append(curl, json_key("cookies", json_from_int(OPT_COOKIES)));
 	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
-	json_append(curl, json_key("decode", json_from_int(OPT_DECODE)));
+	json_append(curl, json_key("parse", json_from_int(OPT_PARSE)));
 	json_append(curl, json_key("headers", json_from_int(OPT_HEADERS)));
 	json_append(json_system, json_key("CURL", curl));
 

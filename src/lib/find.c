@@ -239,9 +239,12 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			 */
 			wasused = find->used;
 			help_find_cat(find, scan->text);
+			waskey = find->key;
+			find->key = scan->text;
 			help_find_row(find, scan->first);
 
 			/* Restore expr */
+			find->key = waskey;
 			find->used = wasused;
 			continue;
 		}

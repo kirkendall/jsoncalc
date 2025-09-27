@@ -232,7 +232,7 @@
         <td>CURLOPT_HTTPAUTH, CURLOPT_XOAUTH2_BEARER</td>
       </tr>
       <tr>
-        <td>CURL.reqContent</td>
+        <td>CURL.content</td>
         <td></td>
         <td>
           This indicates that an HTTP request should send any data as content
@@ -248,7 +248,7 @@
         <td>CURLOPT_POSTFIELDS</td>
       </tr>
       <tr>
-        <td>CURL.reqContentType_</td>
+        <td>CURL.contentType_</td>
         <td>mimetype: string</td>
         <td>
           When a request includes content, this defines the MIME type of the
@@ -263,7 +263,7 @@
         <td>CURLOPT_HTTPHEADER</td>
       </tr>
       <tr>
-        <td>CURL.reqHeader_</td>
+        <td>CURL.header_</td>
         <td>headerline: string</td>
         <td>
           This lets you inject any header line into an HTTP request header.
@@ -271,7 +271,7 @@
           A typical example might be "Cache-Control: no-cache".
           <p style="margin-bottom:0">
           This flag is repeatable.
-          You can use multiple <tt>CURL.reqHeader_</tt> flag arguments to insert
+          You can use multiple <tt>CURL.header_</tt> flag arguments to insert
           multiple header lines.
         </td>
         <td>CURLOPT_HTTPHEADER</td>
@@ -285,11 +285,26 @@
 	  The returned value will be an object with
 	  a "reqHeaders" member containing an array of request header lines,
 	  and a "response" member containing the response data.
-	  If <tt>CURL.headers</tt> is also used, then the response object
-	  will also contain "headers" member containing an array of response
-	  header lines.
+	  If <tt>CURL.reqContent</tt> and/or <tt>CURL.headers</tt> are also
+	  used, then the response object will also contain "reqContent" and/or
+	  "headers" members.
 	</td>
         <td>CURLOPT_DEBUGFUNCTION, CURLOPT_DEBUGDATA, CURLOPT_VERBOSE</td>
+      </tr>
+      <tr>
+        <td>CURL.reqContent</td>
+        <td></td>
+        <td>
+          This causes the request content to be returned along with the
+          response.
+          The returned value will be an object containing "response" and
+          "reqContent" members.
+          The value of "reqContent" will be a string, not a JSON data structure.
+	  If <tt>CURL.reqHeaders</tt> and/or <tt>CURL.headers</tt> are also
+	  used, then the response object will also contain "reqHeaders" and/or
+	  "headers" members.
+        </td>
+        <td>CURLOPT_COOKIEFILE, CURLOPT_COOKIEJAR</td>
       </tr>
       <tr>
         <td>CURL.cookies</td>
@@ -306,11 +321,12 @@
         <td>CURLOPT_COOKIEFILE, CURLOPT_COOKIEJAR</td>
       </tr>
       <tr>
-        <td>CURL.decode</td>
+        <td>CURL.parse</td>
         <td></td>
         <td>
           Normally the <tt>curlXXX()</tt> functions return the result as a
-          string, but this flag causes it to attempt to decode the result.
+          string, but this flag causes it to attempt to parse the result into
+          a JSON data structure.
           If the result can't be decoded, then it will still be returned as a
           string.
           <p style="margin-bottom:0">

@@ -63,15 +63,43 @@
 
       <div class="example">
 	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
-	<kbd>curlGet("https://example.net/app/request.json", data, CURL.username_, "steve", CURL.password_, "haBiBi", CURL.decode)</kbd>
+	<kbd>curlGet("https://example.net/app/request.json", data, CURL.username_, "steve", CURL.password_, "haBiBi", CURL.parse)</kbd>
 	<samp><i>A bunch of parsed data.</i></samp>
 	First we build an object containing data to append to the URL.
 	Then we run <tt>curlGet()</tt> passing it the URL, the data, and some
 	flags.
 	The flags define the user name and password (and imply that
 	"Authentication: Basic" should be used),
-	and also ask for the response text to be decoded
+	and also ask for the response text to be parsed
 	so we get an object instead of a big string.
+      </div>
+
+      <div class="example">
+        <kbd>curlGet("https://swapi.py4e.com/api/people/",{search:"darth"},CURL.parse).results@{name,height,mass,films:(films@curlGet(this,CURL.parse).title).join("\n")}</kbd>
+        <samp>
+<table>
+<tr><th>name</th><th>height</th><th>mass</th><th>films</th></tr>
+<tr><td>Darth Vader</td><td>202</td><td>136</td><td>A New Hope</td></tr>
+<tr><td></td><td></td><td></td><td>The Empire Strikes Back</td></tr>
+<tr><td></td><td></td><td></td><td>Return of the Jedi</td></tr>
+<tr><td></td><td></td><td></td><td>Revenge of the Sith</td></tr>
+<tr><td>Darth Maul</td><td>175</td><td>80</td><td>The Phantom Menace</td></tr>
+<tr><td></td></tr>
+</table>
+        </samp>
+        A nice big example, accessing the Star Wars API.
+        First we obtain a list (in the <tt>results</tt> member) of characters matching
+        the search text "darth".
+        We then select just the <tt>name</tt>, <tt>height</tt>, <tt>mass</tt>,
+        and <tt>films</tt> members for each character...
+        but the <tt>films</tt> member is an array of URLs referencing the
+        films, and we want titles, so we fetch each URL and grab just the
+        <tt>title</tt> member of each returned object.
+        As a final step, we join each character's array of titles into one long string,
+        delimited by newlines.
+        The "grid" table display method knows how to handle newlines.
+        <p>
+        Darth Maul didn't even survive one film.  What a wuss.
       </div>
 
     </details>

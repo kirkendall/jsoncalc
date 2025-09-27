@@ -15,6 +15,7 @@
       <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> { <var>cmds</var> }
       <br/>function <var>name</var> (<var>arglist</var>) : <var>type</var> ;
       <br/>function <var>name</var>
+      <br/>function
       <dd>
       The <tt>function</tt> command lets you define functions.
       <p>
@@ -32,9 +33,10 @@
       &mdash; once with an empty body just so it exists, and then again with
       the recursive body which is allowed to recursively call itself.
       <p>
-      Lastly, you can invoke <tt>function</tt> with just the name of a function
-      to get a summary description of the function.
-      This works even for the built-in functions.
+      Lastly, you can invoke <tt>function</tt> with no arguments to see a list
+      of user-defined functions, or just the name of a function
+      to get a summary description of that function.
+      (The latter works even for the built-in functions.)
       <p>
       The <var>arglist</var> can be empty (just parentheses with nothing in them).
       Generally, though, it is a comma-delimited list of argument names.

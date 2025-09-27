@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>writeJSON</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc writeJSON - Write data out to a JSON file">
+    <meta name="keywords" content="array, object, jsoncalc, function reference, writeJSON">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>writeJSON - Write data out to a JSON file</h1>
+    <dl>
+      <dt>writeJSON(<var>data</var>:any, <var>file</var>:string):boolean
+      <dd>
+      This writes <var>data</var> out to the named <var>file</var>
+      as JSON text.
+      It returns <tt>true</tt> if successful.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>void writeJSON({a:1,b:2}, "file.json")</kbd>
+	<samp>true</samp>
+        This overwrites (if it exists) "file.json"
+        or creates it (if it doesn't exist)
+        and writes the data out as JSON.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>I very deliberately avoided calling this "write()" because I
+            may want to implement a POSIX plugin some day.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=writeArray">writeArray()</td><td>Aggregate function for incrementally writing a JSON array.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -591,6 +591,7 @@ typedef struct jsoncmd_s {
 #define JSON_CONTEXT_FILE_PREVIOUS	(-3)
 
 /* Function declarations */
+jsonfunc_t *json_calc_function_first(void);
 void json_calc_aggregate_hook(
         const char    *name,
         const char	*args,

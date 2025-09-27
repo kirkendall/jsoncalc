@@ -100,6 +100,7 @@ static json_t *jfn_random(json_t *args, void *agdata);
 static json_t *jfn_sign(json_t *args, void *agdata);
 static json_t *jfn_wrap(json_t *args, void *agdata);
 static json_t *jfn_sleep(json_t *args, void *agdata);
+static json_t *jfn_writeJSON(json_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static json_t *jfn_count(json_t *args, void *agdata);
@@ -196,9 +197,10 @@ static jsonfunc_t abs_jf         = {&period_jf,      "abs",         "val:number"
 static jsonfunc_t random_jf      = {&abs_jf,         "random",      "intbound?:number", "number", jfn_random};
 static jsonfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
 static jsonfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
-static jsonfunc_t sleep_jf        = {&wrap_jf,       "sleep",       "seconds:number|period", "number", jfn_sleep};
+static jsonfunc_t sleep_jf       = {&wrap_jf,        "sleep",       "seconds:number|period", "number", jfn_sleep};
+static jsonfunc_t writeJSON_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
 
-static jsonfunc_t count_jf       = {&sleep_jf,       "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jsonfunc_t count_jf       = {&writeJSON_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jsonfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jsonfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
 static jsonfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:any", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JSONFUNC_JSONFREE | JSONFUNC_FREE};
@@ -214,6 +216,14 @@ static jsonfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string,
 static jsonfunc_t join_jf        = {&objectAgg_jf,   "join",        "str:string, delim?:string", "string",	jfn_join,  jag_join, sizeof(agjoindata_t),	JSONFUNC_FREE};
 static jsonfunc_t *funclist      = &join_jf;
 
+
+/* Return the start of the function list.  You can find successive functions
+ * by following each function's ->other pointer.
+ */
+jsonfunc_t *json_calc_function_first(void)
+{
+	return funclist;
+}
 
 /* Register a C function that can be called via json_calc().  The function
  * should look like...
@@ -2340,6 +2350,46 @@ static json_t *jfn_sleep(json_t *args, void *agdata)
 
 	/* Return null */
 	return json_null();
+}
+
+/* Write data to a file in JSON format */
+static json_t *jfn_writeJSON(json_t *args, void *agdata)
+{
+	json_t	*data;
+	char	*filename;
+	jsonformat_t tweaked;
+	FILE	*fp;
+
+	/* Check the args */
+	data = args->first;
+	if (!args->first->next || args->first->next->type != JSON_STRING)
+		return json_error_null(NULL, "needFileName:The %s() function's second parameter must be a file name", "writeJSON");
+	filename = args->first->next->text;
+
+	/* Open the file */
+	fp = fopen(filename, "w");
+	if (!fp)
+		return json_error_null(NULL, "writeFile:Can't open %s for writing", filename);
+
+	/* Tweak the output format */
+	tweaked = json_format_default;
+	tweaked.color = 0;
+	tweaked.graphic = 0;
+	tweaked.pretty = 1;
+	tweaked.tab = 2;
+	tweaked.oneline = 0;
+	tweaked.elem = 0;
+	strcpy(tweaked.table, "json");
+	tweaked.fp = fp;
+
+	/* Write the data */
+	json_print(data, &tweaked);
+
+	/* close the file */
+	fclose(fp);
+
+	/* Return true */
+	return json_bool(1);
 }
 
 

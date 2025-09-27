@@ -1563,6 +1563,29 @@ static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	return gvc_run(cmd, refcontext);
 }
 
+/* Output a description of a function */
+static void describefn(jsonfunc_t *f)
+{
+	json_t	*params = NULL;
+
+	if (f->fn)
+		printf("builtin ");
+	if (f->agfn)
+		printf("aggregate ");
+	printf("function %s", f->name);
+	if (f->args)
+		printf("(%s)", f->args);
+	else {
+		putchar('(');
+		for (params = f->userparams->first; params; params = params->next) /* undeferred */
+			printf("%s%s", params->text, params->next ? ", " : ""); /* undeferred */
+		putchar(')');
+	}
+	if (f->returntype)
+		printf(":%s", f->returntype);
+	putchar('\n');
+}
+
 static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	char	*fname;
@@ -1576,8 +1599,13 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Function name */
 	fname = json_cmd_parse_key(src, 1);
 	if (!fname) {
-		*referr = json_cmd_error(src->str, "Missing function name");
-		goto Error;
+		/* Describe all user-defined functions */
+		jsonfunc_t *f = json_calc_function_first();
+		for (; f; f = f->other) {
+			if (!f->fn)
+				describefn(f);
+		}
+		return NULL;
 	}
 
 	/* Parameter list (the parenthesized text) */
@@ -1593,22 +1621,8 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		}
 
 		/* Output a description of the function */
-		if (f->fn)
-			printf("builtin ");
-		if (f->agfn)
-			printf("aggregate ");
-		printf("function %s", f->name);
-		if (f->args)
-			printf("(%s)", f->args);
-		else {
-			putchar('(');
-			for (params = f->userparams->first; params; params = params->next) /* undeferred */
-				printf("%s%s", params->text, params->next ? ", " : ""); /* undeferred */
-			putchar(')');
-		}
-		if (f->returntype)
-			printf(":%s", f->returntype);
-		putchar('\n');
+		describefn(f);
+
 		free(fname);
 		return NULL;
 	}

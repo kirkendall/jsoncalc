@@ -74,14 +74,15 @@
               <p>
               If you're given data without column headings, then you can still
               read it by setting <tt>headless</tt> to <tt>true</tt>.
-              Then all rows will be read as data rows, but instead of given
+              Then all rows will be read as data rows, but instead of assigning
               each cell a name (by making each row an object), it'll just
               read each row as an array of values.
-              So you end up with an array of arrays, instead of an array of
+              You end up with an array of arrays, instead of an array of
               objects.
               <em>This means it isn't a "table" as JsonCalc defines it.</em>
               You'll need to find a way to assign names to the cells,
               converting each row array into a row object.
+              (See the <a target="_PARENT" href="../index.html?op=values">VALUES</a> operator.)
               <p>
               JsonCalc can also write headless CSV data, but it must be a
               table &mdash; the columns must be assigned names so JsonCalc

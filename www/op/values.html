@@ -88,6 +88,34 @@
 	    values instead of a table, since the data doesn't supply its own
 	    column headings.
 	    You can use <tt>VALUES</tt> to add the column headings.
+	    If you don't care what those column headings are, then you can
+	    generate spreadsheet-like letters via the
+	    <a target="_PARENT" href="../index.html?f=rowNumber">rowNumber()</a>
+	    aggregate function.
+	    <div class="example">
+	      <kbd>var csvdata = [[1,2],[3,4,5],[6,7,8,9]];</kbd>
+	      <kbd>var widest = ([csvdata]@max(this.length))[0];</kbd>
+	      <kbd>var headers = 1 ... widest @ rowNumber("A");</kbd>
+	      <kbd>headers</kbd>
+	      <samp>["A","B","C","D"]</samp>
+	      <kbd>headers values csvdata</kbd>
+	      <samp>
+		<table>
+		  <tr><th>A</th><th>B</th><th>C</th><th>D</th></tr>
+		  <tr><td>1</td><td>2</td><td></td><td></td></tr>
+		  <tr><td>3</td><td>4</td><td>5</td><td></td></tr>
+		  <tr><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+		</table>
+	      </samp>
+	      We set <tt>csvdata</tt> to some sample data that, hey, could have
+	      come from a headless CSV file for all we know.
+	      Then we find the widest row of data (most columns) so we know
+	      how many column headings we need to generate.
+	      Then we use the <a target="_PARENT" href="../index.html?f=rowNumber">rowNumber()</a>
+	      aggregate function to generate those column headings, and
+	      finally use <tt>VALUES</tt> to combine the headings with the
+	      values, resulting in a table.
+	    </div>
 
       </ul>
     </details>

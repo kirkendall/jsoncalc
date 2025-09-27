@@ -6,7 +6,10 @@
 #include <regex.h>
 #include <jsoncalc.h>
 
-/* This stores the search criteria and a incremental results */
+/* This stores the search criteria and a incremental results.  The help_find()
+ * function is heavily recursive, so if we had to pass all of this as
+ * parameters individually it'd be a big burden.
+ */
 typedef struct {
 	json_t	*needle;	/* String or number to search for */
 	regex_t *regex;		/* Regular expression to search for */
@@ -23,7 +26,10 @@ typedef struct {
 	json_t	*result;	/* Table of found matches */
 } jsonfind_t;
 
-/* Append a string to find->expr, expanding it if necessary */
+/* Append a string to find->expr, expanding it if necessary.  When we move
+ * deeper into a data structure, this is used to build the path up to whatever
+ * part we're scanning now.
+ */
 static void help_find_cat(jsonfind_t *find, char *str)
 {
 	size_t len = strlen(str);
@@ -46,12 +52,25 @@ static void help_find_cat(jsonfind_t *find, char *str)
 	find->used += len;
 }
 
+/* Append a row to the find->result table */
+static void help_find_row(jsonfind_t *find, json_t *node)
+{
+	json_t *found = json_object();
+	if (find->index >= 0)
+		json_append(found, json_key("index", json_from_int(find->index)));
+	if (find->key)
+		json_append(found, json_key("key", json_string(find->key, -1)));
+	json_append(found, json_key("value", json_copy(node)));
+	json_append(found, json_key("expr", json_string(find->expr, find->used)));
+	json_append(find->result, found);
+}
+
 /* Do a deep search for a value.  This is a helper function for jfn_find(),
  * which implement's JsonCalc's find() function.
  */
 static void help_find(json_t *haystack, jsonfind_t *find)
 {
-	json_t	*scan, *found;
+	json_t	*scan;
 	int	wasused, wasindex, i;
 	char	*waskey;
 	char	indexstr[40];
@@ -85,7 +104,17 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				 */
 				continue;
 			} else if (!find->needle && !find->regex) {
-				/* Any value will do */
+
+				/* Arrays are weird in one way: When searching
+				 * for "any value" (usually because we're only
+				 * looking or a specific key) then we DON'T
+				 * want to add each element to the result.
+				 * We've already added the array as a whole
+				 * if it is the value of a member with the
+				 * desired key; that's enough.
+				 */
+				if (find->needkey)
+					continue;
 			} else if (scan->type == JSON_STRING && find->regex) {
 				/* Compare against the regexp */
 				regmatch_t matches[10];
@@ -100,7 +129,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 					if (0 != strcmp(find->needle->text, scan->text))
 						continue;
 				}
-			} else if (scan->type == JSON_NUMBER) {
+			} else if (scan->type == JSON_NUMBER && find->needle->type == JSON_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
@@ -129,13 +158,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			help_find_cat(find, indexstr);
 			if (find->index == -1)
 				find->index = i;
-			found = json_object();
-			json_append(found, json_key("index", json_from_int(find->index)));
-			if (find->key)
-				json_append(found, json_key("key", json_string(find->key, -1)));
-			json_append(found, json_key("value", json_copy(scan)));
-			json_append(found, json_key("expr", json_string(find->expr, find->used)));
-			json_append(find->result, found);
+			help_find_row(find, scan);
 
 			/* Restore expr */
 			find->used = wasused;
@@ -149,6 +172,15 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				/* Append this member's key to expr */
 				wasused = find->used;
 				help_find_cat(find, scan->text);
+
+				/* If any value can match, and the key matches
+				 * (or we don't care about the key) then add
+				 * this member as a match.
+				 */
+				if (!find->needle
+				 && !find->regex
+				 && (!find->needkey || !json_mbs_casecmp(find->needkey, scan->text)))
+					help_find_row(find, scan->first);
 
 				/* Store the key so that if we're scanning an
 				 * array, we'll know which array this is.
@@ -180,7 +212,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				regmatch_t matches[10];
 				if (regexec(find->regex, scan->first->text, 10, matches, 0) != 0)
 					continue;
-			} else if (scan->first->type == JSON_NUMBER) {
+			} else if (scan->first->type == JSON_NUMBER && find->needle->type == JSON_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
@@ -194,6 +226,8 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 						continue;
 				}
 
+			} else if (!find->needle && !find->regex) {
+				/* any value matches */
 			} else {
 				/* it can't be what we're looking for */
 				continue;
@@ -205,13 +239,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 			 */
 			wasused = find->used;
 			help_find_cat(find, scan->text);
-			found = json_object();
-			if (find->index >= 0)
-				json_append(found, json_key("index", json_from_int(find->index)));
-			json_append(found, json_key("key", json_string(scan->text, -1)));
-			json_append(found, json_key("value", json_copy(scan->first)));
-			json_append(found, json_key("expr", json_string(find->expr, find->used)));
-			json_append(find->result, found);
+			help_find_row(find, scan->first);
 
 			/* Restore expr */
 			find->used = wasused;

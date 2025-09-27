@@ -10,7 +10,7 @@
   <body>
     <h1>find - Do a deep search for a value</h1>
     <dl>
-      <dt>find(<var>haystack</var><span class="type">?:object|array</span>, <var>needle</var><span class="type">:number|string|regex</span>, <var>key</var><span class="type">?:string</span>, <var>ignoreCase</var><span class="type">?:true</span> ) <span class="type">:table</span>
+      <dt>find(<var>haystack</var><span class="type">?:object|array</span>, <var>needle</var><span class="type">:number|string|regex|null</span>, <var>key</var><span class="type">?:string</span>, <var>ignoreCase</var><span class="type">?:true</span> ) <span class="type">:table</span>
       <dd>
       This is very handy when you're digging through data, trying to find
       that special nugget.
@@ -23,20 +23,21 @@
       <a target="_PARENT" href="../index.html?op=select">SELECT</a> operator
       uses without a <tt>FROM</tt> clause.
       <p>
-      The <var>needle</var> may be a number, string, or
-      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>.
+      The <var>needle</var> may be a number, string,
+      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>
+      or <tt>null</tt>
       If it is a string, the search will be case-sensitive unless you also
-      pass a <tt>true</tt> parameter to make it case-insensitive.
+      pass a <tt>true</tt> argument to make it case-insensitive.
       If it is a regular expression, then <tt>find()</tt> will look for text
-      matching that regular expression in any string in the data.
+      matching that regular expression within any string in the data.
       When <var>needle</var> is a string or regular expression, then it will
       only match strings; if it is a number then it will only match numbers.
+      When <var>needle</var> is <tt>null</tt>, it will match any value;
+      this is most useful when used with a <var>key</var> argument.
       <p>
-      You may also pass a <var>key</var> to limit the search.
-      This is a string corresponding to the name of an object member.
-      The value to find must either be the value for an object member with
-      that name, or an element of an array that is the value of that object
-      member.
+      If you pass an optional <var>key</var> argument, then the search will
+      be limited to finding object members with the given key.
+      The <var>key</var> is given as a string, so use quotes.
       For example, if you wanted to find part#199 in an array of invoices,
       where each invoice contains an array of parts, then you could pass
       <tt>"partno"</tt> as the <var>key</var> to prevent <tt>199</tt> from
@@ -69,7 +70,7 @@
         <tr><th>expr</th><td>
           This is a string that looks like a JsonCalc (or JavaScript)
           expression for reaching the match.
-          If you explicitly pass a <var>haystack</var> parameter, then
+          If you explicitly pass a <var>haystack</var> argument, then
           this will be relative to the <var>haystack</var>.
           If you let the default table be the <var>haystack</var>,
           then the expression will include the default table's name

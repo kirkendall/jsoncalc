@@ -62,7 +62,7 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 		return json_key(json->text, json_copy(json->first));
 
 	  case JSON_STRING:
-	  case JSON_BOOL:
+	  case JSON_BOOLEAN:
 	  case JSON_NULL:
 		return json_simple(json->text, -1, json->type);
 

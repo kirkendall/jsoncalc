@@ -19,7 +19,7 @@
 # undef json_number
 # undef json_from_int
 # undef json_from_double
-# undef json_bool
+# undef json_boolean
 # undef json_null
 # undef json_error_null
 # undef json_array
@@ -60,7 +60,7 @@ size_t json_sizeof(json_t *json)
                 switch (json->type) {
                   case JSON_STRING:
                   case JSON_NUMBER:
-                  case JSON_BOOL:
+                  case JSON_BOOLEAN:
                   case JSON_NULL:
                   case JSON_KEY:
                         /* Add the text length including the terminating \0,
@@ -214,12 +214,12 @@ json_t *json_from_double(double f)
 }
 
 /* Allocate a json_t for a boolean value. */
-json_t *json_bool(int boolean)
+json_t *json_boolean(int boolean)
 {
 	if (boolean)
-		return json_simple("true", 4, JSON_BOOL);
+		return json_simple("true", 4, JSON_BOOLEAN);
 	else
-		return json_simple("false", 5, JSON_BOOL);
+		return json_simple("false", 5, JSON_BOOLEAN);
 }
 
 /* Allocate a json_t for a null value */
@@ -488,15 +488,15 @@ json_t *json_debug_from_double(const char *file, int line, double f)
 
 
 /* Allocate a json_t for a given boolean */
-json_t *json_debug_bool(const char *file, int line, int boolean)
+json_t *json_debug_boolean(const char *file, int line, int boolean)
 {
 	if (boolean)
-		return json_debug_simple(file, line, "true", 4, JSON_BOOL);
+		return json_debug_simple(file, line, "true", 4, JSON_BOOLEAN);
 	else
-		return json_debug_simple(file, line, "false", 5, JSON_BOOL);
+		return json_debug_simple(file, line, "false", 5, JSON_BOOLEAN);
 }
 
-/* Allocate a json_t for a given boolean */
+/* Allocate a json_t for null */
 json_t *json_debug_null(const char *file, int line)
 {
 	return json_debug_simple(file, line, "", 0, JSON_NULL);

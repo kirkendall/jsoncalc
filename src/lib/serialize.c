@@ -91,7 +91,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		}
 		break;
 
-	  case JSON_BOOL:
+	  case JSON_BOOLEAN:
 		len += strlen(json->text); /* simple value */
 		if (buf) {
 			strcpy(buf, json->text);

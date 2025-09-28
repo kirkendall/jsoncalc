@@ -1064,8 +1064,8 @@ json_t *json_datetime_fn(json_t *args, char *typename)
 
 				/* Append timezone info */
 				json_append(scan, json_key("tz", json_from_int(jdt.tz)));
-				json_append(scan, json_key("localtz", json_bool(jdt.localtz)));
-				json_append(scan, json_key("z", json_bool(jdt.z)));
+				json_append(scan, json_key("localtz", json_boolean(jdt.localtz)));
+				json_append(scan, json_key("z", json_boolean(jdt.z)));
 			}
 		}
 		return scan;

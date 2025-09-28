@@ -15,7 +15,7 @@ int json_is_true(json_t *json)
 
         /* Otherwise it depents on type and value */
         switch (json->type) {
-          case JSON_BOOL:
+          case JSON_BOOLEAN:
                 return json->text[0] == 't';
 	  case JSON_NULL:
 		return 0;
@@ -132,7 +132,7 @@ static size_t shorthelper(json_t *json, size_t oneline)
                   case JSON_NULL:
 			size += 4;
 			break;
-                  case JSON_BOOL:
+                  case JSON_BOOLEAN:
                         size += strlen(json->text);
                         break;
                   case JSON_KEY:

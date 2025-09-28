@@ -39,7 +39,7 @@ char *json_typeof(json_t *json, int extended)
 		if (!json->first && extended)
 			return "object*";
 		return "object";
-	  case JSON_BOOL:
+	  case JSON_BOOLEAN:
 		return "boolean";
 	  case JSON_NULL:
 		return "null";
@@ -171,7 +171,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 
 			/* If newtype is "null" then the element is nullable */
 			if (!strcmp(newtype, "null"))
-				json_append(stats, json_key("nullable", json_bool(1)));
+				json_append(stats, json_key("nullable", json_boolean(1)));
 
 			/* Mixing types is  bit tricky */
 			oldtype = json_text_by_key(stats, "type");
@@ -213,7 +213,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 				newwidth = json_mbs_width(col->first->text);
 			}
 			json_append(stats, json_key("width", json_from_int(newwidth)));
-			json_append(stats, json_key("nullable", json_bool(!strcmp(newtype, "null") || !firstrow)));
+			json_append(stats, json_key("nullable", json_boolean(!strcmp(newtype, "null") || !firstrow)));
 			json_append(columns, stats);
 			oldtype = newtype;
 		}
@@ -242,7 +242,7 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 	 */
 	for (stats = columns->first; stats; stats = stats->next) { /* undeferred */
 		if (json_by_key(row, json_text_by_key(stats, "key")) == NULL)
-			json_append(stats, json_key("nullable", json_bool(1)));
+			json_append(stats, json_key("nullable", json_boolean(1)));
 	}
 
 	/* Return the array of stats */

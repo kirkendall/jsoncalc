@@ -140,7 +140,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 			fputs(scan->text, format->fp);
 		break;
 
-	  case JSON_BOOL:
+	  case JSON_BOOLEAN:
 		fputs(scan->text, format->fp);
 		break;
 

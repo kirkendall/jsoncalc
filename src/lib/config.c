@@ -290,7 +290,7 @@ void json_config_load(const char *name)
 		json_append(json_system, json_key("extensions", conf));
 
 		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
-		json_append(json_system, json_key("update", json_bool(0)));
+		json_append(json_system, json_key("update", json_boolean(0)));
 		json_append(json_system, json_key("JSON", json_object()));
 		json_append(json_system, json_key("Math", json_object()));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
@@ -559,7 +559,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 				}
 				continue;
 
-			case JSON_BOOL:
+			case JSON_BOOLEAN:
 				/* should be true or false */
 				if (!strncasecmp(value, "true", 4) && !isalnum(value[4])) {
 					strcpy(found->text, "true");
@@ -633,7 +633,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 			}
 
 		} else { /* name or noname without = */
-			if (found && found->type == JSON_BOOL) {
+			if (found && found->type == JSON_BOOLEAN) {
 				strcpy(found->text, negate ? "false" : "true" );
 				settings += namelen;
 				continue;
@@ -648,7 +648,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					thisconfig = json_config;
 					found = json_by_key(json_config, name + 2);
 				}
-				if (found && found->type == JSON_BOOL) {
+				if (found && found->type == JSON_BOOLEAN) {
 					strcpy(found->text, "false");
 					settings += namelen;
 					continue;

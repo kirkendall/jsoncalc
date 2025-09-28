@@ -373,7 +373,7 @@ int main(int argc, char **argv)
 			break;
 		case 'u':
 			allow_update = 1;
-			json_append(json_system, json_key("update", json_bool(1)));
+			json_append(json_system, json_key("update", json_boolean(1)));
 			break;
 		case 'L':
 			/* Adjust the list of persistent plugins but DON'T LOAD

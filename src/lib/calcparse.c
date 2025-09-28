@@ -813,7 +813,7 @@ static jsoncalc_t *jcalloc(token_t *token)
 		}
 	} else if (token->op == JSONOP_BOOLEAN) {
 		jc->op = JSONOP_LITERAL;
-		jc->u.literal = json_bool(*token->full == 't');
+		jc->u.literal = json_boolean(*token->full == 't');
 	} else if (token->op == JSONOP_NULL) {
 		jc->op = JSONOP_LITERAL;
 		jc->u.literal = json_null();
@@ -1412,7 +1412,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	if (sel->distinct) {
 		t.op = JSONOP_LITERAL;
 		ja = jcalloc(&t);
-		ja->u.literal = json_bool(1);
+		ja->u.literal = json_boolean(1);
 		jc = jcfunc("distinct", jc, ja, NULL);
 	}
 
@@ -1903,7 +1903,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, const char *srcend)
 			jc = top[-6];
 			if (!jc->u.select->orderby)
 				jc->u.select->orderby = json_array();
-			json_append(jc->u.select->orderby, json_bool(1));
+			json_append(jc->u.select->orderby, json_boolean(1));
 			json_append(jc->u.select->orderby, json_string(top[-4]->u.text, -1));
 
 			/* Discard first name and comma, but keep "SO" and "n"*/
@@ -1930,7 +1930,7 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, const char *srcend)
 			jc = top[-4];
 			if (!jc->u.select->orderby)
 				jc->u.select->orderby = json_array();
-			json_append(jc->u.select->orderby, json_bool(1));
+			json_append(jc->u.select->orderby, json_boolean(1));
 			json_append(jc->u.select->orderby, json_string(top[-2]->u.text, -1));
 			json_calc_free(top[-2]);
 			stack->sp -= 2; /* keep "SO" */

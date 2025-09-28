@@ -156,7 +156,7 @@ static char *config_name_generator(const char *text, int state)
 			return tmp;
 		} else if (text[0] == 'n'
 			&& text[1] == 'o'
-			&& scan->first->type == JSON_BOOL
+			&& scan->first->type == JSON_BOOLEAN
 			&& (len == 2 || !json_mbs_ncmp(text + 2, scan->text, len - 2))) {
 			/* Found a matching member name for a "no" boolean */
 			rl_completion_suppress_append = 1;

@@ -28,9 +28,9 @@ static int cmpascending(const void *v1, const void *v2)
 		return 0;
 
 	/* Booleans before numbers or strings */
-	if (b1->value->type == JSON_BOOL && b2->value->type == JSON_BOOL)
+	if (b1->value->type == JSON_BOOLEAN && b2->value->type == JSON_BOOLEAN)
 		return strcmp(b1->value->text, b2->value->text);
-	if (b1->value->type == JSON_BOOL || b2->value->type == JSON_BOOL)
+	if (b1->value->type == JSON_BOOLEAN || b2->value->type == JSON_BOOLEAN)
 		return -1;
 
 	/* Strings before numbers */
@@ -68,7 +68,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	double	dvalue;
 
 	descending = 0;
-	if (orderby && orderby->type == JSON_BOOL) {
+	if (orderby && orderby->type == JSON_BOOLEAN) {
 		descending = json_is_true(orderby);
 		orderby = orderby->next; /* undeferred */
 	}
@@ -119,7 +119,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 				break;
 			else if (value
 			      && bucket[b].value
-			      && (value->type == JSON_STRING || value->type == JSON_BOOL)
+			      && (value->type == JSON_STRING || value->type == JSON_BOOLEAN)
 			      && bucket[b].value->type == value->type) {
 				if (!strcmp(value->text, bucket[b].value->text))
 					break;
@@ -245,7 +245,7 @@ void json_sort(json_t *array, json_t *orderby, int grouping)
 	for (check = orderby; check; check = check->next) { /* undeferred */
 		if (check->type == JSON_STRING)
 			anykeys++;
-		else if (check->type != JSON_BOOL) {
+		else if (check->type != JSON_BOOLEAN) {
 			/* EEE json_sort() key list must be strings and booleans */
 			return;
 		}

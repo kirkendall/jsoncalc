@@ -512,8 +512,8 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 			json_append(entry, json_key("filename", json_string(filename, -1)));
 			json_append(entry, json_key("size", json_from_int(bits == 0 ? 0 : st.st_size)));
 			json_append(entry, json_key("mtime", json_string(isobuf, -1)));
-			json_append(entry, json_key("readable", json_bool(bits & 0444)));
-			json_append(entry, json_key("writable", json_bool(writable && (bits & 0222))));
+			json_append(entry, json_key("readable", json_boolean(bits & 0444)));
+			json_append(entry, json_key("writable", json_boolean(writable && (bits & 0222))));
 
 			/* Add it to the "files" list */
 			json_append(files, entry);

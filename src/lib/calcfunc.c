@@ -609,7 +609,7 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 		return json_copy(args->first);
 
 	/* If boolean or non-binary number, convert its text to a string. */
-	if (args->first->type == JSON_BOOL
+	if (args->first->type == JSON_BOOLEAN
 	 || (args->first->type == JSON_NUMBER && args->first->text[0] != '\0'))
 		return json_string(args->first->text, -1);
 
@@ -626,27 +626,27 @@ static json_t *jfn_toString(json_t *args, void *agdata)
 
 static json_t *jfn_isString(json_t *args, void *agdata)
 {
-	return json_bool(args->first->type == JSON_STRING);
+	return json_boolean(args->first->type == JSON_STRING);
 }
 
 static json_t *jfn_isObject(json_t *args, void *agdata)
 {
-	return json_bool(args->first->type == JSON_OBJECT);
+	return json_boolean(args->first->type == JSON_OBJECT);
 }
 
 static json_t *jfn_isArray(json_t *args, void *agdata)
 {
-	return json_bool(args->first->type == JSON_ARRAY);
+	return json_boolean(args->first->type == JSON_ARRAY);
 }
 
 static json_t *jfn_isTable(json_t *args, void *agdata)
 {
-	return json_bool(json_is_table(args->first));
+	return json_boolean(json_is_table(args->first));
 }
 
 static json_t *jfn_isNumber(json_t *args, void *agdata)
 {
-	return json_bool(args->first->type == JSON_NUMBER);
+	return json_boolean(args->first->type == JSON_NUMBER);
 }
 
 static json_t *jfn_isInteger(json_t *args, void *agdata)
@@ -654,43 +654,43 @@ static json_t *jfn_isInteger(json_t *args, void *agdata)
 	double d;
 
 	if (args->first->type != JSON_NUMBER)
-		return json_bool(0);
+		return json_boolean(0);
 	if (args->first->text[0] == '\0' && args->first->text[1] == 'i')
-		return json_bool(1);
+		return json_boolean(1);
 	d = json_double(args->first);
-	return json_bool(d == (int)d);
+	return json_boolean(d == (int)d);
 }
 
 static json_t *jfn_isNaN(json_t *args, void *agdata)
 {
-	return json_bool(args->first->type != JSON_NUMBER);
+	return json_boolean(args->first->type != JSON_NUMBER);
 }
 
 static json_t *jfn_isDate(json_t *args, void *agdata)
 {
-	return json_bool(json_is_date(args->first));
+	return json_boolean(json_is_date(args->first));
 }
 
 static json_t *jfn_isTime(json_t *args, void *agdata)
 {
-	return json_bool(json_is_time(args->first));
+	return json_boolean(json_is_time(args->first));
 }
 
 static json_t *jfn_isDateTime(json_t *args, void *agdata)
 {
-	return json_bool(json_is_datetime(args->first));
+	return json_boolean(json_is_datetime(args->first));
 }
 
 static json_t *jfn_isPeriod(json_t *args, void *agdata)
 {
-	return json_bool(json_is_period(args->first));
+	return json_boolean(json_is_period(args->first));
 }
 
 /* typeOf(data) returns a string identifying the data's type */
 static json_t *jfn_typeOf(json_t *args, void *agdata)
 {
 	char	*type, *mixed;
-	if (!args->first->next || (args->first->next->type == JSON_BOOL && *args->first->next->text == 'f')) /* undeferred */
+	if (!args->first->next || (args->first->next->type == JSON_BOOLEAN && *args->first->next->text == 'f')) /* undeferred */
 		type = json_typeof(args->first, 0);
 	else {
 		type = json_typeof(args->first, 1);
@@ -729,7 +729,7 @@ static json_t *jfn_widthOf(json_t *args, void *agdata)
 		}
 		/* else number is in text form so fall through... */
 	case JSON_STRING:
-	case JSON_BOOL:
+	case JSON_BOOLEAN:
 		return json_from_int(json_mbs_width(json_text(args->first)));
 	default:
 		return NULL;
@@ -743,7 +743,7 @@ static json_t *jfn_heightOf(json_t *args, void *agdata)
 {
 	switch (args->first->type) {
 	case JSON_NULL:
-	case JSON_BOOL:
+	case JSON_BOOLEAN:
 	case JSON_NUMBER:
 	case JSON_OBJECT:
 	case JSON_ARRAY:
@@ -862,7 +862,7 @@ static json_t *jfn_concat(json_t *args, void *agdata)
 		for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
 			if (scan->type == JSON_ARRAY || scan->type == JSON_OBJECT)
 				goto BadMix;
-			if (scan->type == JSON_STRING || scan->type == JSON_BOOL || (scan->type == JSON_NUMBER && *scan->text))
+			if (scan->type == JSON_STRING || scan->type == JSON_BOOLEAN || (scan->type == JSON_NUMBER && *scan->text))
 				len += strlen(scan->text);
 			else if (scan->type == JSON_NUMBER)
 				len += 20; /* just a guess */
@@ -1095,7 +1095,7 @@ static json_t *jfn_distinct(json_t *args, void *agdata)
 	/* Check for a "strict" flag or field list as the second parameter */
 	fieldlist = args->first->next; /* undeferred */
 	if (fieldlist) {
-		if (fieldlist->type == JSON_BOOL && json_is_true(fieldlist)) {
+		if (fieldlist->type == JSON_BOOLEAN && json_is_true(fieldlist)) {
 			bestrict = 1;
 			fieldlist = fieldlist->next; /* undeferred */
 		}
@@ -1725,7 +1725,7 @@ static json_t *jfn_includes(json_t *args, void *agdata)
 		return json_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "includes");
 	if (i == -3)
 		return json_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "includes");
-	return json_bool(i >= 0);
+	return json_boolean(i >= 0);
 }
 
 /* Return a number indicating the position of the first match within an array
@@ -1773,11 +1773,11 @@ static json_t *jfn_startsWith(json_t *args, void *agdata)
 	if (json_is_true(args->first->next->next)) { /* undeferred */
 		/* Case-insensitive version */
 		len = json_mbs_len(needle);
-		return json_bool(json_mbs_ncasecmp(haystack, needle, len) == 0);
+		return json_boolean(json_mbs_ncasecmp(haystack, needle, len) == 0);
 	} else {
 		/* Case-sensitive version */
 		len = strlen(needle);
-		return json_bool(strncmp(haystack, needle, len) == 0);
+		return json_boolean(strncmp(haystack, needle, len) == 0);
 	}
 }
 
@@ -1802,17 +1802,17 @@ static json_t *jfn_endsWith(json_t *args, void *agdata)
 		haylen = json_mbs_len(haystack);
 		len = json_mbs_len(needle);
 		if (len > haylen)
-			return json_bool(0);
+			return json_boolean(0);
 		haystack = json_mbs_substr(haystack, haylen - len, NULL);
-		return json_bool(json_mbs_casecmp(haystack, needle) == 0);
+		return json_boolean(json_mbs_casecmp(haystack, needle) == 0);
 	} else {
 		/* Case-sensitive version */
 		haylen = strlen(haystack);
 		len = strlen(needle);
 		if (len > haylen)
-			return json_bool(0);
+			return json_boolean(0);
 		haystack += haylen - len;
-		return json_bool(strcmp(haystack, needle) == 0);
+		return json_boolean(strcmp(haystack, needle) == 0);
 	}
 }
 
@@ -2111,7 +2111,7 @@ static json_t *jfn_find(json_t *args, void *agdata)
 	ignorecase = 0;
 	needkey = NULL;
 	for (other = needle->next; other; other = other->next) { /* undeferred */
-		if (other->type == JSON_BOOL)
+		if (other->type == JSON_BOOLEAN)
 			ignorecase = json_is_true(other);
 		else if (other->type == JSON_STRING && !needkey)
 			needkey = other->text;
@@ -2389,7 +2389,7 @@ static json_t *jfn_writeJSON(json_t *args, void *agdata)
 	fclose(fp);
 
 	/* Return true */
-	return json_bool(1);
+	return json_boolean(1);
 }
 
 
@@ -2408,7 +2408,7 @@ static void jag_count(json_t *args, void *agdata)
 {
 	if (json_is_null(args->first))
 		return;
-	if (args->first->type == JSON_BOOL && !json_is_true(args->first))
+	if (args->first->type == JSON_BOOLEAN && !json_is_true(args->first))
 		return;
 	(*(int *)agdata)++;
 }
@@ -2424,7 +2424,7 @@ static json_t *jfn_rowNumber(json_t *args, void *agdata)
 	 * no item is returned and the count isn't incremented.
 	 */
 	if (args->first->type == JSON_NULL
-	 || (args->first->type == JSON_BOOL && !json_is_true(args->first)))
+	 || (args->first->type == JSON_BOOLEAN && !json_is_true(args->first)))
 		return NULL;
 
 	/* If it is a number, then add that to the counter */
@@ -2631,7 +2631,7 @@ static void jag_product(json_t *args, void *agdata)
 static json_t *jfn_any(json_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return json_bool(i);
+	return json_boolean(i);
 }
 static void jag_any(json_t *args, void *agdata)
 {
@@ -2643,7 +2643,7 @@ static void jag_any(json_t *args, void *agdata)
 static json_t *jfn_all(json_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return json_bool(!i);
+	return json_boolean(!i);
 }
 static void jag_all(json_t *args, void *agdata)
 {
@@ -2710,7 +2710,7 @@ static void jag_writeArray(json_t *args, void *agdata)
 	 * context.
 	 */
 	item = args->first;
-	if (item->type == JSON_BOOL) {
+	if (item->type == JSON_BOOLEAN) {
 		if (!json_is_true(item))
 			return;
 	}
@@ -2794,7 +2794,7 @@ static void  jag_join(json_t *args, void *agdata)
 	case JSON_NULL:
 		return;
 	case JSON_STRING:
-	case JSON_BOOL:
+	case JSON_BOOLEAN:
 		text = args->first->text;
 		break;
 	case JSON_NUMBER:

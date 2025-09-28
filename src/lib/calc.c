@@ -465,7 +465,7 @@ json_t *jceach(json_t *arr, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t o
 				json_context_free(local);
 
 				/* If null/false, skip it, if true add element*/
-				if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
+				if (tmp->type == JSON_NULL || tmp->type == JSON_BOOLEAN) {
 					/* Skip for null or false, add for true */
 					if (json_is_true(tmp))
 						json_append(result, json_copy(gscan));
@@ -491,7 +491,7 @@ json_t *jceach(json_t *arr, jsoncalc_t *calc, jsoncontext_t *context, jsonop_t o
 			local = json_context(context, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
 			tmp = json_calc(calc, local, ag);
 			json_context_free(local);
-			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOL) {
+			if (tmp->type == JSON_NULL || tmp->type == JSON_BOOLEAN) {
 				/* Skip for null or false, add for true */
 				if (json_is_true(tmp))
 					json_append(result, json_copy(scan));
@@ -569,7 +569,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			char	*name, *sub;
 			USE_RIGHT_OPERAND(calc);
 			if (right->type == JSON_STRING
-			 || right->type == JSON_BOOL
+			 || right->type == JSON_BOOLEAN
 			 || (right->type == JSON_NUMBER && right->text[0])) {
 				name = (char *)malloc(strlen(calc->LEFT->u.text) + strlen(right->text) + 1);
 				strcpy(name, calc->LEFT->u.text);
@@ -935,12 +935,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_ISNULL:
 		USE_RIGHT_OPERAND(calc);
-		result = json_bool(json_is_null(right));
+		result = json_boolean(json_is_null(right));
 		break;
 
 	  case JSONOP_ISNOTNULL:
 		USE_RIGHT_OPERAND(calc);
-		result = json_bool(!json_is_null(right));
+		result = json_boolean(!json_is_null(right));
 		break;
 
 	  case JSONOP_NEGATE:
@@ -976,8 +976,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			 * text form, or a boolean, then we can treat it as
 			 * a string already.
 			 */
-			if ((left->type == JSON_STRING || left->type == JSON_BOOL || (left->type == JSON_NUMBER && *left->text))
-			 && (right->type == JSON_STRING || right->type == JSON_BOOL || (right->type == JSON_NUMBER && *right->text))) {
+			if ((left->type == JSON_STRING || left->type == JSON_BOOLEAN || (left->type == JSON_NUMBER && *left->text))
+			 && (right->type == JSON_STRING || right->type == JSON_BOOLEAN || (right->type == JSON_NUMBER && *right->text))) {
 				/* Both are strings, or at least stringy */
 				result = json_string(left->text, strlen(left->text) + strlen(right->text));
 				strcat(result->text, right->text);
@@ -1052,8 +1052,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			char	*leftstr, *rightstr;
 			size_t	leftlen;
 			str = NULL;
-			if ((left->type == JSON_STRING || left->type == JSON_BOOL || (left->type == JSON_NUMBER && *left->text))
-			 && (right->type == JSON_STRING || right->type == JSON_BOOL || (right->type == JSON_NUMBER && *right->text))) {
+			if ((left->type == JSON_STRING || left->type == JSON_BOOLEAN || (left->type == JSON_NUMBER && *left->text))
+			 && (right->type == JSON_STRING || right->type == JSON_BOOLEAN || (right->type == JSON_NUMBER && *right->text))) {
 				/* Both are strings, or at least stringy */
 				leftstr = left->text;
 				rightstr = right->text;
@@ -1183,7 +1183,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 	  case JSONOP_NOT:
 		USE_RIGHT_OPERAND(calc);
-		result = json_bool(!json_is_true(right));
+		result = json_boolean(!json_is_true(right));
 		break;
 
 	  case JSONOP_AND:
@@ -1194,7 +1194,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			USE_RIGHT_OPERAND(calc);
 			il = json_is_true(right);
 		}
-		result = json_bool(il);
+		result = json_boolean(il);
 		break;
 
 	  case JSONOP_EQSTRICT:
@@ -1209,7 +1209,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		il = json_equal(left, right);
 		if (calc->op == JSONOP_NESTRICT)
 			il = !il;
-		result = json_bool(il);
+		result = json_boolean(il);
 		break;
 
 	  case JSONOP_LT:
@@ -1242,7 +1242,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				il = 1;
 			else
 				il = 0;
-		} else if ((left->type == JSON_BOOL || right->type == JSON_BOOL)
+		} else if ((left->type == JSON_BOOLEAN || right->type == JSON_BOOLEAN)
 		        && (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)) {
 			/* Compare as booleans, but only for equality */
 			il = json_is_true(left) != json_is_true(right);
@@ -1253,7 +1253,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		        if (calc->op == JSONOP_EQ || calc->op == JSONOP_NE)
 				il = (left->type != right->type);
 			else {
-				result = json_bool(0);
+				result = json_boolean(0);
 				break;
 			}
 		} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
@@ -1267,7 +1267,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				nl = strtod(left->text, &str);
 				if (*str) {
 					/* Not a clean conversion, so not equal */
-					result = json_bool(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
+					result = json_boolean(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
 					break;
 				}
 			}
@@ -1277,7 +1277,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				nr = strtod(right->text, &str);
 				if (*str) {
 					/* Not a clean conversion, so not equal */
-					result = json_bool(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
+					result = json_boolean(calc->op == JSONOP_NE || calc->op == JSONOP_ICNE);
 					break;
 				}
 			}
@@ -1346,7 +1346,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		}
 
 		/* Set the result */
-		result = json_bool(ir);
+		result = json_boolean(ir);
 		break;
 
 	  case JSONOP_BETWEEN:
@@ -1367,10 +1367,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		freeleft = found;
 		if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 			if (json_double(left) < json_double(right))
-				result = json_bool(0);
+				result = json_boolean(0);
 		} else if (left->type == JSON_STRING && right->type == JSON_STRING) {
 			if (json_mbs_casecmp(left->text, right->text) < 0)
-				result = json_bool(0);
+				result = json_boolean(0);
 		} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
 			|| (left->type == JSON_STRING && right->type == JSON_NUMBER)) {
 			/* When comparing strings and numbers, convert the
@@ -1382,7 +1382,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				nl = strtod(left->text, &str);
 				if (*str) {
 					/* Not a clean conversion */
-					result = json_bool(0);
+					result = json_boolean(0);
 					break;
 				}
 			}
@@ -1392,12 +1392,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				nr = strtod(right->text, &str);
 				if (*str) {
 					/* Not a clean conversion */
-					result = json_bool(0);
+					result = json_boolean(0);
 					break;
 				}
 			}
 			if (nl < nr)
-				result = json_bool(0);
+				result = json_boolean(0);
 		} else
 			result = json_error_null(NULL, "between:BETWEEN only works on strings and numbers");
 
@@ -1413,10 +1413,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			USE_RIGHT_OPERAND(calc->RIGHT);
 			if (left->type == JSON_NUMBER && right->type == JSON_NUMBER) {
 				if (json_double(left) > json_double(right))
-					result = json_bool(0);
+					result = json_boolean(0);
 			} else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
 				if (json_mbs_casecmp(left->text, right->text) > 0)
-					result = json_bool(0);
+					result = json_boolean(0);
 			} else if ((left->type == JSON_NUMBER && right->type == JSON_STRING)
 				|| (left->type == JSON_STRING && right->type == JSON_NUMBER)) {
 				/* When comparing strings and numbers, convert
@@ -1428,7 +1428,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 					nl = strtod(left->text, &str);
 					if (*str) {
 						/* Not a clean conversion */
-						result = json_bool(0);
+						result = json_boolean(0);
 						break;
 					}
 				}
@@ -1437,10 +1437,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 				else
 					nr = strtod(right->text, &str);
 				if (nl > nr) {
-					result = json_bool(0);
+					result = json_boolean(0);
 					if (*str) {
 						/* Not a clean conversion */
-						result = json_bool(0);
+						result = json_boolean(0);
 						break;
 					}
 				}
@@ -1450,7 +1450,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 		/* If no result, I guess we're okay */
 		if (!result)
-			result = json_bool(1);
+			result = json_boolean(1);
 
 		break;
 
@@ -1461,18 +1461,18 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			regmatch_t matches[10];
 			if (left->type == JSON_STRING
 			 && regexec((regex_t *)calc->RIGHT->u.regex.preg, left->text, 10, matches, 0) == 0)
-				result = json_bool(1);
+				result = json_boolean(1);
 			else
-				result = json_bool(0);
+				result = json_boolean(0);
 		} else  {
 			USE_RIGHT_OPERAND(calc);
 			if (left->type != JSON_STRING || right->type != JSON_STRING) {
-				result = json_bool(0);
+				result = json_boolean(0);
 			} else {
 				il = json_mbs_like(left->text, right->text);
 				if (calc->op == JSONOP_NOTLIKE)
 					il = !il;
-				result = json_bool(il);
+				result = json_boolean(il);
 			}
 		}
 		break;
@@ -1517,7 +1517,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 						break;
 				}
 			}
-			result = json_bool(scan != NULL);
+			result = json_boolean(scan != NULL);
 
 			/* Just in case right is a deferred array, and we ended
 			 * the scan prematurely...

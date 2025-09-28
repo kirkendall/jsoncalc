@@ -123,7 +123,7 @@ static size_t urlencode(json_t *data, char *buf, int component)
 		special = " :/?&#";
 
 	if (data->type == JSON_STRING
-	 || data->type == JSON_BOOL
+	 || data->type == JSON_BOOLEAN
 	 || (data->type == JSON_NUMBER && *data->text)) {
 		/* Printable ASCII is left unchanged except that spaces become
 		 * "+", "+" and "&" become %2B and %26 respectively, and every
@@ -432,7 +432,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		 * form otherwise assume JSON
 		 */
 		for (scan = data->first; scan; scan = scan->next) {
-			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOL && scan->first->type != JSON_NULL)
+			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOLEAN && scan->first->type != JSON_NULL)
 				break;
 		}
 		if (scan) {

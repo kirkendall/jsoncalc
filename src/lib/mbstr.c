@@ -609,7 +609,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 	 */
 	capfirst = 0;
 	for (ex = json_first(exceptions); ex && !capfirst; ex = json_next(ex))
-		if (ex->type == JSON_BOOL && json_is_true(ex))
+		if (ex->type == JSON_BOOLEAN && json_is_true(ex))
 			capfirst = 1;
 
 	/* Get the "alnum" classifier */

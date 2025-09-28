@@ -20,7 +20,7 @@ typedef enum {
 	JSON_BADTOKEN, JSON_NEWLINE,
 	JSON_OBJECT, JSON_ENDOBJECT,
 	JSON_ARRAY, JSON_ENDARRAY, JSON_DEFER,
-	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_NULL, JSON_BOOL
+	JSON_KEY, JSON_STRING, JSON_NUMBER, JSON_NULL, JSON_BOOLEAN
 } jsontype_t;
 
 /* These represent a parsed token */
@@ -37,7 +37,7 @@ typedef struct {
  * JSON_KEY	first points to value, text contains name
  * JSON_STRING	text contains value
  * JSON_NUMBER	text contains value, as a string
- * JSON_BOOL	text contains "true" or "false"
+ * JSON_BOOLEAN	text contains "true" or "false"
  * JSON_NULL	text is "" or an error message
  */
 typedef struct json_s {
@@ -306,7 +306,7 @@ extern json_t *json_simple(const char *str, size_t len, jsontype_t type);
 extern json_t *json_simple_from_token(json_token_t *token);
 extern json_t *json_string(const char *str, size_t len);
 extern json_t *json_number(const char *str, size_t len);
-extern json_t *json_bool(int boolean);
+extern json_t *json_boolean(int boolean);
 extern json_t *json_null(void);
 extern json_t *json_error_null(const char *where, const char *fmt, ...);
 extern json_t *json_from_int(int i);
@@ -626,7 +626,7 @@ extern void json_debug_free(const char *file, int line, json_t *json);
 extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, jsontype_t type);
 extern json_t *json_debug_string(const char *file, int line, const char *str, size_t len);
 extern json_t *json_debug_number(const char *file, int line, const char *str, size_t len);
-extern json_t *json_debug_bool(const char *file, int line, int boolean);
+extern json_t *json_debug_boolean(const char *file, int line, int boolean);
 extern json_t *json_debug_null(const char *file, int line);
 extern json_t *json_debug_error_null(const char *file, int line, char *fmt, ...);
 extern json_t *json_debug_from_int(const char *file, int line, int i);
@@ -644,7 +644,7 @@ extern json_t *json_debug_calc(const char *file, int line, jsoncalc_t *calc, jso
 #define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
 #define json_string(str, len)		json_debug_string(__FILE__, __LINE__, str, len)
 #define json_number(str, len)		json_debug_number(__FILE__, __LINE__, str, len)
-#define json_bool(boolean)			json_debug_bool(__FILE__, __LINE__, boolean)
+#define json_boolean(boolean)			json_debug_boolean(__FILE__, __LINE__, boolean)
 #define json_null()			json_debug_null(__FILE__, __LINE__)
 #define json_error(...)			json_debug_error(__FILE__, __LINE__, __VA_ARGS__)
 #define json_from_int(i)		json_debug_from_int(__FILE__, __LINE__, i)

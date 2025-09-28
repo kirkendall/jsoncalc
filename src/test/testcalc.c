@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
         /* Use ASCII output, because it's trickier than UTF-8 */
         json_config_load("testcalc");
-        json_config_set(NULL, "ascii", json_bool(1));
+        json_config_set(NULL, "ascii", json_boolean(1));
         json_format_set(NULL, NULL);
 
         /* Parse command-line flags */

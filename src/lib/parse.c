@@ -386,7 +386,7 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 			/* "true" */
 			if (strncmp(str, "true", 4) || isalnum(str[4]))
 				goto BadSymbol;
-			jc = json_bool(1);
+			jc = json_boolean(1);
 			str += 4;
 			break;
 
@@ -394,7 +394,7 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 			/* "false" */
 			if (strncmp(str, "false", 5) || isalnum(str[5]))
 				goto BadSymbol;
-			jc = json_bool(0);
+			jc = json_boolean(0);
 			str += 5;
 			break;
 

@@ -41,7 +41,7 @@ static void csvsingle(json_t *elem, jsonformat_t *format)
 		else
 			fputs(elem->text, format->fp);
 		break;
-	case JSON_BOOL:
+	case JSON_BOOLEAN:
 		fputs(elem->text, format->fp);
 		break;
 	case JSON_NULL:

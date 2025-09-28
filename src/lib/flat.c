@@ -96,7 +96,7 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	if (nestlist && nestlist->type == JSON_ARRAY)
 		nestlist = nestlist->first; /* undeferred */
 	while (nestlist && nestlist->type != JSON_STRING) {
-		if (nestlist->type == JSON_BOOL)
+		if (nestlist->type == JSON_BOOLEAN)
 			skipempty = json_is_true(nestlist);
 		nestlist = nestlist->next; /* undeferred */
 	}

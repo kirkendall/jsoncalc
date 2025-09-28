@@ -327,7 +327,7 @@ jsoncontext_t *json_context_std(json_t *args)
 	for (hook = extralayers; hook; hook = hook->other)
 		context = (*hook->addcontext)(context);
 
-	/* Create a layer to contain the "data" variable.  The layers should be
+	/* Create a layer to contain the "data" variable.  The layer should be
 	 * assignable (JSON_CONTEXT_VAR) if json_system contains "update:true".
 	 */
 	assignable = 0; 
@@ -563,7 +563,7 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 			tweaked.fp = json_file_update(filename);
 			if (tweaked.fp) {
 				/* Write the data */
-				json_print(thiscontext->data, &tweaked);
+				json_print(json_by_key(datacontext->data, "data"), &tweaked);
 				fclose(tweaked.fp);
 
 				/* Turn off the MODIFIED flag */
@@ -599,12 +599,6 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 		 * side-effect of freeing the old data.
 		 */
 		json_append(datacontext->data, json_key("data", data));
-
-		/* Also store it as "this".  The previous "this" data was
-		 * freed by the above json_append() call already, so we don't
-		 * need to free it now.
-		 */
-		thiscontext->data = data;
 
 		/* Update "current_file" number */
 		json_append(globals->data, json_key("current_file", json_from_int(*refcurrent)));

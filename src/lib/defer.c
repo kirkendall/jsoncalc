@@ -74,12 +74,15 @@ void json_break(json_t *elem)
  */
 int json_is_last(const json_t *elem)
 {
+	jsondef_t	*def;
+
 	/* If not deferred, this is easy */
 	if (!json_is_deferred_element(elem))
 		return elem->next ? 0 : 1; /* undeferred */
 
-	/*!!! deferred logic goes here */
-	return 0;
+	/* Otherwise use the deferred type's islast() function */
+	def = (jsondef_t *)elem->next;
+	return (*def->fns->islast)(elem);
 }
 
 /* NOTE: The json_is_deferred_array() and json_is_deferred_element() functions

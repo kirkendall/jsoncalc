@@ -29,6 +29,7 @@
 # undef json_parse_string
 # undef json_copy
 # undef json_copy_filter
+# undef json_calc
 #endif
 
 /* For debugging, this is used to store places that allocate memory, and
@@ -620,3 +621,11 @@ json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*t
         return json;
 }
 
+/* Evaluate an expression */
+json_t *json_debug_calc(const char *file, int line, jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
+{
+	int slot = memory_slot(file, line);
+	json_t *json = json_calc(calc, context, agdata);
+	json_walk(json, fixslot, &slot);
+	return json;
+}

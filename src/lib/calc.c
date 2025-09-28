@@ -8,6 +8,10 @@
 #include <regex.h>
 #include <jsoncalc.h>
 
+/* Use the real version of json_calc here, not the debugging macro */
+#ifdef json_calc
+# undef json_calc
+#endif
 
 /* BIG NOTE ABOUT MEMORY MANAGEMENT
  *

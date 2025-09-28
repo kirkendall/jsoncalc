@@ -147,9 +147,9 @@ json_t *json_by_key_value(json_t *container, const char *key, json_t *value)
 	 * then use that.
 	 */
 	if (json_is_deferred_array(container)
-	 && (def = (jsondef_t*)container->first)->fns->bykey)
+	 && (def = (jsondef_t*)container->first)->fns->bykeyvalue)
 
-		return (*def->fns->bykey)(container, key, value);
+		return (*def->fns->bykeyvalue)(container, key, value);
 
 	/* Scan array for element with that member key:value */
 	for (scan = json_first(container); scan; scan = json_next(scan)) {

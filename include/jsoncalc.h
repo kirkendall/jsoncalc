@@ -136,12 +136,12 @@ typedef struct jsonfile_s {
 typedef struct {
 	size_t	size;	/* Size of jsondef_t plus any other needed storage */
 	char	*desc;	/* basically the "class" of deferred items */
-	json_t	*(*first)(json_t *array);
-	json_t	*(*next)(json_t *elem);
-	int	(*islast)(const json_t *elem);
-	void	(*free)(json_t *array_or_elem);
+	json_t	*(*first)(json_t *array);	/* REQUIRED */
+	json_t	*(*next)(json_t *elem);		/* REQUIRED */
+	int	(*islast)(const json_t *elem);	/* REQUIRED */
+	void	(*free)(json_t *array_or_elem);	/* Only if special needs */
 	json_t	*(*byindex)(json_t *array, int index);
-	json_t	*(*bykey)(json_t *array, const char *key, json_t *value);
+	json_t	*(*bykeyvalue)(json_t *array, const char *key, json_t *value);
 } jsondeffns_t;
 
 /* This is the generic part of a JSON_DEFER node.  It starts with plain json_t,
@@ -154,204 +154,6 @@ typedef struct {
 	jsondeffns_t *fns; /* pointer to a group of function pointers */
 	jsonfile_t *file; /* if non-NULL, it indicates which file to read */
 } jsondef_t;
-
-
-BEGIN_C
-
-/* Files */
-char json_file_new_type;
-void json_file_defer(jsonfile_t *jf, json_t *array);
-void json_file_defer_free(json_t *array);
-jsonfile_t *json_file_load(const char *filename);
-void json_file_unload(jsonfile_t *jf);
-jsonfile_t *json_file_containing(const char *where, int *refline);
-FILE *json_file_update(const char *filename);
-char *json_file_path(const char *prefix, const char *name, const char *suffix);
-
-/* Error handling */
-extern char *json_debug(char *flags);
-
-/* This flag indicates whether computations have been interrupted */
-extern int json_interrupt;
-
-/* Manipulation */
-extern void json_free(json_t *json);
-extern json_t *json_simple(const char *str, size_t len, jsontype_t type);
-extern json_t *json_simple_from_token(json_token_t *token);
-extern json_t *json_string(const char *str, size_t len);
-extern json_t *json_number(const char *str, size_t len);
-extern json_t *json_bool(int boolean);
-extern json_t *json_null(void);
-extern json_t *json_error_null(const char *where, const char *fmt, ...);
-extern json_t *json_from_int(int i);
-extern json_t *json_from_double(double f);
-extern json_t *json_key(const char *key, json_t *value);
-extern json_t *json_object();
-extern json_t *json_array();
-extern json_t *json_defer(jsondeffns_t *fns);
-extern json_t *json_defer_ellipsis(int from, int to);
-extern char *json_append(json_t *container, json_t *more);
-extern size_t json_sizeof(json_t *json);
-extern char *json_typeof(json_t *json, int extended);
-extern char *json_mix_types(char *oldtype, char *newtype);
-extern void json_sort(json_t *array, json_t *orderby, int grouping);
-extern json_t *json_copy_filter(json_t *json, int (*filter)(json_t *));
-extern json_t *json_copy(json_t *json);
-extern json_t *json_array_flat(json_t *array, int depth);
-extern json_t *json_unroll(json_t *table, json_t *nestlist);
-extern json_t *json_array_group_by(json_t *array, json_t *orderby);
-extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
-
-/* Parsing */
-extern void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
-extern json_t *json_parse_string(const char *str);
-extern json_t *json_parse_file(const char *filename);
-
-/* Serialization / Output */
-extern json_t *json_explain(json_t *stats, json_t *row, int depth);
-extern char *json_serialize(json_t *json, jsonformat_t *format);
-extern void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *format));
-extern int json_print_incomplete_line;
-extern void json_print(json_t *json, jsonformat_t *format);
-extern void json_grid(json_t *json, jsonformat_t *format);
-extern void json_format_set(jsonformat_t *format, json_t *config);
-extern void json_format_esc(char *esc, const char *name, int nounderlined);
-extern void json_undefer(json_t *arr);
-
-/* Accessing */
-extern json_t *json_by_key(const json_t *container, const char *key);
-extern json_t *json_by_deep_key(json_t *container, char *key);
-extern json_t *json_by_index(json_t *container, int idx);
-extern json_t *json_by_expr(json_t *container, const char *expr, const char **after);
-extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey);
-#ifdef REG_ICASE /* skip this if <regex.h> not included */
-extern json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey);
-#endif
-extern char *json_default_text(char *newdefault);
-extern char *json_text(json_t *json);
-extern double json_double(json_t *json);
-extern int json_int(json_t *json);
-extern json_t *json_first(json_t *arr);
-extern json_t *json_next(json_t *elem);
-extern void json_break(json_t *elem);
-extern int json_is_last(const json_t *elem);
-
-/* Testing */
-extern int json_length(json_t *container);
-extern int json_is_true(json_t *json);
-extern int json_is_null(json_t *json);
-extern int json_is_error(json_t *json);
-extern int json_is_table(json_t *json);
-extern int json_is_short(json_t *json, size_t oneline);
-extern int json_is_date(json_t *json);
-extern int json_is_time(json_t *json);
-extern int json_is_datetime(json_t *json);
-extern int json_is_period(json_t *json);
-extern int json_is_deferred_array(const json_t *arr);
-extern int json_is_deferred_element(const json_t *elem);
-extern int json_equal(json_t *j1, json_t *j2);
-extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
-#define json_text_by_key(container, key) json_text(json_by_key((container), (key)))
-#define json_text_by_deep_key(container, key) json_text(json_by_deep_key((container), (key)))
-#define json_text_by_index(container, index) json_text(json_by_index((container), (index)))
-/* The next parameter may be NULL.  See json_by_expr() for more details. */
-#define json_text_by_expr(container, expr, after) json_text(json_by_expr((container), (expr), (after)))
-
-/* The following are for debugging memory leaks.  They're only used if your
- * program defined JSON_DEBUG_MEMORY.
- */
-extern int json_debug_count;
-extern void json_debug_free(const char *file, int line, json_t *json);
-extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, jsontype_t type);
-extern json_t *json_debug_string(const char *file, int line, const char *str, size_t len);
-extern json_t *json_debug_number(const char *file, int line, const char *str, size_t len);
-extern json_t *json_debug_bool(const char *file, int line, int boolean);
-extern json_t *json_debug_null(const char *file, int line);
-extern json_t *json_debug_error_null(const char *file, int line, char *fmt, ...);
-extern json_t *json_debug_from_int(const char *file, int line, int i);
-extern json_t *json_debug_from_double(const char *file, int line, double f);
-extern json_t *json_debug_key(const char *file, int line, const char *key, json_t *value);
-extern json_t *json_debug_object(const char *file, int line);
-extern json_t *json_debug_array(const char *file, int line);
-extern json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns);
-extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
-extern json_t *json_debug_copy(const char *file, int line, json_t *json);
-extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*filter)(json_t *item));
-#ifdef JSON_DEBUG_MEMORY
-#define json_free(json)			json_debug_free(__FILE__, __LINE__, json)
-#define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
-#define json_string(str, len)		json_debug_string(__FILE__, __LINE__, str, len)
-#define json_number(str, len)		json_debug_number(__FILE__, __LINE__, str, len)
-#define json_bool(boolean)			json_debug_bool(__FILE__, __LINE__, boolean)
-#define json_null()			json_debug_null(__FILE__, __LINE__)
-#define json_error(...)			json_debug_error(__FILE__, __LINE__, __VA_ARGS__)
-#define json_from_int(i)		json_debug_from_int(__FILE__, __LINE__, i)
-#define json_from_double(f)		json_debug_from_double(__FILE__, __LINE__, f)
-#define json_key(key, value)		json_debug_key(__FILE__, __LINE__, key, value)
-#define json_object()			json_debug_object(__FILE__, __LINE__)
-#define json_array()			json_debug_array(__FILE__, __LINE__)
-#define json_defer(fns)			json_debug_defer(__FILE__, __LINE__, (fns))
-#define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
-#define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
-#define json_copy_filter(json, filter)	json_debug_copy_filter(__FILE__, __LINE__, json, filter)
-#endif
-
-/* Multibyte character strings */
-size_t json_mbs_len(const char *s);
-int json_mbs_width(const char *s);
-int json_mbs_height(const char *s);
-size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth);
-size_t json_mbs_wrap_char(char *buf, const char *s, int width);
-size_t json_mbs_wrap_word(char *buf, const char *s, int width);
-size_t json_mbs_canonize(char *dest, const char *src);
-int json_mbs_cmp(const char *s1, const char *s2);
-int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
-const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);
-const char *json_mbs_str(const char *haystack, const char *needle, size_t *refccount, size_t *reflen, int last, int ignorecase);
-void json_mbs_tolower(char *s);
-void json_mbs_toupper(char *s);
-void json_mbs_tomixed(char *s, json_t *exceptions);
-int json_mbs_casecmp(const char *s1, const char *s2);
-int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len);
-int json_mbs_abbrcmp(const char *abbr, const char *full);
-const char *json_mbs_ascii(const char *str, char *buf);
-size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, jsonformat_t *format);
-size_t json_mbs_unescape(char *dst, const char *src, size_t len);
-int json_mbs_like(const char *text, const char *pattern);
-
-/* Dates and times */
-int json_str_date(const char *str);
-int json_str_time(const char *str);
-int json_str_datetime(const char *str);
-int json_str_period(const char *str);
-int json_date(char *result, const char *str);
-int json_time(char *result, const char *str, const char *tz);
-int json_datetime(char *result, const char *str, const char *tz);
-int json_datetime_add(char *result, const char *str, const char *period);
-int json_datetime_subtract(char *result, const char *str, const char *period);
-int json_datetime_diff(char *result, const char *str1, const char *str2);
-json_t *json_datetime_fn(json_t *args, char *type);
-
-/* Configuration data */
-json_t *json_config, *json_system;
-void json_config_load(const char *name);
-void json_config_save(const char *name);
-json_t *json_config_get(const char *section, const char *key);
-void json_config_set(const char *section, const char *key, json_t *value);
-json_t *json_config_parse(json_t *config, const char *settings, const char **refend);
-#define json_config_get_int(section, key) json_int(json_config_get(section, key))
-#define json_config_get_double(section, key) json_double(json_config_get(section, key))
-#define json_config_get_text(section, key) json_text(json_config_get(section, key))
-
-/* Plugins */
-json_t *json_plugins;
-json_t *json_plugin_load(const char *name);
-
-
-#ifndef FALSE
-# define FALSE 0
-# define TRUE 1
-#endif
 
 /* This is a list of token types.  Nearly all of them are operators.
  * IF YOU MAKE ANY CHANGES HERE, THEN YOU MUST ALSO UPDATE THE operators[]
@@ -458,6 +260,187 @@ typedef struct jsoncalc_s{
                 char text[1]; /* extra chars get allocated later */
         } u;
 } jsoncalc_t;
+/* This enum represents details about how a single context layer is used */
+typedef enum {
+	JSON_CONTEXT_NOFREE = 1,/* Don't free the data when context is freed */
+	JSON_CONTEXT_VAR = 2,	/* contains vars -- use with GLOBAL for non-local */
+        JSON_CONTEXT_CONST = 4,	/* contains consts -- like variable but can't assign */
+        JSON_CONTEXT_GLOBAL = 8,/* Context is accessible everywhere */
+	JSON_CONTEXT_THIS = 16, /* Context can be "this" or "that" */
+	JSON_CONTEXT_DATA = 32,	/* Context contains "data" variable */
+        JSON_CONTEXT_ARGS = 64, /* Function arguments and local vars/consts */
+        JSON_CONTEXT_NOCACHE = 128, /* try autoload() before *data */
+        JSON_CONTEXT_MODIFIED = 256 /* Data has been modified (set via context->modified() function */
+} jsoncontextflags_t;
+
+/* This is used to track context (the stack of variable definitions).  */
+typedef struct jsoncontext_s {
+    struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
+    json_t *data;     /* a used item */
+    json_t *(*autoload)(char *key); /* called from json_context_by_key() */
+    void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
+    jsoncontextflags_t flags;
+} jsoncontext_t;
+
+BEGIN_C
+
+/* Files */
+char json_file_new_type;
+void json_file_defer(jsonfile_t *jf, json_t *array);
+void json_file_defer_free(json_t *array);
+jsonfile_t *json_file_load(const char *filename);
+void json_file_unload(jsonfile_t *jf);
+jsonfile_t *json_file_containing(const char *where, int *refline);
+FILE *json_file_update(const char *filename);
+char *json_file_path(const char *prefix, const char *name, const char *suffix);
+
+/* Error handling */
+extern char *json_debug(char *flags);
+
+/* This flag indicates whether computations have been interrupted */
+extern int json_interrupt;
+
+/* Manipulation */
+extern void json_free(json_t *json);
+extern json_t *json_simple(const char *str, size_t len, jsontype_t type);
+extern json_t *json_simple_from_token(json_token_t *token);
+extern json_t *json_string(const char *str, size_t len);
+extern json_t *json_number(const char *str, size_t len);
+extern json_t *json_bool(int boolean);
+extern json_t *json_null(void);
+extern json_t *json_error_null(const char *where, const char *fmt, ...);
+extern json_t *json_from_int(int i);
+extern json_t *json_from_double(double f);
+extern json_t *json_key(const char *key, json_t *value);
+extern json_t *json_object();
+extern json_t *json_array();
+extern json_t *json_defer(jsondeffns_t *fns);
+extern json_t *json_defer_ellipsis(int from, int to);
+extern char *json_append(json_t *container, json_t *more);
+extern size_t json_sizeof(json_t *json);
+extern char *json_typeof(json_t *json, int extended);
+extern char *json_mix_types(char *oldtype, char *newtype);
+extern void json_sort(json_t *array, json_t *orderby, int grouping);
+extern json_t *json_copy_filter(json_t *json, int (*filter)(json_t *));
+extern json_t *json_copy(json_t *json);
+extern json_t *json_array_flat(json_t *array, int depth);
+extern json_t *json_unroll(json_t *table, json_t *nestlist);
+extern json_t *json_array_group_by(json_t *array, json_t *orderby);
+extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
+
+/* Parsing */
+extern void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
+extern json_t *json_parse_string(const char *str);
+extern json_t *json_parse_file(const char *filename);
+
+/* Serialization / Output */
+extern json_t *json_explain(json_t *stats, json_t *row, int depth);
+extern char *json_serialize(json_t *json, jsonformat_t *format);
+extern void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *format));
+extern int json_print_incomplete_line;
+extern void json_print(json_t *json, jsonformat_t *format);
+extern void json_grid(json_t *json, jsonformat_t *format);
+extern void json_format_set(jsonformat_t *format, json_t *config);
+extern void json_format_esc(char *esc, const char *name, int nounderlined);
+extern void json_undefer(json_t *arr);
+
+/* Accessing */
+extern json_t *json_by_key(const json_t *container, const char *key);
+extern json_t *json_by_deep_key(json_t *container, char *key);
+extern json_t *json_by_index(json_t *container, int idx);
+extern json_t *json_by_expr(json_t *container, const char *expr, const char **after);
+extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey);
+#ifdef REG_ICASE /* skip this if <regex.h> not included */
+extern json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey);
+#endif
+extern char *json_default_text(char *newdefault);
+extern char *json_text(json_t *json);
+extern double json_double(json_t *json);
+extern int json_int(json_t *json);
+extern json_t *json_first(json_t *arr);
+extern json_t *json_next(json_t *elem);
+extern void json_break(json_t *elem);
+extern int json_is_last(const json_t *elem);
+
+/* Testing */
+extern int json_length(json_t *container);
+extern int json_is_true(json_t *json);
+extern int json_is_null(json_t *json);
+extern int json_is_error(json_t *json);
+extern int json_is_table(json_t *json);
+extern int json_is_short(json_t *json, size_t oneline);
+extern int json_is_date(json_t *json);
+extern int json_is_time(json_t *json);
+extern int json_is_datetime(json_t *json);
+extern int json_is_period(json_t *json);
+extern int json_is_deferred_array(const json_t *arr);
+extern int json_is_deferred_element(const json_t *elem);
+extern int json_equal(json_t *j1, json_t *j2);
+extern int json_compare(json_t *obj1, json_t *obj2, json_t *compare);
+#define json_text_by_key(container, key) json_text(json_by_key((container), (key)))
+#define json_text_by_deep_key(container, key) json_text(json_by_deep_key((container), (key)))
+#define json_text_by_index(container, index) json_text(json_by_index((container), (index)))
+/* The next parameter may be NULL.  See json_by_expr() for more details. */
+#define json_text_by_expr(container, expr, after) json_text(json_by_expr((container), (expr), (after)))
+
+
+/* Multibyte character strings */
+size_t json_mbs_len(const char *s);
+int json_mbs_width(const char *s);
+int json_mbs_height(const char *s);
+size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth);
+size_t json_mbs_wrap_char(char *buf, const char *s, int width);
+size_t json_mbs_wrap_word(char *buf, const char *s, int width);
+size_t json_mbs_canonize(char *dest, const char *src);
+int json_mbs_cmp(const char *s1, const char *s2);
+int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
+const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);
+const char *json_mbs_str(const char *haystack, const char *needle, size_t *refccount, size_t *reflen, int last, int ignorecase);
+void json_mbs_tolower(char *s);
+void json_mbs_toupper(char *s);
+void json_mbs_tomixed(char *s, json_t *exceptions);
+int json_mbs_casecmp(const char *s1, const char *s2);
+int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len);
+int json_mbs_abbrcmp(const char *abbr, const char *full);
+const char *json_mbs_ascii(const char *str, char *buf);
+size_t json_mbs_escape(char *dst, const char *src, size_t len, int quote, jsonformat_t *format);
+size_t json_mbs_unescape(char *dst, const char *src, size_t len);
+int json_mbs_like(const char *text, const char *pattern);
+
+/* Dates and times */
+int json_str_date(const char *str);
+int json_str_time(const char *str);
+int json_str_datetime(const char *str);
+int json_str_period(const char *str);
+int json_date(char *result, const char *str);
+int json_time(char *result, const char *str, const char *tz);
+int json_datetime(char *result, const char *str, const char *tz);
+int json_datetime_add(char *result, const char *str, const char *period);
+int json_datetime_subtract(char *result, const char *str, const char *period);
+int json_datetime_diff(char *result, const char *str1, const char *str2);
+json_t *json_datetime_fn(json_t *args, char *type);
+
+/* Configuration data */
+json_t *json_config, *json_system;
+void json_config_load(const char *name);
+void json_config_save(const char *name);
+json_t *json_config_get(const char *section, const char *key);
+void json_config_set(const char *section, const char *key, json_t *value);
+json_t *json_config_parse(json_t *config, const char *settings, const char **refend);
+#define json_config_get_int(section, key) json_int(json_config_get(section, key))
+#define json_config_get_double(section, key) json_double(json_config_get(section, key))
+#define json_config_get_text(section, key) json_text(json_config_get(section, key))
+
+/* Plugins */
+json_t *json_plugins;
+json_t *json_plugin_load(const char *name);
+
+
+#ifndef FALSE
+# define FALSE 0
+# define TRUE 1
+#endif
+
 
 
 /* Functions are stored in a linked list of these.  If a function is *not* an
@@ -481,29 +464,6 @@ typedef struct jsonfunc_s {
 } jsonfunc_t;
 #define JSONFUNC_JSONFREE 1	/* Call json_free() on the agdata afterward */
 #define JSONFUNC_FREE 2		/* Call free() on the agdata afterward */
-
-/* This enum represents details about how a single context layer is used */
-typedef enum {
-	JSON_CONTEXT_NOFREE = 1,/* Don't free the data when context is freed */
-	JSON_CONTEXT_VAR = 2,	/* contains vars -- use with GLOBAL for non-local */
-        JSON_CONTEXT_CONST = 4,	/* contains consts -- like variable but can't assign */
-        JSON_CONTEXT_GLOBAL = 8,/* Context is accessible everywhere */
-	JSON_CONTEXT_THIS = 16, /* Context can be "this" or "that" */
-	JSON_CONTEXT_DATA = 32,	/* Context contains "data" variable */
-        JSON_CONTEXT_ARGS = 64, /* Function arguments and local vars/consts */
-        JSON_CONTEXT_NOCACHE = 128, /* try autoload() before *data */
-        JSON_CONTEXT_MODIFIED = 256 /* Data has been modified (set via context->modified() function */
-} jsoncontextflags_t;
-
-/* This is used to track context (the stack of variable definitions).  */
-typedef struct jsoncontext_s {
-    struct jsoncontext_s *older;/* link list of jsoncontext_t contexts */
-    json_t *data;     /* a used item */
-    json_t *(*autoload)(char *key); /* called from json_context_by_key() */
-    void   (*modified)(struct jsoncontext_s *layer, jsoncalc_t *lvalue);
-    jsoncontextflags_t flags;
-} jsoncontext_t;
-
 
 /* For non-aggregate functions, this is used to pass other information that
  * they might need.
@@ -657,4 +617,45 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
 json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context);
 jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t *context);
 
+
+/* The following are for debugging memory leaks.  They're only used if your
+ * program defined JSON_DEBUG_MEMORY.
+ */
+extern int json_debug_count;
+extern void json_debug_free(const char *file, int line, json_t *json);
+extern json_t *json_debug_simple(const char *file, int line, const char *str, size_t len, jsontype_t type);
+extern json_t *json_debug_string(const char *file, int line, const char *str, size_t len);
+extern json_t *json_debug_number(const char *file, int line, const char *str, size_t len);
+extern json_t *json_debug_bool(const char *file, int line, int boolean);
+extern json_t *json_debug_null(const char *file, int line);
+extern json_t *json_debug_error_null(const char *file, int line, char *fmt, ...);
+extern json_t *json_debug_from_int(const char *file, int line, int i);
+extern json_t *json_debug_from_double(const char *file, int line, double f);
+extern json_t *json_debug_key(const char *file, int line, const char *key, json_t *value);
+extern json_t *json_debug_object(const char *file, int line);
+extern json_t *json_debug_array(const char *file, int line);
+extern json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns);
+extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
+extern json_t *json_debug_copy(const char *file, int line, json_t *json);
+extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*filter)(json_t *item));
+extern json_t *json_debug_calc(const char *file, int line, jsoncalc_t *calc, jsoncontext_t *context, void *agdata);
+#ifdef JSON_DEBUG_MEMORY
+#define json_free(json)			json_debug_free(__FILE__, __LINE__, json)
+#define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
+#define json_string(str, len)		json_debug_string(__FILE__, __LINE__, str, len)
+#define json_number(str, len)		json_debug_number(__FILE__, __LINE__, str, len)
+#define json_bool(boolean)			json_debug_bool(__FILE__, __LINE__, boolean)
+#define json_null()			json_debug_null(__FILE__, __LINE__)
+#define json_error(...)			json_debug_error(__FILE__, __LINE__, __VA_ARGS__)
+#define json_from_int(i)		json_debug_from_int(__FILE__, __LINE__, i)
+#define json_from_double(f)		json_debug_from_double(__FILE__, __LINE__, f)
+#define json_key(key, value)		json_debug_key(__FILE__, __LINE__, key, value)
+#define json_object()			json_debug_object(__FILE__, __LINE__)
+#define json_array()			json_debug_array(__FILE__, __LINE__)
+#define json_defer(fns)			json_debug_defer(__FILE__, __LINE__, (fns))
+#define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
+#define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
+#define json_copy_filter(json, filter)	json_debug_copy_filter(__FILE__, __LINE__, json, filter)
+#define json_calc(calc,context,agdata)	json_debug_calc(__FILE__, __LINE__, calc, context, agdata)
+#endif
 END_C

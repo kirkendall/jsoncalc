@@ -547,7 +547,7 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 	if ((datacontext->flags & JSON_CONTEXT_MODIFIED) != 0
 	 && current_file >= 0
 	 && current_file != *refcurrent
-	 && (j = json_by_index(files, current_file)) != NULL
+	 && (j = json_by_index(files, current_file)) != NULL /* undeferred */
 	 && json_is_true(json_by_key(j, "writable"))) {
 		char *filename = json_text_by_key(j, "filename");
 		if (filename) {
@@ -585,7 +585,7 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 	 */
 	if (current_file != *refcurrent || !j) {
 		/* Load the data.  If it couldn't be loaded then say why */
-		char *currentname = json_text_by_key(json_by_index(files, *refcurrent), "filename");
+		char *currentname = json_text_by_key(json_by_index(files, *refcurrent), "filename"); /* undeferred */
 		json_t *data;
 		if (!currentname)
 			data = json_error_null(0, "There is no current file");
@@ -749,7 +749,7 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 		/* Look for it in the context */
 		value = json_context_by_key(context, *refkey, &layer);
 
-		/* If found, celebrate */
+		/* If not found, be sad */
 		if (!value) {
 			/* NOT FOUND!  Try again without &layer as a way to
 			 * distinguish between const and unknown var
@@ -758,6 +758,14 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 				return "Const:Attempt to change const \"%s\"";
 			return "UnknownVar:Unknown variable \"%s\"";
 		}
+
+		/* Found!  Since we're doing assignments, if this is a
+		 * deferred array then we need to undefer it.
+		 */
+		json_undefer(layer->data);
+		json_undefer(value);
+
+		/* Return what we found */
 		if (reflayer)
 			*reflayer = layer;
 		if (refcontainer)
@@ -798,6 +806,11 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 		t = json_by_key(value, *refkey);
 		if (!t && !refvalue)
 			return "UnknownMember:Object has no member \"%s\"";
+
+		/* Since we're doing this to assign a value, we can't use
+		 * deferred arrays.
+		 */
+		json_undefer(value);
 
 		/* The value becomes the container, and "t" becomes the value */
 		if (refcontainer)

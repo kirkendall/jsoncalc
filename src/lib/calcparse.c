@@ -552,7 +552,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 		} else {
 			while (isdigit(token->full[token->len]))
 				token->len++;
-			if (token->full[token->len] == '.' && token->full[token->len + 1] != '.') {
+			if (token->full[token->len] == '.' && isdigit(token->full[token->len + 1])) {
 				token->len++;
 				while (isdigit(token->full[token->len]))
 					token->len++;

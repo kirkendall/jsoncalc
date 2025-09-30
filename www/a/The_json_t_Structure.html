@@ -42,7 +42,7 @@
     The most important field is <tt>type</tt>.
     It identifies the JSON data type that this <tt>json_t</tt> contains,
     and will be one of the following symbols:
-    JSON_BOOL, JSON_NULL, JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_DEFER,
+    JSON_BOOLEAN, JSON_NULL, JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_DEFER,
     JSON_OBJECT, or JSON_KEY.
     <p>
     The <tt>text</tt> field generally stores string values, and the
@@ -83,7 +83,7 @@
 
     <h2>Boolean</h2>
 
-    A JSON boolean value is stored in a <tt>json_t</tt> with JSON_BOOL stored
+    A JSON boolean value is stored in a <tt>json_t</tt> with JSON_BOOLEAN stored
     in its <tt>type</tt> field.
     The <tt>text</tt> field will contain either "true" or "false".
     You can use <tt>json-&gt;text[0] == 't'</tt> to test whether a

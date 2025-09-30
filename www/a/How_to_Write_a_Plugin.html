@@ -329,8 +329,8 @@
 	jsoncontext_t *miContexto(jsoncontext_t *context)
 	{
 	    json_t *obj = json_object();
-	    json_append(obj, json_key("verdad", json_bool(1)));
-	    json_append(obj, json_key("falso", json_bool(0)));
+	    json_append(obj, json_key("verdad", json_boolean(1)));
+	    json_append(obj, json_key("falso", json_boolean(0)));
 	    <b>return</b> json_context(context, obj, 0);
 	}
 
@@ -363,7 +363,7 @@
     library, use GCC with <tt>-fpic -shared</tt>.
     (The <tt>-shared</tt> tells GCC to make a shared library instead of an
     independent program.)
-    You'll probably also want a <tt>-o plugin</tt><var>plugin</var><tt>.so</tt>
+    You'll probably also want a <tt>-o lib</tt><var>plugin</var><tt>.so</tt>
     flag to control the name of the generated file.
     <p>
     One neat thing is that if your plugin depends on other C libraries such as

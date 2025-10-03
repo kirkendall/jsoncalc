@@ -557,9 +557,12 @@ Error:
 	return NULL;
 }
 
-/* List of known parsers other than JSON */
+/* List of registered parsers (other than the built-in JSON parser) */
 jsonparser_t *parsers;
 
+/* This is used by both json_parse_file() and json_parse_string() to do the
+ * actual JSON parsing.
+ */
 static json_t *parse(const char *str, size_t len, const char **refend, const char **referr)
 {
 	jsonparser_t *jp;
@@ -625,17 +628,33 @@ json_t *json_parse_file(const char *filename)
  * tester function returns a non-zero value, then the parser function is used
  * to parse this data.
  */
-void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr))
+void json_parse_hook(const char *plugin, const char *name, const char *suffix, const char *mimetype, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr))
 {
-	jsonparser_t *jp;
+	json_t	*table, *row;
+	jsonparser_t	*jp, *scan;
 
-	/* Allocate a new parser, and initialize it */
+	/* Allocate a new jsonparser_t for it */
 	jp = (jsonparser_t *)malloc(sizeof *jp);
+	jp->other = NULL;
 	jp->name = name;
 	jp->tester = tester;
 	jp->parser = parser;
 
-	/* Add it to the list */
-	jp->other = parsers;
-	parsers = jp;
+	/* Add it to the end of the list */
+	if (parsers) {
+		for (scan = parsers; scan->other; scan = scan->other) {
+		}
+		scan->other = jp;
+	} else {
+		parsers = jp;
+	}
+
+	/* Add a row to the "parsers" table in json_system */
+	table = json_by_key(json_system, "parsers");
+	row = json_object();
+	json_append(row, json_key("plugin", plugin ? json_string(plugin, -1) : json_null()));
+	json_append(row, json_key("name", json_string(name, -1)));
+	json_append(row, json_key("suffix", suffix ? json_string(suffix, -1) : json_null()));
+	json_append(row, json_key("mimetype", mimetype ? json_string(mimetype, -1) : json_null()));
+	json_append(table, row);
 }

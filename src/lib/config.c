@@ -282,17 +282,35 @@ void json_config_load(const char *name)
 		pathname = json_file_path(NULL, NULL, NULL);
 		json_append(json_system, json_key("configdir", json_string(pathname, -1)));
 		free(pathname);
+
+		/* Add an empty list of plugins.  As plugins are loaded,
+		 * this will become populated.
+		 */
 		if (!json_plugins)
 			json_plugins = json_array();
 		json_append(json_system, json_key("plugins", json_plugins));
+
+		/* Add a table of parsers.  Initially it'll contain only the
+		 * built-in JSON parser, but as plugins register their parsers
+		 * via json_parse_hook(), they'll be added here too.
+		 */
 		conf = json_array();
-		json_append(conf, json_string("json", -1));
-		json_append(json_system, json_key("extensions", conf));
+		value = json_object();
+		json_append(value, json_key("plugin", json_null()));
+		json_append(value, json_key("name", json_string("json", -1)));
+		json_append(value, json_key("suffix", json_string(".json", -1)));
+		json_append(value, json_key("mimetype", json_string("application/json", -1)));
+		json_append(conf, value);
+		json_append(json_system, json_key("parsers", conf));
+
+		/* Add empty JSON and Math objects, for JS compatibility. */
+		json_append(json_system, json_key("JSON", json_object()));
+		json_append(json_system, json_key("Math", json_object()));
+
+		/* Add members to json_system, describing the environment */
 
 		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
 		json_append(json_system, json_key("update", json_boolean(0)));
-		json_append(json_system, json_key("JSON", json_object()));
-		json_append(json_system, json_key("Math", json_object()));
 		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
 		json_append(json_system, json_key("copyright", json_string(JSON_COPYRIGHT, -1)));
 

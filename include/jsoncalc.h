@@ -330,7 +330,7 @@ extern json_t *json_array_group_by(json_t *array, json_t *orderby);
 extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
 
 /* Parsing */
-extern void json_parse_hook(const char *name, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
+extern void json_parse_hook(const char *plugin, const char *name, const char *suffix, const char *mimetype, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
 extern json_t *json_parse_string(const char *str);
 extern json_t *json_parse_file(const char *filename);
 

@@ -37,9 +37,9 @@ static json_t *jfn_arity(json_t *args, void *agdata)
  * complex example to demonstrate some of the parse helper functions.
  */
 
-extern jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-extern jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
+static jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
 
 /* This parses our "example" command.  The command name has already been
  * parsed, which is how json_cmd_parse_string() and json_cmd_parse_file()
@@ -58,7 +58,7 @@ jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
  * entirely handled at parse time and doesn't require any action at run time.
  * The "function" command is an example of this.
  */
-jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	char	*text;
 	const char *end, *err;
@@ -111,7 +111,7 @@ jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 /* Run an "example" command.  The result of parsing it is passed as "cmd",
  * and a reference to the context is passed via *refcontext.
  */
-jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	char	*text, *mustfree;
 	json_t	*result;

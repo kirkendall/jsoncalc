@@ -34,11 +34,11 @@ static char *config = "{"
 "}";
 
 
-jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-jsoncmdname_t jcn_log = {NULL, "log", log_parse, log_run, "log"};
+static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr);
+static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jsoncmdname_t jcn_log = {NULL, "log", log_parse, log_run, "log"};
 
 
 /* When logset is used to select a default log name, this is where it's stored.
@@ -48,7 +48,7 @@ jsoncmdname_t jcn_log = {NULL, "log", log_parse, log_run, "log"};
 static char *defaultname;
 
 /* Get a boolean config */
-int getbool(char *key)
+static int getbool(char *key)
 {
 	return json_is_true(json_config_get("plugin.log", key));
 }
@@ -57,7 +57,7 @@ int getbool(char *key)
  * file extension from config, and optionally a version suffix.  The returned
  * name in a buffer that gets reused, so you may need to make a local copy.
  */
-char *mkfilename(const char *logname, int ver)
+static char *mkfilename(const char *logname, int ver)
 {
 	json_t	*dir, *ext;
 	char	*dirstr, *extstr, verstr[20];
@@ -151,7 +151,7 @@ static int keep()
 
 
 /* Do file rollover by date */
-void rolldaily(const char *logname)
+static void rolldaily(const char *logname)
 {
 	json_t	*val;
 	time_t	now;
@@ -234,7 +234,7 @@ void rolldaily(const char *logname)
 
 
 /* Do file rollover by size */
-void rollsize(const char *logname)
+static void rollsize(const char *logname)
 {
 	char *filename = mkfilename(logname, 0);
 	char *incrname;
@@ -313,7 +313,7 @@ void rollsize(const char *logname)
 
 
 /* Perform log rollover, if necessary, and then open a new log */
-FILE *switchfile(const char *logname)
+static FILE *switchfile(const char *logname)
 {
 	static FILE *prevfp;
 	static char *prevname;
@@ -369,7 +369,7 @@ FILE *switchfile(const char *logname)
 /* Parse a logset command.  Mostly this just sets the default output for any
  * following log commands.
  */
-jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	json_t	*setting, *err;
 	char	*setstr;
@@ -426,12 +426,12 @@ jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 }
 
 /* Placeholder - logset is handled entirely at compile time */
-jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	return NULL;
 }
 
-jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 {
 	jsonsrc_t start;
 	char	*name = NULL;
@@ -500,7 +500,7 @@ jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return cmd;
 }
 
-jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 {
 	json_t *list, *scan;
 	FILE	*out;

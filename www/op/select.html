@@ -21,6 +21,7 @@
       WHERE <var>condition</var>
       GROUP BY <var>columns</var>
       ORDER BY <var>columns</var>
+      HAVING <var>condition</var>
       LIMIT <var>maxrows</var>
     </blockquote>
     ... but everything except <tt>SELECT</tt> is optional.
@@ -74,6 +75,12 @@
     independent results for each group; e.g., <tt>count(*)</tt> would return
     the number of rows in each group, instead of the overall number of rows.
     Second, only one row per group will be included in the result table.
+    <p>
+    The optional <tt>HAVING</tt> clause lets you select which groups to
+    include in the result
+    (as opposed to the <tt>WHERE</tt> clause which selects rows).
+    Often, aggregate functions work better here that in the <tt>WHERE</tt>
+    clause.
     <p>
     The optional <tt>ORDER BY</tt> <var>fields</var> clause causes rows to
     be sorted by their values in the listed fields.  You may also follow any
@@ -141,9 +148,9 @@
 
 	<li>Internally, <tt>SELECT</tt> expressions are converted to "native"
             functions and operators. An expression such as
-            <span style="white-space:nowrap">"<tt>SELECT a AS aprime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY aprime</tt>"</span>
+            <span style="white-space:nowrap">"<tt>SELECT a AS aPrime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY aPrime</tt>"</span>
             would become
-            <span style="white-space:nowrap">"<tt>(table.groupBy(["e","f"]) @ d>5 ? {aprime:a, b}).orderBy("aprime")</tt>".</span>
+            <span style="white-space:nowrap">"<tt>((table@d&gt;5).groupBy(["e","f"]) @  {aPrime:a, b}).orderBy("aPrime")</tt>".</span>
 
 	<li>In the <tt>FROM</tt> clause, the use of a comma to denote
 	    <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> is

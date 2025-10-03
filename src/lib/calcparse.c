@@ -58,6 +58,7 @@ typedef struct jsonselect_s {
 	json_t *unroll;		/* list of field names to unroll, or NULL */
 	jsoncalc_t *where;	/* expression that selects rows, or NULL for all */
 	json_t *groupby;	/* list of field names, or NULL */
+	jsoncalc_t *having;	/* expression that selects groups */
 	json_t *orderby;	/* list of field names, or NULL */
 	jsoncalc_t *limit;	/* expression that limits the returned values */
 } jsonselect_t;
@@ -111,6 +112,7 @@ static struct {
 	{"GROUP",	"@",	115,	0,	JCOP_INFIX},	/*!!!*/
 	{"GROUPBY",	"GRO",	2,	1,	JCOP_OTHER},
 	{"GT",		">",	190,	0,	JCOP_INFIX},
+	{"HAVING",	"HAV",	2,	1,	JCOP_OTHER},
 	{"ICEQ",	"=",	180,	0,	JCOP_INFIX},
 	{"ICNE",	"<>",	180,	0,	JCOP_INFIX},
 	{"IN",		"IN",	175,	0,	JCOP_INFIX},
@@ -166,6 +168,7 @@ static jsoncalc_t selectdistinct = {JSONOP_DISTINCT};
 static jsoncalc_t selectfrom = {JSONOP_FROM};
 static jsoncalc_t selectwhere = {JSONOP_WHERE};
 static jsoncalc_t selectgroupby = {JSONOP_GROUPBY};
+static jsoncalc_t selecthaving = {JSONOP_HAVING};
 static jsoncalc_t selectorderby = {JSONOP_ORDERBY};
 static jsoncalc_t selectdesc = {JSONOP_DESCENDING};
 static jsoncalc_t selectlimit = {JSONOP_LIMIT};
@@ -334,6 +337,10 @@ void json_calc_dump(jsoncalc_t *calc)
 
 	  case JSONOP_GROUPBY:
 		printf(" GROUP BY");
+		break;
+
+	  case JSONOP_HAVING:
+		printf(" HAVING");
 		break;
 
 	  case JSONOP_ORDERBY:
@@ -656,6 +663,8 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 			} else if (token->len == 5 && !strncasecmp(token->full, "group by", 8)) {
 				token->len = 8;
 				token->op = JSONOP_GROUPBY;
+			} else if (token->len == 6 && !strncasecmp(token->full, "having", 6)) {
+				token->op = JSONOP_HAVING;
 			} else if (token->len == 5 && !strncasecmp(token->full, "order by", 8)) {
 				token->len = 8;
 				token->op = JSONOP_ORDERBY;
@@ -763,6 +772,7 @@ static jsoncalc_t *jcalloc(token_t *token)
 	  case JSONOP_FROM: return &selectfrom;
 	  case JSONOP_WHERE: return &selectwhere;
 	  case JSONOP_GROUPBY: return &selectgroupby;
+	  case JSONOP_HAVING: return &selecthaving;
 	  case JSONOP_ORDERBY: return &selectorderby;
 	  case JSONOP_DESCENDING: return &selectdesc;
 	  case JSONOP_LIMIT: return &selectlimit;
@@ -1047,6 +1057,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_FROM:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
+	  case JSONOP_HAVING:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:
@@ -1237,6 +1248,7 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_AS:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
+	  case JSONOP_HAVING:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:
@@ -1286,6 +1298,17 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 			anyselectag = jcisag(jc->u.param.left);
 	}
 
+	/* If there's a having clause without a groupby clause, then use it
+	 * as part of the where clause.
+	 */
+	if (sel->having && !sel->groupby) {
+		if (sel->where)
+			sel->where = jcleftright(JSONOP_AND, sel->where, sel->having);
+		else
+			sel->where = sel->having;
+		sel->having = NULL;
+	}
+
 	/* Maybe dump some debugging info */
 	if (json_debug_flags.calc) {
 		char *tmp; 
@@ -1330,6 +1353,10 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 
 	/* If there's a GROUP BY list, add a groupBy() function call */
 	if (sel->groupby) {
+		/* If there's a where clause, do it before groupby */
+		if (sel->where)
+			jc = jcleftright(JSONOP_EACH, jc, sel->where);
+
 		/* The list is already json_t array of strings.  Make it be
 		 * a jsoncalc_t literal.
 		 */
@@ -1339,60 +1366,34 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 
 		/* Add groupBy() function call */
 		jc = jcfunc("groupBy", jc, ja, NULL);
-	}
 
-	/* Is there a column list in SELECT, or a WHERE clause? */
-	if (sel->select || sel->where || sel->groupby) {
-		/* If we have both, then combine them.  If the select list
-		 * doesn't use aggregates then combine them via a ? operator.
-		 * With aggregates, it gets more complicated.
+		/* If there's a having clause and/or a select list, that's
+		 * next.  Even without it, we still need an @ operator even
+		 * if the right operand is just "this".
 		 */
-		if (sel->select && sel->where && !anyselectag) {
-			ja = jcleftright(JSONOP_QUESTION, sel->where, sel->select);
-		} else if (sel->select && sel->where) {
-			/* The complicated way. To avoid having aggregates in
-			 * the select list accumulate results over all records
-			 * (not just ones satisfying the where clause), we need
-			 * to use two @ operators - one to apply the where test
-			 * and one to generate the rows.
-			 */
-
-			/* Add the @ for the where test */
-			jc = jcleftright(JSONOP_GROUP, jc, sel->where);
-
-			/* If grouping, then we need an extra groupBy() call
-			 * since this @ will remove grouping information.
-			 */
-			if (sel->groupby) {
-				/* The list is already json_t array of strings.
-				 * Make it be a jsoncalc_t literal.
-				 */
-				t.op = JSONOP_LITERAL;
-				ja = jcalloc(&t);
-				ja->u.literal = json_copy(sel->groupby);
-
-				/* Add groupBy() function call */
-				jc = jcfunc("groupBy", jc, ja, NULL);
-			}
-
-			/* Add the select list separately */
+		if (sel->having && sel->select) {
+			ja = jcleftright(JSONOP_QUESTION, sel->having, sel->select);
+		} else if (sel->having) {
+			ja = sel->having;
+		} else if (sel->select) {
 			ja = sel->select;
-		} else if (sel->select)
-			ja = sel->select;
-		else if (sel->where)
-			ja = sel->where;
-		else {
-			/* With GROUP BY, we always want an @ even if all we
-			 * do with it is "this".
-			 */
+		} else {
+			/* use "this" as the right operator */
 			t.op = JSONOP_NAME;
 			t.full = "this";
 			t.len = 4;
 			ja = jcalloc(&t);
 		}
-
-		/* Add an @ operator to connect select/where with table */
 		jc = jcleftright(JSONOP_GROUP, jc, ja);
+	} else if (sel->where || sel->select) {
+		/* We want to add a @@where?select or just part of that */
+		if (sel->where && sel->select)
+			ja = jcleftright(JSONOP_QUESTION, sel->where, sel->select);
+		else if (sel->where)
+			ja = sel->where;
+		else
+			ja = sel->select;
+		jc = jcleftright(JSONOP_EACH, jc, ja);
 	}
 
 	/* If there's an ORDER BY clause, add an orderBy() function call */
@@ -1456,6 +1457,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
  *   F  JSONOP_FROM
  *   W  JSONOP_WHERE
  *   G  JSONOP_GROUPBY
+ *   H  JSONOP_HAVING
  *   O  JSONOP_ORDERBY
  *   L  JSONOP_LIMIT
  *   d  JSONOP_DESCENDING
@@ -1612,6 +1614,11 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 			return FALSE;
 		break;
 
+	  case 'H': /* JSONOP_HAVING */
+		if (jc->op != JSONOP_HAVING)
+			return FALSE;
+		break;
+
 	  case 'O': /* JSONOP_ORDERBY */
 		if (jc->op != JSONOP_ORDERBY)
 			return FALSE;
@@ -1721,6 +1728,7 @@ static int pattern(stack_t *stack, char *want)
 			 && jc->op != JSONOP_FROM
 			 && jc->op != JSONOP_WHERE
 			 && jc->op != JSONOP_GROUPBY
+			 && jc->op != JSONOP_HAVING
 			 && jc->op != JSONOP_ORDERBY
 			 && jc->op != JSONOP_LIMIT)
 				return FALSE;
@@ -1897,6 +1905,11 @@ static char *reduce(stack_t *stack, jsoncalc_t *next, const char *srcend)
 			continue;
 		} else if (PATTERN("SG") && PREC(JSONOP_GROUPBY)) {
 			stack->sp--; /* keep "S" */
+			continue;
+		} else if (PATTERN("SHx") && PREC(JSONOP_HAVING)) {
+			/* Save the condition in select.having */
+			top[-3]->u.select->having = top[-1];
+			stack->sp -= 2;
 			continue;
 		} else if (PATTERN("SOnd,n") && PREC(JSONOP_COMMA)) {
 			/* Add the name to an array of names */
@@ -2318,6 +2331,7 @@ static int parsecolon(jsoncalc_t *jc)
 	  case JSONOP_AS:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
+	  case JSONOP_HAVING:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:
@@ -2443,6 +2457,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_AS:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
+	  case JSONOP_HAVING:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:

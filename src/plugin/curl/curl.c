@@ -33,7 +33,7 @@ typedef enum {
 	OPT_REQCONTENT,		/* Return request content along with response */
 	OPT_COOKIES,		/* Allow cookies to be sent/received */
 	OPT_FOLLOWLOCATION,	/* Follow HTTP 3xx redirects */
-	OPT_PARSE,		/* Try to parse the response content */
+	OPT_RAW,		/* Don't try to parse the response content */
 	OPT_HEADERS		/* Return response headers along with content */
 } opt_t;
 
@@ -210,7 +210,7 @@ typedef struct {
 	struct curl_slist *slist;	/* List of request headers to add */
 	char	*reqcontenttype;	/* MIME type of the request content */
 	int	content;		/* Send data as content? */
-	int	parse;			/* Parse the response? */
+	int	raw;			/* Don't parse the response? */
 	int	reqheaders;		/* Return the request headers too? */
 	int	reqcontent;		/* Return the request content too? */
 	int	headers;		/* Return the response headers too? */
@@ -322,8 +322,8 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 		case OPT_FOLLOWLOCATION:
 			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 			break;
-		case OPT_PARSE:
-			flags->parse = 1;
+		case OPT_RAW:
+			flags->raw = 1;
 			break;
 		case OPT_HEADERS:
 			flags->headers = 1;
@@ -381,7 +381,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 */
 	flags.reqcontenttype = NULL;
 	flags.content = !strcmp(request, "POST");
-	flags.parse = flags.reqheaders = flags.reqcontent = flags.headers = 0;
+	flags.raw = flags.reqheaders = flags.reqcontent = flags.headers = 0;
 	flags.slist = NULL;
 	err = doFlags(fn, curl, data, &flags, more);
 	if (err) {
@@ -519,7 +519,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 * embarrassing.
 	 */
 	response = NULL;
-	if (flags.parse && rcv.buf) {
+	if (!flags.raw && rcv.buf) {
 		/* Try to parse it.  If that returns an error, then maybe
 		 * display the error message as a warning and fall back on
 		 * returning the response as a string.
@@ -777,7 +777,7 @@ char *plugincurl()
 	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
 	json_append(curl, json_key("cookies", json_from_int(OPT_COOKIES)));
 	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
-	json_append(curl, json_key("parse", json_from_int(OPT_PARSE)));
+	json_append(curl, json_key("raw", json_from_int(OPT_RAW)));
 	json_append(curl, json_key("headers", json_from_int(OPT_HEADERS)));
 	json_append(json_system, json_key("CURL", curl));
 

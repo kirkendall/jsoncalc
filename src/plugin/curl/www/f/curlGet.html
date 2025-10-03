@@ -54,7 +54,7 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>curlGet("http://localhost/")</kbd>
+	<kbd>curlGet("http://localhost/", CURL.raw)</kbd>
 	<samp><i>Some big HTML string</i></samp>
         This attempts to fetch the main index of a local HTTP server.
         Assuming you have one running, you should receive an HTML document
@@ -63,19 +63,18 @@
 
       <div class="example">
 	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
-	<kbd>curlGet("https://example.net/app/request.json", data, CURL.username_, "steve", CURL.password_, "haBiBi", CURL.parse)</kbd>
+	<kbd>curlGet("https://example.net/app/request.json", data, CURL.username_, "steve", CURL.password_, "haBiBi")</kbd>
 	<samp><i>A bunch of parsed data.</i></samp>
 	First we build an object containing data to append to the URL.
 	Then we run <tt>curlGet()</tt> passing it the URL, the data, and some
 	flags.
 	The flags define the user name and password (and imply that
-	"Authentication: Basic" should be used),
-	and also ask for the response text to be parsed
-	so we get an object instead of a big string.
+	"Authentication: Basic" should be used).
+	The lack of a <tt>CURL.raw</tt> flag means the response will be parsed.
       </div>
 
       <div class="example">
-        <kbd>curlGet("https://swapi.py4e.com/api/people/",{search:"darth"},CURL.parse).results@{name,height,mass,films:(films@curlGet(this,CURL.parse).title).join("\n")}</kbd>
+        <kbd>curlGet("https://swapi.py4e.com/api/people/",{search:"darth"}).results@{name,height,mass,films:(films@curlGet(this).title).join("\n")}</kbd>
         <samp>
 <table>
 <tr><th>name</th><th>height</th><th>mass</th><th>films</th></tr>

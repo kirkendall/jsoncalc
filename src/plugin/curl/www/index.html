@@ -321,22 +321,17 @@
         <td>CURLOPT_COOKIEFILE, CURLOPT_COOKIEJAR</td>
       </tr>
       <tr>
-        <td>CURL.parse</td>
+        <td>CURL.raw</td>
         <td></td>
         <td>
-          Normally the <tt>curlXXX()</tt> functions return the result as a
-          string, but this flag causes it to attempt to parse the result into
-          a JSON data structure.
-          If the result can't be decoded, then it will still be returned as a
-          string.
+          Normally the <tt>curlXXX()</tt> functions try to parse the
+          response content, and only return it as a string if it is unparsable.
+          This flag causes it to always return the content as a string.
           <p style="margin-bottom:0">
-          Using this flag causes an "Accept: application/json" header line to
-          be sent with HTTP/HTTPS requests.
-          Despite this, if you've loaded another plugin that decodes documents
-          such as
-          <a target="_PARENT" href="../index.html?p=csv">plugin csv</a> or
-          <a target="_PARENT" href="../index.html?p=xml">plugin xml</a>
-          then those formats will be parsed too.
+          Without this flag, an "Accept: application/json" header line will
+          be sent with the request.
+          If plugins add parsers for other formats, they'll be included in the
+          "Accept:" header too.
         </td>
         <td></td>
       </tr>

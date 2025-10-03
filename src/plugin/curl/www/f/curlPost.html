@@ -75,13 +75,11 @@
 
       <div class="example">
 	<kbd>const data={size:"L", color:"Brown", odor: "None"};</kbd>
-	<kbd>curlPost("https://example.net/app/request.json", data, CURL.decode, CURL.bearer_, token)</kbd>
+	<kbd>curlPost("https://example.net/app/request.json", data, CURL.bearer_, token)</kbd>
 	<samp><i>A bunch of parsed data.</i></samp>
 	First we build an object containing data to send as the request's content.
 	Then we call <tt>curlPost()</tt>, passing it the URL and the data,
 	followed by flags.
-	The <tt>CURL.decode</tt> flag tells it to attempt to decode the response
-	so we get an object back instead of a big string of JSON source code.
 	The <tt>CURL.bearer_</tt> flag tells it to use "Authentication: Bearer"
 	with the bearer token that's stored in a "token" variable.
 	The parsed response data is then returned.
@@ -93,13 +91,11 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Passing a <tt>CURL.decode</tt> flag to parse the response also
-            implies that the request headers should include an
-            "Accept: application/json" header line.
-            However, if you've loaded another plugin that supports parsing
-            other data formats (e.g., the "csv" or "xml" plugins) then those
-            will be recognized and parsed too.
-
+        <li>Unless you use <tt>CURL.raw</tt> to inhibit parsing of the response,
+            the request headers should include an "Accept: application/json"
+            header line.
+            If plugins have added other parsers such as "csv",
+            then their MIME types will be included in the "Accept:" header too.
       </ul>
     </details>
 

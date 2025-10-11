@@ -76,7 +76,7 @@ void json_break(json_t *elem)
 	def = (jsondef_t *)elem->next; /* deferred */
 	if (def->fns->free)
 		(*def->fns->free)(elem);
-	free(def);
+	json_free(def);
 	elem->next = NULL;
 
 	/* Free the element itself */

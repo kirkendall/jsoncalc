@@ -636,6 +636,7 @@ extern json_t *json_debug_key(const char *file, int line, const char *key, json_
 extern json_t *json_debug_object(const char *file, int line);
 extern json_t *json_debug_array(const char *file, int line);
 extern json_t *json_debug_defer(const char *file, int line, jsondeffns_t *fns);
+extern json_t *json_debug_first(const char *file, int line, json_t *array);
 extern json_t *json_debug_parse_string(const char *file, int line, const char *str);
 extern json_t *json_debug_copy(const char *file, int line, json_t *json);
 extern json_t *json_debug_copy_filter(const char *file, int line, json_t *json, int (*filter)(json_t *item));
@@ -645,7 +646,7 @@ extern json_t *json_debug_calc(const char *file, int line, jsoncalc_t *calc, jso
 #define json_simple(str, len, type)	json_debug_simple(__FILE__, __LINE__, str, len, type)
 #define json_string(str, len)		json_debug_string(__FILE__, __LINE__, str, len)
 #define json_number(str, len)		json_debug_number(__FILE__, __LINE__, str, len)
-#define json_boolean(boolean)			json_debug_boolean(__FILE__, __LINE__, boolean)
+#define json_boolean(boolean)		json_debug_boolean(__FILE__, __LINE__, boolean)
 #define json_null()			json_debug_null(__FILE__, __LINE__)
 #define json_error(...)			json_debug_error(__FILE__, __LINE__, __VA_ARGS__)
 #define json_from_int(i)		json_debug_from_int(__FILE__, __LINE__, i)
@@ -654,6 +655,7 @@ extern json_t *json_debug_calc(const char *file, int line, jsoncalc_t *calc, jso
 #define json_object()			json_debug_object(__FILE__, __LINE__)
 #define json_array()			json_debug_array(__FILE__, __LINE__)
 #define json_defer(fns)			json_debug_defer(__FILE__, __LINE__, (fns))
+#define json_first(array)		json_debug_first(__FILE__, __LINE__, (array))
 #define json_parse_string(str)          json_debug_parse_string(__FILE__, __LINE__, str)
 #define json_copy(json)			json_debug_copy(__FILE__, __LINE__, json)
 #define json_copy_filter(json, filter)	json_debug_copy_filter(__FILE__, __LINE__, json, filter)

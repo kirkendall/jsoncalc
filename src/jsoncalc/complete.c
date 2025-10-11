@@ -236,6 +236,7 @@ char *member_name_generator(const char *text, int state)
 char **jsoncalc_completion(const char *text, int start, int end)
 {
 	char	*key, *next, c;
+	json_t	*breaker = NULL;
 	int	scan, state;
 	char	buf[1000];
 
@@ -357,6 +358,7 @@ char **jsoncalc_completion(const char *text, int start, int end)
 		next = strpbrk(key, ".[");
 		if (!next) {
 			completion_key_offset = key - buf - start;
+			json_break(breaker);
 			return rl_completion_matches(text, member_name_generator);
 		}
 		c = *next;
@@ -371,8 +373,12 @@ char **jsoncalc_completion(const char *text, int start, int end)
 		 * we can't do the completion.
 		 */
 		while (completion_container && completion_container->type == JSON_ARRAY)
-			completion_container = completion_container->first;
-		if (!completion_container)
+			completion_container = json_first(completion_container);
+		if (!completion_container) {
+			json_break(breaker);
 			return NULL;
+		}
+		if (json_is_deferred_element(completion_container))
+			breaker = completion_container;
 	}
 }

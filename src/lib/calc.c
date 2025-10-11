@@ -1629,6 +1629,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_DISTINCT:
 	  case JSONOP_WHERE:
 	  case JSONOP_GROUPBY:
+	  case JSONOP_HAVING:
 	  case JSONOP_ORDERBY:
 	  case JSONOP_DESCENDING:
 	  case JSONOP_LIMIT:

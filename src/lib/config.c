@@ -44,6 +44,7 @@ static const char *defaultconfig = "{"
 	"},"
 	"\"emptyobject\":\"object\","
 	"\"defersize\":1000000,"
+	"\"deferexplain\":100,"
 	"\"prompt\":{"
 		"\"bold\":true,"
 		"\"dim\":false,"
@@ -413,7 +414,7 @@ json_t *json_config_get(const char *section, const char *key)
 
 	/* Locate the section.  If section is NULL, use the format settings */
 	if (section) {
-		jsect = json_by_expr(json_config, section, NULL);
+		jsect = json_by_expr(json_config, section, NULL); /* undeferred */
 		if (!jsect)
 			return NULL;
 	} else {
@@ -445,7 +446,7 @@ void json_config_set(const char *section, const char *key, json_t *value)
 	 */
 	if (section) {
 		/* Use the named section */
-		jsect = json_by_expr(json_config, section, NULL);
+		jsect = json_by_expr(json_config, section, NULL); /* undeferred */
 		if (!jsect) {
 			if (!strncmp(section, "plugin.", 7)) {
 				jsect = json_by_key(json_config, "plugin");

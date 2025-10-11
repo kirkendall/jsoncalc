@@ -26,6 +26,7 @@
 # undef json_key
 # undef json_object
 # undef json_defer
+# undef json_first
 # undef json_parse_string
 # undef json_copy
 # undef json_copy_filter
@@ -290,7 +291,7 @@ static json_t *dummy(json_t *node)
 	return NULL;
 };
 static jsondeffns_t dummyfns = {
-	sizeof(jsondeffns_t),	/* size */
+	sizeof(json_t) + sizeof(jsondeffns_t),	/* size (of the whole more-than-json_t */
 	"dummy",	/* desc */
 	dummy,		/* first */
 	dummy,		/* next */
@@ -313,8 +314,11 @@ json_t *json_defer(jsondeffns_t *fns)
 	if (!fns)
 		fns = &dummyfns;
 
-	/* Allocate it, with extra space */
-	size = fns->size - sizeof json->text;
+	/* Allocate it, with extra space.  Note that we must tweak the size
+	 * because json_simple wants to be passed the size of the "text" field,
+	 * but fns->size is the size of the whole thing.
+	 */
+	size = fns->size - sizeof(json_t) + sizeof json->text;
 	json = json_simple(NULL, size, JSON_DEFER);
 
 	/* Store the fns pointer, with this deferred array's implementation
@@ -601,6 +605,18 @@ json_t *json_debug_parse_string(const char *file, int line, const char *str)
         json = json_parse_string(str);
         json_walk(json, fixslot, &slot);
         return json;
+}
+
+/* Find the first element of a (possibly deferred) array */
+json_t *json_debug_first(const char *file, int line, json_t *array)
+{
+	int slot = memory_slot(file, line);
+	json_t *json = json_first(array);
+	if (json_is_deferred_element(json)) {
+		fixslot(json, &slot);
+		fixslot(json->next, &slot);
+	}
+	return json;
 }
 
 /* Do a deep copy of a json_t tree */

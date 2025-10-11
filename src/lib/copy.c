@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <jsoncalc.h>
 
 /* Even if memory debugging is enabled, here we're defining the non-debugging verion
@@ -49,6 +50,31 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 
 	  case JSON_ARRAY:
 		copy = json_array();
+		copy->text[1] = json->text[1];
+		JSON_ARRAY_LENGTH(copy) = JSON_ARRAY_LENGTH(json);
+
+		/* For deferred arrays without a test, keep it deferred */
+		if (json_is_deferred_array(json) && !test) {
+			json_t basic;
+			jsondef_t *def = (jsondef_t *)json->first;
+			copy->first = json_defer(def->fns);
+
+			/* We want to copy all data associated with this
+			 * deferred array, except for "basic".  We keep
+			 * "basic" separate so its memory tracking is
+			 * independent.
+			 */
+			basic = *copy->first;
+			memcpy(copy->first, json->first, def->fns->size);
+			*copy->first = basic;
+
+			/* If a file is referenced, this is a new reference */
+			if (def->file)
+				def->file->refs++;
+			break;
+		}
+
+		/* Otherwise we scan, filter, and copy elements individually */
 		for (scan = json_first(json); scan; scan = json_next(scan))
 		{
 			sub = json_copy_filter(scan, test);

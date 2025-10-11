@@ -12,7 +12,7 @@
 int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 {
 	json_t *field1, *field2, *key;
-	int	descending;
+	int	descending, isnull1, isnull2;
 	double	diff;
 
 	// Check parameters.
@@ -41,33 +41,49 @@ int json_compare(json_t *obj1, json_t *obj2, json_t *orderby)
 		/* Get the members for the next key */
 		field1 = json_by_expr(obj1, key->text, NULL);
 		field2 = json_by_expr(obj2, key->text, NULL);
-		if (json_is_null(field1) && json_is_null(field2))
-			continue; // if both are NULL, skip it
-		if (json_is_null(field1))
-			return 1; // NULL comes after non-NULL
-		if (json_is_null(field2))
-			return -1; // NULL comes after non-NULL
 
-		// Compare, based on type.  Assume both are same type
+		/* null comes after non-null, always */
+		isnull1 = json_is_null(field1);
+		isnull2 = json_is_null(field2);
+		if (isnull1 || isnull2) {
+			/* json_by_expr() may encounter deferred arrays */
+			json_break(field1);
+			json_break(field2);
+
+			/* Skip if both null */
+			if (isnull1 && isnull2)
+				continue;
+
+			/* Otherwise, the non-null comes first */
+			if (isnull1)
+				return 1;
+			return -1;
+		}
+
+		/* Compare, based on type.  Assume both are same type */
 		if (field1->type == JSON_NUMBER)
 			diff = json_double(field1) - json_double(field2);
 		else
 			diff = strcasecmp(field1->text, field2->text);
 
-		// If descending then invert
+		/* json_by_expr() may encounter deferred arrays */
+		json_break(field1);
+		json_break(field2);
+
+		/* If descending then invert */
 		if (descending) {
 			diff = -diff;
 			descending = !descending;
 		}
 
-		// If equal then skip to the next field
+		/* If equal then skip to the next field */
 		if (diff == 0)
 			continue;
 
-		// Return only -1, 1
+		/* Return only -1, 1 */
 		return (diff < 0) ? -1 : 1;
 	}
 
-	// We reached the end without finding any difference
+	/* We reached the end without finding any difference */
 	return 0;
 }

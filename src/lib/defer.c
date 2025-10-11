@@ -12,6 +12,9 @@
  * can also safely call this on objects to iterate over the members, but
  * objects are never deferred.
  */
+#ifdef JSON_DEBUG_MEMORY
+# undef json_first
+#endif
 json_t *json_first(json_t *arr)
 {
 	/* If not an array, and not an element of an array (no "next") then
@@ -50,9 +53,9 @@ json_t *json_next(json_t *elem)
 		return elem->next; /* undeferred */
 
 	/* Call the ->next function */
-	result =  (*((jsondef_t *)(elem->next))->fns->next)(elem);
+	result = (*((jsondef_t *)(elem->next))->fns->next)(elem);
 	if (!result)
-		json_free(elem);
+		json_break(elem);
 	return result;
 }
 
@@ -61,11 +64,22 @@ json_t *json_next(json_t *elem)
  */
 void json_break(json_t *elem)
 {
+	jsondef_t *def;
+
 	/* If not deferred, do nothing */
 	if (!json_is_deferred_element(elem))
 		return;
 
-	/* Free it.  If it requires special freeing, do that first */
+	/* Free the JSON_DEFER node.  If it requires special freeing,
+	 * do that first.
+	 */
+	def = (jsondef_t *)elem->next; /* deferred */
+	if (def->fns->free)
+		(*def->fns->free)(elem);
+	free(def);
+	elem->next = NULL;
+
+	/* Free the element itself */
 	json_free(elem);
 }
 

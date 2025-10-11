@@ -38,19 +38,40 @@ void json_grid(json_t *json, jsonformat_t *format)
 	if (!isatty(fileno(format->fp))) /* Disable color if not a tty */
 		format->color = 0;
 
-	/* Collect statistics about the columns */
+	/* Collect statistics about the columns.  For deferred arrays,
+	 * we may want to limit the number of rows that we check.
+	 */
 	explain = NULL;
-	for (row = json_first(json); row; row = json_next(row))
-		explain = json_explain(explain, row, 0);
+	if (json_is_deferred_array(json)) {
+		/* Get the limit on explain rows to check for deferred arrays.
+		 * If >=1 then only scan those rows.
+		 */
+		int deferexplain = 0;
+		explain = json_by_key(json_config, "deferexplain");
+		if (explain && explain->type == JSON_NUMBER)
+			deferexplain = json_int(explain);
+		if (deferexplain > 0) {
+			/* Collect statistics about columns in the first few rows */
+			for (row = json_first(json);
+			     deferexplain > 0 && row;
+			     deferexplain--, row = json_next(row)) {
+				explain = json_explain(explain, row, 0);
+			}
+			json_break(row);
+		}
+	}
+	if (!explain) {
+		/* Collect column statistics across all rows */
+		for (row = json_first(json); row; row = json_next(row))
+			explain = json_explain(explain, row, 0);
+	}
 
 	/* Allocate arrays to hold padding tips. */
 	c = json_length(explain);
 	widths = (int *)calloc(c, sizeof(int));
 	pad = (int *)calloc(c, sizeof(int));
 
-	/* If any column's key is wider than their data, expand the column.
-	 * Also, output the column headings while we're at it.
-	 */
+	/* If any column's key is wider than their data, expand the column. */
 	rowheight = 1;
 	for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
 		/* For columns that can contain arrays or objects, make sure
@@ -224,9 +245,9 @@ void json_grid(json_t *json, jsonformat_t *format)
 						putc(' ', format->fp);
 				}
 
-				/* If a wide column heading dictates that we nned
-				 * extra padding, then output the second half of
-				 * that extra padding now.
+				/* If a wide column heading dictates that we
+				 * need extra padding, then output the second
+				 * half of that extra padding now.
 				 */
 				for (i = pad[c] - (pad[c] >> 1); i > 0; i--)
 					putc(' ', format->fp);

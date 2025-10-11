@@ -2154,8 +2154,24 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* Output the explain results, unless the parameter text was just "?" */
 	columns = NULL;
 	if (!cmd->var) {
-		for (table = json_first(table); table; table = json_next(table))
-			columns = json_explain(columns, table, 0);
+		/* If it is a deferred array, then we might want to check only
+		 * some of the rows.
+		 */
+		if (json_is_deferred_array(table)) {
+			int deferexplain = 0;
+			json_t *jc = json_by_key(json_config, "deferexplain");
+			if (jc && jc->type == JSON_NUMBER)
+				deferexplain = json_int(jc);
+			if (deferexplain >= 1) {
+				for (table = json_first(table); deferexplain > 0 && table; deferexplain--, table = json_next(table))
+					columns = json_explain(columns, table, 0);
+				json_break(table);
+			}
+		}
+		if (!columns) {
+			for (table = json_first(table); table; table = json_next(table))
+				columns = json_explain(columns, table, 0);
+		}
 		json_print(columns, NULL);
 	}
 

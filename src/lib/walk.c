@@ -53,9 +53,6 @@ int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data)
 	if (!json)
 		return 0;
 
-	/* If applied to a deferred array, convert it to undeferred */
-	json_undefer(json);
-
 	/* Call the function for this node */
 	quit = (*callback)(json, data);
 	if (quit != 0)

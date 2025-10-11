@@ -23,15 +23,16 @@ typedef struct jsonparser_s {
 	json_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
 } jsonparser_t;
 
+static json_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer);
 
 /******************************************************************************/
 /* This next section of code is all in support of deferred arrays.            */
 
 /* This is used to store the details of a deferred array */
 typedef struct {
-	jsondef_t *basic; /* normal stuff */
-	char	*start;	  /* position within that file where array starts */
-	char	*end;	  /* where it ends */
+	jsondef_t basic; /* normal stuff */
+	const char *start;/* position within that file where array starts */
+	const char *end;  /* where it ends */
 } jdefarray_t;
 
 /* Parse the first element of the array, and return it.  This also involves
@@ -39,7 +40,25 @@ typedef struct {
  */
 static json_t *jdefarray_first(json_t *array)
 {
-	return NULL;
+	/* Parse the first element.  Deferred arrays always have at least one
+	 * element.
+	 */
+	jdefarray_t *def = (jdefarray_t *)array->first;
+	jdefarray_t *nextdef;
+	const char *next;
+	json_t *elem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
+
+	/* Make its "->next" point to a copy of "def" with its "->start"
+	 * pointing to the next element's position in the data source code.
+	 */
+	elem->next = json_defer(def->basic.fns);
+	nextdef = (jdefarray_t *)elem->next;
+	nextdef->basic.fns = def->basic.fns;
+	nextdef->start = next;
+	nextdef->end = def->end;
+
+	/* Return the element. */
+	return elem;
 }
 
 /* Parse the next element of the array and return it.  This also frees the
@@ -48,13 +67,41 @@ static json_t *jdefarray_first(json_t *array)
  */
 static json_t *jdefarray_next(json_t *elem)
 {
-	return NULL;
+	jdefarray_t *def = (jdefarray_t *)elem->first;
+	const char *next;
+
+	/* Free the previous element, but not its ->first */
+	elem->first = NULL;
+	json_free(elem);
+
+	/* Parse the next element.  If none, then return NULL and trust the
+	 * json_next() function (which calls this) to do the cleanup.
+	 */
+	json_t *nextelem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
+	if (!nextelem)
+		return NULL;
+
+	/* Reuse the "def" with the next element, tweaking its "start" to point
+	 * to the next next element.
+	 */
+	nextelem->next = (json_t *)def;
+	def->start = next;
+	return nextelem;
 }
 
 /* Test whether the current element is the last element. */
 static int jdefarray_islast(const json_t *elem)
 {
-	return 0;
+	jdefarray_t *def = (jdefarray_t *)elem->first;
+	const char *skip;
+
+	/* "start" points to the next element's source code. Skip over
+	 * whitespace and commas, and then check whether we hit a "]".
+	 *
+	 */
+	for (skip = def->start; *skip == ',' || isspace(*skip); skip++) {
+	}
+	return *skip == ']';
 }
 
 static jsondeffns_t jdefarrayfns = {
@@ -231,7 +278,7 @@ const char *jskim(const char *str, const char *end, int *refcount, int *reftable
 /* Parse an in-memory JSON document.  This could be a string, or an mmap()ed
  * file.
  */
-static json_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr)
+static json_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
 {
 	json_t *stack[100];
 	int	sp;
@@ -409,17 +456,30 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 		case '[':
 			/* Start of an array  -- maybe deferred? */
 			jc = json_array();
-			if (defersize > 0 && (end - str) >= defersize) {
+			if (allowdefer && defersize > 0 && (end - str) >= defersize) {
 				/* Find the end of the array */
 				int count, istable;
 				const char *endarray = jskim(str, end, &count, &istable);
 				/* Is it big enough to be worth deferring? */
 				if ((endarray - str) >= defersize) {
 					/* Yes, defer it */
-					/*!!!*/
+					jdefarray_t *def;
+					jc->text[1] = istable ? 't' : 'n';
+					JSON_ARRAY_LENGTH(jc) = count;
+					jc->first = json_defer(&jdefarrayfns);
+					def = (jdefarray_t *)jc->first;
+					def->start = str + 1;
+					def->end = endarray;
+					def->basic.file = json_file_containing(str, NULL);
+					if (def->basic.file)
+						def->basic.file->refs++;
+
+					/* Move past the array.  "- 1" because
+					 * of the "str++" before "break".
+					 */
+					str = endarray - 1;
 				}
 			}
-
 			str++;
 			break;
 
@@ -522,9 +582,10 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 			}
 
 			/* If it's a new array or object, push it onto the stack
-			 * so we can start to accumulate its members/elements
+			 * so we can start to accumulate its members/elements.
+			 * Except if deferred array.
 			 */
-			if (jc->type == JSON_ARRAY || jc->type == JSON_OBJECT)
+			if ((jc->type == JSON_ARRAY && !json_is_deferred_array(jc)) || jc->type == JSON_OBJECT)
 				stack[++sp] = jc;
 		}
 
@@ -532,6 +593,8 @@ static json_t *parseJSON(const char *str, size_t len, const char **refend, const
 	}
 
 	/* Return the thing in the arraybuf */
+	if (refend)
+		*refend = str;
 	return arraybuf.first;
 
 BadSymbol:
@@ -574,7 +637,7 @@ static json_t *parse(const char *str, size_t len, const char **refend, const cha
 	}
 
 	/* Otherwise, fall back on the JSON parser */
-	return parseJSON(str, len, refend, referr);
+	return parseJSON(str, len, refend, referr, 1);
 }
 
 

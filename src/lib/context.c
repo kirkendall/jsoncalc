@@ -462,7 +462,7 @@ json_t *json_context_file(jsoncontext_t *context, const char *filename, int writ
 		return NULL;
 
 	/* Locate the "files" array within "global" */
-	files = json_by_expr(globals->data, "global.files", NULL);
+	files = json_by_expr(globals->data, "global.files", NULL); /* undeferred */
 	if (!files)
 		return NULL;
 

@@ -88,6 +88,9 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	if (!table || (!json_is_table(table) && table->type != JSON_OBJECT))
 		return json_array();
 
+	/* This won't work for deferred arrays */
+	json_undefer(table);
+
 	/* We want to treat the nest list as linked list of JSON_STRINGs.
 	 * Probably it comes to us as a JSON_ARRAY though; skip to the start
 	 * of the first element of the array.  Skip any non-strings.  If we
@@ -111,8 +114,8 @@ json_t *json_unroll(json_t *table, json_t *nestlist)
 	/* For each element of the table... */
 	for (table = json_first(table); table; table = json_next(table)) {
 		/* Fetch the unrolled nested variable */
-		value = json_by_expr(table, nestlist->text, NULL);
-		nested = json_unroll(value, nestlist->next); /* undeferred */
+		value = json_by_expr(table, nestlist->text, NULL); /* undeferred */
+		nested = json_unroll(value, nestlist->next);
 
 		/* If nested is empty, either skip it or stuff an empty object
 		 * into it.

@@ -110,8 +110,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 			/* If we didn't finish scanning a deferred array, then
 			 * we may need to do extra cleanup.
 			 */
-			if (scan)
-				json_break(scan);
+			json_break(scan);
                         if (indent > 0)
                                 fprintf(format->fp, "%*s", indent, "");
                 } else {
@@ -261,9 +260,9 @@ void json_print_table_hook(char *name, void (*fn)(json_t *json, jsonformat_t *fo
 	tablefmts = t;
 
 	/* Also add it to the list of preferred values for config "table". */
-	list = json_by_expr(json_config, "interactive.\"table-list\"", NULL);
+	list = json_by_expr(json_config, "interactive.\"table-list\"", NULL);/* undeferred */
 	json_append(list, json_string(name, -1));
-	list = json_by_expr(json_config, "batch.\"table-list\"", NULL);
+	list = json_by_expr(json_config, "batch.\"table-list\"", NULL);/* undeferred */
 	json_append(list, json_string(name, -1));
 }
 

@@ -669,7 +669,12 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 			USE_RIGHT_OPERAND(calc);
 			if (left->type == JSON_OBJECT && right->type == JSON_STRING)
 				result = json_by_key(left, right->text);
-			else if (left->type == JSON_ARRAY && right->type == JSON_NUMBER)
+			else if (left->type == JSON_OBJECT) {
+				/* convert to a string, use it as the key */
+				str = json_serialize(right, NULL);
+				result = json_by_key(left, str);
+				free(str);
+			} else if (left->type == JSON_ARRAY && right->type == JSON_NUMBER)
 				result = json_by_index(left, json_int(right));
 			else if (left->type == JSON_STRING && right->type == JSON_NUMBER) {
 				size_t len = strlen(left->text);

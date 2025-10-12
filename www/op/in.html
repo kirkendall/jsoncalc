@@ -11,8 +11,10 @@
     <h1>IN operator</h1>
     <table class="opList">
       <tr><td class="left">expr</td><td class="op">IN</td><td class="right">arr</td><td class="opdesc">Test whether an array contains a value</td></tr>
+      <tr><td class="left">expr</td><td class="op">NOT IN</td><td class="right">arr</td><td class="opdesc">Test whether an array does not contain a value</td></tr>
     </table>
-    Test whether the <var>expr</var> value appears in the <var>arr</var> array.
+    These test whether the <var>expr</var> value appears in the <var>arr</var>
+    array.
     The <var>expr</var> may be of any type, even objects or arrays.
     If <var>expr</var> is a string, it will be compared case-insensitively.
     Otherwise, comparisions will be strict like the
@@ -32,6 +34,13 @@
 	<kbd>4 in [1,2,4,8]</kbd>
 	<samp>true</samp>
         A simple numeric test.
+      </div>
+
+      <div class="example">
+	<kbd>5 in [1,2,4,8]</kbd>
+	<samp>false</samp>
+        Another simple test.
+        <tt>NOT IN</tt> is the opposite of <tt>IN</tt>.
       </div>
 
       <div class="example">

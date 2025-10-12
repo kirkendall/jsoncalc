@@ -10,16 +10,17 @@
   <body>
     <h1>The find operator</h1>
     <table class="opList">
-      <tr><td class="left">array<br/>object</td><td class="op">@</td><td class="right">boolean</td><td class="opdesc">Search for data satisfying an expression</td></tr>
+      <tr><td class="left">array<br/>object</td><td class="op">@</td><td class="right">boolean</td><td class="opdesc">Deep search via an expression</td></tr>
     </table>
     This searches through the left operand for data that makes the right
     operand true, and returns a table of the matches that it found.
     <p>
     The left operand will generally be an array or object.
     The operator "walks" through the data structure, reevaluating the right
-    operand for each object or array.
-    If it returns <tt>true</tt> then an entry is added to the response table
-    describing its location, and any nested objects/arrays are skipped over.
+    operand for each object or array within it.
+    If it evaluates to <tt>true</tt> then an entry is added to the response
+    table describing its location,
+    and any nested objects/arrays are skipped over.
     <p>
     The format of the response table is the same as for the
     <a target="_PARENT" href="../index.html?f=find">find()</a> function.

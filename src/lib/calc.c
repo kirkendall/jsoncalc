@@ -1494,6 +1494,7 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		break;
 
 	  case JSONOP_IN:
+	  case JSONOP_NOTIN:
 		USE_LEFT_OPERAND(calc);
 		USE_RIGHT_OPERAND(calc);
 
@@ -1533,7 +1534,10 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 						break;
 				}
 			}
-			result = json_boolean(scan != NULL);
+			if (calc->op == JSONOP_IN)
+				result = json_boolean(scan != NULL);
+			else
+				result = json_boolean(scan == NULL);
 
 			/* Just in case right is a deferred array, and we ended
 			 * the scan prematurely...

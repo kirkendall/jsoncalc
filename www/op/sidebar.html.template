@@ -5,9 +5,12 @@
   </head>
   <body>
     <h3>JsonCalc Operators</h3>
+
     <div class="sidebar">
       @@@
     </div>
+    <em>Assignment is listed under</em>
+    <a target="_PARENT" href="../index.html?cmd=assign">commands</a>.
   </body>
   <script>
     // If passed an operator page name, try to find it and highlight it.

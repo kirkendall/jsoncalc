@@ -65,9 +65,9 @@ typedef struct jsonselect_s {
 
 
 /* This table defines the relationship between text and the jsonop_t symbols.
- * It also includes precedence and quirks to help the parser.  As shown here,
- * the items are grouped by how they're related, but the lex() function sorts
- * them by op so you can use operators[jc->op] to find information about jc.
+ * It also includes precedence and quirks to help the parser.  The items are
+ * indexed by jsonop_t, so you can use operators[jc->op] to find information
+ * about jc.
  */
 static struct {
 	char symbol[11];/* Derived form the JSONOP_xxxx enumerated value */
@@ -135,6 +135,7 @@ static struct {
 	{"NESTRICT",	"!==",	180,	0,	JCOP_INFIX},
 	{"NJOIN",	"#=",	117,	0,	JCOP_INFIX},
 	{"NOT",		"!",	240,	0,	JCOP_PREFIX},
+	{"NOTIN",	"IN",	175,	0,	JCOP_INFIX},
 	{"NOTLIKE",	"NLK",	180,	0,	JCOP_INFIX},
 	{"NULL",	"NUL",	-1,	0,	JCOP_OTHER},
 	{"NUMBER",	"NUM",	-1,	0,	JCOP_OTHER},
@@ -279,6 +280,7 @@ void json_calc_dump(jsoncalc_t *calc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTIN:
 	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
@@ -626,7 +628,10 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 			token->op = JSONOP_NOTLIKE;
 		} else if (token->len == 2 && !strncasecmp(token->full, "in", 2))
 			token->op = JSONOP_IN;
-		else if (token->len == 3 && !strncasecmp(token->full, "and", 3))
+		else if (token->len == 3 && !strncasecmp(token->full, "not in", 6)) {
+			token->len = 6;
+			token->op = JSONOP_NOTIN;
+		} else if (token->len == 3 && !strncasecmp(token->full, "and", 3))
 			token->op = JSONOP_AND;
 		else if (token->len == 2 && !strncasecmp(token->full, "or", 2))
 			token->op = JSONOP_OR;
@@ -1013,6 +1018,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTIN:
 	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
@@ -1214,6 +1220,7 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTIN:
 	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
@@ -1449,7 +1456,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
  *   :  JSONOP_COLON or JSONOP_MAYBEMEMBER
  *   &  JSONOP_AND
  *   b  JSONOP_BETWEEN
- *   i  JSONOP_IN
+ *   i  JSONOP_IN or JSONOP_NOTIN
  *   N  JSONOP_ISNULL or JSONOP_ISNOTNULL
  *   l  Literal
  *   n  Name or string literal
@@ -1533,8 +1540,8 @@ static int pattern_single(jsoncalc_t *jc, char pchar)
 			return FALSE;
 		break;
 
-	  case 'i': /* JSONOP_IN */
-		if (jc->op != JSONOP_IN)
+	  case 'i': /* JSONOP_IN or JSONOP_NOTIN */
+		if (jc->op != JSONOP_IN && jc->op != JSONOP_NOTIN)
 			return FALSE;
 		break;
 
@@ -2305,6 +2312,7 @@ static int parsecolon(jsoncalc_t *jc)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTIN:
 	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:
@@ -2417,6 +2425,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_ICEQ:
 	  case JSONOP_ICNE:
 	  case JSONOP_LIKE:
+	  case JSONOP_NOTIN:
 	  case JSONOP_NOTLIKE:
 	  case JSONOP_IN:
 	  case JSONOP_EQSTRICT:

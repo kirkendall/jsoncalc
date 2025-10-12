@@ -47,9 +47,9 @@ void json_grid(json_t *json, jsonformat_t *format)
 		 * If >=1 then only scan those rows.
 		 */
 		int deferexplain = 0;
-		explain = json_by_key(json_config, "deferexplain");
-		if (explain && explain->type == JSON_NUMBER)
-			deferexplain = json_int(explain);
+		json_t *jdef = json_by_key(json_config, "deferexplain");
+		if (jdef && jdef->type == JSON_NUMBER)
+			deferexplain = json_int(jdef);
 		if (deferexplain > 0) {
 			/* Collect statistics about columns in the first few rows */
 			for (row = json_first(json);

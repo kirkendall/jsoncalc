@@ -50,6 +50,8 @@ static json_t *jdefarray_first(json_t *array)
 
 	/* Make its "->next" point to a copy of "def" with its "->start"
 	 * pointing to the next element's position in the data source code.
+	 * Note that we don't copy basic.file because files' ref counts are
+	 * maintained per deferred array, not per deferred element.
 	 */
 	elem->next = json_defer(def->basic.fns);
 	nextdef = (jdefarray_t *)elem->next;
@@ -67,12 +69,8 @@ static json_t *jdefarray_first(json_t *array)
  */
 static json_t *jdefarray_next(json_t *elem)
 {
-	jdefarray_t *def = (jdefarray_t *)elem->first;
+	jdefarray_t *def = (jdefarray_t *)elem->next;
 	const char *next;
-
-	/* Free the previous element, but not its ->first */
-	elem->first = NULL;
-	json_free(elem);
 
 	/* Parse the next element.  If none, then return NULL and trust the
 	 * json_next() function (which calls this) to do the cleanup.
@@ -86,6 +84,11 @@ static json_t *jdefarray_next(json_t *elem)
 	 */
 	nextelem->next = (json_t *)def;
 	def->start = next;
+
+	/* Free the previous element, but not its ->next */
+	elem->next = NULL;
+	json_free(elem);
+
 	return nextelem;
 }
 

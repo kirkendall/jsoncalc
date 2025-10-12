@@ -106,6 +106,7 @@ static struct {
 	{"ENVIRON",	"$",	169,	0,	JCOP_OTHER},
 	{"EQ",		"==",	180,	0,	JCOP_INFIX},
 	{"EQSTRICT",	"===",	180,	0,	JCOP_INFIX},
+	{"FIND",	"@",	116,	0,	JCOP_INFIX},
 	{"FNCALL",	"F",	170,	0,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	0,	JCOP_OTHER},
 	{"GE",		">=",	190,	0,	JCOP_INFIX},
@@ -241,6 +242,7 @@ void json_calc_dump(jsoncalc_t *calc)
 
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
+	  case JSONOP_FIND:
 	  case JSONOP_NJOIN:
 	  case JSONOP_LJOIN:
 	  case JSONOP_RJOIN:
@@ -983,6 +985,7 @@ void json_calc_free(jsoncalc_t *jc)
 	  case JSONOP_AS:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
+	  case JSONOP_FIND:
 	  case JSONOP_NJOIN:
 	  case JSONOP_LJOIN:
 	  case JSONOP_RJOIN:
@@ -1222,6 +1225,7 @@ static int jcisag(jsoncalc_t *jc)
 	  case JSONOP_MAYBEASSIGN:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
+	  case JSONOP_FIND:
 	  case JSONOP_VALUES:
 		return jcisag(jc->LEFT) || jcisag(jc->RIGHT);
 
@@ -2314,6 +2318,7 @@ static int parsecolon(jsoncalc_t *jc)
 	  case JSONOP_VALUES:
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
+	  case JSONOP_FIND:
 		return parsecolon(jc->LEFT) || parsecolon(jc->RIGHT);
 
 	  case JSONOP_FNCALL:
@@ -2423,6 +2428,7 @@ static jsoncalc_t *parseag(jsoncalc_t *jc, jsonag_t *ag)
 	  case JSONOP_APPEND:
 	  case JSONOP_MAYBEASSIGN:
 	  case JSONOP_VALUES:
+	  case JSONOP_FIND:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, ag);
 		break;

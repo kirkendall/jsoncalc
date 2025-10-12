@@ -13,6 +13,8 @@
 typedef struct {
 	json_t	*needle;	/* String or number to search for */
 	regex_t *regex;		/* Regular expression to search for */
+	jsoncalc_t *calc;	/* Expression to search for (RHS of @ operator) */
+	jsoncontext_t *context;	/* Context of the "calc" expression */
 	char	*needkey;	/* If not NULL, key must match this */
 	int	needint;	/* Integer to search for */
 	double	needdouble;	/* Double to search for */
@@ -71,10 +73,22 @@ static void help_find_row(jsonfind_t *find, json_t *node)
 static void help_find(json_t *haystack, jsonfind_t *find)
 {
 	json_t	*scan;
-	int	wasused, wasindex, i;
+	int	wasused, wasindex, i, match;
 	char	*waskey;
 	char	indexstr[40];
 
+	/* If given a "calc" test and it matches, then add it to the result
+	 * but DON'T continue to scan its contents for additional matches.
+	 */
+	if (find->calc) {
+		json_t *test = json_calc(find->calc, find->context, NULL);
+		match = json_is_true(test);
+		json_free(test);
+		if (match) {
+			help_find_row(find, haystack);
+			return;
+		}
+	}
 	/* Arrays and objects are treated a bit differently */
 	if (haystack->type == JSON_ARRAY) {
 		/* For each element... */
@@ -88,13 +102,20 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				wasindex = find->index;
 				if (find->index == -1)
 					find->index = i;
+				if (find->context)
+					find->context = json_context(find->context, scan, JSON_CONTEXT_NOFREE|JSON_CONTEXT_THIS);
 
 				/* Recurse */
 				help_find(scan, find);
 
 				/* Restore expr */
+				if (find->context)
+					find->context = json_context_free(find->context);
 				find->used = wasused;
 				find->index = wasindex;
+				continue;
+			} else if (find->calc) {
+				/* Already did the calc test */
 				continue;
 			} else if (find->needkey && (!find->key || 0 != json_mbs_casecmp(find->needkey, find->key) )) {
 				/* Wrong key.  The only reason we're scanning
@@ -179,6 +200,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				 */
 				if (!find->needle
 				 && !find->regex
+				 && !find->calc
 				 && (!find->needkey || !json_mbs_casecmp(find->needkey, scan->text)))
 					help_find_row(find, scan->first);
 
@@ -187,13 +209,20 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				 */
 				waskey = find->key;
 				find->key = scan->text;
+				if (find->context)
+					find->context = json_context(find->context, scan, JSON_CONTEXT_NOFREE|JSON_CONTEXT_THIS);
 
 				/* Recurse */
 				help_find(scan->first, find);
 
 				/* Restore expr */
+				if (find->context)
+					find->context = json_context_free(find->context);
 				find->key = waskey;
 				find->used = wasused;
+				continue;
+			} else if (find->calc) {
+				/* We already checked */
 				continue;
 			} else if (find->needkey && 0 != json_mbs_casecmp(find->needkey, scan->text)) {
 				/* Wrong key */
@@ -212,7 +241,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 				regmatch_t matches[10];
 				if (regexec(find->regex, scan->first->text, 10, matches, 0) != 0)
 					continue;
-			} else if (scan->first->type == JSON_NUMBER && find->needle->type == JSON_NUMBER) {
+			} else if (scan->first->type == JSON_NUMBER && find->needle && find->needle->type == JSON_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
@@ -226,7 +255,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
 						continue;
 				}
 
-			} else if (!find->needle && !find->regex) {
+			} else if (!find->needle && !find->regex && !find->calc) {
 				/* any value matches */
 			} else {
 				/* it can't be what we're looking for */
@@ -270,7 +299,7 @@ static void help_find(json_t *haystack, jsonfind_t *find)
  * If no matches are found, an empty array is returned.  Parameter errors cause
  * a "null" json_t to be returned containing an error message.
  */
-static json_t *find(json_t *haystack, json_t *needle, int ignorecase, regex_t *regex, char *needkey)
+static json_t *find(json_t *haystack, json_t *needle, int ignorecase, regex_t *regex, char *needkey, jsoncalc_t *calc, jsoncontext_t *context)
 {
 	jsonfind_t find;
 
@@ -286,6 +315,8 @@ static json_t *find(json_t *haystack, json_t *needle, int ignorecase, regex_t *r
 	find.regex = regex;
 	find.needkey = needkey;
 	find.ignorecase = ignorecase;
+	find.calc = calc;
+	find.context = context;
 	find.index = -1;
 	find.key = NULL;
 	find.size = 100;
@@ -325,11 +356,16 @@ static json_t *find(json_t *haystack, json_t *needle, int ignorecase, regex_t *r
 /* Do a deep search for a value */
 json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey)
 {
-	return find(haystack, needle, ignorecase, NULL, needkey);
+	return find(haystack, needle, ignorecase, NULL, needkey, NULL, NULL);
 }
 
 /* Do a deep search for a regular expression */
 json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey)
 {
-	return find(haystack, NULL, 0, regex, needkey);
+	return find(haystack, NULL, 0, regex, needkey, NULL, NULL);
+}
+
+json_t *json_find_calc(json_t *haystack, jsoncalc_t *calc, jsoncontext_t *context)
+{
+	return find(haystack, NULL, 0, NULL, NULL, calc, context);
 }

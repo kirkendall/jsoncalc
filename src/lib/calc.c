@@ -809,6 +809,17 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 		}
 		break;
 
+	  case JSONOP_FIND:
+		/* Evaluate the left operand.  Then pass that result and the
+		 * right operand to json_find_calc() to build the result table.
+		 */
+		USE_LEFT_OPERAND(calc);
+		if (json_is_null(left))
+			result = left;
+		else
+			result = json_find_calc(left, calc->RIGHT, context);
+		break;
+
 	  case JSONOP_EACH:
 	  case JSONOP_GROUP:
 		/* Evaluate the left operand.  If null then return an empty

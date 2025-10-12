@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Category of operators</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc - Category of operators">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, op">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>The find operator</h1>
+    <table class="opList">
+      <tr><td class="left">array<br/>object</td><td class="op">@</td><td class="right">boolean</td><td class="opdesc">Search for data satisfying an expression</td></tr>
+    </table>
+    This searches through the left operand for data that makes the right
+    operand true, and returns a table of the matches that it found.
+    <p>
+    The left operand will generally be an array or object.
+    The operator "walks" through the data structure, reevaluating the right
+    operand for each object or array.
+    If it returns <tt>true</tt> then an entry is added to the response table
+    describing its location, and any nested objects/arrays are skipped over.
+    <p>
+    The format of the response table is the same as for the
+    <a target="_PARENT" href="../index.html?f=find">find()</a> function.
+    Its columns are:
+      <table class="referencelist">
+        <tr><th>index</th><td>
+          This is the the array subscript where it was found.
+          If there are nested arrays, this will be the index into the outermost
+          array.
+          If there are no arrays then this member will be omitted.
+        </td></tr>
+
+        <tr><th>key</th><td>
+          If an object member's value is a match, then this will be the
+          key (name) of that member.
+          If the match is an array element, but the array is the value of an
+          object's member, then that member's key (i.e., the array's name)
+          is used here.
+          As usual in JsonCalc, the member name comparison is case-insensitive.
+          If there are no objects then this will be omitted.
+        </td></tr>
+
+        <tr><th>value</th><td>
+          This is a copy of the matching value.
+          For the <tt>@</tt> operator this will generally be an object or array.
+        </td></tr>
+
+        <tr><th>expr</th><td>
+          This is a string that looks like a JsonCalc (or JavaScript)
+          expression for reaching the match.
+          It is relative to the left operand's value, so you'd want to
+          append this string to that expression's source code to find
+          the data.
+        </td></tr>
+
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>[{a:1},{a:2.5},{a:3}] @ a != round(a)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>index</th><th>value</th><th>expr</th></tr>
+	    <tr><td>1</td><td>{object}</td><td>[1]</td></tr>
+	  </table>
+	</samp>
+        The left operand is a simple table.
+        The right operand tests whether the value of "a" is an integer.
+        The result lists one place it found a non-integer "a".
+        Since no nested objects were encountered,
+        this match has no "key" column.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The "value" column will usually just show "{object}", "{array}"
+            or "{table}".
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <a target="_PARENT" href="../index.html?f=find">find()</a> - function for ding values.
+    </details>
+
+  </body>
+</html>

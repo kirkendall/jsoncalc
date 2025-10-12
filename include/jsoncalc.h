@@ -189,6 +189,7 @@ typedef enum {
 	JSONOP_ENVIRON,
 	JSONOP_EQ,
 	JSONOP_EQSTRICT,
+	JSONOP_FIND,
 	JSONOP_FNCALL,
 	JSONOP_FROM,
 	JSONOP_GE,
@@ -354,6 +355,7 @@ extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char 
 #ifdef REG_ICASE /* skip this if <regex.h> not included */
 extern json_t *json_find_regex(json_t *haystack, regex_t *regex, char *needkey);
 #endif
+extern json_t *json_find_calc(json_t *haystack, jsoncalc_t *calc, jsoncontext_t *context);
 extern char *json_default_text(char *newdefault);
 extern char *json_text(json_t *json);
 extern double json_double(json_t *json);

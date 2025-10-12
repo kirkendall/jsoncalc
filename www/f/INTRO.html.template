@@ -93,7 +93,7 @@
 
     <details>
       <summary>Aggregate functions accumulate results across rows of a table.</summary>
-      This is usually employed via the @ or @@ operators, or an SQL SELECT statement.
+      This is usually employed via the # or ## operators, or an SQL SELECT statement.
       You can also apply them to an array directly.
     </details>
 

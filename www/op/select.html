@@ -43,7 +43,7 @@
     This can be any expression that returns a table,
     even another <tt>SELECT</tt> clause
     or the natural join of two or more tables via the
-    <a target="_PARENT" href="../index.html?op=join">@=</a> operator.
+    <a target="_PARENT" href="../index.html?op=join">#=</a> operator.
     The expression that returns the table may also be followed by a
     comma-delimited list of names of nested tables to expand via the
     <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> function.
@@ -150,7 +150,7 @@
             functions and operators. An expression such as
             <span style="white-space:nowrap">"<tt>SELECT a AS aPrime, b FROM table WHERE d>5 GROUP BY e, f ORDER BY aPrime</tt>"</span>
             would become
-            <span style="white-space:nowrap">"<tt>((table@d&gt;5).groupBy(["e","f"]) @  {aPrime:a, b}).orderBy("aPrime")</tt>".</span>
+            <span style="white-space:nowrap">"<tt>((table#d&gt;5).groupBy(["e","f"]) #  {aPrime:a, b}).orderBy("aPrime")</tt>".</span>
 
 	<li>In the <tt>FROM</tt> clause, the use of a comma to denote
 	    <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> is
@@ -192,7 +192,7 @@
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td><a target="_PARENT" href="../index.html?op=each">@, @@</a></td><td>Array filtering operators</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">#, ##</a></td><td>Array filtering operators</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=equal">=, &lt;&gt;</a></td><td>SQL-like case-insensitive equality operators</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=like">LIKE</a></td><td>LIKE pattern comparison operator</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=BETWEEN">BETWEEN</a></td><td>BETWEEN comparison operator</td></tr>

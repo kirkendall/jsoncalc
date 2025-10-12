@@ -134,7 +134,7 @@
     </div>
 
     <div class="example">
-      <kbd>test.scores.groupBy("run") @ {run, avg: avg(score)}</kbd>
+      <kbd>test.scores.groupBy("run") # {run, avg: avg(score)}</kbd>
       <samp>
 	<table>
 	  <tr><th>run</th><th>avg</th></tr>
@@ -145,11 +145,11 @@
       </samp>
       Internally, the SELECT operator is converted into a set of "native"
       operators and functions.
-      The <a target="_PARENT" href="index.html?op=each">@</a> operator
+      The <a target="_PARENT" href="index.html?op=each">#</a> operator
       takes an array as its left operand;
       processes each element of the array via the expression on the right;
       and collects the results in a new array.
-      <tt>@</tt> also knows about grouping, and accumulates a separate
+      <tt>#</tt> also knows about grouping, and accumulates a separate
       <tt>avg(score)</tt> for each group, and then returns only one
       element per group.
       Thus, we end up with an array of 3 objects, where each object has
@@ -159,7 +159,7 @@
     <p>
     These are just one-liners.  Nothing fancy or too complicated.
     The big takeaway is: JsonCalc expressions are a lot like JavaScript,
-    with a bit of SQL and a not-all-that-magical <tt>@</tt> operator.
+    with a bit of SQL and a not-all-that-magical <tt>#</tt> operator.
 
     <h2>How can JsonCalc help process downloads?</h2>
 
@@ -305,7 +305,7 @@ name=Mary run=3 score=40
     than JsonCalc, and it wouldn't interface well with shell scripts, or
     support plugins, or autoload data from directories, or have SQL-like
     features or the
-    <a target="_PARENT" href="index.html?op=each">@</a> operator.
+    <a target="_PARENT" href="index.html?op=each">#</a> operator.
     <p>
     The internal representation of JSON data is likely to be around 5 times
     larger than the JSON text that it comes from.  It could be anywhere from

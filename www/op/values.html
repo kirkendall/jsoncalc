@@ -67,7 +67,7 @@
 
         <li>The <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> function can do similar things.
             Usually <tt>VALUES</tt> is simpler, but combining <tt>objectAgg()</tt>
-            with the <a target="_PARENT" href="../index.html?op=each">@</a> operator
+            with the <a target="_PARENT" href="../index.html?op=each">#</a> operator
             can be more flexible.
 
 	<li>This operator is meant to resemble
@@ -94,8 +94,8 @@
 	    aggregate function.
 	    <div class="example">
 	      <kbd>var csvdata = [[1,2],[3,4,5],[6,7,8,9]];</kbd>
-	      <kbd>var widest = ([csvdata]@max(this.length))[0];</kbd>
-	      <kbd>var headers = 1 ... widest @ rowNumber("A");</kbd>
+	      <kbd>var widest = ([csvdata] # max(this.length))[0];</kbd>
+	      <kbd>var headers = 1 ... widest # rowNumber("A");</kbd>
 	      <kbd>headers</kbd>
 	      <samp>["A","B","C","D"]</samp>
 	      <kbd>headers values csvdata</kbd>

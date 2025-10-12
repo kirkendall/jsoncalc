@@ -19,8 +19,10 @@
       When applied to a table (array of objects), it converts each one separately,
       resulting in an array of arrays of <tt>{key,value}</tt> objects.
       This two-layer structure is similar to how the
-      <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function represents groups, and the
-      @ operator knows how to deal with groups.
+      <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function
+      represents groups, and the
+      <a target="_PARENT" href="../index.html?op=each">#</a> operator
+      knows how to deal with groups.
       Combine that with the <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> aggregate function
       and you have a versatile way to bulk-adjust tables.
     </dl>
@@ -41,17 +43,17 @@
       </div>
 
       <div class="example">
-        <kbd>({"r":1,"a":2,"n":3,"d":4,"o":5,"m":6}.keysValues().orderBy("key")@objectAgg(key,value))[0]</kbd>
+        <kbd>({"r":1,"a":2,"n":3,"d":4,"o":5,"m":6}.keysValues().orderBy("key") # objectAgg(key,value))[0]</kbd>
         <samp>{"a":2,"d":4,"m":6,"n":3,"o":4,"r":1}</samp>
         Here we're sorting the members of an object by their keys (names).
         The "[0]" is there because
-        <a target="_PARENT" href="../index.html?op=each">@</a>
+        <a target="_PARENT" href="../index.html?op=each">#</a>
         returns an array of <tt>objectAgg()</tt> results which are all the same.
         We just want one copy of that.
       </div>
 
       <div class="example">
-	<kbd>test.scores.keysValues() @ objectAgg(key.toMixedCase(), value)</kbd>
+	<kbd>test.scores.keysValues() # objectAgg(key.toMixedCase(), value)</kbd>
 	<samp>
 	  <table>
 	    <tr><th>Name</th><th>Run</th><th>Score</th></tr>

@@ -477,8 +477,8 @@ extensions are:</p>
 <td width="85%">
 
 
-<p><i>array</i><b>@</b><i>filter</i> and
-<i>array</i><b>@@</b><i>filter</i> operators to transform
+<p><i>array</i><b>#</b><i>filter</i> and
+<i>array</i><b>##</b><i>filter</i> operators to transform
 arrays.</p> </td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
@@ -490,14 +490,14 @@ arrays.</p> </td></tr>
 <td width="85%">
 
 
-<p>A <i>table</i><b>@=</b><i>table,
-table</i><b>@&lt;</b><i>table</i> and
-<i>table</i><b>@&gt;</b><i>table</i></p> </td></tr>
+<p>A <i>table</i><b>#=</b><i>table,
+table</i><b>#&lt;</b><i>table</i> and
+<i>table</i><b>#&gt;</b><i>table</i></p> </td></tr>
 </table>
 
 <p style="margin-left:15%; margin-top: 1em">database join
-operators. <b>@=</b> is natural join, <b>@&lt;</b> is left
-natural join, and <b>@&gt;</b> is right natural join. A
+operators. <b>#=</b> is natural join, <b>#&lt;</b> is left
+natural join, and <b>#&gt;</b> is right natural join. A
 table is simply an array of objects.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
@@ -673,10 +673,10 @@ calculator.</p> </td></tr>
 <p>Output an array of integers from 1 to 10.</p></td></tr>
 </table>
 
-<p style="margin-left:11%;">1...10@{n:this,"n^2":this*this}</p>
+<p style="margin-left:11%;">1...10#{n:this,"n^2":this*this}</p>
 
 <p style="margin-left:22%;">For each element of the array,
-construct an object. The @ operator loops over the elements
+construct an object. The # operator loops over the elements
 from the left operand (an array) and applies the right
 operand (an expression) to them with &quot;this&quot; set to
 the array element&rsquo;s value. The {...} notation is an
@@ -725,24 +725,24 @@ should look pretty.</p>
 <p style="margin-left:22%;">Output the same table, but
 sorted by name and run.</p>
 
-<p style="margin-left:11%;">test.scores@run==1</p>
+<p style="margin-left:11%;">test.scores#run==1</p>
 
 <p style="margin-left:22%;">Only output rows for run 1. The
-@ and @@ operators take an array as the left operand and an
+# and ## operators take an array as the left operand and an
 expression on the right to filter the array. If the
 expression returns a boolean value, then the element is
 omitted or kept.</p>
 
-<p style="margin-left:11%;">test.scores@{run,score}</p>
+<p style="margin-left:11%;">test.scores#{run,score}</p>
 
 <p style="margin-left:22%;">Only output the &quot;run&quot;
 and &quot;score&quot; columns. If the right-hand operand of
-@ or @@ returns a value other than <b>null, true</b> or
+# or ## returns a value other than <b>null, true</b> or
 <b>false</b> then it is used instead of the array&rsquo;s
 element.</p>
 
 
-<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)@{run,avgScore:avg(score)}</p>
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)#{run,avgScore:avg(score)}</p>
 
 <p style="margin-left:22%;">This groups the records by
 score, and then computes the average score within each
@@ -750,10 +750,10 @@ group. <b>avg(</b><i>x</i><b>)</b> is an aggregate function,
 meaning it first accumulates data across all rows of the
 data (or all in the group, in this case) and goes back and
 makes the cumulative result available when evaluating each
-row. The @ operator only adds one row per group.</p>
+row. The # operator only adds one row per group.</p>
 
 
-<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;,&quot;total&quot;)@{run,avgScore:avg(score)}</p>
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;,&quot;total&quot;)#{run,avgScore:avg(score)}</p>
 
 <p style="margin-left:22%;">The difference here is,
 groupBy() is passed an extra parameter that causes an extra
@@ -770,16 +770,16 @@ translated to <b>jsoncalc</b>&rsquo;s native expression
 syntax so it&rsquo;s about as efficient either way.</p>
 
 
-<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)@@{run,avgScore:avg(score)}</p>
+<p style="margin-left:11%;">test.scores.groupBy(&quot;run&quot;)##{run,avgScore:avg(score)}</p>
 
-<p style="margin-left:22%;">The difference between @@ and @
-is that when groups are used, @ only outputs one value per
-group while @@ outputs one item per row. In this example, we
+<p style="margin-left:22%;">The difference between ## and #
+is that when groups are used, # only outputs one value per
+group while ## outputs one item per row. In this example, we
 get a separate copy of each row for each name, even though
 the name isn&rsquo;t included in the resulting rows.</p>
 
 
-<p style="margin-left:11%;">test.scores.orderBy(&quot;name&quot;).groupBy(&quot;name&quot;)@{name,avgScore:avg(score)}</p>
+<p style="margin-left:11%;">test.scores.orderBy(&quot;name&quot;).groupBy(&quot;name&quot;)#{name,avgScore:avg(score)}</p>
 
 <p style="margin-left:22%;">Compute the average score for
 each name. Note that groupBy() only compares adjacent items

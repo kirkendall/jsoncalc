@@ -4,19 +4,19 @@
     <title>Join operators</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
     <meta name="description" content="jsoncalc - Join operators">
-    <meta name="keywords" content="array, object, jsoncalc, operator reference, @=, @<, @>">
+    <meta name="keywords" content="array, object, jsoncalc, operator reference, #=, #<, #>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
     <h1>Join operators</h1>
     <table class="opList">
-      <tr><td class="left">table</td><td class="op">@=</td><td class="right">table</td><td class="opdesc">Natural join</td></tr>
-      <tr><td class="left">table</td><td class="op">@&lt;</td><td class="right">table</td><td class="opdesc">Left natural join</td></tr>
-      <tr><td class="left">table</td><td class="op">@&gt;</td><td class="right">table</td><td class="opdesc">Right natural join</td></tr>
+      <tr><td class="left">table</td><td class="op">#=</td><td class="right">table</td><td class="opdesc">Natural join</td></tr>
+      <tr><td class="left">table</td><td class="op">#&lt;</td><td class="right">table</td><td class="opdesc">Left natural join</td></tr>
+      <tr><td class="left">table</td><td class="op">#&gt;</td><td class="right">table</td><td class="opdesc">Right natural join</td></tr>
     </table>
     These operators allow you to combine two tables (arrays of objects) into one.
     <p>
-    The <tt>@=</tt> "natural join" operator tries to match every object
+    The <tt>#=</tt> "natural join" operator tries to match every object
     in the left operand against every object in the right operand.
     If there are no clashing members (i.e., members with the same name in
     both objects, but with different values), then a new object is added to the result
@@ -25,21 +25,21 @@
     The objects in the result array will contain only one copy of the shared
     members.
     <p>
-    The <tt>@&lt;</tt> "left natural join" is similar, but if there are any
+    The <tt>#&lt;</tt> "left natural join" is similar, but if there are any
     objects in the left operand which clash with all objects in the right
     operand, then the object from the left operand is added without any
     changes.
-    The result of <tt>@&lt;</tt> is always a superset of <tt>@=</tt> &mdash;
+    The result of <tt>#&lt;</tt> is always a superset of <tt>#=</tt> &mdash;
     it's kind of a "natural join plus any leftovers from the left operand".
     <p>
-    The <tt>@&gt;</tt> "right natural join" does the same, except it keeps
+    The <tt>#&gt;</tt> "right natural join" does the same, except it keeps
     unmatched records from the right operand instead.
 
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>[{a:1},{a:2},{a:3}] @= [{b:1},{b:2}]</kbd>
+	<kbd>[{a:1},{a:2},{a:3}] #= [{b:1},{b:2}]</kbd>
 	<samp>
 	  <table>
 	    <tr><th>a</th><th>b</th></tr>
@@ -63,7 +63,7 @@
 	<samp>4</samp>
 	<kbd>sales.length</kbd>
 	<samp>9</samp>
-	<kbd>stores @= sales</kbd>
+	<kbd>stores #= sales</kbd>
 	<samp>
 	<table>
 	  <tr><th>store number</th><th>state</th><th>product</th><th>quantity</th></tr>
@@ -88,7 +88,7 @@
       </div>
 
       <div class="example">
-	<kbd>stores @&lt; sales</kbd>
+	<kbd>stores #&lt; sales</kbd>
 	<samp>
 	  <table>
 	    <tr><th>store number</th><th>state</th><th>product</th><th>quantity</th></tr>
@@ -104,8 +104,8 @@
 	    <tr><td>4</td><td>CA</td><td></td><td></td></tr>
 	  </table>
 	</samp>
-        This is identical to the previous example except we used <tt>@&lt;</tt>
-        instead of <tt>@=</tt>.  Because of that, the result includes store 4
+        This is identical to the previous example except we used <tt>#&lt;</tt>
+        instead of <tt>#=</tt>.  Because of that, the result includes store 4
         even though it has no sales.
       </div>
 
@@ -134,7 +134,7 @@
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=each">@ and @@</a> - Table filtering operator<br/>
+      <a target="_PARENT" href="../index.html?op=each"># and ##</a> - Table filtering operator<br/>
       <a target="_PARENT" href="../index.html?op=select">SELECT</a> - SQL-like <tt>select</tt> operator<br/>
       <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a> - Sorting function
     </details>

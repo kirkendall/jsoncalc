@@ -65,14 +65,14 @@
       </div>
 
       <div class="example">
-	<kbd>test.cust @ contact[type:"email"].address</kbd>
+	<kbd>test.cust # contact[type:"email"].address</kbd>
 	<samp>["pboy@test.org","notringo@lp.uk"]</samp>
 	Across all four customers in <tt>test.cust</tt>,
 	we're scanning for a contact method containing <tt>type:"email"</tt>,
 	and collecting the corresponding <tt>address</tt> in an array.
 	In <tt>test.cust</tt>, one row has no <tt>contact</tt>, and one has
 	<tt>contact</tt> but none of its elements contains <tt>type:"email"</tt>.
-	The <tt>@</tt> operator filters those out, so we just get the two
+	The <tt>#</tt> operator filters those out, so we just get the two
 	actual email addresses that appear in <tt>test.cust</tt>.
       </div>
 

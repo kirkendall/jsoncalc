@@ -121,9 +121,9 @@ s.substr(1,3)
 =false
 [false, true, false].any()
 =true
-["a","b","c"]@arrayAgg(this)
+["a","b","c"] # arrayAgg(this)
 =[["a","b","c"],["a","b","c"],["a","b","c"]]
-[["a","b","c"]]@arrayAgg(this)
+[["a","b","c"]] # arrayAgg(this)
 =[["a","b","c"]]
 [2,3,5,7,11].avg()
 =5.6
@@ -198,9 +198,9 @@ table.isArray()
 =[{"key":"a","value":1},{"key":"b","value":2}]
 [5,3,7,9,4].max()
 =9
-([5,3,7,9,4]@max(this))[0]
+([5,3,7,9,4] # max(this))[0]
 =9
-([5,3,7,9,4]@{max:max(this),min:min(this)})[0]
+([5,3,7,9,4] # {max:max(this),min:min(this)})[0]
 ={"max":9,"min":3}
 ["q","w","e","r","t","y"].max()
 ="y"
@@ -210,7 +210,7 @@ table.isArray()
 ="e"
 join(["One","Two","Three"]," ")
 ="One Two Three"
-(["One","Two","Three"]@join(this))[0]
+(["One","Two","Three"] # join(this))[0]
 ="One,Two,Three"
 nameBits(6, ["one","two","four"], "+")
 ="two+four"
@@ -236,20 +236,22 @@ toFixed(50.2, 2)
 =6
 
 # bigger stuff
-users=[{"id":1,"name":"steve"},{"id":2,"name":"rebecca"}]
-actions=[{"id":1,"action":"add"},{"id":1,"action":"change"},{"id":2,"action":"delete"},{"id":3,"action":"add"}]
+[1,2,3].length
+=3
+users=[{"id":1,"name":"steve"}, {"id":2,"name":"rebecca"}]
 users.length
 =2
+actions=[{"id":1,"action":"add"}, {"id":1,"action":"change"}, {"id":2,"action":"delete"}, {"id":3,"action":"add"}]
 actions.length
 =4
-count(actions@id=1)
+count(actions # id=1)
 =2
-users @= actions
+users #= actions
 =[{"id":1,"name":"steve","action":"add"},{"id":1,"name":"steve","action":"change"},{"id":2,"name":"rebecca","action":"delete"}]
 # SQL
 select * from users
 =[{"id":1,"name":"steve"},{"id":2,"name":"rebecca"}]
 select name from users
 =[{"name":"steve"},{"name":"rebecca"}]
-select * from users @= actions
+select * from users #= actions
 =[{"id":1,"name":"steve","action":"add"},{"id":1,"name":"steve","action":"change"},{"id":2,"name":"rebecca","action":"delete"}]

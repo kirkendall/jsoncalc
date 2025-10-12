@@ -15,7 +15,7 @@
       This splits a table (array of objects) into segments, based on the values of the <var>columns</var> members.  The result is an array of arrays of objects.
       <p>
       This is useful mostly as a way to affect the scope of aggregate functions when used with
-      the @ and @@ operators.
+      the <a target="_PARENT" href="../index.html?op=each"># and ##</a> operators.
       For example, if you have a table of sales data which contains a "region" column
       (meaning each row/element/object has a "region" member)
       then you might want to group them by region so you could report the regional
@@ -42,7 +42,9 @@
       append an extra object to the end of the response array, containing a
       single member with first name from the <var>columns</var> parameter as
       the member's key (name), and the <var>totals</var> value as its value.
-      Due to the way @ and @@ interact with aggregates, this causes any columns
+      Due to the way
+      <a target="_PARENT" href="../index.html?op=each"># and ##</a> interact
+      with aggregates, this causes any columns
       that use aggregate functions to apply those functions across all rows
       instead of splitting by the group.
       This makes it easy to get combined totals.
@@ -51,7 +53,7 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>groupBy(test.scores, "run")@{run,avg(score)}</kbd>
+	<kbd>groupBy(test.scores, "run") # {run,avg(score)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>run</th><th>avg(score)</th></tr>
@@ -61,12 +63,12 @@
 	  </table>
 	</samp>
 	Group "test.scores" table rows by "run".
-	The @ operator outputs one record per group, in this case containing the
+	The # operator outputs one record per group, in this case containing the
 	run number and the average score within that run.
       </div>
 
       <div class="example">
-	<kbd>test.scores.groupBy("name","OVERALL")@{name,avg(score)}</kbd>
+	<kbd>test.scores.groupBy("name","OVERALL") # {name,avg(score)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>name</th><th>avg(score)</th></tr>
@@ -84,7 +86,7 @@
       </div>
 
       <div class="example">
-	<kbd>test.scores.groupBy("run") @@ score&lt;avg(score)</kbd>
+	<kbd>test.scores.groupBy("run") ## score&lt;avg(score)</kbd>
 	<samp>
 	  <table>
 	    <tr><th>name</th><th>run</th><th>score</th></tr>
@@ -94,9 +96,9 @@
 	    <tr><td>Paul</td><td>3</td><td>25</td></tr>
 	  </table>
 	</samp>
-	The difference between @ and @@ is that @ outputs one row per group, while
-	@@ outputs one row per row.
-	We're using @@ here to list the name, run, and score
+	The difference between # and ## is that # outputs one row per group,
+	while ## outputs one row per row.
+	We're using ## here to list the name, run, and score
 	of anybody who got less than the average score for their run.
 	Note that we got two rows from run 3.
       </div>
@@ -110,8 +112,10 @@
         <li>The result of <tt>groupBy()</tt> is no longer a table.
             Instead, it is an array of tables, possibly with an oddball
             "totals" object added in.
-            The @ and @@ operators work with this, and will reassemble the
+            The # and ## operators work with this, and will reassemble the
             results as a table again.
+
+	<li><tt>groupBy()</tt> also has the side-effect of sorting the groups.
 
         <li>If you're using the
             <a target="_PARENT" href="../index.html?f=count">count()</a>

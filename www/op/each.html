@@ -4,24 +4,24 @@
     <title>Array filter operators</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
     <meta name="description" content="jsoncalc - Array filter operators">
-    <meta name="keywords" content="array, aggregate, jsoncalc, operator reference, @, @@">
+    <meta name="keywords" content="array, aggregate, jsoncalc, operator reference, #, ##">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
     <h1>Array filter operators</h1>
     <table class="opList">
-      <tr><td class="left">array</td><td class="op">@</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per group</td></tr>
-      <tr><td class="left">array</td><td class="op">@@</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per row</td></tr>
+      <tr><td class="left">array</td><td class="op">#</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per group</td></tr>
+      <tr><td class="left">array</td><td class="op">##</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per row</td></tr>
     </table>
     These two operators loop over the elements of their left argument (an array),
     process each one individually via the expression of the right argument, and
     collect the results in a new array which is the final result of the operator.
     <p>
-    The only difference between <tt>@</tt> and <tt>@@</tt> is that if you divide
+    The only difference between <tt>#</tt> and <tt>##</tt> is that if you divide
     the array into groups (by embedding sub-arrays within the array e.g. via the
     <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a> function)
-    then <tt>@</tt> will include one result per group,
-    while <tt>@@</tt> returns a result for each element of each group.
+    then <tt>#</tt> will include one result per group,
+    while <tt>##</tt> returns a result for each element of each group.
     <p>
     So the right operand gets evaluated a lot.
     Usually once for each array element.
@@ -53,7 +53,7 @@
     aggregate data for each group.
     <p>
     If the left argument is <tt>null</tt> instead of an array,
-    then <tt>@</tt> and <tt>@@</tt> return an empty array.
+    then <tt>#</tt> and <tt>##</tt> return an empty array.
     If the left argument is any other non-array, then it is processed as though it
     was the only element of a 1-element array.
     These two rules are intended to simplify processing of data converted from XML.
@@ -67,13 +67,13 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>[2,3,5,7,11] @ this &lt; 6</kbd>
+	<kbd>[2,3,5,7,11] # this &lt; 6</kbd>
 	<samp>[2,3,5]</samp>
 	Test each element, and keep the ones less than 6.
       </div>
 
       <div class="example">
-	<kbd>[2,3,5,7,11] @ {max:max(this), min:min(this)}</kbd>
+	<kbd>[2,3,5,7,11] # {max:max(this), min:min(this)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>max</th><th>min</th></tr>
@@ -84,7 +84,7 @@
 	    <tr><td>11</td><td>2</td></tr>
 	  </table>
 	</samp>
-	<kbd>([2,3,5,7,11] @ {max:max(this), min:min(this)})[0]</kbd>
+	<kbd>([2,3,5,7,11] # {max:max(this), min:min(this)})[0]</kbd>
 	<samp>{"max":11,"min":2}</samp>
 	Find the maximum and minumum values, and construct an object with their values.
 	<a target="_PARENT" href="../index.html?f=max">max()</a> and
@@ -94,7 +94,7 @@
 	using groups.
 	<p>
 	Also since we aren't using groups,
-	<tt>@</tt> returns an item for each element of the left array,
+	<tt>#</tt> returns an item for each element of the left array,
 	which is why we get an array of five objects back instead of one.
 	Arrays of objects are displayed in a grid by default, which is why this doesn't
 	look like JSON.
@@ -104,7 +104,7 @@
       </div>
 
       <div class="example">
-        <kbd>test.scores.groupBy("run") @ {run, max:max(score), min:min(score)}</kbd>
+        <kbd>test.scores.groupBy("run") # {run, max:max(score), min:min(score)}</kbd>
         <samp>
 	  <table>
 	    <tr><th>run</th><th>max</th><th>min</th></tr>
@@ -116,14 +116,14 @@
         <tt>test.scores</tt> is part of the sample data.
         It is a table (array of objects).
         We use <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
-        to divide the table into groups, and then use @ to first accumulate
+        to divide the table into groups, and then use # to first accumulate
         aggregate data over all elements, and then to return one result element
         per group.
         This gives us a table of statistics about each run.
       </div>
 
       <div class="example">
-        <kbd>test.scores.groupBy("run","overall") @ {run, max:max(score), min:min(score)}</kbd>
+        <kbd>test.scores.groupBy("run","overall") # {run, max:max(score), min:min(score)}</kbd>
         <samp>
 	  <table>
 	    <tr><th>run</th><th>max</th><th>min</th></tr>
@@ -146,7 +146,7 @@
       </div>
 
       <div class="example">
-        <kbd>test.scores.groupBy("run") @@ score &gt;= avg(score) ? {run, name, score, avg(score)}</kbd>
+        <kbd>test.scores.groupBy("run") ## score &gt;= avg(score) ? {run, name, score, avg(score)}</kbd>
         <samp>
 	  <table>
 	    <tr><th>run</th><th>name</th><th>score</th><th>avg(score)</th></tr>
@@ -157,7 +157,7 @@
 	    <tr><td>3</td><td>Mary</td><td>40</td><td>31.6666666667</td></tr>
 	  </table>
         </samp>
-        Now we're using <tt>@@</tt> instead of <tt>@</tt> because we want potentially
+        Now we're using <tt>##</tt> instead of <tt>#</tt> because we want potentially
         one record per element from the left array instead of one per group.
         Details instead of summary.
         This looks for any scores greater than or equal to the average score for
@@ -167,18 +167,18 @@
         <a target="_PARENT" href="../index.html?op=question">?:</a> operator
         but omits the <tt>:</tt> part.
         When you do this, <tt>:null</tt> is implied which is handy in
-        <tt>@</tt>/<tt>@@</tt> expressions since <tt>@</tt>/<tt>@@</tt>
+        <tt>#</tt>/<tt>##</tt> expressions since <tt>#</tt>/<tt>##</tt>
         adds nothing to the response for <tt>null</tt>.
       </div>
 
       <div class="example">
-        <kbd>test.scores @ score &gt; 30 ? count(*)</kbd>
+        <kbd>test.scores # score &gt; 30 ? count(*)</kbd>
         <samp>[9,9]</samp>
-        <kbd>test.scores @ score &gt; 30 @ count(*)</kbd>
+        <kbd>test.scores # score &gt; 30 # count(*)</kbd>
         <samp>[2,2]</samp>
-        <kbd>test.scores @ count(score &gt; 30)</kbd>
+        <kbd>test.scores # count(score &gt; 30)</kbd>
         <samp>[2,2,2,2,2,2,2,2,2]</samp>
-        <kbd>count(test.scores @ score &gt; 30)</kbd>
+        <kbd>count(test.scores # score &gt; 30)</kbd>
         <samp>2</samp>
 	This demonstrates a quirk of aggregate functions.
 	In the first example, <tt>count(*)</tt> is invoked for every item,
@@ -188,7 +188,7 @@
 	<tt>score&gt;30</tt>, the other examples use
 	<tt>count()</tt> better, in different ways.
 	The second example starts by filtering out the low scores, and then uses
-	a second <tt>@</tt> operator on the resulting two-element array to
+	a second <tt>#</tt> operator on the resulting two-element array to
 	generate a count which is returned separately for each element.
 	The third example uses <tt>count()</tt>'s argument to selectively
 	count the high scores, but then returns that count for all elements.
@@ -206,26 +206,26 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Usually you'll want <tt>@</tt>.
-            The <tt>@@</tt> operator is only useful when you're comparing individual
+        <li>Usually you'll want <tt>#</tt>.
+            The <tt>##</tt> operator is only useful when you're comparing individual
             values to aggregate values, and even then only if you're using groups.
 
-	<li>If the left array isn't divided into groups, the <tt>@</tt> will return
+	<li>If the left array isn't divided into groups, the <tt>#</tt> will return
 	    one element for each left operand element.
 	    You might expect it to return just one summary item, but no.
 	    It must return one result element per ungrouped left element in order
 	    for things like the <tt>groupBy("run","overall")</tt> example above
 	    to work.
 
-	<li>The eagerness of <tt>@</tt> and <tt>@@</tt> to treat subarrays as
+	<li>The eagerness of <tt>#</tt> and <tt>##</tt> to treat subarrays as
 	    groups can sometimes be a problem.
 	    To prevent them from treating subarrays as groups,
 	    just enclose the whole array in one extra layer of square brackets;
 	    this causes the array to be seen as a group.
 	    <div class="example">
-	      <kbd>[["a",1],["b",2],["c",3]] @ objectAgg(this[0], this[1])</kbd>
+	      <kbd>[["a",1],["b",2],["c",3]] # objectAgg(this[0], this[1])</kbd>
 	      <samp>[{},{},{}]</samp>
-	      <kbd>[[["a",1],["b",2],["c",3]]] @ objectAgg(this[0], this[1])</kbd>
+	      <kbd>[[["a",1],["b",2],["c",3]]] # objectAgg(this[0], this[1])</kbd>
 	      <samp>
 <table>
 <tr><th>a</th><th>b</th><th>c</th></tr>

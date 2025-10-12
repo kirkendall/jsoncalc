@@ -26,8 +26,10 @@
       However, there's rarely any point to this since <strong>jsoncalc</strong>'s
       "grid" view of tables can't display tables-within-tables.
       <p>
-      This is an aggregate function, meaning it accumulates the count over a series
-      of table elements when used with the @ operator, or a <tt>SELECT</tt> clause.
+      This is an aggregate function, meaning it accumulates the count over a
+      series of table elements when used with the
+      <a target="_PARENT" href="../index.html?op=each">#</a> operator, or a
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a> clause.
       You may also pass it an array to have it accumulate results across the elements
       of that array.
     </dl>
@@ -58,11 +60,12 @@
       <ul>
 
         <li>Although this is an aggregate function, it doesn't really work very well
-            with the @ and @@ operators.
+            with the # and ## operators.
             Usually you'll just pass a table as the first argument.
 
-	<li>For the sake of resembling SQL a bit better,
-	    there is also an <tt>explain</tt> command.
+	<li>For the sake of resembling SQL a bit better, there is also an
+	    <a target="_PARENT" href="../index.html?cmd=explain">explain</a>
+	    command.
 	    <div class="example">
 	      <kbd>explain test.scores</kbd>
 	    </div>

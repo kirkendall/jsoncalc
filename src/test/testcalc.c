@@ -161,6 +161,7 @@ int main(int argc, char **argv)
         json_config_load("testcalc");
         json_config_set(NULL, "ascii", json_boolean(1));
         json_format_set(NULL, NULL);
+        json_config_set(NULL, "defersize", json_from_int(0));
 
         /* Parse command-line flags */
         while ((ch = getopt(argc, argv, "meJ:")) >= 0)
@@ -192,7 +193,7 @@ int main(int argc, char **argv)
 
 	printf("%sPassed %d/%d%s", GREEN, counts.tests - counts.failed, counts.tests, PLAIN);
 	if (counts.failed > 0)
-		printf(", %sfailed %d/%d%s", RED, counts.failed, counts.tests, PLAIN);
+		printf(", %sFailed %d/%d%s", RED, counts.failed, counts.tests, PLAIN);
 	putchar('\n');
         return counts.failed > 0;
 }

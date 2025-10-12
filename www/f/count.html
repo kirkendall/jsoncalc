@@ -21,7 +21,7 @@
       This is an aggregate function, meaning it accumulates the count over a
       series of table elements when used with the
       <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
-      <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators.
+      <a target="_PARENT" href="../index.html?op=each"># or ##</a> operators.
       You may also pass it an array to have it accumulate results across the
       elements of that array.
     </dl>
@@ -36,17 +36,19 @@
       </div>
 
       <div class="example">
-	<kbd>[false, false, true, true, false] @ count(this)</kbd>
+	<kbd>[false, false, true, true, false] # count(this)</kbd>
 	<samp>[2,2,2,2,2]</samp>
-        Here we're using it with the <tt>@</tt> operator.
-	The count is repeated 5 times because <tt>@</tt> is an array filter,
+        Here we're using it with the <tt>#</tt> operator.
+	The count is repeated 5 times because <tt>#</tt> is an array filter,
 	which is converting each <tt>true/false</tt> to the count.
 	You could wrap the whole expression in parentheses and add <tt>[0]</tt>
 	to get just the first copy of the count.
+	<kbd>([false, false, true, true, false] # count(this))[0]</kbd>
+	<samp>2</samp>
       </div>
 
       <div class="example">
-	<kbd>emojis.groupBy("group") @ {group, count(*)}</kbd>
+	<kbd>emojis.groupBy("group") # {group, count(*)}</kbd>
 	<samp>
 	  <table>
 	    <tr><th>group</th><th>count(*)</th></tr>
@@ -75,12 +77,12 @@
 	    I chose to make JsonCalc be incompatible in this way so you could
 	    use conditional expressions in the <tt>count()</tt> argument.
 	    <div class="example">
-	      <kbd>[this.scores] @ count(score &lt; 30)</kbd>
+	      <kbd>[this.scores] # count(score &lt; 30)</kbd>
 	      <samp>[4]</samp>
 	      This scans <tt>test.scores</tt> (part of the sample data) for
 	      rows with a score less than 30.
 	      We wrapped <tt>[test.scores]</tt> in brackets so the
-	      <a target="_PARENT" href="../index.html?op=each">@</a> operator
+	      <a target="_PARENT" href="../index.html?op=each">#</a> operator
 	      would treat it as one group instead of 9 separate rows.
 	      <p>
 	      By the way, you might be tempted to use an expression like
@@ -91,8 +93,8 @@
 	      but the argument to <tt>count()</tt> would need it for each row.  
 	      To make this work, you'd need to generate the average first,
 	      in a separate expression.
-	      <kbd>var avg = (test.scores @ avg(score))[0];</kbd>
-	      <kbd>[this.scores] @ count(score &lt; avg)</kbd>
+	      <kbd>var avg = (test.scores # avg(score))[0];</kbd>
+	      <kbd>[this.scores] # count(score &lt; avg)</kbd>
 	      <samp>[4]</samp>
 	    </div>
 

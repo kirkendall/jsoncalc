@@ -17,7 +17,7 @@
       This is an aggregate function, meaning it accumulates its result over a
       series of table elements when used with the
       <a target="_PARENT" href="../index.html?op=select">SELECT</a>,
-      <a target="_PARENT" href="../index.html?op=each">@ or @@</a> operators.
+      <a target="_PARENT" href="../index.html?op=each"># or ##</a> operators.
       You may also pass it an array to have it accumulate results across the
       elements of that array, but it is rather quirky as explained in the first example below.
     </dl>
@@ -45,11 +45,11 @@
         be used to selectively delete members.
         <p>
         But it's a lot more common to use use <tt>objectgAgg()</tt> with the
-        <a target="_PARENT" href="../index.html?op=each">@</a> operator.
+        <a target="_PARENT" href="../index.html?op=each">#</a> operator.
       </div>
 
       <div class="example">
-	<kbd>test.scores.groupBy("run")@objectAgg(name,score)</kbd>
+	<kbd>test.scores.groupBy("run") # objectAgg(name,score)</kbd>
 	<samp>
 	  <table>
 	    <tr><th>Peter</th><th>Paul</th><th>Mary</th></tr>
@@ -62,7 +62,7 @@
         "name" and "score" members.
         The <a target="_PARENT" href="../index.html?f=groupby">groupBy()</a> function splits the table into
         groups (segments) that share the same run number.
-        The @ operator invokes the objectAgg() function for each object in each
+        The # operator invokes the objectAgg() function for each object in each
         group, and then at the end of the group it retrieves the accumulated value.
         objectAgg() uses the name and score from each object to add a member to
         a new object which is accumulated across the group; I.e., it ends up
@@ -80,7 +80,7 @@
         object returned by <tt>objectAgg</tt> with an object containing only the
         run number.
         <div class="example">
-	  <kbd>test.scores.groupBy("run")@{run}|objectAgg(name,score)</kbd>
+	  <kbd>test.scores.groupBy("run") # {run}|objectAgg(name,score)</kbd>
 	  <samp>
 	    <table>
 	      <tr><th>run</th><th>Peter</th><th>Paul</th><th>Mary</th></tr>
@@ -91,9 +91,9 @@
           </samp>
 	</div>
         This is even surprisingly efficient.
-        The @ operator only invokes the objectAgg() function for each row from
+        The # operator only invokes the objectAgg() function for each row from
         the <tt>test.scores</tt> table, but not the whole right-hand-side operand
-        of the @ operator.  The entire right-hand-side expression is only evaluated
+        of the # operator.  The entire right-hand-side expression is only evaluated
         at the end of each group.  This means that <tt>{run}|</tt> is only evaluated
         once per run, not once per score.
 
@@ -108,7 +108,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../index.html?f=keysValues">keysValues()</a></td><td>Extract a {<var>key</var>,<var>value</var>} array from an object, or array of objects (i.e. a table)</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=values">VALUES</a></td><td>Operator to combine an array of keys and an array of values</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=each">@ and @@</a></td><td>Array filtering operators</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each"># and ##</a></td><td>Array filtering operators</td></tr>
       </table>
     </details>
   </body>

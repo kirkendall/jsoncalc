@@ -111,11 +111,11 @@
 	    substrings.
 
 	<li>If you want to eliminate empty strings from an array, the simplest
-	    way to do it is via the <a target="_PARENT" href="../index.html?op=each">@</a> operator.
+	    way to do it is via the <a target="_PARENT" href="../index.html?op=each">#</a> operator.
 	    <div class="example">
-	      <kbd>"*alpha*beta*".split("*") @ this != ""</kbd>
+	      <kbd>"*alpha*beta*".split("*") # this != ""</kbd>
 	      <samp>["alpha","beta"]</samp>
-	      <tt>split()</tt> returns ["","alpha","beta",""], but the @ takes
+	      <tt>split()</tt> returns ["","alpha","beta",""], but the # takes
 	      each element of that array and applies the <tt>this!=""</tt>
 	      expression to it; if that expression is false then the element
 	      is discarded.  We end up with just the non-empty substrings.
@@ -128,7 +128,7 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?lit=regex">regex</a></td><td>Regular expressions</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=each">@</a></td><td>Array filtering operator</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">#</a></td><td>Array filtering operator</td></tr>
       </table>
     </details>
 

@@ -174,7 +174,7 @@
     </div>
 
     <div class="example">
-      <kbd>function addHead(row:array[]):table { return (1...row[0].length @ rowNumber("A")) values row; }</kbd>
+      <kbd>function addHead(row:array[]):table { return (1...row[0].length # rowNumber("A")) values row; }</kbd>
       <kbd>addHead(rgbn)</kbd>
       <samp>
         <table>
@@ -186,7 +186,7 @@
       </samp>
       If you don't really care about the assigned names, then you can
       generate them automatically via an expression such as
-      <tt>1...row[0].length @ rowNumber("A")</tt>.
+      <tt>1...row[0].length # rowNumber("A")</tt>.
     </div>
     <p>
     The above example is only relevant if you're working with headless CSV

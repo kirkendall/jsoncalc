@@ -98,7 +98,7 @@ static struct {
 	{"DIVIDE",	"/",	220,	0,	JCOP_INFIX},
 	{"DOT",		".",	270,	0,	JCOP_INFIX},
 	{"DOTDOT",	"..",	270,	0,	JCOP_INFIX}, /*!!!*/
-	{"EACH",	"@@",	115,	0,	JCOP_INFIX}, /*!!!*/
+	{"EACH",	"##",	115,	0,	JCOP_INFIX}, /*!!!*/
 	{"ELLIPSIS",	"...",	127,	0,	JCOP_INFIX},
 	{"ENDARRAY",	"]",	0,	1,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	1,	JCOP_OTHER},
@@ -109,7 +109,7 @@ static struct {
 	{"FNCALL",	"F",	170,	0,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	0,	JCOP_OTHER},
 	{"GE",		">=",	190,	0,	JCOP_INFIX},
-	{"GROUP",	"@",	115,	0,	JCOP_INFIX},	/*!!!*/
+	{"GROUP",	"#",	115,	0,	JCOP_INFIX},	/*!!!*/
 	{"GROUPBY",	"GRO",	2,	1,	JCOP_OTHER},
 	{"GT",		">",	190,	0,	JCOP_INFIX},
 	{"HAVING",	"HAV",	2,	1,	JCOP_OTHER},
@@ -122,7 +122,7 @@ static struct {
 	{"LIKE",	"LIK",	180,	0,	JCOP_INFIX},
 	{"LIMIT",	"LIM",	2,	1,	JCOP_OTHER},
 	{"LITERAL",	"LIT",	-1,	0,	JCOP_OTHER},
-	{"LJOIN",	"@<",	117,	0,	JCOP_INFIX},
+	{"LJOIN",	"#<",	117,	0,	JCOP_INFIX},
 	{"LT",		"<",	190,	0,	JCOP_INFIX},
 	{"MAYBEASSIGN",	"=??",	110,	0,	JCOP_INFIX},
 	{"MAYBEMEMBER",	":??",	121,	0,	JCOP_INFIX},
@@ -132,7 +132,7 @@ static struct {
 	{"NE",		"!=",	180,	0,	JCOP_INFIX},
 	{"NEGATE",	"U-",	240,	0,	JCOP_PREFIX},
 	{"NESTRICT",	"!==",	180,	0,	JCOP_INFIX},
-	{"NJOIN",	"@=",	117,	0,	JCOP_INFIX},
+	{"NJOIN",	"#=",	117,	0,	JCOP_INFIX},
 	{"NOT",		"!",	240,	0,	JCOP_PREFIX},
 	{"NOTLIKE",	"NLK",	180,	0,	JCOP_INFIX},
 	{"NULL",	"NUL",	-1,	0,	JCOP_OTHER},
@@ -142,7 +142,7 @@ static struct {
 	{"ORDERBY",	"ORD",	2,	1,	JCOP_OTHER},
 	{"QUESTION",	"?",	121,	0,	JCOP_RIGHTINFIX}, /* right-to-left associative */
 	{"REGEX",	"REG",	-1,	0,	JCOP_OTHER},
-	{"RJOIN",	"@>",	117,	0,	JCOP_INFIX},
+	{"RJOIN",	"#>",	117,	0,	JCOP_INFIX},
 	{"SELECT",	"SEL",	1,	1,	JCOP_OTHER},
 	{"STARTARRAY",	"[",	260,	1,	JCOP_OTHER},
 	{"STARTOBJECT",	"{",	260,	1,	JCOP_OTHER},
@@ -1291,7 +1291,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		}
 
 		/* We also need to know if ANY of the columns use aggregates.
-		 * This will help us organize the right hand side of the @
+		 * This will help us organize the right hand side of the #
 		 * expression.
 		 */
 		for (jc = sel->select; jc && !anyselectag; jc = jc->u.param.right)
@@ -1368,7 +1368,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		jc = jcfunc("groupBy", jc, ja, NULL);
 
 		/* If there's a having clause and/or a select list, that's
-		 * next.  Even without it, we still need an @ operator even
+		 * next.  Even without it, we still need an # operator even
 		 * if the right operand is just "this".
 		 */
 		if (sel->having && sel->select) {
@@ -1386,7 +1386,7 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 		}
 		jc = jcleftright(JSONOP_GROUP, jc, ja);
 	} else if (sel->where || sel->select) {
-		/* We want to add a @@where?select or just part of that */
+		/* We want to add a ##where?select or just part of that */
 		if (sel->where && sel->select)
 			ja = jcleftright(JSONOP_QUESTION, sel->where, sel->select);
 		else if (sel->where)

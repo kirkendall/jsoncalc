@@ -74,7 +74,7 @@
       </div>
 
       <div class="example">
-        <kbd>curlGet("https://swapi.py4e.com/api/people/",{search:"darth"}).results@{name,height,mass,films:(films@curlGet(this).title).join("\n")}</kbd>
+        <kbd>curlGet("https://swapi.py4e.com/api/people/",{search:"darth"}).results # {name,height,mass,films:(films # curlGet(this).title).join("\n")}</kbd>
         <samp>
 <table>
 <tr><th>name</th><th>height</th><th>mass</th><th>films</th></tr>

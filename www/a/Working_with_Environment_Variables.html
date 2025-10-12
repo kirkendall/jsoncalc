@@ -85,12 +85,12 @@
       functions.
     </div>
     <div class="example">
-      <kbd>1...10 @ $partno[this]</kbd>
+      <kbd>1...10 # $partno[this]</kbd>
       <samp>["10017","12565-B"]</samp>
       This collects <tt>$partno1</tt> through <tt>$partno10</tt> into an array.
       Any missing $partno<var>N</var> variables will be omitted from the array,
       because those $partno<var>N</var> expressions return <b>null</b> and the
-      <a target="_PARENT" href="../index.html?op=each">@</a> operator omits
+      <a target="_PARENT" href="../index.html?op=each">#</a> operator omits
       <b>null</b> from its result array.
     </div>
 
@@ -127,7 +127,7 @@
     {
        custno: $custno,
        po: $pono,
-       detail: (1...10 @ $partno[this] ? {partno:$partno[this], desc:$desc[this], qty:parseInt($qty[this]))
+       detail: (1...10 # $partno[this] ? {partno:$partno[this], desc:$desc[this], qty:parseInt($qty[this]))
      }"
     </pre>
     When run, this should produce output similar to the following:
@@ -157,7 +157,7 @@
     an argument.
     The script stuffs the environment variables into an object.
     The parts are collected in a "detail" member, as an array of objects.
-    In the <a target="_PARENT" href="../index.html?op=each">@</a> expression
+    In the <a target="_PARENT" href="../index.html?op=each">#</a> expression
     that builds the array, we loop over 10 possible part slots and use
     "$partno[i] ? " to skip over ones that aren't used.
     For the used slots, we get corresponding

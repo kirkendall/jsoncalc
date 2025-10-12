@@ -50,8 +50,6 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 
 	  case JSON_ARRAY:
 		copy = json_array();
-		copy->text[1] = json->text[1];
-		JSON_ARRAY_LENGTH(copy) = JSON_ARRAY_LENGTH(json);
 
 		/* For deferred arrays without a test, keep it deferred */
 		if (json_is_deferred_array(json) && !test) {

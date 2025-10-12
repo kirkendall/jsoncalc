@@ -293,11 +293,11 @@ size_t json_mbs_wrap_char(char *buf, const char *s, int width)
  *
  * "dest" is the location to write the canonized string to, and it may be NULL
  * to only count the length of the canonized string, but not return the string.
- * It may also be the same as "src".  "src" is the original string.  It returns
- * the length of the canonized string in bytes, not counting the terminating
- * '\0' character (which it will add, just not count).
+ * It may also be the same as "src".  "src" is the original string.  The
+ * function returns the length of the canonized string in bytes, not counting
+ * the terminating '\0' character (which it will add, just not count).
  */
-size_t json_mbs_canonize(char *dest, const char *src)
+size_t json_mbs_simple_key(char *dest, const char *src)
 {
 	size_t len, dashlen;
 	wchar_t wc;
@@ -308,6 +308,10 @@ size_t json_mbs_canonize(char *dest, const char *src)
 
 	/* Initialize the multibyte character state */
 	memset(&state, 0, sizeof state);
+
+	/* Skip XML namespace */
+	if ((dash = strchr(src, ':')) != NULL && dash[1])
+		src = dash + 1;
 
 	/* Copy all printable characters up to the first alphanumeric */
 	for (len = 0; *src; ) {
@@ -323,9 +327,7 @@ size_t json_mbs_canonize(char *dest, const char *src)
 	}
 
 	/* Copy all printable characters except "-" or "_", and keep track of
-	 * where the last string of "-" or "_" started.  Also, if a ":" is
-	 * encountered other than at the end of the string, then remove it
-	 * and everything before it.
+	 * where the last string of "-" or "_" started.
 	 */
 	for (dash = NULL, dashlen = len; *src; ) {
                 in = mbrtowc(&wc, src, MB_CUR_MAX, &state);
@@ -341,10 +343,6 @@ size_t json_mbs_canonize(char *dest, const char *src)
 			continue; /* skip unprintable */
 		if (wcwidth(wc) == 0)
 			continue; /* skip diacritics */
-		if (wc == ':' && *src) {
-			len = 0;
-			continue; /* skip XML namespace */
-		}
 		if (iswalnum(wc)) {
 			dash = NULL;
 
@@ -358,8 +356,17 @@ size_t json_mbs_canonize(char *dest, const char *src)
 				if (dest)
 					dest[len++] = 'S';
 				wc = 'S';
-			}
-			else if (wc >= 0xe0 && wc <= 0xf6)
+			} else if (wc == 0xc6) {
+				/* AE */
+				if (dest)
+					dest[len++] = 'A';
+				wc = 'E';
+			} else if (wc == 0xe6) {
+				/* ae */
+				if (dest)
+					dest[len++] = 'a';
+				wc = 'e';
+			} else if (wc >= 0xe0 && wc <= 0xf6)
 				wc = "aaaaaaeceeeeiiiidnooooo"[wc - 0xe0];
 			else if (wc >= 0xf8 && wc <= 0xfd)
 				wc = "ouuuuy"[wc - 0xd8];

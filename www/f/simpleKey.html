@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>simpleKey</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc simpleKey - Transform a string to allow "loose" comparison">
+    <meta name="keywords" content="string, jsoncalc, function reference, simpleKey">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>simpleKey - Transform a string to allow "loose" comparison</h1>
+    <dl>
+      <dt>simpleKey(<var>str:string</var>):string
+      <dd>
+      The <tt>simpleKey()</tt> function transforms a string to allow for
+      easy comparison.
+      The "case insensitive" member name lookup uses the same rules as this
+      function, so experimenting with this function can give you a better
+      feel for how loose lookup works.
+      <p>
+      The transformations performed include:
+      <ul>
+        <li>Everything before the first ":" is deleted.
+        <li>Control characters are deleted.
+        <li>Zero-width characters (diacritics, mostly) are deleted.
+        <li>Precomposed diacritics are converted to their base letter.
+        <li>Lowercase letters are converted to uppercase.
+        <li>&#xdf; and &#xc6;/&#xe6; are converted to SS and AE respectively.
+        <li>"-" and "_" are removed, except at the beginning or end of the string.
+      <ul>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>simpleKey()</kbd>
+	<samp>Returned value</samp>
+        Description of the example.  Explain why it works.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Deleting everything before ":" is intended to let you access XML
+            symbols without worrying about namespaces.
+	<li>Deleting "-" helps with data from languages that allow hyphens
+	    as part of a name, such as XML and CSS.
+	<li>Deleting "_" lets us avoid the snakes-vs-camels debate.
+	<li>Converting to uppercase avoid a lot of frustration, for example
+	    whether an identifier member's key ends with "Id" or "ID".
+	<li>Removing diacritics just saves time when typing.
+	<li>The simplified string never requires more bytes than the original string.
+	    In Unicode, the &#xdf;, &#xc6;, &#xe6; are represented by 2-byte
+	    sequences, so converting them to two 1-byte letters doesn't use any
+	    extra memory.
+	    (This doesn't really matter in JsonCalc scripts, but I thought it was interesting.)
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=toUpperCase">toUpperCase()</a></td><td>Convert a string to uppercase</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

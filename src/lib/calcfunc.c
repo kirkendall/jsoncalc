@@ -39,7 +39,7 @@ typedef struct { char *ag; size_t size;} agjoindata_t;
 static json_t *jfn_toUpperCase(json_t *args, void *agdata);
 static json_t *jfn_toLowerCase(json_t *args, void *agdata);
 static json_t *jfn_toMixedCase(json_t *args, void *agdata);
-static json_t *jfn_canonize(json_t *args, void *agdata);
+static json_t *jfn_simpleKey(json_t *args, void *agdata);
 static json_t *jfn_substr(json_t *args, void *agdata);
 static json_t *jfn_hex(json_t *args, void *agdata);
 static json_t *jfn_toString(json_t *args, void *agdata);
@@ -136,8 +136,8 @@ static void    jag_join(json_t *args, void *agdata);
 static jsonfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str:string", "string",	jfn_toUpperCase};
 static jsonfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str:string", "string",	jfn_toLowerCase};
 static jsonfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str:string, exceptions?:string[]",	"string",	jfn_toMixedCase};
-static jsonfunc_t canonize_jf = {&toMixedCase_jf,    "canonize",    "str:string",	"string",	jfn_canonize};
-static jsonfunc_t substr_jf      = {&canonize_jf,    "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
+static jsonfunc_t simpleKey_jf = {&toMixedCase_jf,    "simpleKey",    "str:string",	"string",	jfn_simpleKey};
+static jsonfunc_t substr_jf      = {&simpleKey_jf,    "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
 static jsonfunc_t hex_jf         = {&substr_jf,      "hex",         "val:string|number, length?:number", "string",	jfn_hex};
 static jsonfunc_t toString_jf    = {&hex_jf,         "toString",    "val:any", "string",		jfn_toString};
 static jsonfunc_t String_jf      = {&toString_jf,    "String",      "val:any", "string",		jfn_toString};
@@ -488,8 +488,11 @@ static json_t *jfn_toMixedCase(json_t *args, void *agdata)
 
 }
 
-/* canonize(str) returns a canonized version of str */
-static json_t *jfn_canonize(json_t *args, void *agdata)
+/* simpleKey(str) returns a simplified version of str.  This gives scripts
+ * a way to access the function that JsonCalc uses for doing case-insensitive
+ * member lookups.
+ */
+static json_t *jfn_simpleKey(json_t *args, void *agdata)
 {
 	json_t  *tmp;
 
@@ -499,8 +502,8 @@ static json_t *jfn_canonize(json_t *args, void *agdata)
 	else
 		tmp = jfn_toString(args, agdata);
 
-	/* Canonize it */
-	json_mbs_canonize(tmp->text, tmp->text);
+	/* Simplify it.  Note that we do this in-place. */
+	json_mbs_simple_key(tmp->text, tmp->text);
 
 	/* Return it */
 	return tmp;

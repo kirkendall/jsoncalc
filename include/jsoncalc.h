@@ -395,7 +395,7 @@ int json_mbs_height(const char *s);
 size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth);
 size_t json_mbs_wrap_char(char *buf, const char *s, int width);
 size_t json_mbs_wrap_word(char *buf, const char *s, int width);
-size_t json_mbs_canonize(char *dest, const char *src);
+size_t json_mbs_simple_key(char *dest, const char *src);
 int json_mbs_cmp(const char *s1, const char *s2);
 int json_mbs_ncmp(const char *s1, const char *s2, size_t len);
 const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit);

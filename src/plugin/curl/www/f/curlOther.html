@@ -59,7 +59,7 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>curlOther("DELETE", "http://localhost/event/" + id)</kbd>
+	<kbd>curlOther("DELETE", "http://localhost/event/" + encodeURI(id))</kbd>
 	<samp><i>Some big confirmation string</i></samp>
 	This sends an HTTP "DELETE" request, to delete an event I guess.
 	Often sites that use a "DELETE" request like to embed important

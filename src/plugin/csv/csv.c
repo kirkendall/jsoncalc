@@ -399,7 +399,7 @@ static int csvtest(const char *str, size_t len)
 	return 1;
 }
 
-/* Parse "str" and return its contents as a JSON table.  Store a pointer to
+/* Parse "buf" and return its contents as a JSON table.  Store a pointer to
  * the end of the parsed text at "refend" unless "refend" is NULL.  If an error
  * is detected, store a pointer to the location of the error at "referr" (if
  * "referr" is not NULL) and return an json_t containing an error null.

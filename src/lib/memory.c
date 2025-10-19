@@ -181,7 +181,8 @@ json_t *json_simple(const char *str, size_t len, jsontype_t type)
 /* Allocate a json_t for a given string.  Note that any escape sequences
  * such as \n or \u22c8 are handled by the parser via json_mbs_unescape()
  * so we just get the actual data here.  Passing -1 for len causes it to
- * compute the length via strlen().
+ * compute the length via strlen().  "str" is not required to have a
+ * terminating '\0' but the returned json->text field will.
  */
 json_t *json_string(const char *str, size_t len)
 {
@@ -265,7 +266,7 @@ json_t *json_error_null(const char *where, const char *fmt, ...)
  */
 json_t *json_key(const char *key, json_t *value)
 {
-	json_t *json = json_simple(key, strlen(key), JSON_KEY);
+	json_t *json = json_simple(key, strlen(key) * 2 + 1, JSON_KEY);
 	json->first = value;
 	return json;
 }

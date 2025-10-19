@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include <jsoncalc.h>
 
 /* Return the value of a named field within an object or array.  If there
@@ -10,6 +11,7 @@
 json_t *json_by_key(const json_t *container, const char *key)
 {
 	json_t *scan;
+	char	*simple, *loose;
 
 	/* Defend against NULL */
 	if (!container)
@@ -18,7 +20,7 @@ json_t *json_by_key(const json_t *container, const char *key)
 	/* Only objects should have named values (though JavaScript also
 	 * supports "associative arrays" which do the same thing)
 	 */
-	if (container->type != JSON_OBJECT && container->type != JSON_ARRAY)
+	if (container->type != JSON_OBJECT)
 	{
 		/* EEE "Attempt to find named item in a non-object"); */
 		return NULL;
@@ -27,16 +29,30 @@ json_t *json_by_key(const json_t *container, const char *key)
 	/* Scan for it.  If found, return its value */
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
-		if (scan->type == JSON_KEY && !strcmp(scan->text, key))
+		assert(scan->type == JSON_KEY);
+		if (!strcmp(scan->text, key))
 			return scan->first;
 	}
 
-	/* Not found, but try again case-insensitively */
+	/* Not found, but try again using loose name comparison */
+	simple = strdup(key);
+	(void)json_mbs_simple_key(simple, key);
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
-		if (scan->type == JSON_KEY && !strcasecmp(scan->text, key))
+		/* Locate the key's "loose" version.  If it doesn't exist
+		 * then create it now.
+		 */
+		loose = scan->text + strlen(scan->text) + 1;
+		if (!*loose)
+			(void)json_mbs_simple_key(loose, scan->text);
+
+		/* Compare them now */
+		if (!strcmp(loose, simple)) {
+			free(simple);
 			return scan->first;
+		}
 	}
+	free(simple);
 
 	/* Not found */
 	return NULL;

@@ -3,8 +3,8 @@
 #include <string.h>
 #include <jsoncalc.h>
 
-/* Even if memory debugging is enabled, here we're defining the non-debugging verion
- * of the json_copy() function.
+/* Even if memory debugging is enabled, here we're defining the non-debugging
+ * version of the json_copy() and json_copy_filter() functions.
  */
 #ifdef JSON_DEBUG_MEMORY
 # undef json_copy

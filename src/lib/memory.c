@@ -266,6 +266,10 @@ json_t *json_error_null(const char *where, const char *fmt, ...)
  */
 json_t *json_key(const char *key, json_t *value)
 {
+	/* Allocate it with twice as much space for storing the key's name.
+	 * This is so we can also store the simplified version later, if
+	 * necessary.
+	 */
 	json_t *json = json_simple(key, strlen(key) * 2 + 1, JSON_KEY);
 	json->first = value;
 	return json;

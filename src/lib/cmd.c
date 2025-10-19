@@ -2385,7 +2385,7 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	 */
 	cmd = NULL;
 	code = json_cmd_parse_file(filename);
-	if (code) {
+	if (code && code != JSON_CMD_ERROR) {
 		cmd = json_cmd(&start, &jcn_import);
 		cmd->sub = code;
 	}

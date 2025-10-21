@@ -629,7 +629,7 @@ jsonparser_t *parsers;
 /* This is used by both json_parse_file() and json_parse_string() to do the
  * actual JSON parsing.
  */
-static json_t *parse(const char *str, size_t len, const char **refend, const char **referr)
+static json_t *parse(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
 {
 	jsonparser_t *jp;
 
@@ -640,7 +640,7 @@ static json_t *parse(const char *str, size_t len, const char **refend, const cha
 	}
 
 	/* Otherwise, fall back on the JSON parser */
-	return parseJSON(str, len, refend, referr, 1);
+	return parseJSON(str, len, refend, referr, allowdefer);
 }
 
 
@@ -653,7 +653,7 @@ json_t *json_parse_string(const char *str)
 	json_t	*result;
 
 	/* Parse it */
-	result = parse(str, strlen(str), &end, &error);
+	result = parse(str, strlen(str), &end, &error, 0);
 
 	/* If error, then return a "null" json_t with an error message */
 	if (!result)
@@ -677,7 +677,7 @@ json_t *json_parse_file(const char *filename)
 		return NULL;
 
 	/* Parse it */
-	result = parse(jf->base, jf->size, &end, &error);
+	result = parse(jf->base, jf->size, &end, &error, 1);
 
 	/* Close/unmap the file */
 	json_file_unload(jf);

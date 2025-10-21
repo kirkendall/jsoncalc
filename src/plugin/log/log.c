@@ -34,11 +34,7 @@ static char *config = "{"
 "}";
 
 
-static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmdname_t jcn_log = {NULL, "log", log_parse, log_run, "log"};
+static jsoncmdname_t *jcn_log;
 
 
 /* When logset is used to select a default log name, this is where it's stored.
@@ -493,7 +489,7 @@ static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	} while (*src->str++ == ',');
 
 	/* Build the command */
-	cmd = json_cmd(&start, &jcn_log);
+	cmd = json_cmd(&start, jcn_log);
 	cmd->calc = list;
 	cmd->key = name;
 	cmd->var = detail + '0';
@@ -643,7 +639,7 @@ char *pluginlog(void)
 	free(dir);
 
 	/* Add the "log" and "logset" commands */
-	json_cmd_hook("log", "log", log_parse, log_run);
+	jcn_log = json_cmd_hook("log", "log", log_parse, log_run);
 	json_cmd_hook("log", "logset", logset_parse, logset_run);
 
 	/* Success! */

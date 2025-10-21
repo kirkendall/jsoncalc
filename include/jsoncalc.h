@@ -604,7 +604,7 @@ json_t *json_context_default_table(jsoncontext_t *context, char **refexpr);
  */
 extern jsoncmd_t JSON_CMD_ERROR[];
 
-void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
+jsoncmdname_t *json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext));
 int json_cmd_lineno(jsonsrc_t *src);
 jsoncmdout_t *json_cmd_error(const char *where, const char *fmt, ...);
 jsoncmdout_t *json_cmd_src_error(jsonsrc_t *src, int code, char *fmt, ...);

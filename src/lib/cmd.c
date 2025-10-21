@@ -114,7 +114,7 @@ json_t json_cmd_continue;	/* "continue" statement */
 json_t json_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
 
 /* Add a new statement name, and its argument parser and runner. */
-void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext))
+jsoncmdname_t *json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext))
 {
 	/* Allocate a jsoncmdname_t for it */
 	jsoncmdname_t *sn = (jsoncmdname_t *)malloc(sizeof(jsoncmdname_t));
@@ -128,6 +128,9 @@ void json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(json
 	/* Add it to the list */
 	sn->other = names;
 	names = sn;
+
+	/* Return it.  The command parser will likely need to know it. */
+	return sn;
 }
 
 /* Generate an error message */

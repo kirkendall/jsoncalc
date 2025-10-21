@@ -37,9 +37,7 @@ static json_t *jfn_arity(json_t *args, void *agdata)
  * complex example to demonstrate some of the parse helper functions.
  */
 
-static jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *example_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmdname_t jcn_example = {NULL, "example", example_parse, example_run};
+static jsoncmdname_t *jcn_example;
 
 /* This parses our "example" command.  The command name has already been
  * parsed, which is how json_cmd_parse_string() and json_cmd_parse_file()
@@ -102,7 +100,7 @@ static jsoncmd_t *example_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 
 	/* Build a command containing the text */
-	cmd = json_cmd(src, &jcn_example);
+	cmd = json_cmd(src, jcn_example);
 	cmd->key = text;
 	cmd->calc = expr;
 	return cmd;
@@ -186,7 +184,7 @@ char *pluginexample()
 	json_calc_function_hook("arity",  "x:any, ...", "number", jfn_arity);
 
 	/* Register the commands.  The first arg is the plugin name. */
-	json_cmd_hook("example", "example", example_parse, example_run);
+	jcn_example = json_cmd_hook("example", "example", example_parse, example_run);
 
 	/* Success */
 	return NULL;

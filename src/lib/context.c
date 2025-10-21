@@ -38,6 +38,36 @@ void json_context_hook(jsoncontext_t *(*addcontext)(jsoncontext_t *context))
 	extralayers = hook;
 }
 
+/* Dump the context stack in a human-readable format, for debugging.  In the
+ * GDB debugger, you can invoke this as "call json_context_dump(context)"
+ */
+void json_context_dump(jsoncontext_t *context)
+{
+	char	*str;
+	for (; context; context = context->older) {
+		if (!context->data)
+			str = "";
+		else if (context->data == json_system)
+			str = "json_system";
+		else
+			str = (context->data ? json_serialize(context->data, NULL) : "");
+		printf("%c%c%c%c%c%c%c%c%c%c%c %s\n",
+			context->autoload ? 'a' : ' ',
+			context->modified ? 'm' : ' ',
+			context->flags & JSON_CONTEXT_NOFREE ? 'F' : ' ',
+			context->flags & JSON_CONTEXT_VAR ? 'V' : ' ',
+			context->flags & JSON_CONTEXT_CONST ? 'C' : ' ',
+			context->flags & JSON_CONTEXT_GLOBAL ? 'G' : ' ',
+			context->flags & JSON_CONTEXT_THIS ? 'T' : ' ',
+			context->flags & JSON_CONTEXT_DATA ? 'D' : ' ',
+			context->flags & JSON_CONTEXT_ARGS ? 'A' : ' ',
+			context->flags & JSON_CONTEXT_NOCACHE ? 'N' : ' ',
+			context->flags & JSON_CONTEXT_MODIFIED ? 'M' : ' ',
+			str);
+		if (*str && *str != 'j')
+			free(str);
+	}
+}
 
 /* This callback is called if the current file's parsed data gets modified */
 static void data_modified(jsoncontext_t *layer, jsoncalc_t *lvalue)
@@ -276,10 +306,12 @@ static json_t *stdcurrent(char *key)
 	return NULL;
 }
 
-/* This creates the first several layers of a typical context stack.  "args"
- * should be an object containing members that should be accessible in scripts
- * via the "global.args" or simply "args" pseudovariables.  The "args" data
- * will be freed when the last context layer is freed.
+/* This creates the first several layers of a typical context stack.
+ *
+ * "args" should be an object containing members that should be accessible
+ * in scripts via the "global.args" or simply "args" pseudo-variables.  The
+ * "args" data will be freed when the last context layer is freed.  You may
+ * also pass NULL as the "args" value to skip all that.
  */
 jsoncontext_t *json_context_std(json_t *args)
 {
@@ -310,9 +342,9 @@ jsoncontext_t *json_context_std(json_t *args)
 	/* Create the base layer of the context */
 	context = json_context(context, base, JSON_CONTEXT_GLOBAL);
 
-	/* Add a layer that autoloads the time variables.  These should not
-	 * be cached.  Also add dummy versions of all time variables, mostly
-	 * for the benefit of name completion.
+	/* Make it autoload the time variables.  These should not  be cached.
+	 * Also add dummy versions of all time variables, mostly for the
+	 * benefit of name completion.
 	 */
 	context->autoload = stdcurrent;
 	context->flags |= JSON_CONTEXT_NOCACHE;

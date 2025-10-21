@@ -543,7 +543,10 @@ json_t *json_debug_error_null(const char *file, int line, char *fmt, ...)
  */
 json_t *json_debug_key(const char *file, int line, const char *key, json_t *value)
 {
-	json_t *json = json_debug_simple(file, line, key, strlen(key), JSON_KEY);
+	/* Allocate double the space for the key name, so we have a place to
+	 * put the "loose" version from json_mbs_simple_key().
+	 */
+	json_t *json = json_debug_simple(file, line, key, strlen(key) * 2 + 1, JSON_KEY);
 	json->first = value;
 	return json;
 }

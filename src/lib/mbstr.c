@@ -5,6 +5,7 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <string.h>
+#include <assert.h>
 #include <jsoncalc.h>
 
 
@@ -299,6 +300,7 @@ size_t json_mbs_wrap_char(char *buf, const char *s, int width)
  */
 size_t json_mbs_simple_key(char *dest, const char *src)
 {
+	size_t	lenbefore = strlen(src);
 	size_t len, dashlen;
 	wchar_t wc;
         int     in, out;
@@ -405,6 +407,7 @@ size_t json_mbs_simple_key(char *dest, const char *src)
 	}
 
 	/* Mark the end with a "\0', but don't include it in the count */
+	assert(len <= lenbefore);
 	dest[len] = '\0';
 	return len;
 }

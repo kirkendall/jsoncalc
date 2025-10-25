@@ -6,6 +6,7 @@ WWW=	../../../www
 
 ALL=	$(PLUGIN)/pluginxml.so
 SRC=	xml.c
+BUNDLE=	genplain.c gentemplate.c parse.c
 OBJ=	xml.o
 LIBS=	
 CFLAGS=	-I$(INC)
@@ -19,7 +20,7 @@ $(ALL): pluginxml.so
 pluginxml.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o pluginxml.so
 
-$(OBJ): $(SRC)
+$(OBJ): $(SRC) $(BUNDLE)
 	$(CC) $(CFLAGS) -c xml.c
 
 clean:

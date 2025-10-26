@@ -19,8 +19,7 @@ void json_grid(json_t *json, jsonformat_t *format)
 	size_t	size;
 	char	hdrpad;
 	char	number[40];
-	char	*bar;
-	char	delim[20];
+	char	*bar, *barface, *cellface;
 	int	*widths, *pad;
 	jsonformat_t tweaked;
 
@@ -110,29 +109,13 @@ void json_grid(json_t *json, jsonformat_t *format)
 	/* Decide whether to color the output */
 	hdrpad = format->color ? ' ' : '_';
 	bar = format->graphic ? "\xe2\x94\x82" : "|";
-	strcpy(delim, bar);
-	if (format->color && *format->escgridline) {
-		strcpy(delim, format->escgridline);
-		strcat(delim, bar);
-		strcat(delim, json_format_color_end);
-	}
 
 	/* Output the column headings.  If rowheight > 1 we need to do this
 	 * separately for each line of the headings.
 	 */
 	for (line = 0; line < rowheight; line++) {
 		/* Colorize? */
-		if (format->color) {
-			if (line + 1 == rowheight) {
-				/* Last row of headings (usually only row) */
-				if (*format->escgridhead)
-					fputs(format->escgridhead, format->fp);
-			} else {
-				/* An earlier line of multi-line headings */
-				if (*format->escgridhead2)
-					fputs(format->escgridhead2, format->fp);
-			}
-		}
+		cellface = (line == rowheight - 1 ? "gridhead" : "_gridhead");
 
 		/* Output this line of this column's heading */
 		for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
@@ -143,22 +126,22 @@ void json_grid(json_t *json, jsonformat_t *format)
 			if (size > 0)
 				size--; /* remove newline */
 
-//fprintf(format->fp, "%02d/%02d", wdata, width);
 			/* Output the key as a column heading */
+			json_user_printf(format, cellface, "");
 			for (i = 0; i < (width - wdata + 1) / 2; i++)
-				putc(hdrpad, format->fp);
+				json_user_ch(hdrpad);
 			if (size > 0)
-				fwrite(text, 1, size, format->fp);
+				json_user_printf(format, cellface, "%.*s", size, text);
 			for (; i < (width - wdata); i++)
-				putc(hdrpad, format->fp);
+				json_user_ch(hdrpad);
+
+			/* Bar between columns */
 			if (!json_is_last(col))
-				fputs(bar, format->fp);
+				json_user_printf(format, cellface, "%s", bar);
 		}
 
 		/* End the line */
-		if (format->color && *format->escgridhead)
-			fputs(json_format_color_end, format->fp);
-		putc('\n', format->fp);
+		json_user_printf(format, "normal", "\n");
 	}
 
 	/* For each row... */
@@ -178,6 +161,10 @@ void json_grid(json_t *json, jsonformat_t *format)
 
 		/* For each line of the row... */
 		for (line = 0; line < rowheight; line++) {
+
+			/* Choose the color */
+			barface = (line == rowheight - 1 ? "gridline" : "_gridline");
+			cellface = (line == rowheight - 1 ? "gridcell" : "_gridcell");
 
 			/* Output this line of the row */
 			for (c = 0, col = json_first(explain); col; c++, col = json_next(col)) {
@@ -218,46 +205,46 @@ void json_grid(json_t *json, jsonformat_t *format)
 				width = widths[c];
 
 				/* If a wide column heading dictates that we
-				 * need extra padding, then output half of that
-				 * extra padding now.
+				 * need extra padding (more than data width),
+				 * then output half of that extra padding now.
 				 */
-				for (i = pad[c] >> 1; i > 0; i--)
-					putc(' ', format->fp);
+				if (pad[c] >= 2)
+					json_user_printf(format, cellface, "%*c", pad[c] >> 1, ' ');
 
 				/* Output the cell. Alignment depends on type */
 				if (cell && cell->type == JSON_STRING) {
 					/* left-justify strings */
 					if (size > 0)
-						fwrite(text, size, 1, format->fp);
-					for (i = 0; i < width - wdata; i++)
-						putc(' ', format->fp);
+						json_user_printf(format, cellface, "%.*s", size, text);
+					if (width - wdata > 0)
+						json_user_printf(format, cellface, "%*c", width - wdata, ' ');
 				} else if (cell && cell->type == JSON_NUMBER) {
 					/* right-justify numbers */
-					for (i = 0; i < width - wdata; i++)
-						putc(' ', format->fp);
-					fputs(text, format->fp);
+					if (width - wdata > 0)
+						json_user_printf(format, cellface, "%*c", width - wdata, ' ');
+					json_user_printf(format, cellface, "%s", text);
 				} else {
 					/* center everything else */
-					for (i = 0; i < (width - wdata + 1) / 2; i++)
-						putc(' ', format->fp);
-					fputs(text, format->fp);
-					for (; i < (width - wdata); i++)
-						putc(' ', format->fp);
+					if (width - wdata > 0)
+						json_user_printf(format, cellface, "%*c", (width - wdata + 1) >> 1, ' ');
+					json_user_printf(format, cellface, "%s", text);
+					if (width - wdata > 1)
+						json_user_printf(format, cellface, "%*c", (width - wdata) >> 1, ' ');
 				}
 
 				/* If a wide column heading dictates that we
 				 * need extra padding, then output the second
 				 * half of that extra padding now.
 				 */
-				for (i = pad[c] - (pad[c] >> 1); i > 0; i--)
-					putc(' ', format->fp);
+				if (pad[c] >= 1)
+					json_user_printf(format, cellface, "%*c", (pad[c] + 1) >> 1, ' ');
 
 				/* Delimiter between columns */
 				if (!json_is_last(col))
-					fputs(delim, format->fp);
+					json_user_printf(format, barface, "%s", bar);
 
 			}
-			putc('\n', format->fp);
+			json_user_printf(format, "normal", "\n");
 		}
 	}
 

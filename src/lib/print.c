@@ -27,19 +27,21 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 
 	/* output the indent */
 	if (indent > 0 && (format->pretty || format->elem))
-		fprintf(format->fp, "%*s", indent, "");
+		json_user_printf(format, "result", "%*s", indent, "");
+	else
+		json_user_printf(format, "result", ""); /* just to set color */
 
 	/* If this is a key, then output the key and switch to its value */
 	scan = json;
 	if (json->type == JSON_KEY)
 	{
-                putc('"', format->fp);
+                json_user_ch('"');
                 for (str = json->text; *str; str++) {
 			switch (*str) {
 			case '"':
 			case '\\':
-				putc('\\', format->fp);
-				putc(*str, format->fp);
+				json_user_ch('\\');
+				json_user_ch(*str);
 				break;
 			case '\'':
 				/* For "sh" format, the entire output is
@@ -48,51 +50,50 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 				 * For that, we need to end the quote, add a
 				 * backslash-', and start a new quote.
 				 */
-				if (*str == '\'' && format->sh) {
-					putc('\'', format->fp);
-					putc('\\', format->fp);
-					putc('\'', format->fp);
-					putc('\'', format->fp);
+				if (format->sh) {
+					json_user_ch('\'');
+					json_user_ch('\\');
+					json_user_ch('\'');
 				}
-				putc(*str, format->fp);
+				json_user_ch('\'');
 				break;
 			case '\n':
-				putc('\\', format->fp);
-				putc('n', format->fp);
+				json_user_ch('\\');
+				json_user_ch('n');
 				break;
 			default:
-				putc(*str, format->fp);
+				json_user_ch(*str);
 			}
 		}
-                putc('"', format->fp);
-                putc(':', format->fp);
+                json_user_ch('"');
+                json_user_ch(':');
 		scan = json->first;
 	}
 
 	switch (scan->type)
 	{
 	  case JSON_OBJECT:
-                putc('{', format->fp);
+                json_user_ch('{');
 		if (format->pretty || format->elem) {
-                        putc('\n', format->fp);
+                        json_user_ch('\n');
                         for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, indent + format->tab, format);
 			}
                         if (indent > 0)
-                                fprintf(format->fp, "%*s", indent, "");
+                                json_user_printf(format, "result", "%*s", indent, "");
                 } else {
                         for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, 0, format);
 			}
                 }
-                putc('}', format->fp);
+                json_user_ch('}');
 		break;
 
 	  case JSON_ARRAY:
-		putc('[', format->fp);
+		json_user_ch('[');
 		if (format->pretty || format->elem) {
 			jsonformat_t byelem;
-			putc('\n', format->fp);
+			json_user_ch('\n');
 			byelem = *format;
 			if (format->elem) {
 				byelem.tab = 0;
@@ -101,10 +102,10 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 			}
                         for (scan = json_first(scan); scan && !json_interrupt; scan = json_next(scan)) {
                                 if (format->elem && indent + format->tab > 0)
-					fprintf(format->fp, "%*c", indent + format->tab, ' ');
+					json_user_printf(format, "result", "%*c", indent + format->tab, ' ');
                                 jcprint(scan, indent + format->tab, &byelem);
 				if (format->elem)
-					putc('\n', format->fp);
+					json_user_ch('\n');
 			}
 
 			/* If we didn't finish scanning a deferred array, then
@@ -112,7 +113,7 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 			 */
 			json_break(scan);
                         if (indent > 0)
-                                fprintf(format->fp, "%*s", indent, "");
+                                json_user_printf(format, "result", "%*s", indent, "");
                 } else {
                         for (scan = json_first(scan); scan && !json_interrupt; scan = json_next(scan)) {
                                 jcprint(scan, indent + format->tab, format);
@@ -120,31 +121,31 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 		}
 		if (scan)
 			json_break(scan);
-		putc(']', format->fp);
+		json_user_ch(']');
 		break;
 
 	  case JSON_STRING:
 		str = json_serialize(scan, format);
-		fputs(str, format->fp);
+		json_user_printf(format, "result", "%s", str);
 		free(str);
 		break;
 
 	  case JSON_NUMBER:
 		/* could be binary int or double, or it could be text */
 		if (scan->text[0] == '\0' && scan->text[1] == 'i')
-			fprintf(format->fp, "%d", JSON_INT(scan));
+			json_user_printf(format, "result", "%d", JSON_INT(scan));
 		else if (scan->text[0] == '\0' && scan->text[1] == 'd')
-			fprintf(format->fp, "%.*g", format->digits, JSON_DOUBLE(scan));
+			json_user_printf(format, "result", "%.*g", format->digits, JSON_DOUBLE(scan));
 		else
-			fputs(scan->text, format->fp);
+			json_user_printf(format, "result", "%s", scan->text);
 		break;
 
 	  case JSON_BOOLEAN:
-		fputs(scan->text, format->fp);
+		json_user_printf(format, "result", "%s", scan->text);
 		break;
 
 	  case JSON_NULL:
-		fputs("null", format->fp);
+		json_user_printf(format, "result", "null");
 		break;
 
 	  default:
@@ -152,9 +153,9 @@ static void jcprint(json_t *json, int indent, jsonformat_t *format)
 	}
 
 	if (!json_is_last(json))
-		putc(',', format->fp);
+		json_user_ch(',');
 	if (format->pretty || format->elem)
-		putc('\n', format->fp);
+		json_user_ch('\n');
 }
 
 /* Output each row of a table as a line containing a series of name=value pairs */
@@ -166,7 +167,7 @@ static void jcsh(json_t *json, jsonformat_t *format){
 	for (row = json_first(json); row && !json_interrupt; row = json_next(row)) {
 		for (col = row->first; col; col = col->next) { /* object */
 			/* Output the prefix, name, and an = */
-			fprintf(format->fp, "%s%s=", format->prefix, col->text);
+			json_user_printf(format, "result", "%s%s=", format->prefix, col->text);
 
 			/* Get the value */
 			frees = NULL;
@@ -184,7 +185,7 @@ static void jcsh(json_t *json, jsonformat_t *format){
 
 			/* Output it, maybe with quotes */
 			if (*t)
-				putc('\'', format->fp);
+				json_user_ch('\'');
 			for (; *s; s++) {
 				if ((unsigned char)*s < ' ' || *s == '\177')
 					; /* omit all control characters */
@@ -192,21 +193,21 @@ static void jcsh(json_t *json, jsonformat_t *format){
 					/* To output a ' we must end quoting,
 					 * output \' and start new quoting.
 					 */
-					putc('\'', format->fp);
-					putc('\\', format->fp);
-					putc('\'', format->fp);
-					putc('\'', format->fp);
+					json_user_ch('\'');
+					json_user_ch('\\');
+					json_user_ch('\'');
+					json_user_ch('\'');
 				} else if ((*s & 0x80) != 0 && format->ascii) {
 					char buf[13], *c;
 					s = (char *)json_mbs_ascii(s, buf);
 					s--; /* because for-loop does s++ */
 					for (c = buf; *c; c++)
-						putc(*c, format->fp);
+						json_user_ch(*c);
 				} else
-					putc(*s, format->fp);
+					json_user_ch(*s);
 			}
 			if (*t)
-				putc('\'', format->fp);
+				json_user_ch('\'');
 
 			/* If supposed to free it, do that */
 			if (frees)
@@ -214,9 +215,9 @@ static void jcsh(json_t *json, jsonformat_t *format){
 
 			/* If not the last, then output a space */
 			if (col->next) /* object */
-				putc(' ', format->fp);
+				json_user_ch(' ');
 		}
-		putc('\n', format->fp);
+		json_user_ch('\n');
 	}
 
 	/* If we stopped before the end of a deferred array, there could be
@@ -288,29 +289,17 @@ void json_print(json_t *json, jsonformat_t *format)
 
 	/* Maybe output error messages embedded in "null" */
 	if (tweaked.errors && json->type == JSON_NULL && *json->text) {
-		if (tweaked.color && isatty(fileno(stderr)))
-			fprintf(stderr, "%s%s%s\n",
-				tweaked.escerror,
-				json->text,
-				json_format_color_end);
-		else
-			fprintf(stderr, "%s\n", json->text);
-		/* ... but either way, continue to output "null" too */
+		json_user_printf(&tweaked, "error", "%s\n", json->text);
+		/* ... but continue to output "null" too */
 	}
-
-	/* If not writing to a tty then always inhibit colors */
-	if (!isatty(fileno(tweaked.fp)))
-		tweaked.color = 0;
 
 	/* Maybe output strings unadorned (and without adding a newline) */
 	if (tweaked.string && json->type == JSON_STRING) {
 		size_t len;
-		fputs(json->text, tweaked.fp);
+		json_user_printf(&tweaked, "normal", "%s", json->text);
 		len = strlen(json->text);
-		if (tweaked.fp == stdout) {
-		if (len > 0 && json->text[len - 1] != '\n')
+		if (tweaked.fp == stdout && len > 0)
 			json_print_incomplete_line = (len > 0 && json->text[len - 1] != '\n');
-		}
 		return;
 	}
 
@@ -342,16 +331,16 @@ void json_print(json_t *json, jsonformat_t *format)
 
 	/* Output it as JSON, possibly "pretty" */
 	if (tweaked.sh)
-		putc('\'', tweaked.fp);
+		json_user_printf(&tweaked, "result", "'"); /* set color too */
 	jcprint(json, 0, &tweaked);
 	if (tweaked.sh)
-		putc('\'', tweaked.fp);
+		json_user_printf(&tweaked, "result", "'"); /* set color too */
 
 	/* "Pretty" mode always ends with a newline, but for non-"pretty"
 	 * we want to add a newline now.
 	 */
 	if (!tweaked.pretty)
-		fputc('\n', tweaked.fp);
+		json_user_printf(&tweaked, "normal", "\n");
 	if (tweaked.fp == stdout)
 		json_print_incomplete_line = 0;
 }

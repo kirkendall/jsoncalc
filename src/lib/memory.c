@@ -384,13 +384,11 @@ static int memory_slot(const char *file, int line)
                 if (!memory_tracker[slot].file) {
                         memory_tracker[slot].file = file;
                         memory_tracker[slot].line = line;
-/*printf("%s:%d: allocating slot %d\n", file, line, slot);*/
                         return slot;
                 }
 
                 /* Found an existing slot for this file/line */
                 if (memory_tracker[slot].file == file && memory_tracker[slot].line == line) {
-/*printf("%s:%d: reusing slot %d\n", file, line, slot);*/
                         return slot;
 		}
 
@@ -401,7 +399,6 @@ static int memory_slot(const char *file, int line)
         /* If we get here then we looped without ever finding the slot or an
          * empty slot.  All we can do is count it in the overflow area.
          */
-/*printf("%s:%d: forced to use slot 0\n", file, line);*/
         return 0;
 }
 

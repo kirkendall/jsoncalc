@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include <jsoncalc.h>
 #include "version.h"
 
@@ -43,92 +44,123 @@ static const char *defaultconfig = "{"
 		"\"null\":\"\","
 	"},"
 	"\"emptyobject\":\"object\","
-	"\"defersize\":1000000,"
+	"\"defersize\":10000000,"
 	"\"deferexplain\":100,"
-	"\"prompt\":{"
-		"\"bold\":true,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"cyan\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
-	"\"prompt\":{"
-		"\"bold\":false,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"normal\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
-	"\"result\":{"
-		"\"bold\":false,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"normal\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
-	"\"error\":{"
-		"\"fg\":\"red\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-		"\"bold\":true,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-	"},"
-	"\"gridhead\":{"
-		"\"bold\":true,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"blue\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
-	"\"gridline\":{"
-		"\"bold\":true,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"blue\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
-	"\"debug\":{"
-		"\"bold\":true,"
-		"\"dim\":false,"
-		"\"italic\":false,"
-		"\"underlined\":false,"
-		"\"blinking\":false,"
-		"\"linethru\":false"
-		"\"fg\":\"blue\","
-		"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
-		"\"bg\":\"on normal\","
-		"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
-	"},"
+	"\"styles\": ["
+		"{"
+			"\"style\":\"normal\","
+			"\"bold\":false,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"normal\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},{"
+			"\"style\":\"prompt\","
+			"\"bold\":true,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"cyan\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},{"
+			"\"style\":\"result\","
+			"\"bold\":false,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"normal\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},{"
+			"\"style\":\"error\","
+			"\"bold\":true,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"red\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":true"
+		"},{"
+			"\"style\":\"debug\","
+			"\"bold\":true,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"blue\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":true"
+		"},{"
+			"\"style\":\"gridhead\","
+			"\"bold\":true,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":true,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"blue\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},{"
+			"\"style\":\"gridline\","
+			"\"bold\":true,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"blue\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},{"
+			"\"style\":\"gridcell\","
+			"\"bold\":false,"
+			"\"dim\":false,"
+			"\"italic\":false,"
+			"\"underlined\":false,"
+			"\"blinking\":false,"
+			"\"boxed\":false,"
+			"\"strike\":false"
+			"\"fg\":\"normal\","
+			"\"fg-list\":[\"normal\",\"black\",\"red\",\"green\",\"yellow\",\"blue\",\"magenta\",\"cyan\",\"white\"],"
+			"\"bg\":\"on normal\","
+			"\"bg-list\":[\"on normal\",\"on black\",\"on red\",\"on green\",\"on yellow\",\"on blue\",\"on magenta\",\"on cyan\",\"on white\"],"
+			"\"stderr\":false"
+		"},"
+	"],"
 	"\"plugin\":{}"
 "}";
 
@@ -403,6 +435,63 @@ void json_config_save(const char *name)
 	json_free(copy);
 }
 
+/* Look up the section in config.styles for a given style.  There are two ways
+ * this is used.
+ *
+ * Plugins can call it with NULL as the second argument, during their config
+ * initialization.  Used this way, if the requested style isn't found then it
+ * will be added and returned.  It will initially be a copy of "normal" but
+ * the plugin can directly modify member values as appropriate.  Note that
+ * settings from -s/-S flags or the config file are loaded later.
+ *
+ * If called with a reference to a (json_t*) as the second argument, then it'll
+ * store the "config.styles" pointer there if the style is found.  If the style
+ * is not found, the function will return NULL.  The config code itself uses
+ * this method to avoid creating bogus/misspelled names.
+ */
+json_t *json_config_style(const char *name, json_t **refstyles)
+{
+	json_t *styles, *scan, *style;
+
+	/* Find "config.styles" */
+	styles = json_by_key(json_config, "styles");
+	assert(styles != NULL && styles->type == JSON_ARRAY);
+
+	/* Scan for the requested style.  We don't use json_by_key_value()
+	 * for this because we hope to avoid converting the name from (char *)
+	 * to (json_t *).
+	 */
+	for (scan = json_first(styles); scan; scan = json_next(scan)) {
+		assert(scan->type == JSON_OBJECT);
+		style = json_by_key(scan, "style");
+		assert(style && style->type == JSON_STRING);
+		if (!json_mbs_casecmp(style->text, name)) {
+			/* Found!  Return it.  Note that config.styles is
+			 * not a deferred array, so we don't need to call
+			 * json_break()
+			 */
+			if (refstyles)
+				*refstyles = styles;
+			return scan;
+		}
+	}
+
+	/* Not found.  If called from the config code below, (i.e. if refstyles
+	 * is not NULL) then return NULL.
+	 */
+	if (refstyles)
+		return NULL;
+
+	/* Okay, we were called from a plugin's initialization code, so we need
+	 * to add it.  Start with a copy of "normal" (the first element of
+	 * config.styles) and stuff the new name into the copy.
+	 */
+	scan = json_copy(styles->first);
+	json_append(scan, json_key("style", json_string(name, -1)));
+	json_append(styles, scan);
+	return scan;
+}
+
 /* Get an option from a given section of the settings.  If you pass NULL
  * for the section name, then it'll look in the top level of the config data,
  * or in the "interactive" or "batch" subsection as appropriate.  Returns
@@ -542,10 +631,15 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 		thisconfig = config;
 		found = json_by_key(config, name);
 
-		/* If not found in "config" then try the whole config */
+		/* If not found in "config" then try the whole config, or
+		 * in the "styles" array.
+		 */
 		if (!found) {
 			thisconfig = json_config;
 			found = json_by_key(json_config, name);
+		}
+		if (!found) {
+			found = json_config_style(name, &thisconfig);
 		}
 
 		/* Followed by "=" ?  Or, equivalently, '.' to make deeply
@@ -667,6 +761,9 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					thisconfig = json_config;
 					found = json_by_key(json_config, name + 2);
 				}
+				/* NOTE: We don't need to check for a color name
+				 * because you can never say "set noprompt".
+				 */
 				if (found && found->type == JSON_BOOLEAN) {
 					strcpy(found->text, "false");
 					settings += namelen;

@@ -606,16 +606,10 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 
 		/* If error then report it and quit */
 		if (result) {
-			if (json_format_default.color)
-				fputs(json_format_default.escerror, stderr);
 			jf = json_file_containing(result->where, &lineno);
 			if (jf)
-				fprintf(stderr, "%s:%d: ", jf->filename, lineno);
-			fputs(result->text, stderr);
-			fputc('\n', stderr);
-			if (json_format_default.color)
-				fputs(json_format_color_end, stderr);
-
+				json_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
+			json_user_printf(NULL, "error", "%s\n", result->text);
 			free(result);
 			json_cmd_free(firstcmd);
 			return JSON_CMD_ERROR;
@@ -710,13 +704,12 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		if (json_debug_flags.trace) {
 			int lineno;
 			jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
-			fputs(json_format_default.escdebug, stderr);
 			if (jf)
-				fprintf(stderr, "%s:%d: ", jf->filename, lineno);
+				json_user_printf(NULL, "debug", "%s:%d: ", jf->filename, lineno);
 			if (cmd->key)
-				fprintf(stderr, "%s %s%s\n", cmd->name->name, cmd->key, json_format_color_end);
+				json_user_printf(NULL, "debug", "%s %s\n", cmd->name->name, cmd->key);
 			else
-				fprintf(stderr, "%s%s\n", cmd->name->name, json_format_color_end);
+				json_user_printf(NULL, "debug", "%s\n", cmd->name->name);
 		}
 
 		/* Run the command */
@@ -1572,21 +1565,21 @@ static void describefn(jsonfunc_t *f)
 	json_t	*params = NULL;
 
 	if (f->fn)
-		printf("builtin ");
+		json_user_printf(NULL, "normal", "builtin ");
 	if (f->agfn)
-		printf("aggregate ");
-	printf("function %s", f->name);
+		json_user_printf(NULL, "normal", "aggregate ");
+	json_user_printf(NULL, "normal", "function %s", f->name);
 	if (f->args)
-		printf("(%s)", f->args);
+		json_user_printf(NULL, "normal", "(%s)", f->args);
 	else {
-		putchar('(');
+		json_user_ch('(');
 		for (params = f->userparams->first; params; params = params->next) /* undeferred */
-			printf("%s%s", params->text, params->next ? ", " : ""); /* undeferred */
-		putchar(')');
+			json_user_printf(NULL, "normal", "%s%s", params->text, params->next ? ", " : ""); /* undeferred */
+		json_user_ch(')');
 	}
 	if (f->returntype)
-		printf(":%s", f->returntype);
-	putchar('\n');
+		json_user_printf(NULL, "normal", ":%s", f->returntype);
+	json_user_ch('\n');
 }
 
 static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
@@ -2149,10 +2142,17 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* Detect errors */
-	if (json_is_error(table))
-		return json_cmd_error(cmd->where, "%s", table->text);
-	if (!json_is_table(table))
-		return json_cmd_error(cmd->where, "explainNotTable:Not a table");
+	if (json_is_error(table)) {
+		jsoncmdout_t *out = json_cmd_error(cmd->where, "%s", table->text);
+		json_free(table);
+		return out;
+	}
+	if (!json_is_table(table)) {
+
+		jsoncmdout_t *out = json_cmd_error(cmd->where, "explainNotTable:Not a table");
+		json_free(table);
+		return out;
+	}
 
 	/* Output the explain results, unless the parameter text was just "?" */
 	columns = NULL;
@@ -2180,7 +2180,7 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 	/* If we have an expr for the default table, output it */
 	if (expr)
-		puts(expr);
+		json_user_printf(NULL, "normal", "%s\n", expr);
 
 	/* Clean up */
 	if (columns)
@@ -2321,9 +2321,9 @@ static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	elem = json_by_index(files, current);
 	files = json_by_key(elem, "filename");
 	if (!files || files->type != JSON_STRING)
-		puts("(no files)");
+		json_user_printf(NULL, "normal", "%s\n", "(no files)");
 	else
-		puts(files->text);
+		json_user_printf(NULL, "normal", "%s\n", files->text);
 	json_break(files);
 	json_break(elem);
 
@@ -2546,12 +2546,12 @@ static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	lastchar = '\n';
 	for (scan = json_first(list); scan; scan = json_next(scan)) {
 		if (scan->type == JSON_STRING) {
-			fputs(scan->text, stdout);
+			json_user_printf(NULL, "normal", "%s", scan->text, stdout);
 			if (*scan->text)
 				lastchar = scan->text[strlen(scan->text) - 1];
 		} else {
 			char *tmp = json_serialize(scan, NULL);
-			fputs(tmp, stdout);
+			json_user_printf(NULL, "normal", "%s", tmp);
 			free(tmp);
 			lastchar = 'x'; /* Never empty, never '\n' */
 		}
@@ -2692,11 +2692,21 @@ static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* If not an assignment, then it's an output.  Output it! */
 	if (cmd->calc->op != JSONOP_ASSIGN
 	 && cmd->calc->op != JSONOP_APPEND
-	 && cmd->calc->op != JSONOP_MAYBEASSIGN)
+	 && cmd->calc->op != JSONOP_MAYBEASSIGN) {
+		/* Print the result */
 		json_print(result, NULL);
 
-	/* Either way, free the result */
-	json_free(result);
+		/* Give the user interface a chance to save the result.  If
+		 * it doesn't want to do that, then free it.
+		 */
+		if (!json_user_result(result))
+			json_free(result);
+	} else {
+		/* For assignment, a copy of the result is already saved to
+		 * we can discard it.
+		 */
+		json_free(result);
+	}
 
 	return NULL;
 }

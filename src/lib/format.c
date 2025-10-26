@@ -23,106 +23,8 @@ jsonformat_t json_format_default = {
 	1,	/* graphic - use Unicode graphic characters */
 	"",	/* prefix - prepended to names for sh format */
 	"",	/* null - text to show as null for grid format */
-	"\033[36;1m",	/* escprompt - coloring for the prompt */
-	"\033[36m",	/* escresult - coloring for result */
-	"\033[4;32m",	/* eschead - coloring for last grid heading line */
-	"\033[32m",	/* eschead2 - coloring for other grid heading lines */
-	"\033[32m",	/* escdelim - coloring for table column delimiter */
-	"\033[31m",	/* escerror - coloring for errors */
-	"\033[33m",	/* escdebug - coloring for debugging output */
 	NULL	/* output - NULL for stdout, else the fp to write to */
 };
-
-/* This is the escape sequence to end coloring */
-char json_format_color_end[20] = "\033[m";
-
-
-/* Convert a color name or other attribute to a number */
-static char *colorcode(char *esc, const char *color)
-{
-	int	i;
-	char	*code;
-
-	/* Map names to numbers, for coloring escape sequences */
-	static struct {
-		char *name;
-		char code[3];
-	} colors[] = {
-		{"bold","1"},{"dim","2"},{"italic","3"},{"underlined","4"},
-		{"blinking","5"},{"boxed","7"},
-		{"black","30"},{"red","31"},{"green","32"},{"yellow","33"},
-		{"blue","34"},{"magenta","35"},{"cyan","36"},{"white","37"},
-		{"on black","40"},{"on red","41"},{"on green","42"},
-		{"on yellow","43"},{"on blue","44"},{"on magenta","45"},
-		{"on cyan","46"},{"on white","47"},
-		{NULL}
-	};
-
-	/* Defend against NULL */
-	if (!color)
-		return esc;
-
-	/* Scan for the code, by name */
-	for (i = 0; colors[i].name; i++)
-		if (!strcmp(colors[i].name, color)) {
-			/* Copy it, with a ; appended */
-			for (code = colors[i].code; *code; )
-				*esc++ = *code++;
-			*esc++ = ';';
-			return esc;
-		}
-
-	return esc;
-}
-
-/* Convert a color from the config object to an escape sequence.  "esc" points
- * to a buffer to receive the escape sequence.  "name" is the name of a color
- * setting, such as "gridhead". 'nounderlined" inhibits underlining if set to 1.
- */
-void json_format_esc(char *esc, const char *name, int nounderlined)
-{
-	json_t	*color;
-	char	*wholeesc = esc;
-
-	/* Find the nested object describing this color */
-	color = json_by_key(json_config, name);
-	if (!color) {
-		*esc = '\0';
-		return;
-	}
-
-	/* Start the escape sequence */
-	*esc++ = '\033';
-	*esc++ = '[';
-
-	/* Foreground and background */
-	esc = colorcode(esc, json_text_by_key(color, "fg"));
-	esc = colorcode(esc, json_text_by_key(color, "bg"));
-
-	/* Other attributes */
-	if (json_is_true(json_by_key(color, "bold")))
-		esc = colorcode(esc, "bold");
-	if (json_is_true(json_by_key(color, "dim")))
-		esc = colorcode(esc, "dim");
-	if (json_is_true(json_by_key(color, "italic")))
-		esc = colorcode(esc, "italic");
-	if (!nounderlined && json_is_true(json_by_key(color, "underlined")))
-		esc = colorcode(esc, "underlined");
-	if (json_is_true(json_by_key(color, "blinking")))
-		esc = colorcode(esc, "blinking");
-	if (json_is_true(json_by_key(color, "boxed")))
-		esc = colorcode(esc, "boxed");
-
-	/* We should have an extra ";" at the end, which we'll convert to
-	 * 'm' to complete the sequence.  If there is no ';' then there are
-	 * no attributes set so we might as well skip the whole sequence.
-	 */
-	if (esc[-1] == ';') {
-		esc[-1] = 'm';
-		esc[0] = '\0';
-	} else
-		*wholeesc = '\0';
-}
 
 
 /* Initialize the format and colors from json_config or some other config.
@@ -163,11 +65,4 @@ void json_format_set(jsonformat_t *format, json_t *config)
 	format->prefix[sizeof format->prefix - 1] = '\0';
 	strncpy(format->null, json_text_by_key(section, "null"), sizeof format->null - 1);
 	format->null[sizeof format->null - 1] = '\0';
-	json_format_esc(format->escprompt, "prompt", 0);
-	json_format_esc(format->escresult, "result", 0);
-	json_format_esc(format->escgridhead, "gridhead", 0);
-	json_format_esc(format->escgridhead2, "gridhead", 1);
-	json_format_esc(format->escgridline, "gridline", 0);
-	json_format_esc(format->escerror, "error", 0);
-	json_format_esc(format->escdebug, "debug", 0);
 }

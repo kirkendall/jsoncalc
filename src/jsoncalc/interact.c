@@ -93,11 +93,11 @@ static char *jcprompt(const char *prompt)
 
 	sprintf(buf, "%c%s%c%s%c%s%c ",
 		RL_PROMPT_START_IGNORE,
-		json_format_default.escprompt,
+		"\033[32;1m",
 		RL_PROMPT_END_IGNORE,
 		prompt,
 		RL_PROMPT_START_IGNORE,
-		json_format_color_end,
+		"\033[m",
 		RL_PROMPT_END_IGNORE);
 
 	return buf;

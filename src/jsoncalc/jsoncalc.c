@@ -194,26 +194,22 @@ void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
 	result = json_cmd_run(jc, &context);
 	if (result) {
 		if (result->ret == &json_cmd_break)
-			puts("RETURNED A \"BREAK\"");
+			json_user_printf(NULL, "debug", "RETURNED A \"BREAK\"\n");
 		else if (result->ret == &json_cmd_continue)
-			puts("RETURNED A \"CONTINUE\"");
+			json_user_printf(NULL, "debug", "RETURNED A \"CONTINUE\"\n");
 		else if (result->ret) {
-			printf("RETURNED A VALUE: ");
+			json_user_printf(NULL, "debug", "RETURNED A VALUE: ");
 			json_print(result->ret, NULL);
 			json_free(result->ret);
 		} else {
-			if (*json_format_default.escerror)
-				fputs(json_format_default.escerror, stderr);
 			if (result->where) {
 				int lineno;
 				jsonfile_t *jf = json_file_containing(result->where, &lineno);
 				if (jf)
-					fprintf(stderr, "%s:%d: ", jf->filename, lineno);
+					json_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
 			}
-			fprintf(stderr, "%s\n", result->text);
-			if (*json_format_default.escerror)
-				fputs(json_format_color_end, stderr);
-			putc('\n', stderr);
+			json_user_printf(NULL, "error", "%s", result->text);
+			json_user_printf(NULL, "normal", "\n");
 		}
 		free(result);
 	}
@@ -311,8 +307,6 @@ int main(int argc, char **argv)
 
 	/* set the locale */
 	val = setlocale(LC_ALL, "");
-	if (json_debug_flags.calc)
-		printf("Locale:  %s\n", val);
 
 	/* Detect "--version" */
 	if (argc >= 2 && !strcmp(argv[1], "--version")) {

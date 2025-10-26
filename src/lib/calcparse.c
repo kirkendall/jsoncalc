@@ -539,7 +539,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 	/* If no tokens, return NULL */
 	if (!*str) {
 		if (json_debug_flags.calc)
-			printf("lex(): NULL\n");
+			json_user_printf(NULL, "debug", "lex(): NULL\n");
 		return NULL;
 	}
 
@@ -578,7 +578,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 			str += token->len;
 		}
 		if (json_debug_flags.calc)
-			printf("lex(): number JSONOP_NUMBER \"%.*s\"\n", token->len, token->full);
+			json_user_printf(NULL, "debug", "lex(): number JSONOP_NUMBER \"%.*s\"\n", token->len, token->full);
 		return str;
 	}
 
@@ -603,7 +603,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 			token->len -= 2;
 		}
 		if (json_debug_flags.calc)
-			printf("lex(): string JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
+			json_user_printf(NULL, "debug", "lex(): string JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
 		return str;
 	}
 
@@ -688,7 +688,7 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 		}
 		str += token->len;
 		if (json_debug_flags.calc)
-			printf("lex(): keyword JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
+			json_user_printf(NULL, "debug", "lex(): keyword JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
 		return str;
 	}
 
@@ -747,13 +747,13 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 			token->op = jcisassign(stack);
 
 		if (json_debug_flags.calc)
-			printf("lex(): operator JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
+			json_user_printf(NULL, "debug", "lex(): operator JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
 		return str;
 	}
 
 	/* Invalid */
 	if (json_debug_flags.calc)
-		printf("lex(): invalid JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
+		json_user_printf(NULL, "debug", "lex(): invalid JSONOP_%s \"%.*s\"\n", json_calc_op_name(token->op), token->len, token->full);
 	str++;
 	return str;
 } 
@@ -1323,18 +1323,19 @@ static jsoncalc_t *jcselect(jsonselect_t *sel)
 	/* Maybe dump some debugging info */
 	if (json_debug_flags.calc) {
 		char *tmp; 
-		printf("jcselect(\n");
-		printf("   distinct=%s\n", sel->distinct ? "true" : "false");
-		printf("   select=");json_calc_dump(sel->select);putchar('\n');
-		printf("   from=");json_calc_dump(sel->from);putchar('\n');
+		json_user_printf(NULL, "debug", "jcselect(\n");
+		json_user_printf(NULL, "debug", "   distinct=%s\n", sel->distinct ? "true" : "false");
+		json_user_printf(NULL, "debug", "   select=");json_calc_dump(sel->select);json_user_ch('\n');
+		json_user_printf(NULL, "debug", "   from=");json_calc_dump(sel->from);json_user_ch('\n');
 		tmp = json_serialize(sel->groupby, 0);
-		printf("   groupby=%s\n", tmp);
+		json_user_printf(NULL, "debug", "   groupby=%s\n", tmp);
 		free(tmp);
 		tmp = json_serialize(sel->orderby, 0);
-		printf("   orderby=%s\n", tmp);
+		json_user_printf(NULL, "debug", "   orderby=%s\n", tmp);
 		free(tmp);
-		printf("   limit=");json_calc_dump(sel->limit);putchar('\n');
-		printf(")\n");
+		json_user_printf(NULL, "debug", "   limit=");json_calc_dump(sel->limit);json_user_ch('\n');
+		json_user_ch(')');
+		json_user_ch('\n');
 	}
 
 	/* Start building the "native" version of the SELECT in variable "jc",
@@ -1759,9 +1760,9 @@ static int pattern_verbose(stack_t *stack, char *want, jsoncalc_t *next)
 	dumpstack(stack, "pattern %s", want);
 	if (json_debug_flags.calc && result) {
 		if (next)
-			printf(" -> TRUE, if prec>=%d (%s next.prec)\n", operators[next->op].prec, json_calc_op_name(next->op));
+			json_user_printf(NULL, "debug", " -> TRUE, if prec>=%d (%s next.prec)\n", operators[next->op].prec, json_calc_op_name(next->op));
 		else
-			puts(" -> TRUE, unconditionally");
+			json_user_printf(NULL, "debug", " -> TRUE, unconditionally\n");
 	}
 	return result;
 }
@@ -2555,7 +2556,7 @@ jsoncalc_t *json_calc_parse(const char *str, const char **refend, const char **r
 	/* One last reduce */
 	if (!err) {
 		if (json_debug_flags.calc)
-			puts("Doing the final reduce...");
+			json_user_printf(NULL, "debug", "Doing the final reduce...\n");
 		err = reduce(&stack, NULL, token.full + token.len);
 	}
 

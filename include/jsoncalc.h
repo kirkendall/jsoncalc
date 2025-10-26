@@ -84,13 +84,6 @@ typedef struct {
 	char	graphic;/* Use Unicode graphic chars where appropriate */
 	char	prefix[20]; /* Prefix to add to keys for shell output */
 	char	null[20];/* how to display null in tables */
-	char	escprompt[20]; /* coloring for the prompt */
-	char	escresult[20]; /* coloring of result */
-	char	escgridhead[20]; /* coloring of last grid heading line */
-	char	escgridhead2[20]; /* coloring of other grid heading lines */
-	char	escgridline[20]; /* coloring of grid lines between columns */
-	char	escerror[20]; /* coloring of errors */
-	char	escdebug[20]; /* coloring of debugging output */
 	FILE	*fp;	/* where to write to */
 } jsonformat_t;
 
@@ -107,7 +100,6 @@ typedef struct {
 
 extern json_debug_t json_debug_flags;
 extern jsonformat_t json_format_default;
-extern char json_format_color_end[20];
 
 /* This represents a file that is open for reading JSON data or scripts.
  * The file is mapped into memory starting at "base", and can be accessed
@@ -344,13 +336,13 @@ extern int json_print_incomplete_line;
 extern void json_print(json_t *json, jsonformat_t *format);
 extern void json_grid(json_t *json, jsonformat_t *format);
 extern void json_format_set(jsonformat_t *format, json_t *config);
-extern void json_format_esc(char *esc, const char *name, int nounderlined);
 extern void json_undefer(json_t *arr);
 
 /* Accessing */
-extern json_t *json_by_key(const json_t *container, const char *key);
+extern json_t *json_by_key(const json_t *object, const char *key);
 extern json_t *json_by_deep_key(json_t *container, char *key);
-extern json_t *json_by_index(json_t *container, int idx);
+extern json_t *json_by_index(json_t *array, int idx);
+extern json_t *json_by_key_value(json_t *array, const char *key, json_t *value);
 extern json_t *json_by_expr(json_t *container, const char *expr, const char **after);
 extern json_t *json_find(json_t *haystack, json_t *needle, int ignorecase, char *needkey);
 #ifdef REG_ICASE /* skip this if <regex.h> not included */
@@ -428,6 +420,7 @@ json_t *json_datetime_fn(json_t *args, char *type);
 json_t *json_config, *json_system;
 void json_config_load(const char *name);
 void json_config_save(const char *name);
+json_t *json_config_style(const char *name, json_t **refstyles);
 json_t *json_config_get(const char *section, const char *key);
 void json_config_set(const char *section, const char *key, json_t *value);
 json_t *json_config_parse(json_t *config, const char *settings, const char **refend);
@@ -596,6 +589,12 @@ json_t *json_context_assign(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *c
 json_t *json_context_append(jsoncalc_t *lvalue, json_t *rvalue, jsoncontext_t *context);
 int json_context_declare(jsoncontext_t **refcontext, char *key, json_t *value, jsoncontextflags_t flags);
 json_t *json_context_default_table(jsoncontext_t *context, char **refexpr);
+
+void json_user_printf(jsonformat_t *format, const char *face, const char *fmt, ...);
+void json_user_ch(int ch);
+int json_user_result(json_t *result);
+void json_user_hook(int (*handler)(json_t *jface, int newface, const char *text, size_t len));
+void json_user_result_hook(int (*handler)(json_t *result));
 
 /****************************************************************************/
 

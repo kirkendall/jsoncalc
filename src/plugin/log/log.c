@@ -16,7 +16,7 @@
  */
 static char *config = "{"
 	"\"dir\":\"\","
-	"\"name-list\":[\"stdout\",\"stderr\",\"jsoncalc\"],"
+	"\"name-list\":[\"tty\",\"jsoncalc\"],"
 	"\"name\":\"jsoncalc\","
 	"\"ext\":\".log\","
 	"\"rollover-list\":[\"daily\",\"size\",\"never\"],"
@@ -502,6 +502,7 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	FILE	*out;
 	int	showdate, showtime, showpid, showfile, showline;
 	int	lastchar;
+	jsonformat_t tweaked;
 
 	/* If this detail level is too high, skip it */
 	scan = json_config_get("plugin.log", "detail");
@@ -509,17 +510,11 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		return NULL;
 
 	/* Decide where to log */
-	if (!strcmp("stderr", cmd->key)) {
-		out = stderr;
-	} else if (!strcmp("stdout", cmd->key) || !strcmp("-", cmd->key)) {
-		out = stdout;
-	} else {
+	tweaked = json_format_default;
+	tweaked.fp = NULL;
+	if (strcmp("tty", cmd->key)) {
 		out = switchfile(cmd->key);
 	}
-
-	/* If it's a tty, maybe use colors */
-	if (isatty(fileno(out)) && json_format_default.color)
-		fputs(json_format_default.escdebug, out);
 
 	/* Write any line info */
 	showdate = getbool("date");
@@ -537,62 +532,62 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		else
 			localtime_r(&now, &tm);
 		if (showdate && showtime)
-			fprintf(out, "%4d-%02d-%02dT%02d:%02d:%02d%s",
+			json_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 		else if (showdate)
-			fprintf(out, "%4d-%02d-%02d",
+			json_user_printf(&tweaked, "log", "%4d-%02d-%02d",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 		else
-			fprintf(out, "%02d%02d%02d%s",
+			json_user_printf(&tweaked, "log", "%02d%02d%02d%s",
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 	}
 	if (showpid) {
 		if (showdate || showtime || showpid)
-			putc(' ', out);
-		fprintf(out, "[%5d]", (int)getpid());
+			json_user_ch(' ');
+		json_user_printf(&tweaked, "log", "[%5d]", (int)getpid());
 	}
 	if (showfile || showline) {
 		int lineno;
 		jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
 		if (jf) { 
 			if (showdate || showtime || showpid)
-				putc(' ', out);
+				json_user_ch(' ');
 			if (showfile)
-				fputs(jf->filename, out);
+				json_user_printf(&tweaked, "log", "%s", jf->filename, out);
 			if (showfile && showline)
-				fputc(':', out);
+				json_user_ch(':');
 			if (showline)
-				fprintf(out, "%d", lineno);
+				json_user_printf(&tweaked, "log", "%d", lineno);
 		}
 	}
 	if (showdate || showtime || showfile || showline)
-		fputc('\t', out);
+		json_user_ch(' ');
 
 	/* Evaluate the expression list. */
 	list = json_calc(cmd->calc, *refcontext, NULL);
 
 	/* If it's an error then log the error instead of the expression */
 	if (json_is_null(list) && *list->text) {
-		fprintf(out, "Expression error: %s\n", list->text);
+		json_user_printf(&tweaked, "log", "Expression error: %s\n", list->text);
 	} else {
 		/* Output each expression with a space delimiter */
 		lastchar = '\n';
 		for (scan = list->first; scan; scan = scan->next) {
 			/* Space between items */
 			if (scan != list->first)
-				fputc(' ', out);
+				json_user_ch(' ');
 
 			/* Output strings plainly (no quotes), but convert
 			 * anything else to a JSON string.
 			 */
 			if (scan->type == JSON_STRING) {
-				fputs(scan->text, out);
+				json_user_printf(&tweaked, "log", "%s", scan->text);
 				if (*scan->text)
 					lastchar = scan->text[strlen(scan->text) - 1];
 			} else {
 				char *tmp = json_serialize(scan, NULL);
-				fputs(tmp, out);
+				json_user_printf(&tweaked, "log", "%s", tmp);
 				free(tmp);
 				lastchar = 'x'; /* Never empty, never '\n' */
 			}
@@ -600,19 +595,15 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 		/* If the last character wasn't a newline, then add a newline */
 		if (lastchar != '\n')
-			fputc('\n', out);
+			json_user_ch('\n');
 	}
 
 	/* Clean up */
 	json_free(list);
 
-	/* If it's a tty, turn off colors */
-	if (isatty(fileno(out)) && json_format_default.color)
-		fputs(json_format_color_end, out);
-
 	/* If supposed to flush, then do that */
-	if (getbool("flush"))
-		fflush(out);
+	if (tweaked.fp && getbool("flush"))
+		fflush(tweaked.fp);
 
 	/* Success! */
 	return NULL;
@@ -621,7 +612,7 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 /* Initialize the plugin */
 char *pluginlog(void)
 {
-	json_t	*settings, *plugin;
+	json_t	*settings, *plugin, *colornormal, *colorlog, *name;
 	char	*dir;
 
 	/* Set the default options.  The config file hasn't been loaded yet
@@ -630,6 +621,9 @@ char *pluginlog(void)
 	 */
 	plugin = json_by_key(json_config, "plugin");
 	json_append(plugin, json_key("log", json_parse_string(config)));
+
+	/* Add an entry to config.styles for the "log" style */
+	json_config_style("log", NULL);
 
 	/* Most default options are hardcoded, but the "dir" setting should
 	 * be the first writable directory in the JSONCALCPATH.

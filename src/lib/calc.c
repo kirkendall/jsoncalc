@@ -640,6 +640,8 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 	  case JSONOP_SUBSCRIPT:
 		USE_LEFT_OPERAND(calc);
 		if (calc->RIGHT->op == JSONOP_COLON) {
+			char *key;
+
 			/* Subscript by name:value, scans an array of objects
 			 * for a given member and value.
 			 */
@@ -648,19 +650,45 @@ json_t *json_calc(jsoncalc_t *calc, jsoncontext_t *context, void *agdata)
 
 			/* Evaluate the value of name:value.  Also fetch name */
 			USE_RIGHT_OPERAND(calc->RIGHT);
-			str = calc->RIGHT->LEFT->u.text;
+			key = calc->RIGHT->LEFT->u.text;
 
 			/* Scan array for element with that member name:value */
+			str = NULL;
 			for (scan = json_first(left); scan; scan = json_next(scan)) {
 				if (scan->type != JSON_OBJECT)
 					continue;
-				found = json_by_key(scan, str);
-				if (found && json_equal(found, right)) {
+				found = json_by_key(scan, key);
+				if (found && found->type == JSON_STRING && right->type == JSON_STRING) {
+					/* String comparison is case-insensitive */
+					if (!json_mbs_casecmp(found->text, right->text)) {
+						result = json_copy(scan);
+						json_break(scan);
+						break;
+					}
+				} else if (found && found->type == JSON_STRING && right->type != JSON_STRING) {
+					/* This handles the special case where
+					 * the value we're searching for is a
+					 * number, but the data we're comparing
+					 * it to is a string.  We convert the
+					 * search value to a string ONCE, and
+					 * do a string comparison.
+					 */
+					if (!str)
+						str = json_serialize(right, NULL);
+					if (!json_mbs_casecmp(found->text, str)) {
+						result = json_copy(scan);
+						json_break(scan);
+						break;
+					}
+
+				} else if (found && json_equal(found, right)) {
 					result = json_copy(scan);
 					json_break(scan);
 					break;
 				}
 			}
+			if (str)
+				free(str);
 			break;
 		} else {
 			/* Evaluate the subscript.  Strings only work for

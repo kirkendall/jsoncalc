@@ -831,7 +831,7 @@ int main(int argc, char **argv)
 	json_context_file(context, NULL, 0, NULL);
 
 	/* If this was determined to be a batch invocation (not interactive)
-	 * but no -ccommand or -fscript flags were given, then assume "-cthis"
+	 * but no -ccommand or -fscript flags were given, then assume "-cdata"
 	 * or "-cselect" so any data will simply be output.
 	 */
 	if (!interactive && !initcmd)
@@ -840,7 +840,7 @@ int main(int argc, char **argv)
 		if (args && (!strcmp(args->text, "grid") || !strcmp(args->text, "sh") || !strcmp(args->text, "csv")))
 			initcmd = json_cmd_parse_string("select");
 		else
-			initcmd = json_cmd_parse_string("this");
+			initcmd = json_cmd_parse_string("data");
 	}
 
 	/* If batch mode and no filenames were named on the command line,

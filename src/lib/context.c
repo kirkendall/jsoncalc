@@ -912,6 +912,15 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 			else if (value->type == JSON_OBJECT && t->type == JSON_STRING) {
 				*refkey = t->text;
 				v = json_by_key(value, *refkey);
+			} else if (value->type == JSON_OBJECT && t->type == JSON_NUMBER) {
+				/* Number could be text or binary.  If binary
+				 * then we need to convert it to text.
+				 */
+				if (t->text[0])
+					*refkey = t->text;
+				else
+					*refkey = json_serialize(t, NULL);
+				v = json_by_key(value, *refkey);
 			} else {
 				/* Bad subscript */
 				json_free(t);
@@ -924,8 +933,11 @@ static const char *jxlvalue(jsoncalc_t *lvalue, jsoncontext_t *context, jsoncont
 			 * a while.
 			 */
 			ret = NULL;
-			if (t->type == JSON_STRING && refkey) {
+			if (t->type == JSON_STRING) {
 				*refkey = strdup(t->text);
+				ret = "";
+			} else if (t->type == JSON_NUMBER && !t->text[0] && value->type == JSON_OBJECT) {
+				/* *refkey is already dynamically allocated */
 				ret = "";
 			}
 			json_free(t);

@@ -507,13 +507,19 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 		if (calc)
 			json_calc_free(calc);
 		if (!err) {
-			char *vagueerr;
+			/* Parsing ended prematurely, but without an error
+			 * message.  We need to figure out why it ended
+			 * prematurely.  Start by looking for an initial name.
+			 */
+			char *vagueerr = NULL, afterch = '\0';
 			if (isalpha(*where)) {
 				/* It started with a name.  Parse the name,
-				 * and report it as an unknown command.
+				 * so we can report it as an unknown command.
 				 */
 				src->str = where;
 				vagueerr = json_cmd_parse_key(src, 0);
+				if (src->str < src->buf + src->size)
+					afterch = *src->str;
 			}
 
 			/* If no name, or a function name, then assume we got
@@ -521,10 +527,12 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 			 * consts, but we don't have a context yet.) Otherwise,
 			 * treat it as an unknown command.
 			 */
-			if (!vagueerr || json_calc_function_by_name(vagueerr))
-				*referr = json_cmd_error(where, "Expression syntax error");
+			if (vagueerr && afterch == '(' && !json_calc_function_by_name(vagueerr))
+				*referr = json_cmd_error(where, "unkFunc:Unknown function %s()", vagueerr);
+			else if (vagueerr && afterch != '.' && afterch != '[')
+				*referr = json_cmd_error(where, "unkCmd:Unknown command \"%s\"", vagueerr);
 			else
-				*referr = json_cmd_error(where, "Unknown command \"%s\"", vagueerr);
+				*referr = json_cmd_error(where, "syntax:Expression syntax error");
 			if (vagueerr)
 				free(vagueerr);
 		} else {

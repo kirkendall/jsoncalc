@@ -108,7 +108,7 @@ int isdirectory(const char *filename)
 json_t *autoload(char *key)
 {
 	char    filename[1000];
-	json_t  *dir, *ext;
+	json_t  *dir, *parser, *ext;
 
 	/* Scan for a key.json (or other known extensions) file in any of
 	 * the autoload directories.
@@ -116,18 +116,28 @@ json_t *autoload(char *key)
 	dir = json_by_key(json_config, "autoload");
 	if (!dir || dir->type != JSON_ARRAY)
 		return NULL;
-	for (dir = dir->first; dir; dir = dir->next) {
+	for (dir = json_first(dir); dir; dir = json_next(dir)) {
 		if (dir->type != JSON_STRING)
 			continue;
-		ext = json_by_key(json_system, "extensions");
-		if (!ext || ext->type != JSON_ARRAY)
-			return NULL;
-		for (ext = ext->first; ext; ext = ext->next) {
-			if (ext->type != JSON_STRING)
+		parser = json_by_key(json_system, "parsers");
+		if (!parser)
+			continue;
+		for (parser = json_first(parser); parser; parser = json_next(parser)) {
+			if (parser->type != JSON_OBJECT)
 				continue;
-			sprintf(filename, "%s/%s.%s", dir->text, key, ext->text);
-			if (access(filename, R_OK) == 0) {
-				return json_parse_file(filename);
+			ext = json_by_key(parser, "suffix");
+			if (!ext)
+				continue;
+			for (ext = json_first(ext); ext; ext = json_next(ext)) {
+				if (ext->type != JSON_STRING)
+					continue;
+				sprintf(filename, "%s/%s%s", dir->text, key, ext->text);
+				if (access(filename, R_OK) == 0) {
+					json_break(ext);
+					json_break(parser);
+					json_break(dir);
+					return json_parse_file(filename);
+				}
 			}
 		}
 	}

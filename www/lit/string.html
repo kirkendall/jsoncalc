@@ -12,8 +12,7 @@
     Strings represent any character data, in UTF-8 encoding.
     <p>
     They are <em>not</em> chunks of binary data.
-    Only Unicode characters using UTF-8 encoding is allowed, and
-    strings cannot contain a 0x00 byte.
+    Only Unicode characters using UTF-8 encoding are allowed.
     <p>
     They may be enclosed in single quotes (apostrophes, \x27) or
     double quotes (\x22).  When output, they'll always use double quotes
@@ -54,7 +53,7 @@
     of a document but programs can use it internally for things like this.
     This substitution is used in all functions except
     <a target="_PARENT" href="../index.html?f=hex">hex()</a> which can
-    reveal the "efbfbf" UTF-8 byte sequence for the U+ffff codepoint.
+    reveal the "efbfbf" UTF-8 byte sequence for the U+ffff Unicode codepoint.
 
     <details open>
       <summary>Examples</summary>
@@ -103,7 +102,7 @@
             any leading zeroes.
 
 	<li>When outputting Unicode text in ASCII format
-	    (via the -Oascii command-line flag),
+	    (via the -sascii command-line flag),
 	    UTF-16 escapes will be used, including surrogate pairs where needed.
 	    <div class="example">
 	      <kbd>set ascii</kbd>

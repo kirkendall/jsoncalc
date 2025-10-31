@@ -870,8 +870,17 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
 
         /* For each character... */
         for (size = 0, end = src + nbytes; *src && src < end; src++) {
-                /* non-ascii? */
-                if (*src & 0x80) {
+                if ((unsigned char)src[0] == 0xef
+                 && (unsigned char)src[1] == 0xbf
+                 && (unsigned char)src[2] == 0xbf) {
+			/* U+ffff is our internal representation for \0 */
+			if (dst) {
+				dst[size++] = '\\';
+				dst[size++] = '0';
+			} else
+				size += 2;
+			src += 2; /* plus one more in the for-loop */
+                } else if (*src & 0x80) {
                         /* Non-ASCII either copy verbatim, or convert the whole
                          * multibyte character to a single \u sequence.
                          */
@@ -981,6 +990,15 @@ size=nbytes;
                   case '\0':
                         /* premature end of string, omit it */
                         break;
+		  case '0':
+			/* \0 is represented internally by U+ffff */
+			if (dst) {
+				*dst++ = 0xef;
+				*dst++ = 0xbf;
+				*dst++ = 0xbf;
+			}
+			size += 3;
+			break;
                   case 'b':
                         if (dst)
                                 *dst++ = '\b';
@@ -1092,6 +1110,13 @@ size=nbytes;
 				wc2 -= 0xdc00;
 				wc = (wc << 10) + wc2 + 65536;
 			}
+
+			/* Internally, we use U+0000 to mark the end of strings
+			 * and U+ffff to mark a single 0 byte. If we were given
+			 * \x00 or \u0000, convert that to \uffff.
+			 */
+			if (wc == 0)
+				wc = 0xffff;
 
                         /* Add the wide character to the string */
                         if (dst) {

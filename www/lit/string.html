@@ -26,6 +26,7 @@
       <tr><td>\\</td><td>A single literal backslash character, \x5c</td></tr>
       <tr><td>\"</td><td>A double-quote character, \x27</td></tr>
       <tr><td>\'</td><td>A single-quote character, \x22</td></tr>
+      <tr><td>\0</td><td>An ASCII NUL character, \x00</td></tr>
       <tr><td>\b</td><td>A backspace control character, \x08</td></tr>
       <tr><td>\e</td><td>An ASCII escape control character, \x1b</td></tr>
       <tr><td>\f</td><td>A formfeed control character, \x0c</td></tr>
@@ -44,6 +45,16 @@
     corresponding UTF-8 byte sequences.
     It even understands and converts UTF-16 "surrogate pairs" to gain
     access to extended Unicode characters such as emoji.
+    <p>
+    Internally, a 0x00 byte is used to mark the end of strings.
+    To allow '\0' to represent an ASCII NUL character without prematurely
+    marking the end of a string, internally '\0' is represented by a
+    Unicode U+ffff character.
+    This is a special Unicode character that should never be stored as part
+    of a document but programs can use it internally for things like this.
+    This substitution is used in all functions except
+    <a target="_PARENT" href="../index.html?f=hex">hex()</a> which can
+    reveal the "efbfbf" UTF-8 byte sequence for the U+ffff codepoint.
 
     <details open>
       <summary>Examples</summary>
@@ -65,6 +76,21 @@
         the internal UTF-8 encodings for both strings are identical.
       </div>
 
+      <div class="example">
+	<kbd>"\0"</kbd>
+	<samp>"\0"</samp>
+	<kbd>"\0".charCodeAt()</kbd>
+	<samp>0</samp>
+	<kbd>fromCharCode(0)</kbd>
+	<samp>"\0"</samp>
+	<kbd>"\0".hex()</kbd>
+	<samp>"efbfbf"</samp>
+	Some experiments with the "\0" character.
+	Outwardly it looks like an ASCII NUL byte, but the 
+        <a target="_PARENT" href="../index.html?f=hex">hex()</a> function
+        reveals that internally it's stored as U+ffff ("efbfbf" in UTF-8).
+      </div>
+
     </details>
 
     <details>
@@ -80,8 +106,7 @@
 	    (via the -Oascii command-line flag),
 	    UTF-16 escapes will be used, including surrogate pairs where needed.
 	    <div class="example">
-	      <kbd>-Oascii</kbd>
-	      <samp>-Opretty,tab=2,table=grid,error,ascii,color</samp>
+	      <kbd>set ascii</kbd>
 	      <kbd>"\U1f4a3"</kbd>
 	      <samp>"\ud83d\udca3"</samp>
 	      Even though we entered the "bomb" emoji using UTF-32 notation,

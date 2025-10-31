@@ -10,7 +10,7 @@
   <body>
     <h1>charCodeAt - Return the codepoint (number) of a character</h1>
     <dl>
-      <dt>charCodeAt( <var>str</var><span class="type">:string</span>, <var>pos</var><span class="type">?:number|array</span> ) <span class="type">:number|array</span>
+      <dt>charCodeAt( <var>str</var><span class="type">:string</span>, <var>pos</var><span class="type">?:number|array|true</span> ) <span class="type">:number|array</span>
       <dd>
       This returns the numeric code (e.g. Unicode or ASCII) of a character at a
       given position within a string.
@@ -24,7 +24,8 @@
       next character.
       <p>
       Unlike JavaScript, <strong>JsonCalc</strong> also allows you to pass an
-      array <var>arr</var> of position numbers.
+      array of position numbers, or a boolean <tt>true</tt> to indicate that
+      all characters should be converted.
       When you do this, it returns a corresponding array of character codes.
       This can be handy because <strong>JsonCalc</strong>'s
       <a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</a>
@@ -54,6 +55,12 @@
 	Here we're passing an array of positions, and getting an array of character
 	codes back.
 	The expression <tt>1...3</tt> returns the array <tt>[1,2,3]</tt>.
+      </div>
+
+      <div class="example">
+	<kbd>"Steve".charCodeAt(true)</kbd>
+	<samp>[83,116,101,118,101]</samp>
+	This converts all characters to numbers.
       </div>
 
     </details>

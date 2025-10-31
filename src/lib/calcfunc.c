@@ -1355,6 +1355,7 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 	const char	*pos;
 	wchar_t	wc;
 	json_t	*scan, *result;
+	int	in;
 
 	/* The first argument must be a string */
 	if (args->first->type != JSON_STRING)
@@ -1370,6 +1371,8 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 
 		/* Convert the character from UTF-8 to wchar_t */
 		(void)mbtowc(&wc, pos, MB_CUR_MAX);
+		if (wc == 0xffff)
+			wc = 0;
 
 		/* Return it as an integer */
 		return json_from_int((int)wc);
@@ -1388,6 +1391,8 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 
 				/* Convert the character from UTF-8 to wchar_t */
 				(void)mbtowc(&wc, pos, MB_CUR_MAX);
+				if (wc == 0xffff)
+					wc = 0;
 
 				/* Add it to the array */
 				json_append(result, json_from_int((int)wc));
@@ -1398,8 +1403,42 @@ static json_t *jfn_charCodeAt(json_t *args, void *agdata)
 		return result;
 	}
 
+	/* Boolean "true"? */
+	if (args->first->next->type == JSON_BOOLEAN && json_is_true(args->first->next)) {
+		/* Start with an empty array */
+		result = json_array();
+
+		/* For each character... */
+		for (pos = args->first->text; *pos; pos += in) {
+			/* Convert the character from UTF-8 to wchar_t */
+			in = mbtowc(&wc, pos, MB_CUR_MAX);
+			if (in <= 0)
+				break;
+			if (wc == 0xffff)
+				wc = 0;
+
+			/* Add it to the array */
+			json_append(result, json_from_int((int)wc));
+		}
+
+		/* Return the result */
+		return result;
+	}
+
 	/* Nope.  Fail due to bad arguments */
 	return NULL;
+}
+
+/* This helper function returns a number like json_int() except that if the
+ * number is 0 then it returns 0xffff.  This is handy because jsoncalc uses
+ * U+ffff to represent the 0 byte.
+ */
+static int fromCharCodeGetWC(json_t *scan)
+{
+	int c = json_int(scan);
+	if (c == 0)
+		return 0xffff;
+	return c;
 }
 
 /* Return a string generated from character codepoints. */
@@ -1415,12 +1454,12 @@ static json_t *jfn_fromCharCode(json_t *args, void *agdata)
 	/* Count the length.  Note that some codepoints require multiple bytes */
 	for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
 		if (scan->type == JSON_NUMBER) {
-			in = wctomb(dummy, json_int(scan));
+			in = wctomb(dummy, fromCharCodeGetWC(scan));
 			if (in > 0)
 				len += in;
 		} else if (scan->type == JSON_ARRAY) {
 			for (elem = json_first(scan); elem; elem = json_next(elem)) {
-				in = wctomb(dummy, json_int(elem));
+				in = wctomb(dummy, fromCharCodeGetWC(elem));
 				if (in > 0)
 					len += in;
 			}
@@ -1429,20 +1468,20 @@ static json_t *jfn_fromCharCode(json_t *args, void *agdata)
 		}
 	}
 
-	/* Allocate a big enough JSON_STRING.  Note that "len" does not need to allow
-	 * for the '\0' that json_string() adds after the string.
+	/* Allocate a big enough JSON_STRING.  Note that "len" does not need
+	 * to allow for the '\0' that json_string() adds after the string.
 	 */
 	result = json_string("", len);
 
 	/* Loop through the args again, building the result */
 	for (s = result->text, scan = args->first; scan; scan = scan->next) { /* undeferred */
 		if (scan->type == JSON_NUMBER) {
-			in = wctomb(s, json_int(scan));
+			in = wctomb(s, fromCharCodeGetWC(scan));
 			if (in > 0)
 				s += in;
 		} else if (scan->type == JSON_ARRAY) {
 			for (elem = json_first(scan); elem; elem = json_next(elem)) {
-				in = wctomb(s, json_int(elem));
+				in = wctomb(s, fromCharCodeGetWC(elem));
 				if (in > 0)
 					s += in;
 			}

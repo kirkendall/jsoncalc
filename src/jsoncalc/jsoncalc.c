@@ -485,7 +485,8 @@ int main(int argc, char **argv)
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				json_free(err);
-				return 1;
+				exitcode = 1;
+				goto CleanExit;
 			}
 		}
 
@@ -517,7 +518,8 @@ int main(int argc, char **argv)
 			continue;
 		if (!interactive) {
 			fprintf(stderr, "Persistent options only work for interactive invocations\n");
-			return 1;
+			exitcode = 1;
+			goto CleanExit;
 		}
 		anypersistent = 1;
 		switch (opt) {
@@ -570,7 +572,8 @@ int main(int argc, char **argv)
 					section = json_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
-					return 1;
+					exitcode = 1;
+					goto CleanExit;
 				}
 
 				/* Adjust the settings */
@@ -578,7 +581,8 @@ int main(int argc, char **argv)
 				if (err) {
 					puts(err->text);
 					json_free(err);
-					return 1;
+					exitcode = 1;
+					goto CleanExit;
 				}
 			}
 			free(plugin);
@@ -591,7 +595,8 @@ int main(int argc, char **argv)
 			if (err) {
 				puts(err->text);
 				json_free(err);
-				return 1;
+				exitcode = 1;
+				goto CleanExit;
 			}
 
 		}
@@ -675,9 +680,8 @@ int main(int argc, char **argv)
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				json_free(err);
-				while (context)
-					context = json_context_free(context);
-				return 1;
+				exitcode = 1;
+				goto CleanExit;
 			}
 
 			/* If there are options, process them now */
@@ -691,19 +695,17 @@ int main(int argc, char **argv)
 					section = json_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
-					while (context)
-						context = json_context_free(context);
-					return 1;
+					exitcode = 1;
+					goto CleanExit;
 				}
 
 				/* Parse the options.  Watch for errors */
 				err = json_config_parse(section, val, NULL);
 				if (err) {
-					while (context)
-						context = json_context_free(context);
 					fprintf(stderr, "%s\n", err->text);
 					json_free(err);
-					return 1;
+					exitcode = 1;
+					goto CleanExit;
 				}
 			}
 			break;
@@ -711,10 +713,9 @@ int main(int argc, char **argv)
 			section = json_by_key(json_config, interactive ? "interactive" : "batch");
 			err = json_config_parse(section, optarg, NULL);
 			if (err) {
-				while (context)
-					context = json_context_free(context);
 				fprintf(stderr, "%s\n", err->text);
-				return 1;
+				exitcode = 1;
+				goto CleanExit;
 			}
 			break;
 		case 'p':
@@ -722,10 +723,8 @@ int main(int argc, char **argv)
 			break;
 		case 'j':
 			if (*optarg == '?' || json_debug(optarg)) {
-				while (context)
-					context = json_context_free(context);
 				debug_usage();
-				return 1;
+				goto CleanExit;
 			}
 			break;
 		case 'F':
@@ -737,19 +736,16 @@ int main(int argc, char **argv)
 			/* already handled */
 			break;
 		case '?':
-			while (context)
-				context = json_context_free(context);
 			usage(NULL, NULL);
-			return 0;
+			goto CleanExit;
 		default:
 			{
 				char optstr[2];
 				optstr[0] = (char)opt;
 				optstr[1] = '\0';
-				while (context)
-					context = json_context_free(context);
 				usage("Invalid flag -%s\n", optstr);
-				return 1;
+				exitcode = 1;
+				goto CleanExit;
 			}
 		}
 	}
@@ -758,7 +754,8 @@ int main(int argc, char **argv)
 	if (pretty > 0) {
 		if (interactive) {
 			fprintf(stderr, "The -p flag only works for batch invocations\n");
-			return 1;
+			exitcode = 1;
+			goto CleanExit;
 		}
 		switch (pretty) {
 		case 1:	val = "pretty,json,oneline=0,noelem";	break;
@@ -769,10 +766,9 @@ int main(int argc, char **argv)
 		section = json_by_key(json_config, "batch");
 		err = json_config_parse(section, val, NULL);
 		if (err) {
-			while (context)
-				context = json_context_free(context);
 			fprintf(stderr, "%s\n", err->text);
-			return 1;
+			exitcode = 1;
+			goto CleanExit;
 		}
 	}
 
@@ -789,9 +785,8 @@ int main(int argc, char **argv)
 	 * quit now.
 	 */
 	if (initcmd == JSON_CMD_ERROR || autocmd == JSON_CMD_ERROR) {
-		while (context)
-			context = json_context_free(context);
-		return 2;
+		exitcode = 1;
+		goto CleanExit;
 	}
 
 	/* Set the formatting from the config */
@@ -876,6 +871,7 @@ int main(int argc, char **argv)
 
 	/* Clean up & exit */
 CleanExit:
+	/* Update the last file, if appropriate */
 	if (allow_update) {
 		/* Switch to previous file to trigger update, if the current
 		 * file was modified.  Switching to the previous file is enough
@@ -884,8 +880,17 @@ CleanExit:
 		i = JSON_CONTEXT_FILE_PREVIOUS;
 		json_context_file(context, NULL, 0, &i);
 	}
+
+	/* Free the context stack */
 	while (context)
 		context = json_context_free(context);
+
+	/* Free the initialization commands (from -ccmd and -fffile) */
 	json_cmd_free(initcmd);
+
+	/* Revert to normal text colors */
+	json_user_printf(NULL, "normal", "");
+
+	/* Return the success/fail status */
 	return exitcode;
 }

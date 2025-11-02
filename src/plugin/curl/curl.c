@@ -20,7 +20,7 @@ static char *settings = "{"
 	"}"
 "}";
 
-/* These bits are used to select boolean options */
+/* These are used to select CURL options */
 typedef enum { 
 	OPT_PROXY_ = 1,		/* (url) Define an optional proxy server */
 	OPT_USERNAME_,		/* (user) Use Authentication: Basic */
@@ -240,13 +240,13 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 
 		/* If it isn't an option number, that's a problem */
 		if (more->type != JSON_NUMBER)
-			return json_error_null(0, "Bad extra argument passed to the  %s() function", fn);
+			return json_error_null(NULL, "Bad extra argument passed to the  %s() function", fn);
 
 		/* Process each option flag separately */
 		switch (json_int(more)) {
 		case OPT_PROXY_:
 			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(0, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
+				return json_error_null(NULL, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PROXY, more->text);
 			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
@@ -254,27 +254,27 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 
 		case OPT_USERNAME_:
 			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(0, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
+				return json_error_null(NULL, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_easy_setopt(curl, CURLOPT_USERNAME, more->text);
 			break;
 		case OPT_PASSWORD_:
 			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(0, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
+				return json_error_null(NULL, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PASSWORD, more->text);
 			break;
 		case OPT_BEARER_:
 			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(0, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
+				return json_error_null(NULL, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
 			break;
 		case OPT_CONTENT:
 			if (!data)
-				return json_error_null(0, "In %s(), CURL.reqContent only works if content is given after URL", fn);
+				return json_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
 			flags->content = 1;
 			break;
 		case OPT_CONTENTTYPE_:
@@ -282,7 +282,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 			 || more->next->type != JSON_STRING
 			 || strchr(more->next->text, ':')
 			 || !strchr(more->next->text, '/')) {
-				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+				return json_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
 			}
 			more = more->next;
 			flags->reqcontenttype = more->text;
@@ -290,7 +290,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 		case OPT_HEADER_:
 			more = more->next;
 			if (!more || more->type != JSON_STRING || !strchr(more->text, ':'))
-				return json_error_null(0, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+				return json_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
 			flags->slist = curl_slist_append(flags->slist, more->text);
 			break;
 		case OPT_REQHEADERS:
@@ -329,7 +329,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 			flags->headers = 1;
 			break;
 		default:
-			return json_error_null(0, "Invalid option number %d passed to %s()", json_int(more), fn);
+			return json_error_null(NULL, "Invalid option number %d passed to %s()", json_int(more), fn);
 		}
 
 	}
@@ -355,11 +355,11 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	/* Allocate a CURL handle */
 	curl = curl_easy_init();
 	if (!curl)
-		return json_error_null(0, "Failed to allocate a CURL handle in %s()", fn);
+		return json_error_null(NULL, "Failed to allocate a CURL handle in %s()", fn);
 
 	/* First argument must be URL */
 	if (!argsfirst || argsfirst->type != JSON_STRING)
-		return json_error_null(0, "The %s() function requires a URL string", fn);
+		return json_error_null(NULL, "The %s() function requires a URL string", fn);
 	url = argsfirst->text;
 
 	/* If next arg isn't a number, then it must be data... except that if
@@ -394,7 +394,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	if (flags.content && !data) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return json_error_null(0, "The %s() function needs data to send", fn);
+		return json_error_null(NULL, "The %s() function needs data to send", fn);
 	}
 
 	/* If a content type was given, and the content isn't a string, then
@@ -414,7 +414,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		} else {
 			curl_easy_cleanup(curl);
 			curl_slist_free_all(flags.slist);
-			return json_error_null(0, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
+			return json_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
 		}
 	} else if (data && data->type == JSON_STRING) {
 		switch (*data->text) {
@@ -449,7 +449,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	} else if (data) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return json_error_null(0, "The %s() function can't guess the content type", fn);
+		return json_error_null(NULL, "The %s() function can't guess the content type", fn);
 	}
 
 	/* If we have data but aren't sending content, append it to the URL. */
@@ -511,7 +511,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 			free(hdr.buf);
 		if (mustfree)
 			free(mustfree);
-		return json_error_null(0, "CURL error: %s", curl_easy_strerror(result));
+		return json_error_null(NULL, "CURL error: %s", curl_easy_strerror(result));
 	}
 
 	/* Maybe try to parse it; otherwise convert the returned data to a
@@ -588,7 +588,7 @@ static json_t *jfn_curlPost(json_t *args, void *agdata)
 static json_t *jfn_curlOther(json_t *args, void *agdata)
 {
 	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
+		return json_error_null(NULL, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
 	return curlHelper("curlOther", args->first->text, args->first->next);
 }
 
@@ -600,7 +600,7 @@ static json_t *jfn_encodeURI(json_t *args, void *agdata)
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 0);
 	if (len == 0)
-		return json_error_null(0, "Bad argument for %s()", "encodeURI");
+		return json_error_null(NULL, "Bad argument for %s()", "encodeURI");
 
 	/* Allocate a result buffer */
 	result = json_string("", len);
@@ -620,7 +620,7 @@ static json_t *jfn_encodeURIComponent(json_t *args, void *agdata)
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 1);
 	if (len == 0)
-		return json_error_null(0, "Bad argument for %s()", "encodeURIComponent");
+		return json_error_null(NULL, "Bad argument for %s()", "encodeURIComponent");
 
 	/* Allocate a result buffer */
 	result = json_string("", len);
@@ -684,7 +684,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 
 	/* We expect a single string as argument */
 	if (args->first->type != JSON_STRING || args->first->next)
-		return json_error_null(0, "The %s() function takes a single string argument", "mime64");
+		return json_error_null(NULL, "stringarg:The %s() function takes a single string argument", "mime64");
 
 	/* Each group of 3 bytes is represented by 4 digits, so we can calculate
 	 * the final size of the string immediately.
@@ -752,6 +752,90 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 	return result;
 }
 
+/* Convert a MIME64 string back into data.  If the data doesn't look like
+ * UTF-8 text, then each byte will be interpreted as a Latin-1 character and
+ * converted to UTF-8.
+ */
+static json_t *jfn_unmime64(json_t *args, void *agdata)
+{
+	char	*mimetext;
+	int	conversion;
+	unsigned char *binary;
+	size_t	bpos, bits, clen, latin1len;
+	int	notutf8;
+	int	phase, i;
+	char	*c;
+	json_t	*result;
+
+	/* Check arguments.  Mandatory first argument should be a string of
+	 * MIME64 data, second optional argument should be representation type.
+	 */
+	if (args->first->type != JSON_STRING)
+		return json_error_null(NULL, "stringargplus:The %s() function takes a string argument", "unmime64");
+	mimetext = args->first->text;
+	if (!args->first->next)
+		conversion = JSON_BLOB_ANY;
+	else if (args->first->next->type != JSON_NUMBER || (conversion = json_int(args->first->next)) <= JSON_BLOB_ANY || conversion > JSON_BLOB_BYTES) {
+		return json_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
+	}
+
+	/* Convert the string to binary data.  It will never be longer than the
+	 * mimetext.
+	 */
+	binary = (char *)calloc(1, strlen(mimetext));
+	bpos = 0;
+	phase = 0;
+	for (bpos = 0, phase = 0; *mimetext && *mimetext != '='; mimetext++) {
+		/* Convert a single character to 6 data bits.  If not a valid
+		 * mime64 character, skip it.
+		 */
+		c = strchr(b64, *mimetext);
+		if (!c)
+			continue;
+		bits = (c - b64);
+
+		/* Add the bits to the binary data. */
+		switch (phase) {
+		case 0:
+			/* High 6 bits of this byte. */
+			binary[bpos] = bits << 2;
+			phase = 1;
+			break;
+		case 1:
+			/* Low 2 bits of this byte, high 4 bits of next byte */
+			binary[bpos] |= bits >> 4;
+			bpos++;
+			binary[bpos] = bits << 4;
+			phase = 2;
+			break;
+		case 2:
+			/* Low 4 bits of this byte, high 2 bits of next byte */
+			binary[bpos] |= (bits >> 2) & 0x0f;
+			bpos++;
+			binary[bpos] = bits << 6;
+			phase = 3;
+			break;
+		case 3:
+			/* Low 6 bits of this byte.  Advance to next byte */
+			binary[bpos] |= bits;
+			bpos++;
+			phase = 0;
+			break;
+		}
+	}
+
+	/* NOTE: bpos now indicates the length of the binary data */
+
+	/* Try to convert to the requested format */
+	result = json_blob_convert(binary, bpos, conversion);
+	if (!result)
+		result = json_error_null(NULL, "utf8:Data is not valid UTF-8");
+
+	/* Discard the binary version of the data, and return the json_t */
+	free(binary);
+	return result;
+}
+
 
 /* This is the init function.  It registers all of the above functions, and
  * adds a CURL object with some constants in it.
@@ -792,6 +876,7 @@ char *plugincurl()
 	json_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
 	json_calc_function_hook("uuid",  "", "string", jfn_uuid);
 	json_calc_function_hook("mime64",  "data:string", "string", jfn_mime64);
+	json_calc_function_hook("unmime64",  "data:string, convertsion?:number", "string", jfn_unmime64);
 
 	/* Success */
 	return NULL;

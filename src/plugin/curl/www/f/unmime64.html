@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>unmime64</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc unmime64 - Convert MIME base64 text back to its original data">
+    <meta name="keywords" content="string, jsoncalc, function reference, unmime64">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>unmime64 - Convert MIME base64 text back to its original data</h1>
+    <dl>
+      <dt>unmime64( <var>str</var><span class="type">:string</span>, <var>conversion</var>?:number ) <span class="type">:string</span>
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
+      You must load the plugin via either -lcurl on the shell command line,
+      or a <tt>plugin curl;</tt> line in a script.
+      <p>
+      This function converts MIME base64 text back to its original data.
+      <p>
+      Usually the original data will be text, so having this function return
+      it as a string is usually straightforward.
+      It could be binary data that isn't a valid sequence of UTF-8 characters.
+      If any issues prevent the data from being interpreted as UTF-8, then it
+      falls back on Latin-1 (which it then converts to UTF-8 since jsoncalc
+      always uses UTF-8 internally).
+      You can also pass <tt>CURL.binUTF8</tt> or <tt>CURL.binLatin1</tt> as
+      a second argument to force one interpretation or the other.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>unmime64("VGhpcyBpcyBhIHRlc3Q=")</kbd>
+	<samp>"This is a test"</samp>
+	This is the opposite of the first example for the
+        <a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a>
+        function.
+      </div>
+
+      <div class="example">
+	<kbd>unmime64("iVBORw0KGgoAAAANSUhEUgAABZMAAAE==", Blob.utf8)</kbd>
+	<samp style="color:red">utf8:Data is not valid UTF-8</samp>
+	<kbd>unmime64("iVBORw0KGgoAAAANSUhEUgAABZMAAAE==", Blob.latin1)</kbd>
+	<samp>"    PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\x05\0\0\x01"</samp>
+	<kbd>unmime64("iVBORw0KGgoAAAANSUhEUgAABZMAAAE==")</kbd>
+	<samp>[137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,5,147,0,0,1]</samp>
+	This MIME base64 string represents binary data &mdash; the first
+	few bytes of a PNG image file.
+	It isn't properly formed UTF-8, so if we force it to be treated as
+	UTF-8 then it fails.
+	Forcing it to be treated as Latin-1 works, but clearly looks odd.
+	If we allow the function to choose its own format, we get the data
+	back as an array of bytes, since the presence of 0x00 bytes strongly
+	suggests that this isn't text data.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Binary is not native to JSON.
+            Dealing with binary data can get messy.
+	<li>The MIME base64 text is allowed to include extraneous characters.
+	    Usually it's presented in one big chunk,
+	    but it's also somewhat common to see base64 text split into
+	    64-character lines
+	    (i.e., with a newline inserted after the 64th character).
+        <li>Interpreting binary data as Latin-1 text (and converting that
+            to UTF-8) is interesting because each character represents a
+            single byte.  You can use the
+            <a target="_PARENT" href="../../index.html?f=charCodeAt">charCodeAt()</a>
+            function to convert the characters to numbers;
+            the fact that jsoncalc's use of UTF-8 internally causes some
+            characters to use more memory doesn't impact this at all.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=curl/mime64">mime64()</a></td><td>Encode a string using MIME base64 encoding</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=charCodeAt">charCodeAt()</a></td><td>Convert characters to numbers</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

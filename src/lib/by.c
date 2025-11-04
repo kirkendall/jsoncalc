@@ -127,10 +127,6 @@ json_t *json_by_index(json_t *container, int idx)
 	/* Scan for it.  If found, return its value */
 	for (scan = json_first(container), scanidx = 0; scan; scan = json_next(scan))
 	{
-		/* skip named elements */
-		if (scan->type == JSON_KEY)
-			continue;
-
 		/* if the index matches, use it */
 		if (scanidx == idx)
 			return scan;

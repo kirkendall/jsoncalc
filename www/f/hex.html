@@ -57,5 +57,38 @@
 
     </details>
 
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Currently this function does <em>not</em> accept an array of
+            byte values (also known as a Blob, or "binary large object")
+            as its argument.
+            If you need to convert a blob to hex,
+            I suggest that you convert each byte separately and join them together.
+            <div class="example">
+              <kbd>var blob = blob(0...20, Blob.bytes)</kbd>
+              <kbd>(blob # this.hex(2)).join("")</kbd>
+              <samp>"000102030405060708090a0b0c0d0e0f1011121314"</samp>
+              First we create a blob.  A blob looks like an array of bytes but
+	      internally it's stored as true binary data.
+	      Because it looks like an array, though, we can use the
+	      <a target="_PARENT" href="../index.html?op=each">#</a>
+	      operator to loop over it,
+	      converting each byte to a two-character hex string.
+	      Then we apply the <a target="_PARENT" href="../index.html?f=join">join()</a> function to combine all of those strings into one big string.
+            </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+
   </body>
 </html>

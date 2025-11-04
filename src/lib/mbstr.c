@@ -882,9 +882,19 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
 			src += 2; /* plus one more in the for-loop */
                 } else if (*src & 0x80) {
                         /* Non-ASCII either copy verbatim, or convert the whole
-                         * multibyte character to a single \u sequence.
+                         * multibyte character to a single \u sequence.  Except
+                         * U+0080 through U+009f are control codes, so they
+                         * should be \uXXXX sequences.
                          */
-                        if (format->ascii) {
+                        if ((unsigned char)src[0] == 0xc2
+                         && (unsigned char)src[1] >= 0x80 
+                         && (unsigned char)src[1] <= 0x9f) {
+				/* \u0080 through \u009f */
+				if (dst)
+					sprintf(dst + size, "\\u%04x", (unsigned char)src[1]);
+				size += 6;
+				src++; /* for the first byte of UTF-8 */
+			} else if (format->ascii) {
                                 src = json_mbs_ascii(src, escape);
                                 src--; /* because of src++ in the for-loop */
 				if (dst)
@@ -914,8 +924,8 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
 					size += 2;
                         } else {
                                 if (dst)
-                                        sprintf(dst + size, "\\x%02x", *src);
-                                size += 4;
+                                        sprintf(dst + size, "\\u%04x", *src);
+                                size += 6;
                         }
                 } else if (format->sh && *src == '\'') {
 			/* For shell quoting, the entire output will be

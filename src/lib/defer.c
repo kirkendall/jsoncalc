@@ -167,7 +167,7 @@ static json_t *jell_byindex(json_t *defarray, int idx);
 
 static jsondeffns_t jell_fns = {
 	/* size */	sizeof(jell_t),
-	/* desc */	"ellipsis",
+	/* desc */	"Ellipsis",
 	/* first */	jell_first,
 	/* next */	jell_next,
 	/* islast */	jell_islast,

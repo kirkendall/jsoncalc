@@ -334,11 +334,28 @@ void json_config_load(const char *name)
 		json_append(value, json_key("suffix", json_string(".json", -1)));
 		json_append(value, json_key("mimetype", json_string("application/json", -1)));
 		json_append(conf, value);
+		value = json_object();
+		json_append(value, json_key("plugin", json_null()));
+		json_append(value, json_key("name", json_string("blob", -1)));
+		json_append(value, json_key("suffix", json_null()));
+		json_append(value, json_key("mimetype", json_null()));
+		json_append(conf, value);
 		json_append(json_system, json_key("parsers", conf));
 
 		/* Add empty JSON and Math objects, for JS compatibility. */
 		json_append(json_system, json_key("JSON", json_object()));
 		json_append(json_system, json_key("Math", json_object()));
+
+		/* Add a "Blob" object with constants selecting how to handle
+		 * binary data.
+		 */
+		value = json_object();
+		json_append(value, json_key("any", json_from_int(JSON_BLOB_ANY)));
+		json_append(value, json_key("string", json_from_int(JSON_BLOB_STRING)));
+		json_append(value, json_key("utf8", json_from_int(JSON_BLOB_UTF8)));
+		json_append(value, json_key("latin1", json_from_int(JSON_BLOB_LATIN1)));
+		json_append(value, json_key("bytes", json_from_int(JSON_BLOB_BYTES)));
+		json_append(json_system, json_key("Blob", value));
 
 		/* Add members to json_system, describing the environment */
 

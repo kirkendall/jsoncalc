@@ -17,6 +17,8 @@ $(ALL): plugincurl.so
 plugincurl.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o plugincurl.so
 
+$(OBJ): $(SRC)
+
 clean:
 	$(RM) $(PLUGIN)/plugincurl.so
 	$(RM) plugincurl.so

@@ -109,7 +109,7 @@ static int jdefarray_islast(const json_t *elem)
 
 static jsondeffns_t jdefarrayfns = {
 	sizeof(jdefarray_t),	/* size */
-	"json_parse",		/* desc */
+	"JSON",			/* desc */
 	jdefarray_first,	/* first */
 	jdefarray_next,		/* next */
 	jdefarray_islast,	/* islast */
@@ -638,6 +638,10 @@ static json_t *parse(const char *str, size_t len, const char **refend, const cha
 		if (jp->tester(str, len))
 			return jp->parser(str, len, refend, referr);
 	}
+
+	/* How about binary? */
+	if (json_blob_test(str, len))
+		return json_blob_parse(str, len, refend, referr);
 
 	/* Otherwise, fall back on the JSON parser */
 	return parseJSON(str, len, refend, referr, allowdefer);

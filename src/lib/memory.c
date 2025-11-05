@@ -297,7 +297,7 @@ static json_t *dummy(json_t *node)
 };
 static jsondeffns_t dummyfns = {
 	sizeof(json_t) + sizeof(jsondeffns_t),	/* size (of the whole more-than-json_t */
-	"dummy",	/* desc */
+	"Dummy",	/* desc */
 	dummy,		/* first */
 	dummy,		/* next */
 	NULL,		/* islast */

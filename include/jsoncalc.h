@@ -323,6 +323,22 @@ extern json_t *json_unroll(json_t *table, json_t *nestlist);
 extern json_t *json_array_group_by(json_t *array, json_t *orderby);
 extern int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data);
 
+/* Binary files */
+typedef enum {
+	JSON_BLOB_ANY = -1,    /* Automatically choose best interpretation */
+	JSON_BLOB_STRING = -2, /* Automatically choose best text interpretation */
+	JSON_BLOB_UTF8 = -3,   /* Treat like UTF-8 text.  Fail if malformed */
+	JSON_BLOB_LATIN1 = -4, /* Treat like Latin1 text, convert to UTF-8 */
+	JSON_BLOB_BYTES = -5   /* Treat like a deferred array of bytes */
+} jsonblobconv_t;
+extern jsonblobconv_t json_blob_best(const char *data, size_t len, size_t *reflatin1len);
+extern json_t *json_blob_convert(const char *data, size_t len, jsonblobconv_t conversion);
+extern size_t json_blob_unconvert(json_t *json, char *data, jsonblobconv_t conversion);
+extern json_t *json_blob(json_t *json, jsonblobconv_t convin, jsonblobconv_t convout);
+extern const char *json_blob_data(json_t *json, size_t *reflen);
+extern int json_blob_test(const char *data, size_t len);
+extern json_t *json_blob_parse(const char *data, size_t len, const char **refend, const char **referr);
+
 /* Parsing */
 extern void json_parse_hook(const char *plugin, const char *name, const char *suffix, const char *mimetype, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
 extern json_t *json_parse_string(const char *str);

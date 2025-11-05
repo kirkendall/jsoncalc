@@ -55,6 +55,8 @@ static json_t *jfn_isTime(json_t *args, void *agdata);
 static json_t *jfn_isDateTime(json_t *args, void *agdata);
 static json_t *jfn_isPeriod(json_t *args, void *agdata);
 static json_t *jfn_typeOf(json_t *args, void *agdata);
+static json_t *jfn_deferTypeOf(json_t *args, void *agdata);
+static json_t *jfn_blob(json_t *args, void *agdata);
 static json_t *jfn_sizeOf(json_t *args, void *agdata);
 static json_t *jfn_widthOf(json_t *args, void *agdata);
 static json_t *jfn_heightOf(json_t *args, void *agdata);
@@ -153,7 +155,9 @@ static jsonfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "val:any", "
 static jsonfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "val:any", "boolean",		jfn_isDateTime};
 static jsonfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "val:any", "boolean",		jfn_isPeriod};
 static jsonfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "val:any, prevtype:string|true", "string",	jfn_typeOf};
-static jsonfunc_t sizeOf_jf      = {&typeOf_jf,      "sizeOf",      "val:any", "number",		jfn_sizeOf};
+static jsonfunc_t deferTypeOf_jf = {&typeOf_jf,      "deferTypeOf", "val:any", "string",	jfn_deferTypeOf};
+static jsonfunc_t blob_jf 	 = {&deferTypeOf_jf, "blob", 	    "data:string|array, convout?:number, convin?:number", "string|array",	jfn_blob};
+static jsonfunc_t sizeOf_jf      = {&blob_jf,	     "sizeOf",      "val:any", "number",		jfn_sizeOf};
 static jsonfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str:string", "number",		jfn_widthOf};
 static jsonfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str:string", "number",		jfn_heightOf};
 static jsonfunc_t keys_jf        = {&heightOf_jf,    "keys",        "obj:object", "string[]",		jfn_keys};
@@ -706,6 +710,24 @@ static json_t *jfn_typeOf(json_t *args, void *agdata)
 	return json_string(type, -1);
 }
 
+/* deferTypeOf(array) returns a string identifying the type of deferring that
+ * an array is using.  This usually indicates the source of the array (file,
+ * blob, elipsis, etc.)  Returns NULL if not a deferred array.
+ */
+static json_t *jfn_deferTypeOf(json_t *args, void *agdata)
+{
+	jsondef_t *def;
+
+	/* If not a deferred array, return null */
+	if (!json_is_deferred_array(args->first))
+		return json_null();
+
+	/* The type is stored in the JSON_DEFER node */
+	def = (jsondef_t *)args->first->first;
+	return json_string(def->fns->desc, -1);
+}
+
+
 /* Estimate the memory usage of a json_t datum */
 static json_t *jfn_sizeOf(json_t *args, void *agdata)
 {
@@ -1035,7 +1057,7 @@ json_t *jfn_slice(json_t *args, void *agdata)
 	return result;
 }
 
-/* slice(str, qty) Concatenate qty copies of str */
+/* repeat(str, qty) Concatenate qty copies of str */
 static json_t *jfn_repeat(json_t *args, void *agdata)
 {
 	int	len;
@@ -2203,6 +2225,45 @@ static json_t *jfn_find(json_t *args, void *agdata)
 
 	/* Return the result */
 	return result;
+}
+
+static json_t *jfn_blob(json_t *args, void *agdata)
+{
+	json_t *in = args->first;
+	json_t *scan;
+	jsonblobconv_t conv, conv2;
+	int	i;
+
+	/* scan for additional arguments */
+	conv = conv2 = 0; /* impossible value */
+	for (scan = args->first->next; scan; scan = scan->next){/* undeferred */
+		if (scan->type == JSON_NUMBER) {
+			i = json_int(scan);
+			if (i >= JSON_BLOB_BYTES && i <= JSON_BLOB_ANY) {
+				if (conv)
+					conv2 = json_int(scan);
+				else
+					conv = json_int(scan);
+			} else
+				return json_error_null(NULL, "blobNumber:Bad number passed to the %s() function", "blob");
+		} else
+			return json_error_null(NULL, "arg:Bad argument passed to the %s() function", "blob");
+	}
+
+	/* conv describes the output, and defaults to JSON_BLOB_BYTES unless
+	 * the input is an array, in which case it defaults to JSON_BLOB_STRING.
+	 */
+	if (!conv)
+		conv = in->type == JSON_STRING ? JSON_BLOB_BYTES : JSON_BLOB_STRING;
+
+	/* conv2 describes the input.  It is ignored unless the input is a
+	 * string, and it defaults to JSON_BLOB_UTF8.
+	 */
+	if (!conv2)
+		conv2 = JSON_BLOB_UTF8;
+
+	/* Do it.  The real guts are in blob.c */
+	return json_blob(in, conv, conv2);
 }
 
 /******************************************************************************/

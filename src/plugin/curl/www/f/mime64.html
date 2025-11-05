@@ -10,15 +10,26 @@
   <body>
     <h1>mime64 - Convert a string to MIME base64 encoding</h1>
     <dl>
-      <dt>mime64( <var>str</var><span class="type">:string</span> ) <span class="type">:string</span>
+      <dt>mime64( <var>data</var><span class="type">:string|array</span>, <var>conversion</var>?:number ) <span class="type">:string</span>
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=curl">curl</a> plugin.
       You must load the plugin via either -lcurl on the shell command line,
       or a <tt>plugin curl;</tt> line in a script.
       <p>
-      This function converts a string to MIME base64 encoding.
+      This function converts a string, or an array of byte values,
+      to MIME base64 encoding.
       This is most prominently used to encode the username and password
-      for an HTTP "Authentication: Basic" header line.
+      for an HTTP "Authentication: Basic" header line, though it can be used
+      on any binary data.
+      <p>
+      When passed a string, the bytes of the UTF-8 encoding will be used as
+      the data to encode, unless you pass <tt>Blob.latin1</tt> as an optional
+      second argument to make the string be interpreted as Latin-1 characters.
+      <p>
+      When passed an array, all of the arrays elements should be integers
+      between 0 and 255.  Each element will be interpreted as a single byte
+      of the data to encode.
+      This is the format used by the <a target="_PARENT" href="../index.html?f=blob">blob()</a> function.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -64,6 +75,7 @@
         <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</td><td>Send an HTTP/HTTPS "GET" request</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</td><td>Send an HTTP/HTTPS "POST" request</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=blob">blob()</td><td>Convert binary data.</td></tr>
       </table>
     </details>
 

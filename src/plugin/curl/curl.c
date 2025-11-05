@@ -402,54 +402,56 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 * works for HTML form data or JSON.
 	 */
 	mustfree = str = NULL;
-	if (flags.reqcontenttype) {
-		if (data->type == JSON_STRING)
+	if (data) {
+		if (flags.reqcontenttype) {
+			if (data->type == JSON_STRING)
+				str = data->text;
+			else if (strstr(flags.reqcontenttype, "json") || strstr(flags.reqcontenttype, "JSON")) {
+				mustfree = str = json_serialize(data, NULL);
+			} else if (strstr(flags.reqcontenttype, "form") || strstr(flags.reqcontenttype, "FORM")) {
+				size_t arglen = urlencode(data, NULL, 1);
+				mustfree = str = (char *)malloc(arglen + 1);
+				urlencode(data, str, 1);
+			} else {
+				curl_easy_cleanup(curl);
+				curl_slist_free_all(flags.slist);
+				return json_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
+			}
+		} else if (data->type == JSON_STRING) {
+			switch (*data->text) {
+			case '{': /* } */
+			case '[': flags.reqcontenttype = "application/json";	break;
+			case '<': flags.reqcontenttype = "application/xml";	break;
+			default:  flags.reqcontenttype = "application/x-www-form-urlencoded";
+			}
 			str = data->text;
-		else if (strstr(flags.reqcontenttype, "json") || strstr(flags.reqcontenttype, "JSON")) {
+		} else if (data->type == JSON_ARRAY) {
+			flags.reqcontenttype = "application/json";
 			mustfree = str = json_serialize(data, NULL);
-		} else if (strstr(flags.reqcontenttype, "form") || strstr(flags.reqcontenttype, "FORM")) {
-			size_t arglen = urlencode(data, NULL, 1);
-			mustfree = str = (char *)malloc(arglen + 1);
-			urlencode(data, str, 1);
+		} else if (data->type == JSON_OBJECT) {
+			/* If all member values are strings or numbers, assume
+			 * HTML form otherwise assume JSON
+			 */
+			for (scan = data->first; scan; scan = scan->next) {
+				if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOLEAN && scan->first->type != JSON_NULL)
+					break;
+			}
+			if (scan) {
+				/* complex values, can't be a form so assume JSON */
+				str = json_serialize(data, NULL);
+				flags.reqcontenttype = "application/json";
+			} else {
+				/* simple values, it's probably form data */
+				size_t arglen = urlencode(data, NULL, 1);
+				str = (char *)malloc(arglen + 1);
+				urlencode(data, str, 1);
+				flags.reqcontenttype = "application/x-www-form-urlencoded";
+			}
 		} else {
 			curl_easy_cleanup(curl);
 			curl_slist_free_all(flags.slist);
-			return json_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
+			return json_error_null(NULL, "The %s() function can't guess the content type", fn);
 		}
-	} else if (data && data->type == JSON_STRING) {
-		switch (*data->text) {
-		case '{': /* } */
-		case '[': flags.reqcontenttype = "application/json";	break;
-		case '<': flags.reqcontenttype = "application/xml";	break;
-		default:  flags.reqcontenttype = "application/x-www-form-urlencoded";
-		}
-		str = data->text;
-	} else if (data && data->type == JSON_ARRAY) {
-		flags.reqcontenttype = "application/json";
-		mustfree = str = json_serialize(data, NULL);
-	} else if (data && data->type == JSON_OBJECT) {
-		/* If all member values are strings or numbers, assume HTML
-		 * form otherwise assume JSON
-		 */
-		for (scan = data->first; scan; scan = scan->next) {
-			if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOLEAN && scan->first->type != JSON_NULL)
-				break;
-		}
-		if (scan) {
-			/* complex values, can't be a form so assume JSON */
-			str = json_serialize(data, NULL);
-			flags.reqcontenttype = "application/json";
-		} else {
-			/* simple values, it's probably form data */
-			size_t arglen = urlencode(data, NULL, 1);
-			str = (char *)malloc(arglen + 1);
-			urlencode(data, str, 1);
-			flags.reqcontenttype = "application/x-www-form-urlencoded";
-		}
-	} else if (data) {
-		curl_easy_cleanup(curl);
-		curl_slist_free_all(flags.slist);
-		return json_error_null(NULL, "The %s() function can't guess the content type", fn);
 	}
 
 	/* If we have data but aren't sending content, append it to the URL. */
@@ -679,24 +681,48 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 {
 	size_t	len, i, j;
 	json_t	*result;
-	char	*str;
+	char *data, *mustfree;
+	jsonblobconv_t conv;
+	char	*str, *end;
 	int	digit;
 
-	/* We expect a single string as argument */
-	if (args->first->type != JSON_STRING || args->first->next)
-		return json_error_null(NULL, "stringarg:The %s() function takes a single string argument", "mime64");
+	/* Look for conversion method */
+	if (args->first->next ) {
+		if (args->first->next->type != JSON_NUMBER)
+			goto BadArgs;
+		conv = json_int(args->first->next);
+		if (conv < JSON_BLOB_ANY || conv > JSON_BLOB_BYTES)
+			goto BadArgs;
+	} else {
+		conv = JSON_BLOB_UTF8;
+	}
+
+	/* We expect a single string as argument, or an array of bytes */
+	data = mustfree = NULL;
+	if ((data = (char *)json_blob_data(args->first, &len)) == NULL) {
+		if (args->first->type == JSON_STRING && conv == JSON_BLOB_UTF8){
+			data = args->first->text;
+			len = strlen(data); /* byte count */
+		} else {
+			len = json_blob_unconvert(args->first, NULL, conv);
+			if (len == 0)
+				goto BadArgs;
+			data = mustfree = (char *)malloc(len);
+			(void)json_blob_unconvert(args->first, data, conv);
+		}
+	}
 
 	/* Each group of 3 bytes is represented by 4 digits, so we can calculate
 	 * the final size of the string immediately.
 	 */
-	len = strlen(args->first->text);
+	end = data + len;
 	len = ((len + 2) / 3) * 4;
 
 	/* Allocate the result buffer */
 	result = json_string("", len);
 
 	/* Convert each group of 3 bytes */
-	for (str = args->first->text, j = 0; str[0] && str[1] && str[2]; str += 3) {
+	for (str = data, j = 0; str + 3 < end; str += 3) {
 		/* Most significant 6 bits of first byte */
 		digit = (*str >> 2) & 0x3f;
 		result->text[j++] = b64[digit];
@@ -716,7 +742,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 	}
 
 	/* If there's any leftover bytes, convert them too */
-	if (str[0] && str[1]) {
+	if (str + 2 <= end) {
 		/* TWO BYTES LEFT, NEED 3 MORE DIGITS PLUS "=" */
 
 		/* Most significant 6 bits of first byte */
@@ -733,7 +759,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 
 		/* Pad the string with an = sign */
 		result->text[j++] = '=';
-	} else if (str[0]) {
+	} else if (str + 1 <= end) {
 		/* ONE BYTE LEFT, NEED 2 MORE DIGITS PLUS "==" */
 
 		/* Most significant 6 bits of first byte */
@@ -749,7 +775,12 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 		result->text[j++] = '=';
 	} 
 
+	if (mustfree)
+		free(mustfree);
 	return result;
+
+BadArgs:
+	return json_error_null(NULL, "stringarg:The %s() function takes a single string or bytes array as its argument", "mime64");
 }
 
 /* Convert a MIME64 string back into data.  If the data doesn't look like

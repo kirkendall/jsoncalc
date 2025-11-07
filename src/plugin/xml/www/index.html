@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>An XML Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc xml plugin summary">
+    <meta name="keywords" content="jsoncalc, xml plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>XML Plugin</h1>
+    The <strong>xml</strong> plugin adds support for XML data.
+    XML data will be recognized and parsed automatically, and you can use the
+    <a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a> function
+    to generate XML.
+    <p>
+    Internally, jsoncalc represents parsed XML data the same way that it
+    represents JSON data so all of the usual operators and functions can be
+    used on it.
+    At its heart, XML is a text markup language instead of a true data language
+    like JSON, and that leads to a lot of quirks.
+    Some of these quirks, and the way this plugin works around them, are:
+    <ul>
+      <li>XML can use many different character encodings.
+          JSON is nearly always UTF-8, and that's all jsoncalc supports, so
+          the XML plugin just assumes UTF-8 is the encoding of choice there too.
+      <li>In XML, the outermost data wrapper always has a name.
+          In JSON, it's normally just anonymous curly braces.
+          This plugin's parser uses an outer object that contains a single
+          member, which has the name of the XML outermost tag.
+          (If the XML is preceded by a <tt>&lt;?xml version="1.0" ?&gt;</tt>
+          tag, that'll be added to the object too.)
+      <li>XML has directive tags, in addition to data tags.
+          This includes things like <tt>&lt;?xml version="1.0" ?&gt;</tt>
+          and <tt>&lt;!ENTITY foo "bar"></tt>.
+          Directives have no closing &lt;/tag&gt;.
+          This parser stores the contents of the tag as a string.
+      <li>XML has a <em>large</em> number of character entities.
+          When parsing, this plugin uses the <tt>plugin.xml.entity</tt>
+          option to map names to characters.
+          By default, though, it only contains the five most basic character
+          entity names.
+      <li>XML has attributes in tags.
+          This parser stores them in a separate member, with a key (name)
+          derived by appending the <tt>plugin.xml.attributeSuffix</tt>
+          to the tag name.
+          For example, <tt>&lt;price unit="usd">1.99&lt;/price&gt;</tt>
+          would be represented as two members in the parsed data:
+          <tt>"price_":{"unit":"usd"},"price":1.99</tt>.
+      <li>XML has namespaces, represented by an abbreviation and a colon at
+          the start of a tag name or attribute name.
+          This plugin stores the namespace with the tag name or attribute name.
+          However, jsoncalc's "loose" key lookup rules will bypass the
+          namespace, so you can ignore the namespace when convenient.
+      <li>XML doesn't (natively) distinguish between data types.  Everything
+          is tags or text.  If a string value happens to look like a number
+          then this plugin will convert it to a number unless the
+          <tt>plugin.xml.parseNumbers</tt> option is <tt>false</tt>.
+      <li>XML allows tags to repeat. This is as close as XML can get to an
+          array.  This plugin generates an array for repeating tags, but
+          it isn't perfect.  An empty array disappears completely in XML,
+          while a single-element array is indistinguishable from a simple
+          (not-array) value.  Some of jsoncalc's functions and operators
+          are defined with these XML limitations in mind, but working with
+          XML will never be as pleasant as JSON.
+      <li>XML allows text and tags to be intermingled, as in
+          <tt>&lt;name&gt;Duane &lt;i&gt;The Rock&lt;/i&gt; Johnson&lt;/name&gt;</tt>.
+          This is common in text markup languages but it has no corresponding
+          convention in data languages.
+          JSON and jsoncalc flat out can't handle it.
+          XML very rarely uses it too, so <i>hopefully</i> this won't be a problem.
+      <li>XML supports alternately-formatted character data via
+	  <tt>&lt;![CDATA[...]]&gt;</tt>.
+	  Although its use is discouraged for many reasons, it still gets used
+	  sometimes for things like embedding base-64 binary data in a document.
+	  This plugin will parse it as a member named "!".
+      <li>XML allows comments.  Usually these are formatted as
+          <tt>&lt;!-- comment --&gt;</tt> though really -- within any tag
+          toggles comments on or off.
+          This plugin will skip comments, effectively deleting them.
+      <li>XML strings aren't quoted so it's hard to know which whitespace is
+          meaningful.
+          This plugin strips leading and trailing whitespace from text, and
+          indentation within text.
+    </ul>
+
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Option Name</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>attributeSuffix</td>
+          <td>string</td>
+          <td>"_"</td>
+          <td>Suffix appended to a tag name to produce the member key for attributes.</td>
+	</tr>
+        <tr>
+          <td>parseNumbers</td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Unlike JSON, XML does not directly support numbers.
+              This option controls whether strings that look like numbers
+              should be converted to actual numbers.
+	  </td>
+	</tr>
+        <tr>
+          <td>empty</td>
+          <td>"string"|"object"|"array"</td>
+          <td>"string"</td>
+          <td>One problem with XML is that if you see an empty tag, you can't
+              tell if it represents an empty string, object, or array.
+              Usually it's a string, but this option lets you choose a
+              different value.
+	  </td>
+	</tr>
+        <tr>
+          <td>entity</td>
+          <td>object</td>
+          <td>{"quot":"\"", "apos":"'", "amp":"&", "lt":"<", "gt":">"}</td>
+          <td>This object is used to convert named XML entities to their
+              corresponding plain text.  The normal
+              <a target="_PARENT" href="../index.html?cmd=set">set</a>
+              syntax can't add entities; to add new entities, use the
+              <a target="_PARENT" href="../index.html?cmd=xml/xmlEntity">xmlEntity</a> command.
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="functions">Functions</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a></td>
+          <td>Converts parsed data to an XML string.</td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=xml/toTemplateXML">toTemplateXML()</a></td>
+          <td>Converts parsed data to an XML string, under the guidance of a template.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>xmlEntity</td>
+          <td>Adds or adjusts entities in the <tt>entities</tt> setting.</td>
+	</tr>
+      </tbody>
+    </table>
+
+    <h2 id="other">Other Features</h2>
+    As mentioned above, XML will be automatically recognized and parsed.
+    This happens when reading files, receiving network data
+    (via the <a target="_PARENT" href="../index.html?p=curl">curl plugin</a),
+    or even the <a target="_PARENT" href="../index.html?f=parse">JSON.parse()</a> function.
+    <p>
+    There is no way to switch the output format from JSON to XML.
+    If you want to output XML, you must do it explicitly using
+    <a target="_PARENT" href="../index.html?cmd=print">print</a>
+    <a target="_PARENT" href="../index.html?f=xml/toXML">toXML(data)</a>.
+    <div class="example">
+      <kbd>print toXML({price_:{unit:"usd"},price:1.99})</kbd>
+      <samp>&lt;price unit="usd"&gt;1.99&lt;/price&gt;</samp>
+      Since "price_" ends with an underscore (the default value of the
+      <tt>plugin.xml.attributeSuffix</tt> setting), it is used as the
+      attributes for the price tag.  The value of the price tag comes
+      from the "price" member.
+    </div>
+
+  </body>
+</html>

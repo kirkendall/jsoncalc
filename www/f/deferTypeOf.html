@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>deferTypeOf</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc deferTypeOf - Return the type of deferring used for a given array">
+    <meta name="keywords" content="array, jsoncalc, function reference, deferTypeOf">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>deferTypeOf - Return the type of deferring used for a given array</h1>
+    <dl>
+      <dt>deferTypeOf(<var>arg</var>:array):string
+      <dd>
+      If an array is deferred, this will return the name of the type of
+      deferring that is being used.
+      If the argument is a non-deferred array, or not an array at all,
+      then it returns <tt>null</tt>.
+      <p>
+      This rarely matters.
+      Deferred arrays, regardless of their origin, are treated almost exactly
+      like non-deferred arrays.
+      Altering an array, for example by appending a new element to it, will
+      cause the array to be converted to a non-deferred array which can take
+      a noticeable amount of time and memory, so maybe in some very rare cases
+      you might want to see if <tt>deferTypeOf()</tt> returns a
+      non-<tt>null</tt> value.
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>deferTypeOf(1...1000000)</kbd>
+	<samp>"Ellipsis"</samp>
+        The <a target="_PARENT" href="../index.html?op=ellipsis">...</a>
+        operator returns a deferred array of integers.
+        This function returns "Ellipsis" to indicate that it is indeed a
+        deferred array, and that specifically it was created by "<tt>...</tt>".
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>At present, the types of deferred arrays (i.e., the strings this
+            function can return) are:
+            <table class="reference">
+              <tr>
+                <td>"Blob"</td>
+                <td>Binary data, presented as an array of byte values.</td>
+	      </tr>
+	      <tr>
+	        <td>"Ellipsis"</td>
+	        <td>An array of integers over a given range.</td>
+	      </tr>
+	      <tr>
+	        <td>"Dummy"</td>
+	        <td>Used internally by the json_by_expr() C function as an aide to memory management.</td>
+	      </tr>
+	      <tr>
+	        <td>"JSON"</td>
+	        <td>Large array in parsed data from a *.json file</td>
+	      </tr>
+	    </table>
+	<li>Plugins can implement their own types of deferred array.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=ellipsis">...</a></td><td>Returns a array of integers over a range.</td></tr>
+        <tr><td><f target="_PARENT" href="../index.html?op=curl/unmime64">unmime64()<a></td><td>Converts MIME base64 text to a string or blob</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

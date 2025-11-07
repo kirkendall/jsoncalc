@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>toXML</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc toXML - Convert data to an XML string">
+    <meta name="keywords" content="string, object, function reference, toXML">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>toXML - Convert data to an XML string</h1>
+    <dl>
+      <dt>toXML(<var>data</var>:any):string
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=xml">xml</a> plugin.
+      You must load the plugin via either -lxml on the shell command line,
+      or a <tt>plugin xml;</tt> line in a script.
+      <p>
+      The <tt>toXML()</tt> function generates an XML string.
+      It is the opposite of the XML parser;
+      if you take parsed XML data and feed that to this function,
+      you should get the same XML back (possibly with minor formatting changes).
+      <p>
+      Some quirks are:
+      <ul>
+        <li>The data will almost always be an object.
+            All members of the object are converted into a series of XML tags.
+            Usually this will be a single member with data, possibly with a
+            "?xml_" member to generate the "<?xml ?>" meta-tag.
+	<li>Each member is either a "normal tag" member whose value represents
+	    the contents of the tag, or an "attribute" member whose name has
+	    an added suffix (usually "_") and whose value must be an object
+	    giving the names and values of the attributes.
+	<li>If a "normal tag" member's value is an array, the tag will be
+	    repeated for each element of the array.
+	<li>If there's a "key" member but no "key_" member, then the tag will
+	    have contents but no attributes.  If there's a "key_" without a
+	    corresponding "key", then the tag will have attributes but no
+	    content.
+      </ul>
+      <p>
+      The formatter uses the same <tt>pretty</tt> and <tt>tab> config settings
+      as the JSON formatter.
+      It also uses the plugin's <tt>attributeSuffix</tt> option to control what
+      suffix the data keys should use to denote attributes rather than contents.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>toXML({foo:"bar"})</kbd>
+	<samp>"&lt;foo&gt;bar&lt;/foo&gt;"</samp>
+        The simplest possible example.  The key "foo" becomes a tag name,
+        and the value "bar" becomes the content.
+        Since it returns a string, the entire thing is enclosed in quotes.
+      </div>
+      <div class="example">
+	<kbd>print toXML({"?xml_":{version:"1.0"},po_:{number:1106},po:{partno:["CR2032","18650"]})</kbd>
+	<samp>&lt;?php version="1.0" &gt;<br/>&lt;po number="1106"&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;CR2032&lt;/partno&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;18650&lt;/partno&gt;<br/>&lt;/po&gt;</samp>
+	This is a more complex example.
+	We use the <a target="_PARENT" href="../../index.html?cmd=print">print</a>
+	command so you can see the formatting
+	(no added quotes, no backslash escapes).
+	The object has three members:
+	"?php_" which generates the <tt>&lt;?php ?&gt;</tt> tag,
+	and "po_" and "po" which provide the attributes and content of the <tt>&lt;po&gt;</tt> tag.
+	The string is formatted because the <tt>pretty</tt> option is turned on.
+	The content of the <tt>&lt;po&gt;</tt> tag contains single "partno"
+	member, but the member's value is an array so the XML contains multiple
+	<tt>&lt;partno&gt;</tt> tags.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>For data from this plugin's XML parser, this function is intended
+            to recreate the original XML pretty well.  No guarantees though.
+            In particular, whitespace around string values may be lost.
+
+	<li>There is no way to make jsoncalc automatically output its results
+	    in XML instead of JSON.  To display data as XML, you must use
+	    <tt>print toXML()</tt>.
+
+	<li>There is also a
+	    <a target="_PARENT" href="../../index.html?f=xml/toXMLTemplate">toXMLTemplate()</a>
+	    function which uses a separate template string to guide the
+	    generation of XML, pulling data from a JSON object.
+	    The two functions do similar things, but in very different ways.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=xml">plugin xml</a></td><td>Overview of the xml plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=xml/toXMLTemplate">xml/toXMLTemplate()</a></td><td>Generate XML via a template</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=print">print</a></td><td>Output a string without JSON quotes or backslashes.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

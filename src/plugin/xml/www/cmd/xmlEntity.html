@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>xmlEntity</title>
+    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
+    <meta name="description" content="jsoncalc xmlEntity - Edit the table of named entities">
+    <meta name="keywords" content="command, command reference, xmlEntity">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>xmlEntity - Edit the table of named entities</h1>
+    <dl>
+      <dt>xmlEntity <var>entity</var> <b>=</b> <var>expr</var>
+      <br/>xmlEntity
+      <dd>
+      This command is part of the <tt>xml</tt> plugin.
+      It is only available if you used the <tt>-lxml</tt> command-line flag
+      or the <tt>plugin xml</tt> command.
+      <p>
+      Entities are stored in <tt>config.plugin.xml.entity</tt> &mdash;
+      an object where the member key is an entity name and the member value
+      is the text that the entity represents.
+      However, the normal
+      <a target="_PARENT" href="../../index.html?cmd=set">set</a>
+      command won't let you add members to an object.
+      The only way to add a new entity to that object is via <tt>xmlEntity</tt>.
+      <p>
+      Note that the text is given as an expression.
+      This means that if you want it to be literal text, you must enclose
+      the text in quotes.
+      You can also give a number, which will be interpreted as a Unicode
+      codepoint for a single-characters string.
+      <p>
+      You can also invoke <tt>xmlEntity</tt> without any arguments
+      to display the whole entity table.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>xmlEntity</kbd>
+	<samp>
+	  <table>
+	    <tr><th>entity</th><th>codepoint</th><th>text</th></tr>
+	    <tr><td>&amp;amp;</td><td>U+00026</td><td>&</td></tr>
+	    <tr><td>&amp;apos;</td><td>U+00027</td><td>'</td></tr>
+	    <tr><td>&amp;gt;</td><td>U+0003e</td><td>></td></tr>
+	    <tr><td>&amp;lt;</td><td>U+0003c</td><td><</td></tr>
+	    <tr><td>&amp;quot;</td><td>U+00022</td><td>"</td></tr>
+	  </table>
+	</samp>
+        Dump the entity table.  Initially it only contains the five basic
+        entities.
+      </div>
+
+      <div class="example">
+	<kbd>xmlEntity ntilde="&ntilde;"</kbd>
+	Add an entry to make <tt>&amp;ntilde;</tt> be converted/displayed as <tt>&ntilde;</tt>.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>If the <tt>parseEntity</tt> option is turned on, then any
+            &lt;!ENTITY <var>name</var>=<var>text</var>&gt; entities will also
+            add entities to the table.
+
+	<li>The XML parser also understands <tt>&amp;#<var>decimal</var>;</tt>
+	    and <tt>&amp;#x<var>hex</var></tt> entities.
+	    These don't need to be in the table.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=set">set</a></td><td>Adjust configuration settings</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

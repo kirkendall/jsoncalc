@@ -17,6 +17,10 @@
 #endif
 json_t *json_first(json_t *arr)
 {
+	/* Defend against NULL */
+	if (!arr)
+		return NULL;
+
 	/* If not an array, and not an element of an array (no "next") then
 	 * return it though it was the only element of a single-element array.
 	 * This is handy when processing data converted from XML, since XML
@@ -47,6 +51,10 @@ json_t *json_first(json_t *arr)
 json_t *json_next(json_t *elem)
 {
 	json_t *result;
+
+	/* Defend against NULL */
+	if (!elem)
+		return NULL;
 
 	/* Non-deferred arrays are easy */
 	if (!json_is_deferred_element(elem))

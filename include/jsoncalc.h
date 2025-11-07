@@ -442,7 +442,12 @@ void json_config_set(const char *section, const char *key, json_t *value);
 json_t *json_config_parse(json_t *config, const char *settings, const char **refend);
 #define json_config_get_int(section, key) json_int(json_config_get(section, key))
 #define json_config_get_double(section, key) json_double(json_config_get(section, key))
+/* json_config_get_text() is not threadsafe because it returns a pointer into
+ * the json_config tree.  If the option is changed while an expression is
+ * being evaluated, the returned value could become a dangling pointer.
+ */
 #define json_config_get_text(section, key) json_text(json_config_get(section, key))
+#define json_config_get_boolean(section, key) json_is_true(json_config_get(section, key))
 
 /* Plugins */
 json_t *json_plugins;

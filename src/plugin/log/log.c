@@ -519,7 +519,7 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	/* Write any line info */
 	showdate = getbool("date");
 	showtime = getbool("time");
-	showtime = getbool("pid");
+	showpid = getbool("pid");
 	showfile = getbool("file");
 	showline = getbool("line");
 	if (showdate || showtime) {
@@ -532,37 +532,32 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		else
 			localtime_r(&now, &tm);
 		if (showdate && showtime)
-			json_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s",
+			json_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 		else if (showdate)
-			json_user_printf(&tweaked, "log", "%4d-%02d-%02d",
+			json_user_printf(&tweaked, "log", "%4d-%02d-%02d ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 		else
-			json_user_printf(&tweaked, "log", "%02d%02d%02d%s",
+			json_user_printf(&tweaked, "log", "%02d:%02d:%02d%s ",
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 	}
 	if (showpid) {
-		if (showdate || showtime || showpid)
-			json_user_ch(' ');
-		json_user_printf(&tweaked, "log", "[%5d]", (int)getpid());
+		json_user_printf(&tweaked, "log", "[%5d] ", (int)getpid());
 	}
 	if (showfile || showline) {
 		int lineno;
 		jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
 		if (jf) { 
-			if (showdate || showtime || showpid)
-				json_user_ch(' ');
 			if (showfile)
 				json_user_printf(&tweaked, "log", "%s", jf->filename, out);
 			if (showfile && showline)
 				json_user_ch(':');
 			if (showline)
 				json_user_printf(&tweaked, "log", "%d", lineno);
+			json_user_ch(' ');
 		}
 	}
-	if (showdate || showtime || showfile || showline)
-		json_user_ch(' ');
 
 	/* Evaluate the expression list. */
 	list = json_calc(cmd->calc, *refcontext, NULL);

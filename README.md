@@ -19,7 +19,7 @@ Its main features are:
     aggregate functions like COUNT() and SUM(), and operators including
     BETWEEN...AND, LIKE, and IS NULL.
 
-  - Added features include an _array_*@*_expr_ operator for filtering arrays
+  - Added features include an _array_*#*_expr_ operator for filtering arrays
     and tables, intuitive support for ISO 8601 times/dates/periods, and some
     carefully chosen extensions to JavaScript's functions.
 

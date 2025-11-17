@@ -15,8 +15,8 @@
  * the pluginxml() function.
  */
 #include "parse.c"
-#include "genplain.c"
-#include "gentemplate.c"
+#include "unparse.c"
+#include "template.c"
 
 /*----------------------------------------------------------------------------*/
 
@@ -24,7 +24,7 @@
 static char *SETTINGS = "{"
 	"\"attributeSuffix\":\"_\","
 	"\"parseNumber\":true,"
-	"\"parseEntity\":true,"
+	"\"strictPair\":true,"
 	"\"generateCRLF\":true,"
 	"\"empty-list\":[\"string\",\"object\",\"array\"],"
 	"\"empty\":\"string\","
@@ -45,9 +45,9 @@ static json_t *jfn_toXML(json_t *args, void *agdata)
 	size_t len;
 	json_t *result;
 
-	len = xml_plain(NULL, args->first);
+	len = xml_unparse(NULL, args->first);
 	result = json_string("", len);
-	(void)xml_plain(result->text, args->first);
+	(void)xml_unparse(result->text, args->first);
 
 	return result;
 }
@@ -179,7 +179,7 @@ char *pluginxml()
 	jcn_xmlEntity = json_cmd_hook(NULL, "xmlEntity", xmlEntity_parse, xmlEntity_run);
 
 	/* Register the XML data parser */
-	json_parse_hook("xml", "xml", ".xml", "application/xml", xml_test, xml_parse);
+	json_parse_hook("xml", "xml", ".xml", "application/xml", xml_test, xml_parse, NULL);
 
 	/* Success */
 	return NULL;

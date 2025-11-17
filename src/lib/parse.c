@@ -21,6 +21,7 @@ typedef struct jsonparser_s {
 	const char	*name;
 	int	(*tester)(const char *str, size_t len);
 	json_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
+	int	(*updater)(json_t *data, const char *filename);
 } jsonparser_t;
 
 static json_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer);
@@ -178,6 +179,10 @@ static void jappendobject(json_t *container, json_t *more)
  */
 char *json_append(json_t *container, json_t *more)
 {
+	assert(container != NULL && more != NULL);
+	assert(container->type == JSON_ARRAY || container->type == JSON_OBJECT || container->type == JSON_KEY);
+	assert(container->type != JSON_OBJECT || more->type == JSON_KEY);
+
 	switch (container->type) {
 	  case JSON_KEY:
 		if (more->type == JSON_KEY)
@@ -212,7 +217,7 @@ char *json_append(json_t *container, json_t *more)
 }
 
 /* This scans an array's source to determine whether it is worth deferring.
- * Quickly moves past an array without storing it, and returns a pointer to
+ * It quickly moves past an array without storing it, and returns a pointer to
  * the first character after the array.  If refcount is non-NULL then store
  * the count of elements there.  If reftable is non-NULL then it stores a
  * flag indicating whether it is a table (non-empty array of objects).
@@ -698,7 +703,14 @@ json_t *json_parse_file(const char *filename)
  * tester function returns a non-zero value, then the parser function is used
  * to parse this data.
  */
-void json_parse_hook(const char *plugin, const char *name, const char *suffix, const char *mimetype, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr))
+void json_parse_hook(
+	const char *plugin,
+	const char *name,
+	const char *suffix,
+	const char *mimetype,
+	int (*tester)(const char *str, size_t len),
+	json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr),
+	int (*updater)(json_t *data, const char *filename))
 {
 	json_t	*table, *row;
 	jsonparser_t	*jp, *scan;
@@ -709,6 +721,7 @@ void json_parse_hook(const char *plugin, const char *name, const char *suffix, c
 	jp->name = name;
 	jp->tester = tester;
 	jp->parser = parser;
+	jp->updater = updater;
 
 	/* Add it to the end of the list */
 	if (parsers) {
@@ -722,9 +735,10 @@ void json_parse_hook(const char *plugin, const char *name, const char *suffix, c
 	/* Add a row to the "parsers" table in json_system */
 	table = json_by_key(json_system, "parsers");
 	row = json_object();
-	json_append(row, json_key("plugin", plugin ? json_string(plugin, -1) : json_null()));
 	json_append(row, json_key("name", json_string(name, -1)));
+	json_append(row, json_key("plugin", plugin ? json_string(plugin, -1) : json_null()));
 	json_append(row, json_key("suffix", suffix ? json_string(suffix, -1) : json_null()));
 	json_append(row, json_key("mimetype", mimetype ? json_string(mimetype, -1) : json_null()));
+	json_append(row, json_key("writable", json_boolean(updater != NULL)));
 	json_append(table, row);
 }

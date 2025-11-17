@@ -4,26 +4,49 @@
  * xml.c, and compiled as part of that.  Hence the lack of #includes.
  */
 
-/*
-General strategy for the parser: an xml_parse() function parses the contents
-of an XML tag pair.  The contents will be either empty, or a single chunk of
-text, or a series of nested tag pairs.  If empty, that becomes either an
-empty string, empty object, or empty array depending on the "empty" setting.
-If it is text then it is returned as a string, unless it looks like a number
-and the "parseNumber" option is set in which case it's returned as a number.
-If it is a series of tags then they'll be returned as an object.  Repeated
-tags are represented as an array.  Tag attributes are returned as separate
-members with the "attributeSuffix" option appended to the tag name.
+/* General strategy for the parser: The xml_parse() function sets up a
+ * "xml_parse_state_t" struct, and then passes control to xml_parse_helper().
+ * xml_parse_helper() parses a series of tags and collects them in an object,
+ * which it returns.  It uses an xml_parse_tag() function to parse a single
+ * tag including its attributes, contents, and closing tag.  To parse the
+ * contents it may recursively call xml_parse_helper().
+ *
+ * If an error is detected, NULL is returned and the state will include the
+ * position where detection occurred.
+ *
+ * The xml_entities_to_plain() function replaces entities with their
+ * corresponding text.
+ */
 
-If an error is detected then an error null is returned.
+typedef struct xml_parse_name_stack_s {
+	struct xml_parse_name_stack_s *pop;
+	char *namedup;
+} xml_parse_name_stack_t;
 
-The top level parser function just does some basic setup and then calls
-the parser function to (hopefully) return an object containing a member
-with the same name as the outermost XML tag.
+typedef struct {
+	const char	*cursor;/* current parse position */
+	const char	*end;	/* End of the text */
+	int	parseNumber;	/* Boolean: parse digit strings as numbers? */
+	int	strictPair;	/* Boolean: require <tag> to have a </tag>? */
+	const char *empty;	/* One of "string", "object", or "array" */
+	const char *suffix;	/* Value of the attributeSiffix setting */
+	size_t	suffixlen;	/* length of the suffix, in bytes */
+	char	*err;		/* error message (static literal) */
+	char	*name;		/* buffer for storing tag/attribute name */
+	size_t	namesize;	/* size of the buffer */
+	xml_parse_name_stack_t *stack;
+	char	*attrname;	/* Buffer for holding name + suffix */
+} xml_parse_state_t;
 
-*/
+/* This is used to return a single tag.  The tag's name will be available
+ * in state->name.
+ */
+typedef struct {
+	json_t	*attributes;	/* Object with attributes, or NULL if none */
+	json_t	*content;	/* Contents: string, number, object, or NULL */
+} xml_parse_tag_t;
 
-static char *xml_parse_attr_suffix;
+static json_t *xml_parse_helper(xml_parse_state_t *state);
 
 /* Replace all known entities with their corresponding text, and return the
  * size of the resulting text in bytes, not counting the terminating '\0'
@@ -48,7 +71,7 @@ static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 		max = str + len;
 
 	/* Locate the object containing entity translations */
-	entity = json_by_expr(json_config, "plugin.xml.entity", NULL);
+	entity = json_config_get("plugin.xml", "entity");
 
 	/* Allocate the initial name buffer */
 	namesize = 100;
@@ -70,6 +93,7 @@ static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 			if (namelen >= namesize - 1) {
 				namesize += 100;
 				name = (char *)realloc(name, namesize);
+
 			}
 			name[namelen] = str[namelen];
 		}
@@ -133,208 +157,449 @@ static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 	return len;
 }
 
-/* Parse a tag, including its contents and closing tag.  We want to return...
- *  1) The position after the end of the closing tag.
- *  2) The name of the tag.
- *  3) The attributes, as an object.  NULL if none.
- *  4) The contents, either an object or a string.
- *  5) An error, with both an error symbol+message and a position.
- * This function is recursive.
- */
-static json_t *xml_parse_tag(const char **refstr, char **reftagname, json_t **refattr)
+
+/* Push the current name onto the name stack */
+static void xml_parse_push_name(xml_parse_state_t *state)
 {
-	json_t	*attr, *content, *result, *array, *attrarray, *tmp;
-	char	*tagname, *tagattr;
-	size_t	len, taglen;
-	int	arraylen;
+	xml_parse_name_stack_t *s;
+	s = (xml_parse_name_stack_t *)malloc(sizeof(*s));
+	s->pop = state->stack;
+	s->namedup = strdup(state->name);
+	state->stack = s;
+}
 
-	/* Clobber the pointed-to variables */
-	*reftagname = NULL;
-	*refattr = NULL;
+/* Pop a name from the name stack, loading it back into state->name */
+static void xml_parse_pop_name(xml_parse_state_t *state)
+{
+	assert(state->stack);
+	xml_parse_name_stack_t *pop = state->stack->pop;
+	strcpy(state->name, state->stack->namedup); /* guaranteed to fit */
+	free(state->stack->namedup);
+	free(state->stack);
+	state->stack = pop;
+}
 
-	/* Skip whitespace */
-	while (isspace(**refstr))
-		(*refstr)++;
-
-	/* If not a tag, then return an error */
-	if (**refstr != '<')
-		return json_error_null(*refstr, "XMLNOTTAG:XML expects a \"<\" here");
-
-	/* If ending tag, that's an error */
-	(*refstr)++;
-	if (**refstr == '/')
-		return json_error_null(*refstr, "XMLNEST:Bad nesting of XML tags");
-
-	/* Don't allow empty namespaces */
-	if (**refstr == '/')
-		return json_error_null(*refstr, "XMLEMPTYNS:Empty XML namespace");
-
-	/* Find the length of the tag name, and copy it */
-	for (taglen = 0; (*refstr)[taglen] && !strchr(" \t\r\n/>", (*refstr)[taglen]); taglen++) {
+/* Return the type of JSON value that an empty tag pair represents */
+static json_t *xml_parse_empty(xml_parse_state_t *state)
+{
+	switch (state->empty[0]) {
+	case 'o':	return json_object();
+	case 'a':	return json_array();
+	case 'n':	return json_null();
+	default:	return json_string("",0);
 	}
-	*reftagname = (char *)malloc(taglen + 1);
-	strncpy(*reftagname, *refstr, taglen);
-	(*reftagname)[taglen] = '\0';
-	(*refstr) += taglen;
+}
 
-	/* Skip whitespace after the tag name */
-	while (isspace(**refstr))
-		(*refstr)++;
-	if (!**refstr)
-		return json_error_null((*refstr) - 1, "XMLSHORT:Premature end to XML text");
+/* Move past whitespace */
+static void xml_parse_space(xml_parse_state_t *state)
+{
+	while (state->cursor < state->end && isspace(*state->cursor))
+		state->cursor++;
+}
 
-	/* If the tagname starts with "?" or "!" then parse the attribute area
-	 * as a value string.
+/* Parse a single name.  This could be a tag name or attribute name */
+static void xml_parse_name(xml_parse_state_t *state)
+{
+	size_t	len;
+
+	/* Count the name characters */
+	for (len = 0; (state->cursor[len] & 0xff) > ' ' && state->cursor[len] != '=' && state->cursor[len] != '>'; len++) {
+	}
+
+	/* Copy it into namebuf, with a '\0' terminator */
+	if (len + 1 > state->namesize) {
+		state->namesize = (len | 0x1f) + 1;
+		state->name = (char *)realloc(state->name, state->namesize);
+		state->attrname = (char *)realloc(state->attrname, state->namesize + state->suffixlen);
+	}
+	if (len > 0)
+		strncpy(state->name, state->cursor, len);
+	state->name[len] = '\0';
+
+	/* Move the cursor past the name.  Skip trailing spaces */
+	state->cursor += len;
+	xml_parse_space(state);
+}
+
+/* Parse a single tag.  Recursively call xml_parse_helper to parse the contents.
+ * If an error is detected, the state->err field will contain an error message.
+ */
+static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
+{
+	xml_parse_tag_t ret = {NULL, NULL};
+	char	type;
+	int	nest;
+	size_t	len;
+	json_t	*value;
+	const char	*oldcursor;
+
+	/* We should be at the start of a tag */
+	assert(*state->cursor == '<');
+
+	/* Parse the name.  The name may start with "?" or "!" which is handled
+	 * differently than normal tags.  If it starts with "/" then that's
+	 * something else.
 	 */
-	if (**reftagname == '?' || **reftagname == '!') {
-		for (len = 0; (*refstr)[len] && (*refstr)[len] != '>'; len++) {
+	state->cursor++;
+	xml_parse_name(state);
+
+	/* Parse <!...> as one big content string. */
+	if (*state->name == '!') {
+		for (nest = 0, len = 0; nest > 0 || state->cursor[len] != '>'; len++) {
+			if (state->cursor[len] == '<')
+				nest++;
+			else if (state->cursor[len] == '>')
+				nest--;
 		}
-		content = json_string(*refstr, len);
-		(*refstr) += len;
-		if (**refstr == '>')
-			(*refstr)++;
-		return content;
+
+		/* Return it.  The name is in state->name, there are no
+		 * attributes, and the content is a string.
+		 */
+		ret.content = json_string(state->cursor, len);
+		state->cursor += len + 1;
+		return ret;
 	}
 
-	/* Skip whitespace */
-	while (isspace(**refstr))
-		(*refstr)++;
-
-	/* If any attributes, build an object for them */
-	if (**refstr != '>' && **refstr != '/') {
-	/*!!!*/
+	/* If we get </...> that's an error. */
+	if (*state->name == '/') {
+		state->err = "Unmatched </tag>";
+		return ret;
 	}
 
-	/* Move past the ">".  "/>" then assume empty content */
-	if (**refstr == '/') {
-		(*refstr)++;
-		if (**refstr != '>')
-			return json_error_null(*refstr, "XMLSLASH:XML tag contains / in the wrong place");
-		(*refstr)++;
-		return NULL;
-	}
+	/* Otherwise, for <tag> or <?tag...?>, parse the attributes */
+	xml_parse_push_name(state);
+	xml_parse_space(state);
+	while (state->cursor < state->end && !strchr("?>/", *state->cursor)) {
+		/* Parse a name */
+		xml_parse_name(state);
 
-	/* Skip whitespace */
-	while (isspace(**refstr))
-		(*refstr)++;
-
-	/* Do we have string content, or nested tags? */
-	result = NULL;
-	if (**refstr == '<') {
-		/* Zero or more sets of nested tags */
-		while ((*refstr)[1] != '/') {
-			/* Parse a nested tag, recursively */
-			content = xml_parse_tag(refstr, &tagname, &attr);
-
-			/* If error, return that */
-			if (json_is_error(content)) {
-				if (content)
-					json_free(content);
-				return content;
-			}
-
-			/* If no content, then use an empty string, array or object */
-			if (!content) {
-				content = json_string("", 0); /* !!! */
-			}
-
-			/* Derive a name for attributes */
-			tagattr = (char *)malloc(strlen(tagname) + strlen(xml_parse_attr_suffix) + 1);
-			strcpy(tagattr, tagname);
-			strcat(tagattr, xml_parse_attr_suffix);
-
-			/* Add it to the result object.  If duplicate then
-			 * make it an array.
+		/* Is it followed by "="? */
+		xml_parse_space(state);
+		if (*state->cursor == '=') {
+			/* Yes, parse the value.  It should be quoted but if
+			 * not then assume it ends at whitespace or tag end.
 			 */
-			if (!result) {
-				result = json_object();
-				if (attr)
-					json_append(result, json_key(tagattr, attr));
-				json_append(result, json_key(tagname, attr));
-			} else if ((array = json_by_key(result, tagname)) != NULL) {
-				/* Duplicate. If not already an array, then
-				 * convert it now.  Also convert the attributes
-				 * to a parallel array, if any.
-				 */
-				attrarray = json_by_key(result, tagattr);
-				if (array->type != JSON_ARRAY) {
-					/* Convert previous content to array */
-					tmp = json_array();
-					json_append(tmp, array);
-					json_append(result, json_key(tagname, tmp));
-					array = tmp;
-
-					/* If attributes, convert them too */
-					if (attrarray) {
-						tmp = json_array();
-						json_append(tmp, attrarray);
-						json_append(result, json_key(tagattr, tmp));
-						attrarray = tmp;
-					}
+			char *plaintext, *end;
+			size_t plainlen;
+			state->cursor++;
+			if (*state->cursor == '"') {
+				/* Quoted */
+				state->cursor++;
+				for (len = 0; state->cursor[len] != '"'; len++) {
 				}
-
-				/* Append this item */
-				json_append(array, content);
-
-				/* Append attributes to keep the arrays parallel */
-				if (attr && attrarray)
-					json_append(array, attr);
-				else if (attrarray)
-					json_append(array, json_object());
-				else if (attr) {
-					attrarray = json_array();
-					for (arraylen = json_length(array); arraylen > 1; arraylen--)
-						json_append(attrarray, json_object());
-					json_append(attrarray, attr);
-					json_append(result, json_key(tagattr, tmp));
-				}
-
+				plainlen = xml_entities_to_plain(NULL, state->cursor, len);
+				value = json_string("", plainlen);
+				(void)xml_entities_to_plain(value->text, state->cursor, len);
+				state->cursor += len + 1;
 			} else {
-				/* New member for the object */
-				if (attr)
-					json_append(result, json_key(tagattr, attr));
-				json_append(result, json_key(tagname, attr));
+				/* Unquoted */
+				for (len = 0; !isspace(state->cursor[len]) && !strchr("/?>", state->cursor[len]); len++) {
+				}
+				value = json_string(state->cursor, len);
+				state->cursor += len;
 			}
 
-			/* Discard tagname */
-			free(tagattr);
-
-			/* Skip whitespace between tags */
-			while (isspace(**refstr))
-				(*refstr)++;
-
-			/* If we hit text other than "<" thats an error */
-			if (**refstr != '<')
-				return json_error_null(*refstr, "XMLMIX:Mixture of text and XML tags");
+		} else {
+			/* assume it is Boolean "true" */
+			value = json_boolean(1);
 		}
-	} else {
-		/* Find the extent of the text. */
 
-		/* Convert it to a jsoncalc string */
+		/* Add this to the attributes object. If this is the first then
+		 * we also need to allocate the object.
+		 */
+		if (!ret.attributes)
+			ret.attributes = json_object();
+		json_append(ret.attributes, json_key(state->name, value));
 
-		/* Add it to the object */
+		/* Skip whitespace */
+		xml_parse_space(state);
+	}
+	xml_parse_pop_name(state);
+
+	/* If we hit ?> or /> then there is no content.  This is also true if
+	 * the tag name starts with "?" even if the tag doesn't end with "?>".
+	 */
+	if (*state->cursor == '/' || *state->cursor == '?') {
+		state->cursor++;
+		if (*state->cursor++ == '>') {
+			ret.content = xml_parse_empty(state);
+			return ret;
+		}
+		state->err = "malformed tag";
+		if (ret.attributes) {
+			json_free(ret.attributes);
+			ret.attributes = NULL;
+		}
+		return ret;
+	}
+	if (*state->name == '?') {
+		ret.content = xml_parse_empty(state);
+		return ret;
+	}
+	state->cursor++;
+	xml_parse_space(state);
+
+	/* Parse the content.  Detect errors. */
+	xml_parse_push_name(state);
+	ret.content = xml_parse_helper(state);
+	xml_parse_pop_name(state);
+	if (!ret.content) {
+		if (ret.attributes) {
+			json_free(ret.attributes);
+			ret.attributes = NULL;
+		}
+		return ret;
+	}
+{char *tmp = json_serialize(ret.content,0); fprintf(stderr, "%s=%s\n", state->name, tmp); free(tmp); }
+{char *tmp = ret.attributes ? json_serialize(ret.attributes,0) : strdup("null"); fprintf(stderr, "%s=%s\n", state->attrname, tmp); free(tmp); }
+
+	/* We expect to be at a closing tag.  If not, either that's an error. */
+	if (*state->cursor != '<' || state->cursor[1] != '/') {
+		if (ret.attributes) {
+			json_free(ret.attributes);
+			ret.attributes = NULL;
+		}
+		json_free(ret.content);
+		ret.content = NULL;
+		state->err = "Parse error";
+		return ret;
 	}
 
-	/* We expect a closing tag here.  If it is an opening that, that's
-	 * the result of mixing text and tags, which is bad.  If it's the wrong
-	 * closing tag, that could be an error or it could be HTML.
+	/* Check whether we're at the expected closing tag.  If not, that's
+	 * either an error or we keep it as the some other tag's closer.
 	 */
-	if (**refstr != '<')
-		return json_error_null(*refstr, "XMLNOTTAG:XML expects a \"<\" here");
-	(*refstr)++;
-	if (**refstr != '/')
-		return json_error_null(*refstr, "XMLMIX:Mixture of text and XML tags");
-	(*refstr)++;
-	if (strncmp(*refstr, *reftagname, taglen) != 0
-	 || (*refstr)[taglen] != '>')
-		return json_error_null(*refstr, "XMLNEST:Bad nesting of XML tags");
-	(*refstr) += taglen + 1; /* "+1" for the ">" after the tag name */
+	oldcursor = state->cursor;
+	state->cursor += 2;
+	strcpy(state->attrname, state->name);
+	xml_parse_name(state);
+	if (strcmp(state->attrname, state->name)) {
+		if (state->strictPair) {
+			if (ret.attributes) {
+				json_free(ret.attributes);
+				ret.attributes = NULL;
+			}
+			json_free(ret.content);
+			ret.content = NULL;
+			state->err = "Mismatched <tag>...</tag>";
+			return ret;
+		}
+		state->cursor = oldcursor;
+	}
+	xml_parse_space(state);
+	if (*state->cursor == '>') {
+		state->cursor++;
+		xml_parse_space(state);
+	} else {
+		if (ret.attributes) {
+			json_free(ret.attributes);
+			ret.attributes = NULL;
+		}
+		json_free(ret.content);
+		ret.content = NULL;
+		state->err = "xmlclose:Unexpected chars in </tag>";
+	}
 
 	/* Done! */
-	return result;
+	return ret;
+}
+
+/* Parse the content of a tag.  This may be either a string/number value, or
+ * an empty string/object/array, or one or more nested tags to be collected
+ * as a JSON object.  Whatever it is, return it.
+ *
+ * This is also called as the top-level parser for an XML document.  Typically
+ * this will end up parsing the <?xml ... ?> tag and a single document tag
+ * that has lots of stuff inside.
+ *
+ * It returns NULL on errors, or if it hits the end of the buffer without
+ * finding anything to parse.
+ */
+static json_t *xml_parse_helper(xml_parse_state_t *state)
+{
+	json_t	*parsed, *attr, *content, *scan;
+	xml_parse_tag_t tag;
+	size_t	len, entitylen;
+
+	/* Skip leading whitespace */
+	xml_parse_space(state);
+	if (state->cursor >= state->end)
+		return NULL;
+
+	/* If not "<" then we have a string/number value */
+	if (*state->cursor != '<') {
+		/* Count characters */
+		for (len = 1; state->cursor + len < state->end && state->cursor[len] != '<'; len++) {
+		}
+
+		/* Trim trailing whitespace */
+		while (len > 0 && isspace(state->cursor[len - 1]))
+			len--;
+
+
+		/* Expand entities, and store it in a string */
+		entitylen = xml_entities_to_plain(NULL, state->cursor, len);
+		parsed = json_string("", entitylen);
+		(void)xml_entities_to_plain(parsed->text, state->cursor, len);
+
+		/* Are we supposed to parse numbers? */
+		if (state->parseNumber) {
+			/* Does it look like a number? */
+			char *n = parsed->text;
+			if (*n == '-')
+				n++;
+			if (isdigit(*n)) {
+				do {
+					n++;
+				} while (isdigit(*n));
+				if (*n == '.' && isdigit(n[1])) {
+					do {
+						n++;
+					} while (isdigit(*n));
+					if (!*n) {
+						/* Yes, it looks like a number!
+						 * Convert to number.
+						 */
+						parsed->type = JSON_NUMBER;
+					}
+				}
+			}
+		}
+
+		/* Move cursor past the value */
+		state->cursor += len;
+
+		/* Return the string/number */
+		return parsed;
+	}
+
+	/* WE HAVE TAGS (or a closing tag) */
+
+	/* If "</" then we hit an ending tag without any content.  Choose the
+	 * proper type of empty value to return.  This will leave state->cursor
+	 * pointing to the start of the closing tag.
+	 */
+	if (state->cursor[1] == '/') {
+		return xml_parse_empty(state);
+	}
+
+	/* We found a nested tag.  Parse it and its content. May be repeated. */
+	parsed = json_object();
+	do {
+{char *tmp = json_serialize(parsed,0); fprintf(stderr, "%s\n", tmp); free(tmp); }
+		/* Parse a tag */
+		tag = xml_parse_tag(state);
+
+		/* Detect errors */
+		if (state->err) {
+			json_free(parsed);
+			return NULL;
+		}
+
+		/* Add it to the object.  This is more complicated than it
+		 * sounds because...
+		 *  1) Duplicate tags are converted to JSON arrays.
+		 *  2) We always have content.  We sometimes have attributes.
+		 *  3) Attribute arrays should parallel content arrays.
+		 */
+
+		/* Derive the attribute name from the tag name */
+		if (tag.attributes) {
+			strcpy(state->attrname, state->name);
+			strcat(state->attrname, state->suffix);
+		}
+
+		/* Look for existing members for this tag, both for the
+		 * attributes and the content.  We don't use json_by_key()
+		 * for this because XML is case-sensitive.  Also, this loop
+		 * finds the JSON_KEY nodes, which work better for us than
+		 * the values.
+		 */
+		for (attr = content = NULL, scan = parsed->first;
+		     scan && ((tag.attributes && !attr) || !content);
+		     scan = scan->next) {
+			if (tag.attributes && !strcmp(scan->text, state->attrname))
+				attr = scan;
+			else if (!strcmp(scan->text, state->name))
+				content = scan;
+		}
+
+		/* NOTE: At this point, "content" and "attr" refer to JSON_KEY
+		 * nodes in the parsed data, or are NULL if no such nodes exist.
+		 * "tag.content" and "tag.attributes" are values (not keys)
+		 * from the current tag.  "tag.content" will never be NULL,
+		 * but "tag.attributes" might be.
+		 */
+
+		/* If content was NOT found, then just add it to the object
+		 * as a non-array value.
+		 */
+		if (!content) {
+			json_append(parsed, json_key(state->name, tag.content));
+			if (tag.attributes)
+				json_append(parsed, json_key(state->attrname, tag.attributes));
+			xml_parse_space(state);
+			continue;
+		}
+
+		/* A member was found for this tag's content already, so we
+		 * must be doing arrays.  If the existing content isn't an
+		 * array yet, then convert it to an array now.
+		 */
+		if (content->first->type != JSON_ARRAY) {
+			json_t *array = json_array();
+			json_append(array, content->first);
+			content->first = array;
+		}
+
+		/* Same for attributes.  It's also possible that no attributes
+		 * have been seen before this, though, in which case we need
+		 * to add it as an array.  Either way, we need to pad it to
+		 * be the same length as the content array.
+		 */
+		if (tag.attributes && (!attr || attr->first->type != JSON_ARRAY)) {
+			json_t *array = json_array();
+			int pad;
+			if (attr) {
+				json_append(array, attr->first);
+				attr->first = array;
+			} else {
+				attr = json_key(state->attrname, array);
+				json_append(parsed, attr);
+			}
+			pad = json_length(content->first) - json_length(array);
+			for (; pad > 0; pad--)
+				json_append(array, json_object());
+		}
+
+		/* Append the new content to the array. */
+		json_append(content->first, tag.content ? tag.content : json_null());
+
+		/* Do the same for attributes.  If no attributes, but there
+		 * is an attribute array, then append an empty object instead.
+		 */
+		if (attr)
+			json_append(attr->first, tag.attributes ? tag.attributes  : json_object());
+
+
+		/* Skip whitespace */
+		xml_parse_space(state);
+
+	} while (state->cursor + 2 < state->end
+	      && state->cursor[0] == '<'
+	      && state->cursor[1] != '/');
+
+	/* Okay!  We had some fun, parsed some tags, and hit a closing tag or
+	 * the end of the buffer.  The state->cursor points to the start of
+	 * that closing tag or end of the buffer.  Return what we parsed.
+	 */
+	return parsed;
 }
 
 /*----------------------------------------------------------------------------*/
+
+/* The following two functions are passed to json_parse_hook() to allow XML
+ * data to be recognized and parsed.
+ */
 
 /* Return 1 if "str" appears to be XML, else return 0 */
 static int xml_test(const char *str, size_t len)
@@ -350,21 +615,40 @@ static int xml_test(const char *str, size_t len)
 static json_t *xml_parse(const char *buf, size_t len, const char **refend, const char **referr)
 {
 	json_t *result;
-	json_t *content, *attributes;
-	char *tagname;
+	xml_parse_state_t state;
 
-	/* Copy some values from config to variables */
-	attributes = json_by_expr(json_config, "plugin.xml.attributeSuffix", NULL);
-	xml_parse_attr_suffix = attributes->text;
+	/* Set up the parse state */
+	state.cursor = buf;
+	state.end = buf + len;
+	state.parseNumber = json_config_get_boolean("plugin.xml", "parseNumber");
+	state.strictPair = json_config_get_boolean("plugin.xml", "strictPair");
+	state.empty = json_config_get_text("plugin.xml", "empty");
+	state.suffix = json_config_get_text("plugin.xml", "attributeSuffix");
+	state.suffixlen = strlen(state.suffix);
+	state.err = NULL;
+	state.namesize = 128;
+	state.name = (char *)malloc(state.namesize);
+	state.name[0] = '\0';
+	state.attrname = (char *)malloc(state.namesize + state.suffixlen);
+	state.attrname[0] = '\0';
+	state.stack = NULL;
 
-	result = json_object();
+	/* Let xml_parse_helper to the dirty work */
+	result = xml_parse_helper(&state);
 
-	for (;;) {
-		/* Skip whitespace */
-
-		/* Parse a tag */
-		//xml_parse_tag(const char **refstr, char **reftagname, json_t **refattr)
+	/* If NULL then we got an error. Convert NULL to an error message. */
+	if (!result) {
+		if (state.err)
+			result = json_error_null(state.cursor, "xml:%s", state.err);
+		else
+			result = json_error_null(state.cursor, "xmlempty:No XML data");
 	}
+
+	/* Clean up and exit */
+	free(state.name);
+	while (state.stack) /* shouldn't be necessary, but do it anyway */
+		xml_parse_pop_name(&state);
+	return result;
 }
 
 

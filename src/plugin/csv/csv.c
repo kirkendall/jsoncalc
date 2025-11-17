@@ -485,7 +485,7 @@ char *plugincsv()
 
 	/* Register the functions */
 	json_print_table_hook("csv", csvprint);
-	json_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse);
+	json_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
 
 	/* Success */
 	return NULL;

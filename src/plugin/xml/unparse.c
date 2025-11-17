@@ -1,16 +1,16 @@
-/* genplain.c */
+/* genunparse.c */
 
 /* This file is not meant to be compiled separately -- it is included in
  * xml.c, and compiled as part of that.  Hence the lack of #includes.
  */
 
-/* The general idea here is: xml_plain() sets up a state, and invokes
- * xml_plain_helper() to generate all tags for the top-level of the json_t
- * argument.  xml_plain_helper() calls xml_plain_tag() to generate each tag
- * with its arguments and (by recursively calling xml_plain_helper()) contents.
+/* The general idea here is: xml_unparse() sets up a state, and invokes
+ * xml_unparse_helper() to generate all tags for the top-level of the json_t
+ * argument.  xml_unparse_helper() calls xml_unparse_tag() to generate each tag
+ * with its arguments and (by recursively calling xml_unparse_helper()) contents.
  *
  * Also worth noting: XML doesn't have real arrays; generally they're
- * represented by repeatable tags.  If the data passed into xml_plain()
+ * represented by repeatable tags.  If the data passed into xml_unparse()
  * involves any arrays, that's not a native XML thing! It's JSON's clue to
  * generate multiple tags.
  */
@@ -26,14 +26,14 @@ typedef struct {
 	size_t		suffixlen;	/* length of suffix, in bytes */
 	char		*namebuf;	/* buffer for tagname +/- suffix */
 	size_t		namesize;	/* allocated size of namebuf */
-} xml_plain_state_t;
+} xml_unparse_state_t;
 
 
-static void xml_plain_helper(json_t *data, xml_plain_state_t *state);
+static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state);
 
 
 /* Add text, without converting special characters to entities */
-static void xml_plain_add(const char *str, xml_plain_state_t *state)
+static void xml_unparse_add(const char *str, xml_unparse_state_t *state)
 {
 	if (state->buffer)
 		strcpy(state->buffer + state->len, str);
@@ -41,7 +41,7 @@ static void xml_plain_add(const char *str, xml_plain_state_t *state)
 }
 
 /* Add text, converting special characters to entities */
-static void xml_plain_add_text(const char *str, xml_plain_state_t *state)
+static void xml_unparse_add_text(const char *str, xml_unparse_state_t *state)
 {
 	char *entity;
 	for (; *str; str++) {
@@ -55,7 +55,7 @@ static void xml_plain_add_text(const char *str, xml_plain_state_t *state)
 		}
 		if (entity) {
 			/* Add the entity */
-			xml_plain_add(entity, state);
+			xml_unparse_add(entity, state);
 		} else {
 			if (state->buffer)
 				state->buffer[state->len] = *str;
@@ -65,7 +65,7 @@ static void xml_plain_add_text(const char *str, xml_plain_state_t *state)
 }
 
 /* Generate an opening tag with a given name and attributes. */
-static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *content, xml_plain_state_t *state)
+static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *content, xml_unparse_state_t *state)
 {
 	json_t	*attr;
 	char	*str, *entity;
@@ -91,8 +91,8 @@ static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *conte
 	}
 
 	/* Add the "<" and tag name */
-	xml_plain_add("<", state);
-	xml_plain_add(tagname, state);
+	xml_unparse_add("<", state);
+	xml_unparse_add(tagname, state);
 
 	/* If there are attributes, output them */
 	if (attributes) {
@@ -106,15 +106,15 @@ static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *conte
 				continue;
 
 			/* Add the name of the attribute */
-			xml_plain_add(" ", state);
-			xml_plain_add(attr->text, state);
+			xml_unparse_add(" ", state);
+			xml_unparse_add(attr->text, state);
 
 			/* If the value is true then we're done */
 			if (attr->first->type == JSON_BOOLEAN)
 				continue;
 
 			/* Add =" before the value */
-			xml_plain_add("=\"", state);
+			xml_unparse_add("=\"", state);
 
 			/* Get the value to add.  If it's a string (or a number
 			 * that's stored in string form), this is easy but
@@ -122,26 +122,26 @@ static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *conte
 			 */
 			if (attr->first->type == JSON_STRING\
 			 || (attr->first->type == JSON_NUMBER && attr->first->text[0]))
-				xml_plain_add_text(attr->first->text, state);
+				xml_unparse_add_text(attr->first->text, state);
 			else {
 				str = json_serialize(attr->first, NULL);
-				xml_plain_add_text(str, state);
+				xml_unparse_add_text(str, state);
 				free(str);
 			}
 
 			/* Add a terminating " */
-			xml_plain_add("\"", state);
+			xml_unparse_add("\"", state);
 		}
 	}
 
 	/* Is there content? */
-	if (content) {
+	if (content && *tagname != '?') {
 		/* Yes, so end this tag with ">".  If pretty-printing and the
 		 * content is an object (embedded tags) then add a "\n"
 		 */
-		xml_plain_add(">", state);
+		xml_unparse_add(">", state);
 		if (state->pretty && content->type == JSON_OBJECT) 
-			xml_plain_add(state->crlf, state);
+			xml_unparse_add(state->crlf, state);
 
 		dup = NULL;
 		if (content->type == JSON_OBJECT) {
@@ -153,7 +153,7 @@ static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *conte
 			if (tagname == state->namebuf)
 				dup = strdup(tagname);
 			state->indent++;
-			xml_plain_helper(content, state);
+			xml_unparse_helper(content, state);
 			state->indent--;
 
 			/* If pretty-printing, then indent the closing tag */
@@ -171,33 +171,33 @@ static void xml_plain_tag(const char *tagname, json_t *attributes, json_t *conte
 			if (content->type == JSON_STRING
 			 || (content->type == JSON_NUMBER && content->text[0])
 			 || content->type == JSON_BOOLEAN)
-				xml_plain_add_text(content->text, state);
+				xml_unparse_add_text(content->text, state);
 			else {
 				str = json_serialize(content, NULL);
-				xml_plain_add_text(str, state);
+				xml_unparse_add_text(str, state);
 				free(str);
 			}
 		}
 
 		/* Generate the closing tag.  If pretty-printing, add a '\n' */
-		xml_plain_add("</", state);
-		xml_plain_add(dup ? dup : tagname, state);
-		xml_plain_add(">", state);
+		xml_unparse_add("</", state);
+		xml_unparse_add(dup ? dup : tagname, state);
+		xml_unparse_add(">", state);
 	} else {
 		/* No so end the opening tag with " />" or " ?>" */
 		if (*tagname == '?')
-			xml_plain_add(" ?>", state);
+			xml_unparse_add(" ?>", state);
 		else
-			xml_plain_add(" />", state);
+			xml_unparse_add(" />", state);
 	}
 
 	/* If pretty-printing, add a newline */
 	if (state->pretty || *tagname == '?')
-		xml_plain_add(state->crlf, state);
+		xml_unparse_add(state->crlf, state);
 }
 
 /* Test whether a given member name looks like attributes instead of content */
-static int xml_is_attributes(const char *name, xml_plain_state_t *state)
+static int xml_is_attributes(const char *name, xml_unparse_state_t *state)
 {
 	size_t len = strlen(name);
 	if (state->suffixlen >= len)
@@ -210,7 +210,7 @@ static int xml_is_attributes(const char *name, xml_plain_state_t *state)
 /* Make a copy of a tagname.  If suffix=1 then add suffix, if suffix=-1 then
  * delete suffix, for suffix=0 no changes.
  */
-static void xml_plain_name(const char *name, xml_plain_state_t *state, int suffix)
+static void xml_unparse_name(const char *name, xml_unparse_state_t *state, int suffix)
 {
 	/* Get the length of the maybe-altered name */
 	size_t newlen = strlen(name) + suffix * state->suffixlen;
@@ -233,7 +233,7 @@ static void xml_plain_name(const char *name, xml_plain_state_t *state, int suffi
  * itself is stored at "buf", but you can also pass a null "buf" to find the
  * length without actually generating it.
  */
-static void xml_plain_helper(json_t *data, xml_plain_state_t *state)
+static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
 {
 	size_t	len, piece_len;
 	json_t	*mem, *attr, *mscan, *ascan;
@@ -251,47 +251,47 @@ static void xml_plain_helper(json_t *data, xml_plain_state_t *state)
 			if (!mem->first)
 				continue;
 			if (mem->first->type == JSON_STRING) {
-				xml_plain_add("<", state);
-				xml_plain_add(mem->text, state);
-				xml_plain_add(" ", state);
-				xml_plain_add(mem->first->text, state);
-				xml_plain_add(">", state);
-				xml_plain_add(state->crlf, state);
+				xml_unparse_add("<", state);
+				xml_unparse_add(mem->text, state);
+				xml_unparse_add(" ", state);
+				xml_unparse_add(mem->first->text, state);
+				xml_unparse_add(">", state);
+				xml_unparse_add(state->crlf, state);
 			} else if (mem->first->type == JSON_ARRAY) {
 				for (ascan = json_first(mem->first);
 				     ascan;
 				     ascan = json_next(ascan)) {
 					if (ascan->type != JSON_STRING)
 						continue;
-					xml_plain_add("<", state);
-					xml_plain_add(mem->text, state);
-					xml_plain_add(" ", state);
-					xml_plain_add(ascan->text, state);
-					xml_plain_add(">", state);
-					xml_plain_add(state->crlf, state);
+					xml_unparse_add("<", state);
+					xml_unparse_add(mem->text, state);
+					xml_unparse_add(" ", state);
+					xml_unparse_add(ascan->text, state);
+					xml_unparse_add(">", state);
+					xml_unparse_add(state->crlf, state);
 				}
 			}
 			continue;
 		}
 
 		/* Is it an attribute bundle? */
-		if (mem->first->type == JSON_OBJECT && xml_is_attributes(mem->text, state)) {
+		if ((mem->first->type == JSON_OBJECT || mem->first->type == JSON_ARRAY) && xml_is_attributes(mem->text, state)) {
 			/* If there's a non-attribute version, let that handle it */
-			xml_plain_name(mem->text, state, -1);
+			xml_unparse_name(mem->text, state, -1);
 			if (json_by_key(data, state->namebuf))
 				continue;
 
 			/* Okay, attributes are all we've got.  Generate an
 			 * empty tag with the attributes.
 			 */
-			xml_plain_tag(state->namebuf, mem->first, NULL, state);
+			xml_unparse_tag(state->namebuf, mem->first, NULL, state);
 			continue;
 		}
 
 		/* IF WE GET HERE, WE HAVE A "NORMAL" TAG */
 
 		/* Look for attributes */
-		xml_plain_name(mem->text, state, 1);
+		xml_unparse_name(mem->text, state, 1);
 		attr = json_by_key(data, state->namebuf);
 
 		/* The value could be an array, or a single item. */
@@ -304,7 +304,7 @@ static void xml_plain_helper(json_t *data, xml_plain_state_t *state)
 			for (mscan = json_first(mem->first), ascan = json_first(attr);
 			     mscan;
 			     mscan = json_next(mscan), ascan = json_next(ascan)) {
-				xml_plain_tag(mem->text, ascan, mscan, state);
+				xml_unparse_tag(mem->text, ascan, mscan, state);
 			}
 		} else {
 			/* Single value. attr, if used, should also be single */
@@ -312,14 +312,14 @@ static void xml_plain_helper(json_t *data, xml_plain_state_t *state)
 				attr = NULL;
 
 			/* Add the tag */
-			xml_plain_tag(mem->text, attr, mem->first, state);
+			xml_unparse_tag(mem->text, attr, mem->first, state);
 		}
 	}
 }
 
-static size_t xml_plain(char *buf, json_t *data)
+static size_t xml_unparse(char *buf, json_t *data)
 {
-	xml_plain_state_t state;
+	xml_unparse_state_t state;
 
 	/* Set up the state */
 	state.buffer = buf;
@@ -334,7 +334,7 @@ static size_t xml_plain(char *buf, json_t *data)
 	state.namebuf = (char *)malloc(state.namesize);
 
 	/* Let the helper do most of the work (recursively) */
-	xml_plain_helper(data, &state);
+	xml_unparse_helper(data, &state);
 
 	/* Clean up, and return the length */
 	if (state.pretty)

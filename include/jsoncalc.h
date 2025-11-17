@@ -340,7 +340,14 @@ extern int json_blob_test(const char *data, size_t len);
 extern json_t *json_blob_parse(const char *data, size_t len, const char **refend, const char **referr);
 
 /* Parsing */
-extern void json_parse_hook(const char *plugin, const char *name, const char *suffix, const char *mimetype, int (*tester)(const char *str, size_t len), json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr));
+extern void json_parse_hook(
+	const char *plugin,
+	const char *name,
+	const char *suffix,
+	const char *mimetype,
+	int (*tester)(const char *str, size_t len),
+	json_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr),
+	int (*updater)(json_t *data, const char *filename));
 extern json_t *json_parse_string(const char *str);
 extern json_t *json_parse_file(const char *filename);
 

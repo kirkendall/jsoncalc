@@ -329,16 +329,18 @@ void json_config_load(const char *name)
 		 */
 		conf = json_array();
 		value = json_object();
-		json_append(value, json_key("plugin", json_null()));
 		json_append(value, json_key("name", json_string("json", -1)));
+		json_append(value, json_key("plugin", json_null()));
 		json_append(value, json_key("suffix", json_string(".json", -1)));
 		json_append(value, json_key("mimetype", json_string("application/json", -1)));
+		json_append(value, json_key("writable", json_boolean(1)));
 		json_append(conf, value);
 		value = json_object();
-		json_append(value, json_key("plugin", json_null()));
 		json_append(value, json_key("name", json_string("blob", -1)));
+		json_append(value, json_key("plugin", json_null()));
 		json_append(value, json_key("suffix", json_null()));
-		json_append(value, json_key("mimetype", json_null()));
+		json_append(value, json_key("mimetype", json_string("application/octet-stream", -1)));
+		json_append(value, json_key("writable", json_boolean(1)));
 		json_append(conf, value);
 		json_append(json_system, json_key("parsers", conf));
 

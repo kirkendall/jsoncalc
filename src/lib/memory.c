@@ -260,12 +260,13 @@ json_t *json_error_null(const char *where, const char *fmt, ...)
 	return result;
 }
 
-/* Allocate a json_t for a key.  If value is non-NULL, then it will be used
- * as the value associated with the key.  Later, you can use json_append()
- * to assign a value to it too.
+/* Allocate a json_t for a key.  The value must be non-NULL (though it can be
+ * json_null() ).  Later, you can use json_append() to change the value.
  */
 json_t *json_key(const char *key, json_t *value)
 {
+	assert(value != NULL);
+
 	/* Allocate it with twice as much space for storing the key's name.
 	 * This is so we can also store the simplified version later, if
 	 * necessary.

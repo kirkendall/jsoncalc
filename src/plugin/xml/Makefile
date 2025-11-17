@@ -6,7 +6,7 @@ WWW=	../../../www
 
 ALL=	$(PLUGIN)/pluginxml.so
 SRC=	xml.c
-BUNDLE=	genplain.c gentemplate.c parse.c
+BUNDLE=	parse.c unparse.c template.c
 OBJ=	xml.o
 LIBS=	
 CFLAGS=	-I$(INC)

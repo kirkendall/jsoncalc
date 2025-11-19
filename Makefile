@@ -8,6 +8,9 @@ LDFLAGS=-L$(LIB)
 CC=	gcc -fpic -Wall
 
 all:
+	[ -d "$(BIN)" ] || mkdir "$(BIN)"
+	[ -d "$(LIB)" ] || mkdir "$(LIB)"
+	[ -d "$(PLUGIN)" ] || mkdir "$(PLUGIN)"
 	BIN="$(BIN)" INC="$(INC)" LIB="$(LIB)" PLUGIN="$(PLUGIN)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" make -C src -e
 	make -C www
 

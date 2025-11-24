@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>switch</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc switch - Branch based on a computed value">
+    <meta name="keywords" content="command, command reference, switch">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>switch - Branch based on a computed value</h1>
+    <dl>
+      <dt>switch (<var>value</var>) { ... }
+      <dd>
+      The <tt>switch</tt> command evaluates an expression and compares the
+      result to each <a target="_PARENT" href="../index.html?cmd=case">case</a>
+      label within its code block.
+      If a case matches, its commands are executed.
+      If no case matches, and there's a
+      <a target="_PARENT" href="../index.html?cmd=default">default</a> label
+      in the code block, then those commands are executed.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>switch (4) {<br/>
+	     case 2:<br/>
+	     case 3:<br/>
+	     case 5:<br/>
+	     case 7:<br/>
+	       "prime";<br/>
+	       break;<br/>
+	     case 4:<br/>
+	     case 9:<br/>
+	       "square";<br/>
+	       break;<br/>
+	     default:<br/>
+	       "boring";<br/>
+	     }</kbd>
+	<samp>"square"</samp>
+        The expression <tt>4</tt> matches <tt>case 4</tt> so <tt>"square"</tt>
+        gets executed.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=case">case</a></td><td>The <tt>case</tt> label</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=default">default</a></td><td>The <tt>default</tt> label</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=break">break</a></td><td>The <tt>break</tt> command</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

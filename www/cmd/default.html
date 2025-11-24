@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>default</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc default - Defines a default case within a switch statement">
+    <meta name="keywords" content="command, command reference, default">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>default - Defines a default case within a switch statement</h1>
+    <dl>
+      <dt>default:
+      <dd>
+        This only works within a
+        <a target="_PARENT" href="../index.html?cmd=swutch">switch</a>
+        statement.
+        It should be the <tt>switch</tt>'s last option, and it labels the
+        action to perform if none of the
+        <a target="_PARENT" href="../index.html?cmd=case">case</a>
+        labels matched.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>switch ("S") {<br/>
+	     case "Y":	"yes";	break;<br/>
+	     case "N":	"no";	break;<br/>
+	     default: "ambiguous";<br/>
+	     }</kbd>
+	<samp>"ambiguous"</samp>
+        The value "S" doesn't match case "Y" or case "N", so the default case
+        is used and we get "ambiguous";
+        Note that since it is the last case, we don't need a
+        <a target="_PARENT" href="../index.html?cmd=break">break</a>
+        command at the end of it.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>This command takes no arguments, and is terminated with a
+            colon (":") instead of a semicolon (";").
+      </ul>
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=switch">switch</a></td><td>The <tt>switch</tt> command.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=case">case</a></td><td>The <tt>case</tt> label.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

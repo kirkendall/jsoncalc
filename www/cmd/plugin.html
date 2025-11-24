@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>plugin</title>
+    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+    <meta name="description" content="jsoncalc plugin - Load and configure plugins">
+    <meta name="keywords" content="command, command reference, plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>plugin - Load and configure plugins</h1>
+    <dl>
+      <dt>plugin <var>plugin</var>
+      <br/>plugin <var>plugin</var>, <var>settings</var> ...
+      <dd>
+      This loads a plugin, similarly to the <b>-l</b><var>plugin</var>
+      command-line flag.
+      The intent is that scripts should use the <tt>plugin</tt> command
+      to load any plugins that they require, so you don't need to remember
+      which scripts need what, when you run them.
+      As with <b>-l</b><var>plugin</var> flag, you can follow the plugin name
+      with a comma-delimited list of settings for the plugin.
+      <p>
+      Plugins can add functions, commands, parsers, and more.
+      <p>
+      Most plugins are binary files with the name
+      <b>plugin</b><var>plugin</var><b>.so</b> somewhere in the jsoncalc path.
+      They can also be jsoncalc script files named
+      <b>plugin</b><var>plugin</var><b>.jc</b>, also somewhere in the
+      jsoncalc path, or a mixture of the two.
+      <p>
+      (The global <tt>const path</tt> shows the directories in the path.
+      Its default value includes some standard places including
+      <tt>~/.config/jsoncalc/</tt>.
+      You can override the default by setting an environment variable named
+      $JSONCALCPATH to a colon-delimited list of directories.)
+    </dl>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>plugin log, name="mylog", dir="."</kbd>
+        This loads the "log" plugin, if it isn't loaded already.
+        It also configures it to store logs in the current directory, and
+        use "mylog" as the name of the default log file.
+        After this, you can use the plugin's <a target="_PARENT" href="../index.html?cmd=log/log">log</a> command to write lines to "./mylog.log".
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>You can safely run the <tt>plugin</tt> multiple times.
+            The script will only be loaded once, but you can adjust the
+            settings this way.
+
+	<li>There is a global table named <tt>plugins</tt> which lists the
+	    currently-loaded plugins.
+      </ul>
+    </details>
+
+  </body>
+</html>

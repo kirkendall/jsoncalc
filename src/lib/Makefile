@@ -10,7 +10,7 @@ LIBOBJ=	by.o blob.o calc.o calcfunc.o calcparse.o compare.o config.o context.o \
 	copy.o cmd.o datetime.o debug.o defer.o equal.o explain.o file.o \
 	find.o flat.o format.o grid.o is.o length.o mbstr.o memory.o parse.o \
 	print.o serialize.o sort.o text.o user.o walk.o
-#STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICCURL -DSTATICLOG -DSTATICMATH
+#STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICCURL -DSTATICLOG -DSTATICMATH -DSTATICXML
 STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH
 #CC=gcc -g -pg
 #CC=gcc -g -O

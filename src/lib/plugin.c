@@ -10,7 +10,7 @@
  */
 json_t *json_plugins;
 
-#if defined(STATICCACHE) || defined(STATICCSV) || defined(STATICCURL) || defined(STATICEXAMPLE) || defined(STATICLOG) || defined(STATICMATH)
+#if defined(STATICCACHE) || defined(STATICCSV) || defined(STATICCURL) || defined(STATICEXAMPLE) || defined(STATICLOG) || defined(STATICMATH) || defined(STATICXML)
 /* The following code is only needed when the jsoncalc library is compiled as
  * a static library.  We still want access to some plugins, but the -ldl
  * library for loading plugins at runtime doesn't work for statically-linked
@@ -29,6 +29,7 @@ extern char *plugincurl();
 extern char *pluginexample();
 extern char *pluginlog();
 extern char *pluginmath();
+extern char *pluginxml();
 
 /* This is a list of plugins and their initialization functions.  Each line is
  * conditionally compiled because referencing a plugin's init function *WILL*
@@ -55,6 +56,9 @@ static struct staticplugins_s {
 #endif
 #ifdef STATICMATH
 	{"math", pluginmath},
+#endif
+#ifdef STATICMATH
+	{"xml", pluginxml},
 #endif
 	{NULL}
 };

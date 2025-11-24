@@ -2458,7 +2458,7 @@ static json_t *jfn_sleep(json_t *args, void *agdata)
 /* Write data to a file in JSON format */
 static json_t *jfn_writeJSON(json_t *args, void *agdata)
 {
-	json_t	*data;
+	json_t	*data, *nocomma;
 	char	*filename;
 	jsonformat_t tweaked;
 	FILE	*fp;
@@ -2485,8 +2485,13 @@ static json_t *jfn_writeJSON(json_t *args, void *agdata)
 	strcpy(tweaked.table, "json");
 	tweaked.fp = fp;
 
-	/* Write the data */
+	/* Write the data.  Temporarily set ->next to NULL so we don't get
+	 * an extra comma on the end.
+	 */
+	nocomma = data->next;
+	data->next = NULL;
 	json_print(data, &tweaked);
+	data->next = nocomma;
 
 	/* close the file */
 	fclose(fp);

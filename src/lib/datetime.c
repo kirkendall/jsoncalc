@@ -747,8 +747,11 @@ int json_datetime_subtract(char *result, const char *str, const char *period)
 int json_datetime_diff(char *result, const char *str1, const char *str2)
 {
 	jsondatetime_t dt1, dt2;
-	time_t when1, when2, diff;
-	int	neg;
+	time_t when1, when2, diff, seconds;
+	int	neg, dates;
+
+	/* Detect whether they're dates instead of datetimes */
+	dates = json_str_date(str1) || json_str_date(str2);
 
 	/* Convert both datetimes to time_t values */
 	if (parsedatetime(str1, &dt1) || parsedatetime(str2, &dt2))
@@ -773,6 +776,17 @@ int json_datetime_diff(char *result, const char *str1, const char *str2)
 	if (diff < 0) {
 		neg = 1;
 		diff = -diff;
+	}
+
+	/* If either operand is a date instead of a datetime, then round to
+	 * the nearest whole-day difference.  This is especially important
+	 * when two dates straddle a daylight saving time change.
+	 */
+	if (dates) {
+		seconds = diff % 86400;
+		if (seconds >= 43200)
+			diff = diff + 86400;
+		diff = diff - seconds;
 	}
 
 	/* We don't do months and years since they vary.  We start with days */

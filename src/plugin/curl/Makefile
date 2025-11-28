@@ -7,7 +7,7 @@ WWW=	../../../www
 ALL=	$(PLUGIN)/plugincurl.so
 SRC=	curl.c
 OBJ=	curl.o
-LIBS=	`curl-config --libs`
+LIBS=	-L/usr/local/lib64 `curl-config --libs`
 CFLAGS=	-I$(INC) `curl-config --cflags`
 CC=	gcc -fpic -g
 
@@ -18,6 +18,9 @@ plugincurl.so: $(OBJ)
 	$(CC) -shared $(OBJ) $(LIBS) -o plugincurl.so
 
 $(OBJ): $(SRC)
+
+trycurl: trycurl.c curl.c
+	$(CC) $(CFLAGS) trycurl.c $(LIBS) -L ../../../lib -ljsoncalc -o trycurl
 
 clean:
 	$(RM) $(PLUGIN)/plugincurl.so

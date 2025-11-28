@@ -4,7 +4,7 @@ LIB=	`pwd`/lib
 PLUGIN=	`pwd`/plugin
 CFLAGS=	-I$(INC) -DJSON_DEBUG_MEMORY
 #CFLAGS=	-I$(INC)
-LDFLAGS=-L$(LIB)
+LDFLAGS=-L/usr/local/lib64 -L$(LIB)
 CC=	gcc -fpic -Wall
 
 all:

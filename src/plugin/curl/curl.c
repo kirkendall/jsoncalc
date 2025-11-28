@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <jsoncalc.h>
 #include <curl/curl.h>
+#include <jsoncalc.h>
 
 /* This plugin gives access to the "curl" library, for sending requests over
  * the internet using a wide variety of protocols.
@@ -34,7 +34,8 @@ typedef enum {
 	OPT_COOKIES,		/* Allow cookies to be sent/received */
 	OPT_FOLLOWLOCATION,	/* Follow HTTP 3xx redirects */
 	OPT_RAW,		/* Don't try to parse the response content */
-	OPT_HEADERS		/* Return response headers along with content */
+	OPT_HEADERS,		/* Return response headers along with content */
+	OPT_DEBUGRCV		/* Enable extra debugging for received data */
 } opt_t;
 
 /* This data type is used as a read buffer */
@@ -44,24 +45,37 @@ typedef struct {
 	size_t	max;	/* maximum in-memory size */
 	char	*buf;	/* in-memory buffer */
 	FILE	*fp;	/* temp file buffer */
+	int	debug;	/* Output extra debugging info to stderr? */
 } receiver_t;
 
 /* This is a callback function for CURL to send us the received data */
-static size_t receive(char *data, size_t size, size_t nmemb, void *clientp)
+static size_t curlreceive(char *data, size_t size, size_t nmemb, void *clientp)
 {
+	size_t len = size * nmemb;
 	receiver_t *rcv = (receiver_t *)clientp;
+	if (rcv->debug) {
+		if (len > 20)
+			fprintf(stderr, "receive(\"%.10s...%.10s\", %d, %d, {%d/%d})", data, data + len - 10, (int)size, (int)nmemb, (int)rcv->used, (int)rcv->size);
+		else
+			fprintf(stderr, "receive(\"%.*s\", %d, %d, {%d/%d})", (int)(size * nmemb), data, (int)size, (int)nmemb, (int)rcv->used, (int)rcv->size);
+	}
 
 	/* If necessary, enlarge the buffer */
-	if (rcv->used + size * nmemb + 1> rcv->size) {
-		rcv->size = ((rcv->used + size * nmemb) | 0x3fff) + 1; /* 16K chunks */
+	if (rcv->used + len + 1 > rcv->size) {
+		rcv->size = ((rcv->used + len) | 0x3fff) + 1; /* 16K chunks */
+		if (rcv->debug)
+			fprintf(stderr, ", growing");
 		rcv->buf = (char *)realloc(rcv->buf, rcv->size);
 	}
 
 	/* Add new data to the buffer */
-	memcpy(rcv->buf + rcv->used, data, size * nmemb);
-	rcv->used += size * nmemb;
+	memcpy(rcv->buf + rcv->used, data, len);
+	rcv->used += len;
 	rcv->buf[rcv->used] = '\0';
-	return size * nmemb;
+	if (rcv->debug)
+		fprintf(stderr, ", result {%d/%d}\n", (int)rcv->used, (int)rcv->size);
+
+	return len;
 }
 
 /* This is a callback function for CURL to return debugging info, such as
@@ -70,7 +84,7 @@ static size_t receive(char *data, size_t size, size_t nmemb, void *clientp)
 static int receive_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *clientp)
 {
 	if (type == CURLINFO_HEADER_OUT)
-		receive(data, 1, size, clientp);
+		curlreceive(data, 1, size, clientp);
 	return 0;
 }
  
@@ -80,10 +94,14 @@ static char *tempcookiejar;
 /* When exiting, delete the temporary cookie jar (if any) */
 static void curlcleanup(void)
 {
-	if (!tempcookiejar)
-		return;
-	unlink(tempcookiejar);
-	free(tempcookiejar);
+	/* Shut  down libcurl */
+	curl_global_cleanup();
+
+	/* Delete the cookie jar */
+	if (tempcookiejar) {
+		unlink(tempcookiejar);
+		free(tempcookiejar);
+	}
 }
 
 
@@ -93,8 +111,8 @@ static json_t *headerArray(char *header)
 	json_t *array = json_array();
 	size_t	len;
 
-	/* until we hit the blank line parking the end... */
-	while (*header >= ' ') {
+	/* Until we hit the blank line marking the end... */
+	while (header && *header >= ' ') {
 		/* Look for the end of this line */
 		for (len = 1; header[len] >= ' '; len++) {
 		}
@@ -117,10 +135,10 @@ static size_t urlencode(json_t *data, char *buf, int component)
 	size_t	len, chunk;
 	char	*text;
 	json_t	*scan;
-	char	*special = " ";
+	char	*special = " %";
 
 	if (component)
-		special = " :/?&#";
+		special = " %:/?&#";
 
 	if (data->type == JSON_STRING
 	 || data->type == JSON_BOOLEAN
@@ -223,7 +241,7 @@ typedef struct {
  * the calling function is responsible for doing cleanup before returning,
  * including freeing flags->slist.
  */
-static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, json_t *more)
+static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, receiver_t *rcv, json_t *more)
 {
 	json_t	*err;
 	char	*str;
@@ -232,15 +250,18 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 	for (; more; more = more->next) {
 		/* If it's an array, process it recursively */
 		if (more->type == JSON_ARRAY) {
-			err = doFlags(fn, curl, data, flags, more->first);
+			err = doFlags(fn, curl, data, flags, rcv, more->first);
 			if (err)
 				return err;
 			continue;
 		}
 
 		/* If it isn't an option number, that's a problem */
-		if (more->type != JSON_NUMBER)
-			return json_error_null(NULL, "Bad extra argument passed to the  %s() function", fn);
+		if (more->type != JSON_NUMBER) {
+			if (more->type == JSON_STRING)
+				return json_error_null(NULL, "Bad extra argument \"%s\" passed to the %s() function", more->text, fn);
+			return json_error_null(NULL, "Bad extra argument passed to the %s() function", fn);
+		}
 
 		/* Process each option flag separately */
 		switch (json_int(more)) {
@@ -328,6 +349,9 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, j
 		case OPT_HEADERS:
 			flags->headers = 1;
 			break;
+		case OPT_DEBUGRCV:
+			rcv->debug = 1;
+			break;
 		default:
 			return json_error_null(NULL, "Invalid option number %d passed to %s()", json_int(more), fn);
 		}
@@ -347,7 +371,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	CURLcode result;
 	char	*url, *str, *mustfree;
 	json_t	*data, *err;
-	curlflags_t flags;
+	curlflags_t flags = {NULL};
 	size_t	arglen;
 	receiver_t rcv = {0}, hdr = {0}, reqhdr = {0};
 	json_t	*more, *scan, *response;
@@ -383,7 +407,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	flags.content = !strcmp(request, "POST");
 	flags.raw = flags.reqheaders = flags.reqcontent = flags.headers = 0;
 	flags.slist = NULL;
-	err = doFlags(fn, curl, data, &flags, more);
+	err = doFlags(fn, curl, data, &flags, &rcv, more);
 	if (err) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
@@ -488,20 +512,22 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, flags.slist);
 	if (str && flags.content)
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, str);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlreceive);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
 	if (flags.reqheaders) {
 		curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, receive_debug);
 		curl_easy_setopt(curl, CURLOPT_DEBUGDATA, (void *)&reqhdr);
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 	}
 	if (flags.headers) {
-		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, receive);
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curlreceive);
 		curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&hdr);
 	}
 
 	/* Do it */
 	result = curl_easy_perform(curl);
+	if (rcv.debug)
+		fprintf(stderr, "curl_easy_perform() returned %d, rcv.used=%d\n", result, (int)rcv.used);
 	curl_easy_cleanup(curl);
 	curl_slist_free_all(flags.slist);
 
@@ -555,6 +581,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		if (flags.headers)
 			json_append(obj, json_key("headers", headerArray(hdr.buf)));
 		json_append(obj, json_key("response", response));
+		json_append(obj, json_key("responseLength", json_from_int(rcv.used)));
 		response = obj;
 	}
 
@@ -894,10 +921,14 @@ char *plugincurl()
 	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
 	json_append(curl, json_key("raw", json_from_int(OPT_RAW)));
 	json_append(curl, json_key("headers", json_from_int(OPT_HEADERS)));
+	json_append(curl, json_key("debugrcv", json_from_int(OPT_DEBUGRCV)));
 	json_append(json_system, json_key("CURL", curl));
 
 	/* Initialize CURL */
-	curl_global_init(CURL_GLOBAL_DEFAULT);
+	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+		fprintf(stderr, "The cURL library failed to initialize\n");
+		exit(1);
+	}
 
 	/* Register the functions */
 	json_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);

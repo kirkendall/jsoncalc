@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Category of operators</title>
+    <title>Find operator</title>
     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc - Category of operators">
+    <meta name="description" content="jsoncalc - Find operator">
     <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, operator reference, op">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>The find operator</h1>
+    <h1>Find operator</h1>
     <table class="opList">
       <tr><td class="left">array<br/>object</td><td class="op">@</td><td class="right">boolean</td><td class="opdesc">Deep search via an expression</td></tr>
     </table>
@@ -55,7 +55,7 @@
           append this string to that expression's source code to find
           the data.
         </td></tr>
-
+      </table>
 
     <details open>
       <summary>Examples</summary>
@@ -83,13 +83,27 @@
 
         <li>The "value" column will usually just show "{object}", "{array}"
             or "{table}".
+            In some cases it may be helpful to use
+            <a target="_PARENT" href="../index.html?f=unroll">unroll()</a>
+            on the <tt>value</tt> column.
+	    <div class="example">
+	      <kbd>( [{a:1},{a:2.5},{a:3}] @ a != round(a) ).unroll("value")</kbd>
+	      <samp>
+		<table>
+		  <tr><th>index</th><th>a</th><th>expr</th></tr>
+		  <tr><td>1</td><td>2.5</td><td>[1]</td></tr>
+		</table>
+	      </samp>
+	      The <tt>value</tt> column is replaced by columns representing the
+	      members of the value.  In this example, the only member is <tt>a</tt>.
+	    </div>
 
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?f=find">find()</a> - function for ding values.
+      <a target="_PARENT" href="../index.html?f=find">find()</a> - function for finding values.
     </details>
 
   </body>

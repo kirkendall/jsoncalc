@@ -153,9 +153,24 @@
 	      <samp>"2025-03-01"</samp>
 	      There is no February 29 in 2025, so it gets rounded to March 1.
 	    </div>
-	<li>If a date/datetime/period is malformed, then it will be treated
-	    like any other string &mdash; the <tt>+</tt> and <tt>-</tt> operators
+	<li>If a date/datetime/period is malformed, then it will be treated like
+	    any other string &mdash; the <tt>+</tt> and <tt>-</tt> operators
 	    will concatenate them.
+	<li>When the "-" operator is applied to two date strings then the
+	    difference will be rounded to the nearest number of whole days.
+	    This is significant when the two dates straddle a daylight savings
+	    time change.
+	    <div class="example">
+	      <kbd>"2026-08-06" - "2025-11-20"</kbd>
+	      <samp>"P259D"</samp>
+	      <kbd>"2026-08-06T00:00:00" - "2025-11-20T00:00:00"</kbd>
+	      <samp>"P258DT23H"</samp>
+	      The first example uses dates, and we see that the difference
+	      between them is 259 days.
+	      In the second example we use datetimes, and the answer isn't
+	      exactly the same because daylight savings time took away one hour.
+	    </div>
+
       </ul>
     </details>
 

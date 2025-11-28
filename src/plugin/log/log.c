@@ -550,7 +550,7 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
 		if (jf) { 
 			if (showfile)
-				json_user_printf(&tweaked, "log", "%s", jf->filename, out);
+				json_user_printf(&tweaked, "log", "%s", jf->filename);
 			if (showfile && showline)
 				json_user_ch(':');
 			if (showline)

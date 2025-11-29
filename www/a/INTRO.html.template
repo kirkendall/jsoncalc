@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JsonCalc Articles</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc function summary">
-    <meta name="keywords" content="jsoncalc, function reference">
+    <title>jx Articles</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx function summary">
+    <meta name="keywords" content="jx, articles">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>JsonCalc Articles</h1>
+    <h1>jx Articles</h1>
 
     These either announce news, or provide in-depth explanations of related
-    groups of JsonCalc features.
+    groups of jx features.
 
     @@@
   </body>

@@ -1,11 +1,40 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JsonCalc</title>
-    <link rel="stylesheet" type="text/css" href="jsoncalc.css">
-    <meta name="description" content="jsoncalc function reference">
-    <meta name="keywords" content="jsoncalc, function reference, index">
+    <title>jx</title>
+    <link rel="stylesheet" type="text/css" href="jx.css">
+    <meta name="description" content="jx function reference">
+    <meta name="keywords" content="jx, function reference, index">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      div.tipBox { 
+        font-size: 120%;
+        display: inline-block;
+      }
+      div.tipBox div.jx {
+        font-size: 250%;
+        display: inline-block;
+      }
+      div.tipBox a.tip {
+	display:inline-block;
+	white-space: normal;
+	max-width:50vw;
+	text-align:left;
+      }
+      #content>td {
+        overflow-x:hidden;
+        overflow-y:auto;
+        height:calc(100vh - 4.5em);
+        padding: 0;
+        margin:0;
+      }
+      #content>td>iframe {
+        width: 100%;
+        height: 99%;
+        padding: 1;
+        /*border: none;*/
+      }
+    </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script src="search.js"></script>
     <script src="f/flist.js"></script>
@@ -14,11 +43,53 @@
     <script>
 	// This is a collection of all searchable lists
 	var searchable = [
-	    {label:"JsonCalc functions", query:"f", member:"function", list:flist},
-	    {label:"JsonCalc operators", query:"op", member:"opcategory", list:oplist},
+	    {label:"jx functions", query:"f", member:"function", list:flist},
+	    {label:"jx operators", query:"op", member:"opcategory", list:oplist},
 	    {label:"All documentation", member:"keyword", list:kwlist}
 	];
 	var searches;
+
+	var tips = [
+	    {text:"means JSON Explorer"},
+	    {text:"means JSON Extractor"},
+	    {text:"means JSON<span style=\"font-size:133%\">&#x2194;</span>XML Converter (with the xml plugin)", link:"p=xml"},
+	    {text:"means Joy Multiplier?"},
+	    {text:"The curl plugin is good for writing API clients.", link:"p=curl"},
+	    {text:"JavaScript? Not quite. SQL? A tiny bit."},
+	    {text:"Interactive? Hell yeah, when you want it."},
+	    {text:"Batch? Yes in so many ways."},
+	    {text:"Most common JavaScript functions are available", link:"f"},
+	    {text:"Try \"function yourFunctionName\" on a line by itself.", linkn:"cmd=function"},
+	    {text:"The \"array # expr\" operator filters arrays.", link:"op=each"},
+	    {text:"The \"table #= table\" operator does a natural join.", link:"op=join"},
+	    {text:"The \"data @ expr\" operator does a deep search<br/>for data that makes expr true", link:"op=find"},
+	    {text:"The \"find()\" function does a deep search<br/>for a given value", link:"f=find"},
+	    {text:"A table is simply an array of objects"},
+	    {text:"Running \"set sh\" causes tables to be<br/>output as shell variables", link:"cmd=set"},
+	    {text:"Running \"set csv\" (with the csv plugin)<br/>causes tables to be output as CSV", link:"cmd=set"},
+	    {text:"Running \"set grid\" causes tables<br/>to be output as a grid", link:"cmd=set"},
+	    {text:"Running \"set json\" causes tables<br/>to be output as JSON", link:"cmd=set"},
+	    {text:"ISO 8601 date arithmetic is easy!", link:"a=Dates_and_Times"},
+	    {text:"You can read environment variables", link:"a=Working_with_Environment_Variables"},
+	];
+
+	// Show an ever-changing tip
+	function showTip()
+	{
+	    // Choose a random tip and a random font
+	    var tip = tips[Math.floor(Math.random() * tips.length)];
+
+	    // Generate the link
+	    var link = "index.html";
+	    if (tip.link)
+	        link = link + "?" + tip.link;
+
+	    // Change the tip and font.
+	    $("#jxtip").html(tip.text).attr("href", link);
+
+	    // Arrange for it to change again after 10 seconds
+	    window.setTimeout(showTip, 10000);
+	}
 
 	// Initialization
 	$(document).ready(function(){
@@ -34,7 +105,7 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		    $("#main").prop("src", "lit/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "lit/sidebar.html?lit="+namevalue[2]);
 		    break;
-		case 'f': // Functions (JsonCalc, not C)
+		case 'f': // Functions (jx, not C)
 		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "f/sidebar.html?f="+namevalue[2]);
 		    break;
@@ -62,6 +133,9 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 
 	    // Arrange for searching to work incrementally
 	    searches = searchInput("[name=search]");
+
+	    // Show the first tip.  Others will replace it every 10 seconds
+	    showTip();
 	});
     </script>
   </head>
@@ -74,21 +148,22 @@ console.log(namevalue[1] + "=" + namevalue[2]);
         <col style="width:59vw">
       </colgroup>
       <tr id="top" style="height:4em;overflow:hidden;">
-        <td colspan="3" style="vertical-align:middle;">
+        <td colspan="3" style="vertical-align:middle; text-align: center">
           <a class="button" style="float:left; background:rgba(190,220,190,.5); font-size:250%; font-style:italic; margin:0; padding-left:0.3em; padding-right:0.2em;" href="index.html">jx</a>
 	  <div style="float:right; padding-top: 1em;">
             <input type="search" name="search" autocomplete="off" placeholder="Search">
 	  </div>
-          <h1 style="margin:0; text-align:center"><a href="index.html">JSON Explorer</a></h1>
+          <div class="tipBox"><div class="jx">JX</div> <a id="jxtip" class="tip" href="index.html">JSON Explorer</a></div>
 	</td>
       </tr>
       <tr id="content">
-        <td style="overflow-x:hidden;overflow-y:auto;height:calc(100vh - 4em);">
-          <iframe id="sidebar" src="sidebar.html" style="width:100%;height:100%"></iframe>
+        <td>
+          <iframe id="sidebar" src="sidebar.html"></iframe>
         </td>
-        <td colspan="2" style="overflow-x:hidden; overflow-y:auto;height:calc(100vh - 4em);">
-          <iframe id="main" src="INTRO.html" style="width:100%; height:100%"></iframe>
+        <td colspan="2">
+          <iframe id="main" src="INTRO.html"></iframe>
         </td>
       </tr>
+    </table>
   </body>
 </html>

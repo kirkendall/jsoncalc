@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This module exists to define some Math.xxx() functions. */
 
@@ -11,22 +11,22 @@
  * Math object as their first parameter, and a single number as their only
  * meaningful parameter.  We can handle most of that efficiently here.
  */
-static json_t *common(json_t *args, char *name)
+static jx_t *common(jx_t *args, char *name)
 {
-	json_t	*arg;
+	jx_t	*arg;
 	double	d;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JSON_OBJECT)
+	if (arg->type == JX_OBJECT)
 		arg = arg->next;
 
 	/* Must be a single number */
-	if (arg->type != JSON_NUMBER || arg->next)
-		return json_error_null(0, "The %s() function expect single number as its argument", name);
+	if (arg->type != JX_NUMBER || arg->next)
+		return jx_error_null(0, "The %s() function expect single number as its argument", name);
 
 	/* Convert to binary */
-	d = json_double(arg);
+	d = jx_double(arg);
 
 	/* Clear the error code, so we can detect math errors */
 	errno = 0;
@@ -105,143 +105,143 @@ static json_t *common(json_t *args, char *name)
 	/* If an error occurred, say to */
 	switch (errno) {
 	case 0:		break; /* no error */
-	case EDOM:	return json_error_null(0, "Domain error in %s() function", name);
-	case ERANGE:	return json_error_null(0, "Range error in %s() function", name);
-	default:	return json_error_null(0, "Error in %s() function", name);
+	case EDOM:	return jx_error_null(0, "Domain error in %s() function", name);
+	case ERANGE:	return jx_error_null(0, "Range error in %s() function", name);
+	default:	return jx_error_null(0, "Error in %s() function", name);
 	}
 
 	/* Return the result */
-	return json_from_double(d);
+	return jx_from_double(d);
 
 InvalidName:
 	fprintf(stderr, "Invalid Math.function named \"%s\" encountered in the math plugin");
 	abort();
 }
 
-static json_t *jfn_acos(json_t *args, void *agdata)
+static jx_t *jfn_acos(jx_t *args, void *agdata)
 {
 	return common(args, "acos");
 }
 
-static json_t *jfn_acosh(json_t *args, void *agdata)
+static jx_t *jfn_acosh(jx_t *args, void *agdata)
 {
 	return common(args, "acosh");
 }
 
-static json_t *jfn_asin(json_t *args, void *agdata)
+static jx_t *jfn_asin(jx_t *args, void *agdata)
 {
 	return common(args, "asin");
 }
 
-static json_t *jfn_asinh(json_t *args, void *agdata)
+static jx_t *jfn_asinh(jx_t *args, void *agdata)
 {
 	return common(args, "asinh");
 }
 
-static json_t *jfn_atan(json_t *args, void *agdata)
+static jx_t *jfn_atan(jx_t *args, void *agdata)
 {
 	return common(args, "atan");
 }
 
-static json_t *jfn_atanh(json_t *args, void *agdata)
+static jx_t *jfn_atanh(jx_t *args, void *agdata)
 {
 	return common(args, "atanh");
 }
 
-static json_t *jfn_cbrt(json_t *args, void *agdata)
+static jx_t *jfn_cbrt(jx_t *args, void *agdata)
 {
 	return common(args, "cbrt");
 }
 
-static json_t *jfn_ceil(json_t *args, void *agdata)
+static jx_t *jfn_ceil(jx_t *args, void *agdata)
 {
 	return common(args, "ceil");
 }
 
-static json_t *jfn_cos(json_t *args, void *agdata)
+static jx_t *jfn_cos(jx_t *args, void *agdata)
 {
 	return common(args, "cos");
 }
 
-static json_t *jfn_cosh(json_t *args, void *agdata)
+static jx_t *jfn_cosh(jx_t *args, void *agdata)
 {
 	return common(args, "cosh");
 }
 
-static json_t *jfn_exp(json_t *args, void *agdata)
+static jx_t *jfn_exp(jx_t *args, void *agdata)
 {
 	return common(args, "exp");
 }
 
-static json_t *jfn_floor(json_t *args, void *agdata)
+static jx_t *jfn_floor(jx_t *args, void *agdata)
 {
 	return common(args, "floor");
 }
 
-static json_t *jfn_log(json_t *args, void *agdata)
+static jx_t *jfn_log(jx_t *args, void *agdata)
 {
 	return common(args, "log");
 }
 
-static json_t *jfn_log10(json_t *args, void *agdata)
+static jx_t *jfn_log10(jx_t *args, void *agdata)
 {
 	return common(args, "log10");
 }
 
-static json_t *jfn_log2(json_t *args, void *agdata)
+static jx_t *jfn_log2(jx_t *args, void *agdata)
 {
 	return common(args, "log2");
 }
 
-static json_t *jfn_round(json_t *args, void *agdata)
+static jx_t *jfn_round(jx_t *args, void *agdata)
 {
 	return common(args, "round");
 }
 
-static json_t *jfn_sin(json_t *args, void *agdata)
+static jx_t *jfn_sin(jx_t *args, void *agdata)
 {
 	return common(args, "sin");
 }
 
-static json_t *jfn_sinh(json_t *args, void *agdata)
+static jx_t *jfn_sinh(jx_t *args, void *agdata)
 {
 	return common(args, "sinh");
 }
 
-static json_t *jfn_sqrt(json_t *args, void *agdata)
+static jx_t *jfn_sqrt(jx_t *args, void *agdata)
 {
 	return common(args, "sqrt");
 }
 
-static json_t *jfn_tan(json_t *args, void *agdata)
+static jx_t *jfn_tan(jx_t *args, void *agdata)
 {
 	return common(args, "tan");
 }
 
-static json_t *jfn_trunc(json_t *args, void *agdata)
+static jx_t *jfn_trunc(jx_t *args, void *agdata)
 {
 	return common(args, "trunc");
 }
 
 /* The following are different, in that they take 2 arguments */
 
-static json_t *jfn_atan2(json_t *args, void *agdata)
+static jx_t *jfn_atan2(jx_t *args, void *agdata)
 {
-	json_t	*arg;
+	jx_t	*arg;
 	double	x, y;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JSON_OBJECT)
+	if (arg->type == JX_OBJECT)
 		arg = arg->next;
 
 	/* Must be two numbers */
-	if (arg->type != JSON_NUMBER || !arg->next || arg->next->type != JSON_NUMBER || arg->next->next)
-		return json_error_null(0, "The %s() function expect two numbers number as its arguments", atan2);
+	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
+		return jx_error_null(0, "The %s() function expect two numbers number as its arguments", atan2);
 
 	/* Convert to binary */
-	x = json_double(arg);
-	y = json_double(arg->next);
+	x = jx_double(arg);
+	y = jx_double(arg->next);
 
 	/* Clear errno so we can detect errors */
 	errno = 0;
@@ -251,32 +251,32 @@ static json_t *jfn_atan2(json_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return json_error_null(0, "Error in %s() function", "atan2");
+		return jx_error_null(0, "Error in %s() function", "atan2");
 
 	/* Return the result */
-	return json_from_double(x);
+	return jx_from_double(x);
 }
 
-static json_t *jfn_hypot(json_t *args, void *agdata)
+static jx_t *jfn_hypot(jx_t *args, void *agdata)
 {
-	json_t	*arg;
+	jx_t	*arg;
 	double	d, sumsquared;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JSON_OBJECT)
+	if (arg->type == JX_OBJECT)
 		arg = arg->next;
 
 	/* If given a single number, just return its absolute value */
-	if (arg->type == JSON_NUMBER && !arg->next)
-		return json_from_double(abs(json_double(arg)));
+	if (arg->type == JX_NUMBER && !arg->next)
+		return jx_from_double(abs(jx_double(arg)));
 
 	/* Reset errno so we can detect errors */
 	errno = 0;
 
 	/* Sum up the squares of the arguments. */
 	for(sumsquared = 0; arg && errno == 0; arg = arg->next) {
-		d = json_double(arg);
+		d = jx_double(arg);
 		sumsquared += d * d;
 	}
 
@@ -286,32 +286,32 @@ static json_t *jfn_hypot(json_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return json_error_null(0, "Error in %s() function", "hypot");
+		return jx_error_null(0, "Error in %s() function", "hypot");
 
 	/* Return the result */
-	return json_from_double(d);
+	return jx_from_double(d);
 
 BadArgs:
-	return json_error_null(0, "The %s() function expects at least two numbers number as its arguments", "hypot");
+	return jx_error_null(0, "The %s() function expects at least two numbers number as its arguments", "hypot");
 }
 
-static json_t *jfn_pow(json_t *args, void *agdata)
+static jx_t *jfn_pow(jx_t *args, void *agdata)
 {
-	json_t	*arg;
+	jx_t	*arg;
 	double	base, power;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JSON_OBJECT)
+	if (arg->type == JX_OBJECT)
 		arg = arg->next;
 
 	/* Must be two numbers */
-	if (arg->type != JSON_NUMBER || !arg->next || arg->next->type != JSON_NUMBER || arg->next->next)
-		return json_error_null(0, "The %s() function expect two numbers number as its arguments", "pow");
+	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
+		return jx_error_null(0, "The %s() function expect two numbers number as its arguments", "pow");
 
 	/* Convert to binary */
-	base = json_double(arg);
-	power = json_double(arg->next);
+	base = jx_double(arg);
+	power = jx_double(arg->next);
 
 	/* Clear errno so we can detect errors */
 	errno = 0;
@@ -321,10 +321,10 @@ static json_t *jfn_pow(json_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return json_error_null(0, "Error in %s() function", "pow");
+		return jx_error_null(0, "Error in %s() function", "pow");
 
 	/* Return the result */
-	return json_from_double(base);
+	return jx_from_double(base);
 }
 
 /* This is the init function.  It registers all of the above functions, and
@@ -332,49 +332,49 @@ static json_t *jfn_pow(json_t *args, void *agdata)
  */
 char *pluginmath()
 {
-	json_t	*math;
+	jx_t	*math;
 
 	/* Register the functions */
-	json_calc_function_hook("acos",  "n:number", "number", jfn_acos);
-	json_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
-	json_calc_function_hook("asin",  "n:number", "number", jfn_asin);
-	json_calc_function_hook("asinh", "n:number", "number", jfn_asinh);
-	json_calc_function_hook("atan",  "n:number", "number", jfn_atan);
-	json_calc_function_hook("atanh", "n:number", "number", jfn_atanh);
-	json_calc_function_hook("cbrt",  "n:number", "number", jfn_cbrt);
-	json_calc_function_hook("ceil",  "n:number", "number", jfn_ceil);
-	json_calc_function_hook("cos",   "n:number", "number", jfn_cos);
-	json_calc_function_hook("cosh",  "n:number", "number", jfn_cosh);
-	json_calc_function_hook("exp",   "n:number", "number", jfn_exp);
-	json_calc_function_hook("floor", "n:number", "number", jfn_floor);
-	json_calc_function_hook("log",   "n:number", "number", jfn_log);
-	json_calc_function_hook("log10", "n:number", "number", jfn_log10);
-	json_calc_function_hook("log2",  "n:number", "number", jfn_log2);
-	json_calc_function_hook("round", "n:number", "number", jfn_round);
-	json_calc_function_hook("sin",   "n:number", "number", jfn_sin);
-	json_calc_function_hook("sinh",  "n:number", "number", jfn_sinh);
-	json_calc_function_hook("sqrt",  "n:number", "number", jfn_sqrt);
-	json_calc_function_hook("tan",   "n:number", "number", jfn_tan);
-	json_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
+	jx_calc_function_hook("acos",  "n:number", "number", jfn_acos);
+	jx_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
+	jx_calc_function_hook("asin",  "n:number", "number", jfn_asin);
+	jx_calc_function_hook("asinh", "n:number", "number", jfn_asinh);
+	jx_calc_function_hook("atan",  "n:number", "number", jfn_atan);
+	jx_calc_function_hook("atanh", "n:number", "number", jfn_atanh);
+	jx_calc_function_hook("cbrt",  "n:number", "number", jfn_cbrt);
+	jx_calc_function_hook("ceil",  "n:number", "number", jfn_ceil);
+	jx_calc_function_hook("cos",   "n:number", "number", jfn_cos);
+	jx_calc_function_hook("cosh",  "n:number", "number", jfn_cosh);
+	jx_calc_function_hook("exp",   "n:number", "number", jfn_exp);
+	jx_calc_function_hook("floor", "n:number", "number", jfn_floor);
+	jx_calc_function_hook("log",   "n:number", "number", jfn_log);
+	jx_calc_function_hook("log10", "n:number", "number", jfn_log10);
+	jx_calc_function_hook("log2",  "n:number", "number", jfn_log2);
+	jx_calc_function_hook("round", "n:number", "number", jfn_round);
+	jx_calc_function_hook("sin",   "n:number", "number", jfn_sin);
+	jx_calc_function_hook("sinh",  "n:number", "number", jfn_sinh);
+	jx_calc_function_hook("sqrt",  "n:number", "number", jfn_sqrt);
+	jx_calc_function_hook("tan",   "n:number", "number", jfn_tan);
+	jx_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
 
-	json_calc_function_hook("atan2", "x:number, y:number", "number", jfn_atan2);
-	json_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
-	json_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
+	jx_calc_function_hook("atan2", "x:number, y:number", "number", jfn_atan2);
+	jx_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
+	jx_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
 
 	/* Insert constants into the Math object */
-	math = json_by_key(json_system, "Math");
+	math = jx_by_key(jx_system, "Math");
 	if (!math) {
-		math = json_object();
-		json_append(json_system, json_key("Math", math));
+		math = jx_object();
+		jx_append(jx_system, jx_key("Math", math));
 	}
-	json_append(math, json_key("E", json_from_double(M_E)));
-	json_append(math, json_key("LN10", json_from_double(M_LN10)));
-	json_append(math, json_key("LN2", json_from_double(M_LN2)));
-	json_append(math, json_key("LOG10E", json_from_double(M_LOG10E)));
-	json_append(math, json_key("LOG2E", json_from_double(M_LOG2E)));
-	json_append(math, json_key("PI", json_from_double(M_PI)));
-	json_append(math, json_key("SQRT1_2", json_from_double(M_SQRT1_2)));
-	json_append(math, json_key("SQRT2", json_from_double(M_SQRT2)));
+	jx_append(math, jx_key("E", jx_from_double(M_E)));
+	jx_append(math, jx_key("LN10", jx_from_double(M_LN10)));
+	jx_append(math, jx_key("LN2", jx_from_double(M_LN2)));
+	jx_append(math, jx_key("LOG10E", jx_from_double(M_LOG10E)));
+	jx_append(math, jx_key("LOG2E", jx_from_double(M_LOG2E)));
+	jx_append(math, jx_key("PI", jx_from_double(M_PI)));
+	jx_append(math, jx_key("SQRT1_2", jx_from_double(M_SQRT1_2)));
+	jx_append(math, jx_key("SQRT2", jx_from_double(M_SQRT2)));
 
 	/* Success */
 	return NULL;

@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Numbers</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc - Numbers">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx - Numbers">
     <meta name="keywords" content="number">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -17,7 +17,7 @@
     octal with a "0o" or "0" prefix, or
     binary with a "0b" prefix.
     <p>
-    One unusual thing about JsonCalc is that number literals parsed from
+    One unusual thing about jx is that number literals parsed from
     JSON documents are stored internally as text and only converted to
     binary when necessary.
     Computed numbers, and most literals parsed in a script (not JSON data)
@@ -43,7 +43,7 @@
       <div class="example">
 	<kbd>1.2e2</kbd>
 	<samp>120</samp>
-        Numbers in scripts, or entered interactively at JsonCalc's prompt,
+        Numbers in scripts, or entered interactively at jx's prompt,
         are converted to binary.
         When output, they're converted back to text.
         If the number <tt>1.2e2</tt> was encountered in a JSON data file,
@@ -67,7 +67,7 @@
             but not in JSON data.
 	<li>The use of a "0" prefix for octal numbers is deprecated in JavaScript.
 	    Use the "0o" prefix instead there.
-	    In JsonCalc, I intend to continue supporting the "0" prefix forever.
+	    In jx, I intend to continue supporting the "0" prefix forever.
       </ul>
     </details>
 

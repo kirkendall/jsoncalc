@@ -3,19 +3,19 @@
 #include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <jsoncalc.h>
-#include "jcprog.h"
+#include <jx.h>
+#include "jxprog.h"
 
 /* This indicates whether we're running something or reading a command line */
 static int running;
 
 /* This catches the SIGINT signal, and uses it to abort an ongoing computation
- * by setting the json_interrupt flag.
+ * by setting the jx_interrupt flag.
  */
 static void catchinterrupt(int signo)
 {
 	if (running) {
-		json_interrupt = 1;
+		jx_interrupt = 1;
 		fprintf(stderr, "Stopping...\n");
 	}
 }
@@ -42,9 +42,9 @@ static char *historyfile(void)
 	/* First time, generate it */
 	if (!buf) {
 		/* Get the config directory */
-		char *dir = json_file_path(NULL, NULL, NULL);
+		char *dir = jx_file_path(NULL, NULL, NULL);
 		if (!dir)
-			return ".jsoncalc_history";
+			return ".jx.history";
 
 		/* Append "/history" to it */
 		buf = (char *)malloc(strlen(dir) + 9);
@@ -58,7 +58,7 @@ static char *historyfile(void)
 
 
 /* Interactively read a line from stdin.  */
-static char *jcreadline(const char *prompt)
+static char *jxreadline(const char *prompt)
 {
 	char	*expr;
 	size_t	i;
@@ -87,7 +87,7 @@ static char *jcreadline(const char *prompt)
  * and also a couple of special characters that ReadLine uses to indicate
  * certain parts of the prompt (namely those escape sequences) are zero-width.
  */
-static char *jcprompt(const char *prompt)
+static char *jxprompt(const char *prompt)
 {
 	static char	buf[50];
 
@@ -104,18 +104,18 @@ static char *jcprompt(const char *prompt)
 }
 
 
-void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
+void interact(jxcontext_t **contextref, jxcmd_t *initcmds)
 {
 	char	*expr;
-	jsoncmd_t *jc;
-	jsoncmdout_t *result;
+	jxcmd_t *jc;
+	jxcmdout_t *result;
 
 	/* Enable the use of history and name completion while
 	 * inputting expressions.
 	 */
 	using_history();
 	read_history(historyfile());
-	rl_attempted_completion_function = jsoncalc_completion;
+	rl_attempted_completion_function = jx_completion;
 	rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
 
 	/* Catch SIGINT (usually <Ctrl-C>) and use it to stop computation.
@@ -127,12 +127,12 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterrupt;
 
 	/* Run the initcmds once.  (Not once for each file.) */
-	result = json_cmd_run(initcmds, contextref);
+	result = jx_cmd_run(initcmds, contextref);
 	free(result);
 
 	/* Read an expression */
 	for (running = 0;
-	     (expr = jcreadline(jcprompt("JsonCalc:"))) != NULL;
+	     (expr = jxreadline(jxprompt("jx:"))) != NULL;
 	     running = 0) {
 		/* Ignore empty lines */
 		if (!expr[0])
@@ -142,22 +142,22 @@ void interact(jsoncontext_t **contextref, jsoncmd_t *initcmds)
 		running = 1;
 
 		/* Compile */
-		jc = json_cmd_parse_string(expr);
+		jc = jx_cmd_parse_string(expr);
 		free(expr);
-		if (jc != JSON_CMD_ERROR) {
+		if (jc != JX_CMD_ERROR) {
 			/* Execute */
-			json_interrupt = 0;
+			jx_interrupt = 0;
 			run(jc, contextref);
 
 			/* Clean up */
-			json_cmd_free(jc);
+			jx_cmd_free(jc);
 
 			/* If the last line was incomplete, then output a
 			 * newline.  The readline() library depends on this.
 			 */
-			if (json_print_incomplete_line) {
+			if (jx_print_incomplete_line) {
 				putchar('\n');
-				json_print_incomplete_line = 0;
+				jx_print_incomplete_line = 0;
 			}
 		}
 	}

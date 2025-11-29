@@ -8,23 +8,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This can be set to 'o' to make new/unreadable files contain an empty object,
  * or 'a' to make new/unreadable files contain an empty array.  If left to '\0'
  * then new/unreadable files will just fail to load.
  */
-char json_file_new_type = '\0';
+char jx_file_new_type = '\0';
 
 /* This stores a linked list of loaded files */
-static jsonfile_t *loaded;
+static jxfile_t *loaded;
 
 /* Open a file for reading.  This also locks one byte and maps it into memory */
-jsonfile_t *json_file_load(const char *filename)
+jxfile_t *jx_file_load(const char *filename)
 {
 	int	fd;
 	char	*base;
-	jsonfile_t *jf;
+	jxfile_t *jf;
 	struct stat st;
 	size_t	size, used, nread;
 
@@ -35,12 +35,12 @@ jsonfile_t *json_file_load(const char *filename)
 		fd = open(filename, O_RDONLY);
 	if (fd < 0)
 	{
-		if (json_file_new_type == 'o' || json_file_new_type == 'a') {
-			jf = (jsonfile_t *)malloc(sizeof(jsonfile_t));
+		if (jx_file_new_type == 'o' || jx_file_new_type == 'a') {
+			jf = (jxfile_t *)malloc(sizeof(jxfile_t));
 			jf->fd = -1;
 			jf->isfile = 0;
 			jf->size = 3;
-			if (json_file_new_type == 'o')
+			if (jx_file_new_type == 'o')
 				jf->base = strdup("{}\n");
 			else
 				jf->base = strdup("[]\n");
@@ -80,7 +80,7 @@ jsonfile_t *json_file_load(const char *filename)
 	}
 
 	/* Return the info */
-	jf = (jsonfile_t *)malloc(sizeof *jf);
+	jf = (jxfile_t *)malloc(sizeof *jf);
 	jf->fd = fd;
 	jf->filename = strdup(filename);
 	jf->isfile = (st.st_mode & S_IFMT) == S_IFREG;
@@ -92,45 +92,45 @@ jsonfile_t *json_file_load(const char *filename)
 }
 
 /* Connect an open file with a deferred array.  This increments the deferred
- * count of the file, and stores the file's pointer in the array's jsondef_t.
+ * count of the file, and stores the file's pointer in the array's jxdef_t.
  */
-void json_file_defer(jsonfile_t *jf, json_t *array)
+void jx_file_defer(jxfile_t *jf, jx_t *array)
 {
-	assert(array->type == JSON_ARRAY && array->first && array->first->type == JSON_DEFER);
+	assert(array->type == JX_ARRAY && array->first && array->first->type == JX_DEFER);
 
 	jf->refs++;
-	((jsondef_t *)(array->first))->file = jf;
+	((jxdef_t *)(array->first))->file = jf;
 }
 
 /* If a deferred array uses a file, disconnect it from the file.  If that was
  * the last deferred array using the file, then unload the file.  This is used
  * while free freeing a deferred array.
  */
-void json_file_defer_free(json_t *array)
+void jx_file_defer_free(jx_t *array)
 {
-	jsonfile_t *jf;
+	jxfile_t *jf;
 
-	assert(array->type == JSON_ARRAY && array->first && array->first->type == JSON_DEFER);
+	assert(array->type == JX_ARRAY && array->first && array->first->type == JX_DEFER);
 
-	jf = ((jsondef_t *)(array->first))->file;
+	jf = ((jxdef_t *)(array->first))->file;
 	if (jf) {
 		assert(jf->refs > 0);
 		jf->refs--;
 		if (jf->refs == 0)
-			json_file_unload(jf);
+			jx_file_unload(jf);
 	}
 }
 
 
-/* Close a file that was opened via json_file_load() */
-void json_file_unload(jsonfile_t *jf)
+/* Close a file that was opened via jx_file_load() */
+void jx_file_unload(jxfile_t *jf)
 {
 	/* Can't actually unload if the refs is non-zero */
 	if (jf->refs > 0)
 		return;
 
 	/* Remove the jf structure from the loaded list */
-	jsonfile_t *scan, *lag;
+	jxfile_t *scan, *lag;
 	for (lag = NULL, scan = loaded;
 	     scan && scan != jf;
 	     lag = scan, scan = scan->other) {
@@ -168,9 +168,9 @@ void json_file_unload(jsonfile_t *jf)
  * the given "where" pointer, return NULL. The "where" pointer is never
  * dereferenced, so you can be a bit sloppy about it.
  */
-jsonfile_t *json_file_containing(const char *where, int *refline)
+jxfile_t *jx_file_containing(const char *where, int *refline)
 {
-	jsonfile_t *jf;
+	jxfile_t *jf;
 	const char *scan;
 	int	line;
 
@@ -201,7 +201,7 @@ jsonfile_t *json_file_containing(const char *where, int *refline)
  * difference between this and fopen(filename,"w").  When done, the FILE*
  * should be closed via the conventional fclose() function.
  */
-FILE *json_file_update(const char *filename)
+FILE *jx_file_update(const char *filename)
 {
 	int	fd;
 
@@ -228,18 +228,18 @@ FILE *json_file_update(const char *filename)
 	return fdopen(fd, "w");
 }
 
-/* Scan JsonCalc's path for a given file.  If found, return its full pathname
+/* Scan jx's path for a given file.  If found, return its full pathname
  * as a dynamically-allocated string (which the calling function must free).
  * If not found, return NULL.  If "filename" is NULL then just look for a
  * writable directory in the path.  If "ext" is non-NULL then append it to
  * the filename.
  */
-char *json_file_path(const char *prefix, const char *name, const char *suffix)
+char *jx_file_path(const char *prefix, const char *name, const char *suffix)
 {
 	char	*pathname;	/* dynamically-allocated pathname */
 	size_t	pathsize;	/* allocated size of pathname */
 	char	*home;		/* User's home directory */
-	json_t	*path;		/* Array of directories to check */
+	jx_t	*path;		/* Array of directories to check */
 	size_t	needsize;	/* Size of the pathname we're considering */
 	int	first;
 
@@ -262,9 +262,9 @@ char *json_file_path(const char *prefix, const char *name, const char *suffix)
 	if (!home)
 		home = ".";
 
-	/* Get the path from json_config */
-	path = json_by_key(json_system, "path");
-	if (!path || path->type != JSON_ARRAY)
+	/* Get the path from jx_config */
+	path = jx_by_key(jx_system, "path");
+	if (!path || path->type != JX_ARRAY)
 		return NULL;
 
 	/* For each entry in the path... */

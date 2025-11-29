@@ -1,16 +1,16 @@
-.TH jsoncalc 1
+.TH jx 1
 .SH NAME
-jsoncalc \- JSON calculator and reformatter
+jx \- JSON calculator and reformatter
 
 .SH SYNOPSIS
-.B jsoncalc
+.B jx
 .RI [ OPTION ] 
 .RI [ file.jc ]
 .RI [ "name\fB=\fIvalue" ]
 .RI [ file.json ]...
 
 .SH DESCRIPTION
-.B jsoncalc
+.B jx
 is a tool for examining or modifying JSON data.
 It can be run interactively or in batch mode.
 It integrates well with shell scripts.
@@ -43,7 +43,7 @@ if you want.
 .TP
 \|
 Also, if the first file named after the last option appears to contain a
-JsonCalc script instead of JSON data, then it will be loaded like
+jx script instead of JSON data, then it will be loaded like
 .BI -f file.
 
 .TP
@@ -53,7 +53,7 @@ Add
 to a list of scripts to automatically load when running interactively.
 This is persistent across interactive sessions.
 Later, to persistently remove a script from that list, you can invoke
-.B jsoncalc
+.B jx
 with a
 .BI -F- scriptfile
 flag.
@@ -77,22 +77,22 @@ option makes it clear.
 
 .TP
 -u
-This option allows JsonCalc to update any data files named on the command line,
+This option allows jx to update any data files named on the command line,
 if their data was changed via assignments.
-This is often used when JsonCalc is constructing JSON documents from other data
+This is often used when jx is constructing JSON documents from other data
 sources such as environment variables or
 .IB name = value
 arguments on the shell command line.
 
 .TP
 .BR -o | -a
-These affect JsonCalc's behavior when trying to load a file that doesn't exist.
+These affect jx's behavior when trying to load a file that doesn't exist.
 Normally that's an error, but
 .B -o
 and
 .B -a
 cause it to load missing files as empty objects or arrays, respectively.
-This can be handy if you're using JsonCalc to construct a JSON document
+This can be handy if you're using jx to construct a JSON document
 from scratch.
 You'll usually want
 .B -u
@@ -105,7 +105,7 @@ This inhibits some dangerous activities such as invoking an external shell
 command, or reading/writing files not named on the command line.
 This software is distributed with no guarantees of any kind.
 And even if
-.B jsoncalc
+.B jx
 itself is perfect, plugins might not be.
 
 .TP
@@ -115,10 +115,10 @@ a request to load
 .IR dir / name .json
 as variable
 .IR name .
-For example, if you invoke JsonCalc with
+For example, if you invoke jx with
 .BI -d foo
 and then use the name "bar" in an expression,
-JsonCalc will load foo/bar.json into the "bar" variable.
+jx will load foo/bar.json into the "bar" variable.
 This happens on demand; it doesn't proactively load all files in the "foo"
 directory into variables.
 
@@ -188,10 +188,10 @@ outputs compact JSON.
 .BI -l plugin [, settings ]
 This loads a plugin.
 Most plugins are binary files that get linked into
-.B jsoncalc
+.B jx
 at runtime, to provide new functions, commands, file formats, or other features.
 Some plugins may be implemented in
-.BR jsoncalc 's
+.BR jx 's
 scripting language.
 If a plugin supports settings, then you can set them by appending them after
 the plugin's name, with a comma as a delimiter.
@@ -229,7 +229,7 @@ or
 command to explicitly say so.
 
 .SH "INTERACTIVE VS. BATCH MODE"
-.B jsoncalc
+.B jx
 can run in interactive mode or in batch mode.
 .P
 The selection of mode depends on the command-line flags and arguments.
@@ -263,7 +263,7 @@ In batch mode, all data files are loaded, one after the other, and any
 scripts or commands will be executed separately for each one.
 If no data files are named on the command line, and stdin is a file or pipe,
 then
-.B jsoncalc
+.B jx
 will read from stdin and write to stdout.
 .P
 Either way, any data files named on the command line will
@@ -282,7 +282,7 @@ and
 persistently.
 If you often need the "csv" plugin for your interactive sessions, you can
 invoke
-.B jsoncalc
+.B jx
 once with a
 .B -Lcsv
 flag and then it'll always be loaded for your interactive sessions.
@@ -326,7 +326,7 @@ will disable colors in the output.
 Some options are strings that have a list of preferred values associated
 with them.
 You can give just the value, without a name, and
-.B jsoncalc
+.B jx
 will figure out which name it belongs to.
 For example, there's a "table" setting with a list of preferred values that
 includes "sh" (for a format that works well on shell scripts),
@@ -413,7 +413,7 @@ Each row of the table will be output as a line of multiple
 pairs, giving the values for all columns of the table in that row.
 In a shell script, you can read the lines and evaluate them one-by-one like this:
 .nf
-    jsoncalc -ssh -c scores sampledata/test.json | while read row
+    jx -ssh -c scores sampledata/test.json | while read row
     do
         eval $row
         echo "$name earned $score points in run# $run"
@@ -424,7 +424,7 @@ If you expect the output to be a single object then you can use
 .BR bash (1)'s
 "$(...)" notation, like this:
 .nf
-    eval $(jsoncalc -ssh -c 'scores[name:"Paul"]' sampledata/test.json)
+    eval $(jx -ssh -c 'scores[name:"Paul"]' sampledata/test.json)
     echo "$name scored $score"
 .fi
 
@@ -432,7 +432,7 @@ If you expect the output to be a single object then you can use
 The expression syntax resembles that of JavaScript expressions,
 but with database-like extensions.
 For a full description of the syntax, see the
-JsonCalc web page.
+jx web page.
 In short, though, the extensions are:
 .IP \ \(bu 3n
 .IB array @ filter
@@ -481,7 +481,7 @@ notation for appending to an array variable.
 .IP \ \(bu 3n
 A rather full-featured SQL "SELECT" statement.
 .P
-JsonCalc also implements many JavaScript operators, functions, and commands.
+jx also implements many JavaScript operators, functions, and commands.
 It does not support classes though, or functions that alter data such as
 .BR array .splice().
 .P.
@@ -502,28 +502,28 @@ are exactly the same thing.
 
 .SH "INVOCATION EXAMPLES"
 .TP
-jsoncalc
+jx
 Start
-.B jsoncalc
+.B jx
 interactively, without any JSON data initially.
 
 .TP
-jsoncalc -lmath
+jx -lmath
 Start
-.B jsoncalc
+.B jx
 interactively, with the "math" plugin loaded.
 This adds nearly all of the functions and constants from JavaScript's Math class.
 .TP
-jsoncalc file.json
+jx file.json
 Start
-.B jsoncalc
+.B jx
 interactively using the contents of file.json as variable
 .B data.
 
 .TP
-jsoncalc -d.
+jx -d.
 Start
-.B jsoncalc
+.B jx
 interactively.
 Any *.json files in the directory "." can be accessed simply by using their
 basename as a variable name, e.g. using the name
@@ -534,7 +534,7 @@ into the
 .I parts
 variable.
 .TP
-jsoncalc -p file.json
+jx -p file.json
 Pretty-print file.json.
 This is non-interactive because
 .B -p
@@ -542,11 +542,11 @@ was used without
 .BR -i .
 
 .TP
-jsoncalc -c 2+2
+jx -c 2+2
 Start in batch mode, evaluate 2+2 to output 4, and then quit.
 
 .TP
-jsoncalc -u script.js data.json data2.json
+jx -u script.js data.json data2.json
 Start in batch mode.
 For each *.json data file, run the
 .I script.js
@@ -558,13 +558,13 @@ they would updated to include those changes.
 
 .SH "EXPRESSION EXAMPLES"
 The following examples assume you invoked
-.B jsoncalc
-as "jsoncalc -dsampledata".
+.B jx
+as "jx -dsampledata".
 
 .TP
 1+2*3
 This outputs 7.
-.B jsoncalc
+.B jx
 makes a pretty decent calculator.
 
 .TP
@@ -578,7 +578,7 @@ The @ operator loops over the elements from the left operand (an array)
 and applies the right operand (an expression) to them with "this" set to
 the array element's value.  The {...} notation is an object generator.
 The result is an array of objects, which
-.B jsoncalc
+.B jx
 classifies as a table,
 so it is output as a table.
 
@@ -586,7 +586,7 @@ so it is output as a table.
 \"2024-12-25\" + \"P12D\"
 This is an example of ISO-8601 date/time/period calculation.
 It adds 12 days to Christmas, returning "2025-01-06".
-.B jsoncalc
+.B jx
 makes date calculation easy.
 (If the strings didn't look like a date and a period, they would have been
 concatenated just as in JavaScript.
@@ -644,7 +644,7 @@ an extra row to be added for showing the overall average.
 This uses an SQL "SELECT" command to extract basically the same information.
 Note that SQL will choose a default name for a computed column.
 Internally, the SQL "SELECT" is translated to
-.BR jsoncalc "'s"
+.BR jx "'s"
 native expression syntax so it's about as efficient either way.
 
 .TP
@@ -707,22 +707,22 @@ Basically this is the column information used by the "grid" table output method.
 .SH FILES
 
 .TP
-~/.config/jsoncalc/
-This directory stores JsonCalc's configuration.
+~/.config/jx/
+This directory stores jx's configuration.
 It may also store temporary files such as caches and logs.
 
 .TP
 .IR PATH /plugin plugin .so
 Where
 .I PATH
-is a directory name from $JSONCALCPATH,
+is a directory name from $JXPATH,
 this is where a binary plugin may be found.
 
 .TP
-.IR PATH / plugin .jc
+.IR PATH / plugin .jx
 Where
 .I PATH
-is a directory name from $JSONCALCPATH,
+is a directory name from $JXPATH,
 this is where a script plugin may be found.
 
 .SH ENVIRONMENT
@@ -730,16 +730,16 @@ this is where a script plugin may be found.
 .TP
 $HOME
 This is used to find the
-.I ~/.config/jsoncalc
+.I ~/.config/jx
 directory.
 
 .TP
-$JSONCALCPATH
-This is a list of directories where JsonCalc's supporting files might be
+$JXPATH
+This is a list of directories where jx's supporting files might be
 found.
 The default value is derived from $LDLIBRARYPATH
 and also includes
-.IR ~/.config/jsoncalc .
+.IR ~/.config/jx .
 
 .SH "SEE ALSO"
 .BR json_calc (3),
@@ -747,9 +747,9 @@ and also includes
 .BR xfce4-terminal (1),
 .BR gnome-terminal (1)
 .P
-The home page for JsonCalc is
-.US
-http://www.jsoncalc.org/
+The home page for jx is
+.UR
+http://www.jxhub.org/
 .UE
 
 .SH AUTHOR

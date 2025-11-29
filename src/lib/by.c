@@ -3,14 +3,14 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* Return the value of a named field within an object or array.  If there
  * is no such element, then return NULL.
  */
-json_t *json_by_key(const json_t *container, const char *key)
+jx_t *jx_by_key(const jx_t *container, const char *key)
 {
-	json_t *scan;
+	jx_t *scan;
 	char	*simple, *loose;
 
 	/* Defend against NULL */
@@ -20,7 +20,7 @@ json_t *json_by_key(const json_t *container, const char *key)
 	/* Only objects should have named values (though JavaScript also
 	 * supports "associative arrays" which do the same thing)
 	 */
-	if (container->type != JSON_OBJECT)
+	if (container->type != JX_OBJECT)
 	{
 		/* EEE "Attempt to find named item in a non-object"); */
 		return NULL;
@@ -29,14 +29,14 @@ json_t *json_by_key(const json_t *container, const char *key)
 	/* Scan for it.  If found, return its value */
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
-		assert(scan->type == JSON_KEY);
+		assert(scan->type == JX_KEY);
 		if (!strcmp(scan->text, key))
 			return scan->first;
 	}
 
 	/* Not found, but try again using loose name comparison */
 	simple = strdup(key);
-	(void)json_mbs_simple_key(simple, key);
+	(void)jx_mbs_simple_key(simple, key);
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
 		/* Locate the key's "loose" version.  If it doesn't exist
@@ -44,7 +44,7 @@ json_t *json_by_key(const json_t *container, const char *key)
 		 */
 		loose = scan->text + strlen(scan->text) + 1;
 		if (!*loose)
-			(void)json_mbs_simple_key(loose, scan->text);
+			(void)jx_mbs_simple_key(loose, scan->text);
 
 		/* Compare them now */
 		if (!strcmp(loose, simple)) {
@@ -62,13 +62,13 @@ json_t *json_by_key(const json_t *container, const char *key)
  * in anything that it contains.  Also, the container can be an array, not
  * just an object.
  */
-json_t *json_by_deep_key(json_t *container, char *key)
+jx_t *jx_by_deep_key(jx_t *container, char *key)
 {
-        json_t  *result, *scan;
+        jx_t  *result, *scan;
 
         /* First try the container itself (no nesting) */
-        if (container->type == JSON_OBJECT) {
-                result = json_by_key(container, key);
+        if (container->type == JX_OBJECT) {
+                result = jx_by_key(container, key);
                 if (result)
                         return result;
         }
@@ -76,10 +76,10 @@ json_t *json_by_deep_key(json_t *container, char *key)
         /* Next try any containers within this object */
         result = NULL;
         for (scan = container->first; scan && !result; scan = scan->next) { /* object */
-                if (scan->type == JSON_KEY && (scan->first->type == JSON_OBJECT || scan->first->type == JSON_ARRAY))
-                        result = json_by_deep_key(scan->first, key);
-                else if (scan->type == JSON_OBJECT || scan->type == JSON_ARRAY)
-                        result = json_by_deep_key(scan, key);
+                if (scan->type == JX_KEY && (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY))
+                        result = jx_by_deep_key(scan->first, key);
+                else if (scan->type == JX_OBJECT || scan->type == JX_ARRAY)
+                        result = jx_by_deep_key(scan, key);
         }
         return result;
 }
@@ -88,13 +88,13 @@ json_t *json_by_deep_key(json_t *container, char *key)
  * is no such element, then return NULL.
  *
  * IMPORTANT NOTE: If container is a deferred array, then you must call
- * json_break() on the returned element when you're done with it.  If not a
- * deferred array, then json_break() is still safe to call on the element.
+ * jx_break() on the returned element when you're done with it.  If not a
+ * deferred array, then jx_break() is still safe to call on the element.
  */
-json_t *json_by_index(json_t *container, int idx)
+jx_t *jx_by_index(jx_t *container, int idx)
 {
-	json_t *scan;
-	jsondef_t *def;
+	jx_t *scan;
+	jxdef_t *def;
 	int	scanidx;
 
 	/* Defend against NULL */
@@ -102,7 +102,7 @@ json_t *json_by_index(json_t *container, int idx)
 		return NULL;
 
 	/* Only arrays should have indexed values */
-	if (container->type != JSON_ARRAY)
+	if (container->type != JX_ARRAY)
 	{
 		/* EEE "Attempt to find indexed item in a non-array" */
 		return NULL;
@@ -112,7 +112,7 @@ json_t *json_by_index(json_t *container, int idx)
 	 * an index relative to the end of the array.
 	 */
 	if (idx < 0) {
-		idx += json_length(container);
+		idx += jx_length(container);
 		if (idx < 0)
 			return NULL;
 	}
@@ -120,12 +120,12 @@ json_t *json_by_index(json_t *container, int idx)
 	/* If this is a deferred array, and it has a quick way to jump to a
 	 * given index, then use that.
 	 */
-	if (json_is_deferred_array(container)
-	 && (def = (jsondef_t *)(container->first))->fns->byindex)
+	if (jx_is_deferred_array(container)
+	 && (def = (jxdef_t *)(container->first))->fns->byindex)
 		return (*def->fns->byindex)(container, idx);
 
 	/* Scan for it.  If found, return its value */
-	for (scan = json_first(container), scanidx = 0; scan; scan = json_next(scan))
+	for (scan = jx_first(container), scanidx = 0; scan; scan = jx_next(scan))
 	{
 		/* if the index matches, use it */
 		if (scanidx == idx)
@@ -143,32 +143,32 @@ json_t *json_by_index(json_t *container, int idx)
  * NULL.
  * 
  * IMPORTANT NOTE: If container is a deferred array, then you must call
- * json_break() on the returned element when you're done with it.  If not a
- * deferred array, then json_break() is still safe to call on the element.
+ * jx_break() on the returned element when you're done with it.  If not a
+ * deferred array, then jx_break() is still safe to call on the element.
  */
-json_t *json_by_key_value(json_t *container, const char *key, json_t *value) 
+jx_t *jx_by_key_value(jx_t *container, const char *key, jx_t *value) 
 {
-	json_t	*scan, *found;
-	jsondef_t *def;
+	jx_t	*scan, *found;
+	jxdef_t *def;
 
 	/* This only works on tables (arrays of objects) */
-	if (!json_is_table(container))
+	if (!jx_is_table(container))
 		return NULL;
 
 	/* If it is a deferred array, and it has a "bykey" function pointer,
 	 * then use that.
 	 */
-	if (json_is_deferred_array(container)
-	 && (def = (jsondef_t*)container->first)->fns->bykeyvalue)
+	if (jx_is_deferred_array(container)
+	 && (def = (jxdef_t*)container->first)->fns->bykeyvalue)
 
 		return (*def->fns->bykeyvalue)(container, key, value);
 
 	/* Scan array for element with that member key:value */
-	for (scan = json_first(container); scan; scan = json_next(scan)) {
-		if (scan->type != JSON_OBJECT)
+	for (scan = jx_first(container); scan; scan = jx_next(scan)) {
+		if (scan->type != JX_OBJECT)
 			continue;
-		found = json_by_key(scan, key);
-		if (found && json_equal(found, value)) {
+		found = jx_by_key(scan, key);
+		if (found && jx_equal(found, value)) {
 			return scan;
 		}
 	}
@@ -190,17 +190,17 @@ json_t *json_by_key_value(json_t *container, const char *key, json_t *value)
  * this way you can write wrappers to handle things such as comma-delimited
  * lists of expressions.
  *
- * Deferred arrays cause problems.  We want to return the json_t within the
+ * Deferred arrays cause problems.  We want to return the jx_t within the
  * container, but deferred arrays allocate and free elements as they are
  * scanned.  So if a deferred array is involved then the returned item must
- * look like a deferred element that json_break() can clean up.
+ * look like a deferred element that jx_break() can clean up.
  */
-json_t *json_by_expr(json_t *container, const char *expr, const char **next)
+jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 {
 	char	key[100];
 	int	i, deep, quote;
-	json_t	*step;
-	json_t	*defelem;
+	jx_t	*step;
+	jx_t	*defelem;
 
 	/* Defend against NULL */
 	if (!container)
@@ -226,17 +226,17 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 		/* Detect number or symbol.  If neither, we're done */
 		if (isdigit(*expr))
 		{
-			if (container->type != JSON_ARRAY)
+			if (container->type != JX_ARRAY)
 			{
-			        /* EEE if (json_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
+			        /* EEE if (jx_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
 				if (defelem)
-					json_break(defelem);
+					jx_break(defelem);
 			        return NULL;
 			}
-			step = json_by_index(container, atoi(expr));
+			step = jx_by_index(container, atoi(expr));
 			if (!step) {
 				if (defelem)
-					json_break(defelem);
+					jx_break(defelem);
 				return NULL;
 			}
 			while (isdigit(*expr))
@@ -245,33 +245,33 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			/* If this is an element of a deferred array, remember
 			 * that so we can clean up later.
 			 */
-			if (json_is_deferred_element(step) && !defelem)
+			if (jx_is_deferred_element(step) && !defelem)
 				defelem = step;
 		}
 		else if (isalpha(*expr) || *expr == '_')
 		{
-			if (container->type != JSON_OBJECT)
+			if (container->type != JX_OBJECT)
 			{
-			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
+			        /* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
 				if (defelem)
-					json_break(defelem);
+					jx_break(defelem);
 			        return NULL;
 			}
 			for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
 				key[i] = *expr++;
 			key[i] = '\0';
 			if (deep)
-				step = json_by_deep_key(container, key);
+				step = jx_by_deep_key(container, key);
 			else
-				step = json_by_key(container, key);
+				step = jx_by_key(container, key);
 		}
 		else if (*expr == '"' || *expr == '`')
 		{
-			if (container->type != JSON_OBJECT)
+			if (container->type != JX_OBJECT)
 			{
-			        /* EEE if (json_debug_flags.expr) json_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
+			        /* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
 				if (defelem)
-					json_break(defelem);
+					jx_break(defelem);
 			        return NULL;
 			}
 			quote = *expr++;
@@ -280,9 +280,9 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 			key[i] = '\0';
 			expr++;
 			if (deep)
-				step = json_by_deep_key(container, key);
+				step = jx_by_deep_key(container, key);
 			else
-				step = json_by_key(container, key);
+				step = jx_by_key(container, key);
 		}
 		else
 		{
@@ -300,22 +300,22 @@ json_t *json_by_expr(json_t *container, const char *expr, const char **next)
 	} while (*expr && strchr("[].~", *expr));
 
 	/* If we were in a deferred array, then we need to make the returned
-	 * json_t look like an element of that deferred array.
+	 * jx_t look like an element of that deferred array.
 	 */
-	if (defelem && !json_is_deferred_element(container)) {
-		/* We need to call json_break() on the defelem to free up
+	if (defelem && !jx_is_deferred_element(container)) {
+		/* We need to call jx_break() on the defelem to free up
 		 * the scanning resources.  Before we do that, though, we
 		 * need to make a copy of the returned value.
 		 */
-		container = json_copy(container);
+		container = jx_copy(container);
 
 		/* The copy should have its ->next pointer going to a generic
-		 * JSON_DEFER node, just so json_break() will free it.
+		 * JX_DEFER node, just so jx_break() will free it.
 		 */
-		container->next = json_defer(NULL);
+		container->next = jx_defer(NULL);
 
 		/* Okay, now it's safe to free the deferred element */
-		json_break(defelem);
+		jx_break(defelem);
 	}
 
 	/* return the result */

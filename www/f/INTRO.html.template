@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JsonCalc Functions</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc function summary">
-    <meta name="keywords" content="jsoncalc, function reference">
+    <title>jx Functions</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx function summary">
+    <meta name="keywords" content="jx, function reference">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script>
@@ -31,16 +31,16 @@
     </script>
   </head>
   <body>
-    <h1>JsonCalc Functions</h1>
+    <h1>jx Functions</h1>
 
-    This is a list of functions that are part of the JsonCalc query language.
+    This is a list of functions that are part of the jx query language.
     This is <em>not</em> a list of functions in the <tt>-ljson</tt> library.
 
     <details>
       <summary>All functions are global.</summary>
       You can write them using dot notation as though they're member functions,
       but doing so uses the data to the left of the dot for the first argument.
-      All of <strong>jsoncalc</strong>'s functions work this way.
+      All of <strong>jx</strong>'s functions work this way.
       <div class="example">
         <kbd>"Example".toUpperCase()</kbd>
         <samp>"EXAMPLE"</samp>
@@ -51,7 +51,7 @@
 
     <details>
       <summary>All function names are case-insensitive.</summary>
-      This is consistent with <strong>jsoncalc</strong>'s goal of being a good
+      This is consistent with <strong>jx</strong>'s goal of being a good
       quick-and-dirty query tool.
       <p>
       You can also abbreviate function names to just the first letter and all

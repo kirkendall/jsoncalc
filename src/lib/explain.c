@@ -4,11 +4,11 @@
 #include <string.h>
 #include <locale.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 
 
-/* Return a string describing the data type of a json_t.  Possible return
+/* Return a string describing the data type of a jx_t.  Possible return
  * values are:
  *   "boolean"	The symbols true and false.
  *   "null"	A NULL pointer, or the symbol null, or unexpected/error values
@@ -25,7 +25,7 @@
  *   "datetime"	A string that looks like an ISO-8601 datetime
  *   "period"	A string that looks like an ISO-8601 period
  */
-char *json_typeof(json_t *json, int extended)
+char *jx_typeof(jx_t *json, int extended)
 {
 	/* Defend against NULL */
 	if (!json)
@@ -33,39 +33,39 @@ char *json_typeof(json_t *json, int extended)
 
 	/* First clue is the "type" field */
 	switch (json->type) {
-	  case JSON_NUMBER:
+	  case JX_NUMBER:
 		return "number";
-	  case JSON_OBJECT:
+	  case JX_OBJECT:
 		if (!json->first && extended)
 			return "object*";
 		return "object";
-	  case JSON_BOOLEAN:
+	  case JX_BOOLEAN:
 		return "boolean";
-	  case JSON_NULL:
+	  case JX_NULL:
 		return "null";
-	  case JSON_STRING:
+	  case JX_STRING:
 		/* Strings may be dates, times, or datetimes. Or just strings */
 		if (extended) {
 			if (!*json->text)
 				return "string*";
-			if (json_is_date(json))
+			if (jx_is_date(json))
 				return "date";
-			if (json_is_time(json))
+			if (jx_is_time(json))
 				return "time";
-			if (json_is_datetime(json))
+			if (jx_is_datetime(json))
 				return "datetime";
-			if (json_is_period(json))
+			if (jx_is_period(json))
 				return "period";
 		}
 		return "string";
-	  case JSON_ARRAY:
+	  case JX_ARRAY:
 		/* If it's a non-empty array of objects, call it a table.
 		 * Otherwise, it's an array.
 		 */
 		if (extended) {
 			if (!json->first)
 				return "array*";
-			if (json_is_table(json))
+			if (jx_is_table(json))
 				return "table";
 		}
 		return "array";
@@ -78,7 +78,7 @@ char *json_typeof(json_t *json, int extended)
 /* Combine oldtype and newtype.  Try to keep the result as specific as
  * possible.  If total chaos, just return "any".
  */
-char *json_mix_types(char *oldtype, char *newtype)
+char *jx_mix_types(char *oldtype, char *newtype)
 {
 	/* If typenames are the same, or oldtype is "any", it's easy */
 	if (!strcmp(oldtype, newtype) || !strcmp(oldtype, "any"))
@@ -129,38 +129,38 @@ char *json_mix_types(char *oldtype, char *newtype)
  *
  * Returns the updated aggregated data, as an array of objects describing each
  * column.  When the aggregated data is no longer needed, you must free it
- * via the usual json_free() function.
+ * via the usual jx_free() function.
  */
-json_t *json_explain(json_t *columns, json_t *row, int depth)
+jx_t *jx_explain(jx_t *columns, jx_t *row, int depth)
 {
-	json_t *col, *stats, *t, *t2;
+	jx_t *col, *stats, *t, *t2;
 	char	*newtype, *oldtype;
 	int	newwidth, oldwidth;
 	int	firstrow;
 	char	number[40];
 
 	/* If row isn't an object, then we can't do much with it */
-	if (!row || row->type != JSON_OBJECT)
+	if (!row || row->type != JX_OBJECT)
 		return columns;
 
 	/* Allocate an array to store the columns, if we don't have one yet */
 	firstrow = 0;
 	if (!columns) {
-		columns = json_array();
+		columns = jx_array();
 		firstrow = 1;
 	}
 
 	/* For each column of the row ... */
 	for (col = row->first; col; col = col->next) { /* object */
-		assert(col->type == JSON_KEY);
+		assert(col->type == JX_KEY);
 
 		/* Derive the type by examining the key's value */
-		newtype = json_typeof(col->first, 1);
+		newtype = jx_typeof(col->first, 1);
 
 		/* Locate the columns entry for this line, if any */
 		for (stats = columns->first; stats; stats = stats->next) { /* undeferred */
-			if ((t = json_by_key(stats, "key")) != NULL
-			 && t->type == JSON_STRING
+			if ((t = jx_by_key(stats, "key")) != NULL
+			 && t->type == JX_STRING
 			 && !strcmp(t->text, col->text))
 				break;
 		}
@@ -171,67 +171,67 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 
 			/* If newtype is "null" then the element is nullable */
 			if (!strcmp(newtype, "null"))
-				json_append(stats, json_key("nullable", json_boolean(1)));
+				jx_append(stats, jx_key("nullable", jx_boolean(1)));
 
 			/* Mixing types is  bit tricky */
-			oldtype = json_text_by_key(stats, "type");
-			newtype = json_mix_types(oldtype, newtype);
+			oldtype = jx_text_by_key(stats, "type");
+			newtype = jx_mix_types(oldtype, newtype);
 			if (newtype)
-				json_append(stats, json_key("type", json_string(newtype, -1)));
+				jx_append(stats, jx_key("type", jx_string(newtype, -1)));
 			newtype = oldtype;
 
 			/* Get the new width.  The biggest complication here
 			 * is that sometimes numbers are binary.
 			 */
-			if (col->first->type == JSON_NUMBER && !col->first->text[0]) {
+			if (col->first->type == JX_NUMBER && !col->first->text[0]) {
 				if (col->first->text[1] == 'i')
-					snprintf(number, sizeof number, "%d", JSON_INT(col->first));
+					snprintf(number, sizeof number, "%d", JX_INT(col->first));
 				else
-					snprintf(number, sizeof number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
+					snprintf(number, sizeof number, "%.*g", jx_format_default.digits, JX_DOUBLE(col->first));
 				newwidth = strlen(number);
 			} else  {
-				newwidth = json_mbs_width(col->first->text);
+				newwidth = jx_mbs_width(col->first->text);
 			}
 
 			/* Width can only increase */
-			oldwidth = json_int(json_by_key(stats, "width"));
+			oldwidth = jx_int(jx_by_key(stats, "width"));
 			if (newwidth > oldwidth)
-				json_append(stats, json_key("width", json_from_int(newwidth)));
+				jx_append(stats, jx_key("width", jx_from_int(newwidth)));
 
 		} else {
 			/* No, this is a new column.  Add it. */
-			stats = json_object();
-			json_append(stats, json_key("key", json_string(col->text, -1)));
-			json_append(stats, json_key("type", json_string(newtype, -1)));
-			if (col->first->type == JSON_NUMBER && !col->first->text[0]) {
+			stats = jx_object();
+			jx_append(stats, jx_key("key", jx_string(col->text, -1)));
+			jx_append(stats, jx_key("type", jx_string(newtype, -1)));
+			if (col->first->type == JX_NUMBER && !col->first->text[0]) {
 				if (col->first->text[1] == 'i')
-					snprintf(number, sizeof number, "%d", JSON_INT(col->first));
+					snprintf(number, sizeof number, "%d", JX_INT(col->first));
 				else
-					snprintf(number, sizeof number, "%.*g", json_format_default.digits, JSON_DOUBLE(col->first));
+					snprintf(number, sizeof number, "%.*g", jx_format_default.digits, JX_DOUBLE(col->first));
 				newwidth = strlen(number);
 			} else {
-				newwidth = json_mbs_width(col->first->text);
+				newwidth = jx_mbs_width(col->first->text);
 			}
-			json_append(stats, json_key("width", json_from_int(newwidth)));
-			json_append(stats, json_key("nullable", json_boolean(!strcmp(newtype, "null") || !firstrow)));
-			json_append(columns, stats);
+			jx_append(stats, jx_key("width", jx_from_int(newwidth)));
+			jx_append(stats, jx_key("nullable", jx_boolean(!strcmp(newtype, "null") || !firstrow)));
+			jx_append(columns, stats);
 			oldtype = newtype;
 		}
 
 		/* Do we want to recurse for opjects/tables? */
 		if (depth != 0) {
-			if (!strcmp(newtype, "object") && col->first->type == JSON_OBJECT) {
-				t = json_by_key(stats, "explain");
-				t2 = json_explain(t, col->first, depth - 1);
+			if (!strcmp(newtype, "object") && col->first->type == JX_OBJECT) {
+				t = jx_by_key(stats, "explain");
+				t2 = jx_explain(t, col->first, depth - 1);
 				if (!t)
-					json_append(stats, json_key("explain", t2));
-			} else if (!strcmp(newtype, "table") && col->first->type == JSON_ARRAY) {
-				t = json_by_key(stats, "explain");
+					jx_append(stats, jx_key("explain", t2));
+			} else if (!strcmp(newtype, "table") && col->first->type == JX_ARRAY) {
+				t = jx_by_key(stats, "explain");
 				for (t2 = col->first->first; t2; t2 = t2->next) { /* undeferred */
-					t = json_explain(t, t2, depth - 1);
+					t = jx_explain(t, t2, depth - 1);
 				}
-				if (json_by_key(stats, "explain") != t)
-					json_append(stats, json_key("explain", t));
+				if (jx_by_key(stats, "explain") != t)
+					jx_append(stats, jx_key("explain", t));
 			}
 		}
 
@@ -241,8 +241,8 @@ json_t *json_explain(json_t *columns, json_t *row, int depth)
 	 * is nullable.
 	 */
 	for (stats = columns->first; stats; stats = stats->next) { /* undeferred */
-		if (json_by_key(row, json_text_by_key(stats, "key")) == NULL)
-			json_append(stats, json_key("nullable", json_boolean(1)));
+		if (jx_by_key(row, jx_text_by_key(stats, "key")) == NULL)
+			jx_append(stats, jx_key("nullable", jx_boolean(1)));
 	}
 
 	/* Return the array of stats */

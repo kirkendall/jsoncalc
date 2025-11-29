@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>set</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc set - Adjust configuration settings">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx set - Adjust configuration settings">
     <meta name="keywords" content="command, command reference, set">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -73,7 +73,7 @@
         <tt>config.gridhead</tt> (which is an object) to set the
         <tt>underlined</tt> and <tt>bold</tt> boolean members to <tt>true</tt>,
         and the <tt>fg</tt> string member to "cyan".
-        JsonCalc knows that "cyan" is a setting for <tt>fg</tt> because
+        jx knows that "cyan" is a setting for <tt>fg</tt> because
         it appears in the list of preferred values for <tt>fg</tt>.
       </div>
 
@@ -108,13 +108,13 @@
 	    The <tt>set</tt> command will change which every set of formatting
 	    options are appropriate for the current runmode.
 	    There's also a global constant <tt>runmode</tt> which indicates
-	    which JsonCalc is currently using.
+	    which jx is currently using.
 	    <div class="example">
 	      <kbd>runmode</kbd>
 	      <samp>"interactive"</samp>
 	      <kbd>config[runmode].table</kbd>
 	      <samp>"grid"</samp>
-	      This shows that JsonCalc, in its current run mode, will use
+	      This shows that jx, in its current run mode, will use
 	      the "grid" style when printing tables.
 	    </div>
 

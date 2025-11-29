@@ -1,23 +1,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
-/* Predict the size of the string returned by json_serialize.  If buf is passed
+/* Predict the size of the string returned by jx_serialize.  If buf is passed
  * then also store the actual characters there.  Note that the terminating '\0'
  * character is *NOT* included, so you'll need to add 1 to the returned size
  * when allocating a buffer.
  */
-static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
+static size_t jcseriallen(jx_t *json, char *buf, jxformat_t *format)
 {
 	size_t	len, sublen;
-	json_t	*scan;
+	jx_t	*scan;
 	char	*tmp, number[40];
 
 	len = 0;
 	switch (json->type)
 	{
-	  case JSON_OBJECT:
+	  case JX_OBJECT:
 		if (buf) *buf++ = '{';
 		len = 2; /* for the opening and closing brackets/braces */
 		for (scan = json->first; scan; scan = scan->next) /* object */
@@ -25,7 +25,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 			sublen = jcseriallen(scan, buf, format);
 			if (buf) buf += sublen;
 			len += sublen;
-			if (!json_is_last(scan))
+			if (!jx_is_last(scan))
 			{
 				len++; /* for the comma between members */
 				if (buf) *buf++ = ',';
@@ -34,15 +34,15 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		if (buf) *buf++ = '}';
 		break;
 
-	  case JSON_ARRAY:
+	  case JX_ARRAY:
 		if (buf) *buf++ = '[';
 		len = 2; /* for the opening and closing brackets/braces */
-		for (scan = json_first(json); scan; scan = json_next(scan))
+		for (scan = jx_first(json); scan; scan = jx_next(scan))
 		{
 			sublen = jcseriallen(scan, buf, format);
 			if (buf) buf += sublen;
 			len += sublen;
-			if (!json_is_last(scan))
+			if (!jx_is_last(scan))
 			{
 				len++; /* for the comma between elements */
 				if (buf) *buf++ = ',';
@@ -51,7 +51,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		if (buf) *buf++ = ']';
 		break;
 
-	  case JSON_KEY:
+	  case JX_KEY:
 		len = 3; /* Quotes around the key, and a colon after it */
 		len += strlen(json->text);
 		if (buf)
@@ -65,11 +65,11 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		len += jcseriallen(json->first, buf, format);
 		break;
 
-	  case JSON_STRING:
+	  case JX_STRING:
 	  	if (buf)
 	  	        *buf++ = '"';
 	  	len = 2; /* Quotes around the string */
-                sublen = json_mbs_escape(buf, json->text, -1, '"', format);
+                sublen = jx_mbs_escape(buf, json->text, -1, '"', format);
                 len += sublen;
 	  	if (buf) {
 	  	        buf += sublen;
@@ -77,11 +77,11 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 	  	}
 		break;
 
-	  case JSON_NUMBER:
+	  case JX_NUMBER:
 		if (json->text[0] == '\0' && json->text[1] == 'i')
-			snprintf(tmp = number, sizeof number, "%i", JSON_INT(json));
+			snprintf(tmp = number, sizeof number, "%i", JX_INT(json));
 		else if (json->text[0] == '\0' && json->text[1] == 'd')
-			snprintf(tmp = number, sizeof number, "%.*g", format->digits, JSON_DOUBLE(json));
+			snprintf(tmp = number, sizeof number, "%.*g", format->digits, JX_DOUBLE(json));
 		else
 			tmp = json->text;
 		len += strlen(tmp);
@@ -91,7 +91,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		}
 		break;
 
-	  case JSON_BOOLEAN:
+	  case JX_BOOLEAN:
 		len += strlen(json->text); /* simple value */
 		if (buf) {
 			strcpy(buf, json->text);
@@ -99,7 +99,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 		}
 		break;
 
-	  case JSON_NULL:
+	  case JX_NULL:
 		len += 4;
 		if (buf) {
 			strcpy(buf, "null");
@@ -115,7 +115,7 @@ static size_t jcseriallen(json_t *json, char *buf, jsonformat_t *format)
 
 
 /* Return a dynamically-allocated JSON string for a given object.  */
-char *json_serialize(json_t *json, jsonformat_t *format)
+char *jx_serialize(jx_t *json, jxformat_t *format)
 {
 	size_t len;
 	char	*buf;
@@ -126,7 +126,7 @@ char *json_serialize(json_t *json, jsonformat_t *format)
 
 	/* If no format specified, use the default */
 	if (!format)
-		format = &json_format_default;
+		format = &jx_format_default;
 
 	/* Determine how much string we need */
 	len = jcseriallen(json, NULL, format);

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+     <link rel="stylesheet" type="text/css" href="../jx.css">
   </head>
   <body>
-    <h3>JsonCalc articles</h3>
+    <h3>jx articles</h3>
     <div class="sidebar">
       @@@
     </div>

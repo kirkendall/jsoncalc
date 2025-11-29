@@ -1,29 +1,29 @@
 #include <stdio.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 int main(int argc, char **argv)
 {
-	jsoncmd_t *jc;
-	jsoncmdout_t *result;
-	jsoncontext_t *context;
+	jxcmd_t *jc;
+	jxcmdout_t *result;
+	jxcontext_t *context;
 
 	/* Create a context */
-	context = json_context_std(NULL);
+	context = jx_context_std(NULL);
 
-	/* Parse the first command-line argument as a JsonCalc command */
-	jc = json_cmd_parse_string(argv[1]);
-	if (jc != JSON_CMD_ERROR) {
+	/* Parse the first command-line argument as a jx command */
+	jc = jx_cmd_parse_string(argv[1]);
+	if (jc != JX_CMD_ERROR) {
 		/* Run the command */
-		result = json_cmd_run(jc, &context);
+		result = jx_cmd_run(jc, &context);
 
 		/* If it returned anything, say what it returned */
 		if (result) {
 			if (result->ret) {
 				/* Returned value */
 				printf("returning ");
-				json_print(result->ret, NULL);
+				jx_print(result->ret, NULL);
 				putchar('\n');
-				json_free(result->ret);
+				jx_free(result->ret);
 			} else {
 				/* Returned error */
 				printf("%s\n", result->text);
@@ -31,10 +31,10 @@ int main(int argc, char **argv)
 		}
 
 		/* Clean up */
-		json_cmd_free(jc);
+		jx_cmd_free(jc);
 	}
 
 	/* Free the context */
-	json_context_free(context);
+	jx_context_free(context);
 	return 0;
 }

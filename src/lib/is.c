@@ -1,38 +1,38 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* Test whether a JSON value is true.  Everything is true except for the
  * symbols "false" and "null", the number 0, an empty string, or an empty
  * array/object.
  */
-int json_is_true(json_t *json)
+int jx_is_true(jx_t *json)
 {
         /* NULL pointer is false */
         if (!json)
 		return 0;
 
-        /* Otherwise it depents on type and value */
+        /* Otherwise it depends on type and value */
         switch (json->type) {
-          case JSON_BOOLEAN:
+          case JX_BOOLEAN:
                 return json->text[0] == 't';
-	  case JSON_NULL:
+	  case JX_NULL:
 		return 0;
-          case JSON_STRING:
+          case JX_STRING:
                 return json->text[0] != '\0';
-          case JSON_NUMBER:
+          case JX_NUMBER:
                 if (json->text[0] == '0')
 			return 0; /* 0 in string form */
 		if (json->text[0] != '\0')
 			return 1; /* non-0 in string form */
                 if (json->text[1] == 'i')
-			return JSON_INT(json) != 0; /* binary integer */
-                return JSON_DOUBLE(json) != 0.0; /* binary double */
-          case JSON_ARRAY:
-          case JSON_OBJECT:
+			return JX_INT(json) != 0; /* binary integer */
+                return JX_DOUBLE(json) != 0.0; /* binary double */
+          case JX_ARRAY:
+          case JX_OBJECT:
                 return json->first != NULL;
-          default: /* JSON_KEY? Shouldn't happen */
+          default: /* JX_KEY? Shouldn't happen */
                 return 0;
         }
 }
@@ -41,25 +41,25 @@ int json_is_true(json_t *json)
  * pointer is a NULL pointer (which generally means the value is absent
  * from an object) or the symbol "null".
  */
-int json_is_null(json_t *json)
+int jx_is_null(jx_t *json)
 {
-	return (!json || json->type == JSON_NULL);
+	return (!json || json->type == JX_NULL);
 }
 
 /* Test whether a JSON value is a NULL that represents an error. */
-int json_is_error(json_t *json)
+int jx_is_error(jx_t *json)
 {
-	return (json && json->type == JSON_NULL && json->text[0]);
+	return (json && json->type == JX_NULL && json->text[0]);
 }
 
 /* Test whether a JSON value is an array of objects */
-int json_is_table(json_t *json)
+int jx_is_table(jx_t *json)
 {
 	int	anydata;
-	json_t	*elem;
+	jx_t	*elem;
 
         /* Must be an array */
-        if (!json || json->type != JSON_ARRAY)
+        if (!json || json->type != JX_ARRAY)
                 return 0;
 
 	/* If we already have an answer in ->text[1], use it */
@@ -70,9 +70,9 @@ int json_is_table(json_t *json)
 
         /* Every element must be a non-empty object. */
         anydata = 0;
-        for (elem = json_first(json); elem; elem = json_next(elem)) {
-                if (elem->type != JSON_OBJECT) {
-			json_break(elem);
+        for (elem = jx_first(json); elem; elem = jx_next(elem)) {
+                if (elem->type != JX_OBJECT) {
+			jx_break(elem);
 			json->text[1] = 'n';
                         return 0;
 		}
@@ -90,29 +90,29 @@ int json_is_table(json_t *json)
 }
 
 
-/* This is a recursive function to help json_is_short().  It returns an
+/* This is a recursive function to help jx_is_short().  It returns an
  * estimate of the length, but stops counting once the "oneline" threshold
  * has been crossed.  This is only approximate!
  */
-static size_t shorthelper(json_t *json, size_t oneline)
+static size_t shorthelper(jx_t *json, size_t oneline)
 {
         size_t size = 0;
 
         while (json && size < oneline) {
 		/* Assume deferred arrays are long */
-		if (json_is_deferred_array(json))
+		if (jx_is_deferred_array(json))
 			return oneline;
 
                 /* Text and punctuation */
                 switch (json->type) {
-                  case JSON_STRING:
+                  case JX_STRING:
                         size += strlen(json->text) + 2; /* ignoring escapes */
                         break;
-                  case JSON_NUMBER:
+                  case JX_NUMBER:
 			if (*json->text)
 				size += strlen(json->text);
 			else if (json->text[1] == 'i') {
-				int i = JSON_INT(json);
+				int i = JX_INT(json);
 				if (i < 0) {
 					size++; /* for "-" */
 					i = -i;
@@ -129,13 +129,13 @@ static size_t shorthelper(json_t *json, size_t oneline)
 			else
 				size += 10;
 			break;
-                  case JSON_NULL:
+                  case JX_NULL:
 			size += 4;
 			break;
-                  case JSON_BOOLEAN:
+                  case JX_BOOLEAN:
                         size += strlen(json->text);
                         break;
-                  case JSON_KEY:
+                  case JX_KEY:
                         size += strlen(json->text) + 3;
 
 			/* Handle "first" recursively */
@@ -163,39 +163,39 @@ static size_t shorthelper(json_t *json, size_t oneline)
  * quick -- it stops counting once the non-short threshold has been crossed.
  * Also, it uses approximations so the "oneline" parameter is not precise.
  */
-int json_is_short(json_t *json, size_t oneline)
+int jx_is_short(jx_t *json, size_t oneline)
 {
         return shorthelper(json, oneline) < oneline;
 }
 
 /* Return 1 iff json looks like an ISO date string "YYYY-MM-DD" */
-int json_is_date(json_t *json)
+int jx_is_date(jx_t *json)
 {
-	if (!json || json->type != JSON_STRING || !json_str_date(json->text))
+	if (!json || json->type != JX_STRING || !jx_str_date(json->text))
 		return 0;
 	return 1;
 }
 
 /* Return 1 iff json looks like an ISO time string "hh:mm:ss" */
-int json_is_time(json_t *json)
+int jx_is_time(jx_t *json)
 {
-	if (!json || json->type != JSON_STRING || !json_str_time(json->text))
+	if (!json || json->type != JX_STRING || !jx_str_time(json->text))
 		return 0;
 	return 1;
 }
 
 /* Return 1 iff json looks like an ISO datetime string "YYYY-MM-DDThh:mm:ss" */
-int json_is_datetime(json_t *json)
+int jx_is_datetime(jx_t *json)
 {
-	if (!json || json->type != JSON_STRING || !json_str_datetime(json->text))
+	if (!json || json->type != JX_STRING || !jx_str_datetime(json->text))
 		return 0;
 	return 1;
 }
 
 /* Return 1 iff json looks like an ISO period string "PnYnMnWnDTnHnMnS" */
-int json_is_period(json_t *json)
+int jx_is_period(jx_t *json)
 {
-	if (!json || json->type != JSON_STRING || !json_str_period(json->text))
+	if (!json || json->type != JX_STRING || !jx_str_period(json->text))
 		return 0;
 	return 1;
 }

@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 
-/* This is a helper function for json_walk().  The big difference between this
- * and json_walk() is that this function checks siblings, but json_walk()
+/* This is a helper function for jx_walk().  The big difference between this
+ * and jx_walk() is that this function checks siblings, but jx_walk()
  * does not.
  */
-static int jcwalk(json_t *json, int (*callback)(json_t *, void *), void *data)
+static int jcwalk(jx_t *json, int (*callback)(jx_t *, void *), void *data)
 {
 	int	quit;
 
@@ -19,8 +19,8 @@ static int jcwalk(json_t *json, int (*callback)(json_t *, void *), void *data)
 			return quit;
 
 		/* If ->first is non-NULL, walk there too (recursively) */
-		if (json->type != JSON_NULL && json->first) { /* undeferred */
-			quit = json_walk(json->first, callback, data);
+		if (json->type != JX_NULL && json->first) { /* undeferred */
+			quit = jx_walk(json->first, callback, data);
 			if (quit != 0)
 				return quit;
 		}
@@ -33,7 +33,7 @@ static int jcwalk(json_t *json, int (*callback)(json_t *, void *), void *data)
 	return 0;
 }
 
-/* Visit each node in a json_t tree, calling a callback function for each one.
+/* Visit each node in a jx_t tree, calling a callback function for each one.
  * 
  * The nodes are visited in branch-first order, which is roughly the order
  * in which they'd be printed if converted back to JSON text.
@@ -42,10 +42,10 @@ static int jcwalk(json_t *json, int (*callback)(json_t *, void *), void *data)
  * to pass counters or whatever your callback needs.  The callback should
  * return 0 normally, or some other value to stop walking immediately.
  *
- * json_walk() itself returns 0 normally, or the value returned by the
+ * jx_walk() itself returns 0 normally, or the value returned by the
  * callback if the walk was cut short.
  */
-int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data)
+int jx_walk(jx_t *json, int (*callback)(jx_t *, void *), void *data)
 {
 	int quit;
 
@@ -58,8 +58,8 @@ int json_walk(json_t *json, int (*callback)(json_t *, void *), void *data)
 	if (quit != 0)
 		return quit;
 
-	/* For JSON_NULL, don't recurse. */
-	if (json->type == JSON_NULL)
+	/* For JX_NULL, don't recurse. */
+	if (json->type == JX_NULL)
 		return 0;
 
 	/* Do ->first and all of its children and siblings */

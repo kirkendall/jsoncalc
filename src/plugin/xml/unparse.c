@@ -5,7 +5,7 @@
  */
 
 /* The general idea here is: xml_unparse() sets up a state, and invokes
- * xml_unparse_helper() to generate all tags for the top-level of the json_t
+ * xml_unparse_helper() to generate all tags for the top-level of the jx_t
  * argument.  xml_unparse_helper() calls xml_unparse_tag() to generate each tag
  * with its arguments and (by recursively calling xml_unparse_helper()) contents.
  *
@@ -29,7 +29,7 @@ typedef struct {
 } xml_unparse_state_t;
 
 
-static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state);
+static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state);
 
 
 /* Add text, without converting special characters to entities */
@@ -65,18 +65,18 @@ static void xml_unparse_add_text(const char *str, xml_unparse_state_t *state)
 }
 
 /* Generate an opening tag with a given name and attributes. */
-static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *content, xml_unparse_state_t *state)
+static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content, xml_unparse_state_t *state)
 {
-	json_t	*attr;
+	jx_t	*attr;
 	char	*str, *entity;
 	char	*dup;
 
 	/* If attributes is a non-object or empty, ignore it */
-	if (attributes && (attributes->type != JSON_OBJECT || !attributes->first))
+	if (attributes && (attributes->type != JX_OBJECT || !attributes->first))
 		attributes = NULL;
 
 	/* If content is null, ignore it */
-	if (content && content->type == JSON_NULL)
+	if (content && content->type == JX_NULL)
 		content = NULL;
 
 	/* Add the indentation, if "pretty" */
@@ -100,9 +100,9 @@ static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *con
 			/* Skip the the value is false or null */
 			if (!attr->first)
 				continue;
-			if (attr->first->type == JSON_NULL)
+			if (attr->first->type == JX_NULL)
 				continue;
-			if (attr->first->type == JSON_BOOLEAN && attr->first->text[0] == 'f')
+			if (attr->first->type == JX_BOOLEAN && attr->first->text[0] == 'f')
 				continue;
 
 			/* Add the name of the attribute */
@@ -110,7 +110,7 @@ static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *con
 			xml_unparse_add(attr->text, state);
 
 			/* If the value is true then we're done */
-			if (attr->first->type == JSON_BOOLEAN)
+			if (attr->first->type == JX_BOOLEAN)
 				continue;
 
 			/* Add =" before the value */
@@ -120,11 +120,11 @@ static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *con
 			 * that's stored in string form), this is easy but
 			 * other values must be converted.
 			 */
-			if (attr->first->type == JSON_STRING\
-			 || (attr->first->type == JSON_NUMBER && attr->first->text[0]))
+			if (attr->first->type == JX_STRING\
+			 || (attr->first->type == JX_NUMBER && attr->first->text[0]))
 				xml_unparse_add_text(attr->first->text, state);
 			else {
-				str = json_serialize(attr->first, NULL);
+				str = jx_serialize(attr->first, NULL);
 				xml_unparse_add_text(str, state);
 				free(str);
 			}
@@ -140,11 +140,11 @@ static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *con
 		 * content is an object (embedded tags) then add a "\n"
 		 */
 		xml_unparse_add(">", state);
-		if (state->pretty && content->type == JSON_OBJECT) 
+		if (state->pretty && content->type == JX_OBJECT) 
 			xml_unparse_add(state->crlf, state);
 
 		dup = NULL;
-		if (content->type == JSON_OBJECT) {
+		if (content->type == JX_OBJECT) {
 			/* Generate the content, using a higher indentation
 			 * level.  If the tag name resides in state->namebuf
 			 * then make a local copy of it because state->namebuf
@@ -168,12 +168,12 @@ static void xml_unparse_tag(const char *tagname, json_t *attributes, json_t *con
 			}
 		} else {
 			/* Simple value.  Add the string form of it */
-			if (content->type == JSON_STRING
-			 || (content->type == JSON_NUMBER && content->text[0])
-			 || content->type == JSON_BOOLEAN)
+			if (content->type == JX_STRING
+			 || (content->type == JX_NUMBER && content->text[0])
+			 || content->type == JX_BOOLEAN)
 				xml_unparse_add_text(content->text, state);
 			else {
-				str = json_serialize(content, NULL);
+				str = jx_serialize(content, NULL);
 				xml_unparse_add_text(str, state);
 				free(str);
 			}
@@ -228,17 +228,17 @@ static void xml_unparse_name(const char *name, xml_unparse_state_t *state, int s
 		strcat(state->namebuf, state->suffix);
 }
 
-/* This file converts a json_t object to an XML string.  Returns the size of
+/* This file converts a jx_t object to an XML string.  Returns the size of
  * the string in bytes, not counting the terminating '\0' byte.  The string
  * itself is stored at "buf", but you can also pass a null "buf" to find the
  * length without actually generating it.
  */
-static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
+static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 {
 	size_t	len, piece_len;
-	json_t	*mem, *attr, *mscan, *ascan;
+	jx_t	*mem, *attr, *mscan, *ascan;
 
-	assert(data->type == JSON_OBJECT);
+	assert(data->type == JX_OBJECT);
 
 	/* For each member of the object... */
 	for (mem = data->first; mem; mem = mem->next) {
@@ -250,18 +250,18 @@ static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
 			 */
 			if (!mem->first)
 				continue;
-			if (mem->first->type == JSON_STRING) {
+			if (mem->first->type == JX_STRING) {
 				xml_unparse_add("<", state);
 				xml_unparse_add(mem->text, state);
 				xml_unparse_add(" ", state);
 				xml_unparse_add(mem->first->text, state);
 				xml_unparse_add(">", state);
 				xml_unparse_add(state->crlf, state);
-			} else if (mem->first->type == JSON_ARRAY) {
-				for (ascan = json_first(mem->first);
+			} else if (mem->first->type == JX_ARRAY) {
+				for (ascan = jx_first(mem->first);
 				     ascan;
-				     ascan = json_next(ascan)) {
-					if (ascan->type != JSON_STRING)
+				     ascan = jx_next(ascan)) {
+					if (ascan->type != JX_STRING)
 						continue;
 					xml_unparse_add("<", state);
 					xml_unparse_add(mem->text, state);
@@ -275,10 +275,10 @@ static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
 		}
 
 		/* Is it an attribute bundle? */
-		if ((mem->first->type == JSON_OBJECT || mem->first->type == JSON_ARRAY) && xml_is_attributes(mem->text, state)) {
+		if ((mem->first->type == JX_OBJECT || mem->first->type == JX_ARRAY) && xml_is_attributes(mem->text, state)) {
 			/* If there's a non-attribute version, let that handle it */
 			xml_unparse_name(mem->text, state, -1);
-			if (json_by_key(data, state->namebuf))
+			if (jx_by_key(data, state->namebuf))
 				continue;
 
 			/* Okay, attributes are all we've got.  Generate an
@@ -292,23 +292,23 @@ static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
 
 		/* Look for attributes */
 		xml_unparse_name(mem->text, state, 1);
-		attr = json_by_key(data, state->namebuf);
+		attr = jx_by_key(data, state->namebuf);
 
 		/* The value could be an array, or a single item. */
-		if (mem->first->type == JSON_ARRAY) {
+		if (mem->first->type == JX_ARRAY) {
 			/* attr, if used, should also be an array */
-			if (attr && attr->type != JSON_ARRAY)
+			if (attr && attr->type != JX_ARRAY)
 				attr = NULL;
 
 			/* Loop over the array, adding tags */
-			for (mscan = json_first(mem->first), ascan = json_first(attr);
+			for (mscan = jx_first(mem->first), ascan = jx_first(attr);
 			     mscan;
-			     mscan = json_next(mscan), ascan = json_next(ascan)) {
+			     mscan = jx_next(mscan), ascan = jx_next(ascan)) {
 				xml_unparse_tag(mem->text, ascan, mscan, state);
 			}
 		} else {
 			/* Single value. attr, if used, should also be single */
-			if (attr && attr->type == JSON_ARRAY)
+			if (attr && attr->type == JX_ARRAY)
 				attr = NULL;
 
 			/* Add the tag */
@@ -317,18 +317,18 @@ static void xml_unparse_helper(json_t *data, xml_unparse_state_t *state)
 	}
 }
 
-static size_t xml_unparse(char *buf, json_t *data)
+static size_t xml_unparse(char *buf, jx_t *data)
 {
 	xml_unparse_state_t state;
 
 	/* Set up the state */
 	state.buffer = buf;
 	state.len = 0;
-	state.pretty = json_config_get_boolean(NULL, "pretty");
-	state.tab = json_config_get_int(NULL, "tab");
+	state.pretty = jx_config_get_boolean(NULL, "pretty");
+	state.tab = jx_config_get_int(NULL, "tab");
 	state.indent = 0;
-	state.crlf = json_config_get_boolean("plugin.xml", "generateCRLF") ? "\r\n" : "\n";
-	state.suffix = json_config_get_text("plugin.xml", "attributeSuffix");
+	state.crlf = jx_config_get_boolean("plugin.xml", "generateCRLF") ? "\r\n" : "\n";
+	state.suffix = jx_config_get_text("plugin.xml", "attributeSuffix");
 	state.suffixlen = strlen(state.suffix);
 	state.namesize = 128;
 	state.namebuf = (char *)malloc(state.namesize);

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-     <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
+     <link rel="stylesheet" type="text/css" href="../jx.css">
   </head>
   <body>
     <h3>JsonCalc Plugins</h3>

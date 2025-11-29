@@ -20,7 +20,7 @@ do
 
 		# Extract info from the file
 		description=$(sed -n 's/.*<meta name="description" content=".* - \([^"]*\)".*/\1/p' $i)
-		sections=$(sed -n 's/.*<meta name="keywords" content="\(.*\), jsoncalc[^"]*".*/\1/p' $i | tr -d ,)
+		sections=$(sed -n 's/.*<meta name="keywords" content="\(.*\), jx[^"]*".*/\1/p' $i | tr -d ,)
 		functions=$(sed -n 's/.*<meta name="keywords" content=".*, function reference, \([^"]*\)".*/\1/p' $i | tr -d ,)
 
 		# For plugins' functions, use the plugin name as a section

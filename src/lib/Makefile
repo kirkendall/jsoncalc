@@ -1,6 +1,6 @@
 LIB=	../../lib
 INCLUDE=../../include
-HDRS=	$(INCLUDE)/jsoncalc.h $(INCLUDE)/version.h
+HDRS=	$(INCLUDE)/jx.h $(INCLUDE)/version.h
 LIBS=	-ldl
 LIBSRC=	by.c blob.c calc.c calcfunc.c calcparse.c compare.c config.c context.c \
 	copy.c cmd.c datetime.c debug.c defer.c equal.c explain.c file.c \
@@ -15,18 +15,18 @@ STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH
 #CC=gcc -g -pg
 #CC=gcc -g -O
 CC=gcc -g -fpic -Wall
-CFLAGS=-Wall -DJSON_DEBUG_MEMORY -I$(INCLUDE)
+CFLAGS=-Wall -DJX_DEBUG_MEMORY -I$(INCLUDE)
 
-all: $(LIB)/libjsoncalc.so $(LIB)/libjsoncalc.a
+all: $(LIB)/libjx.so $(LIB)/libjx.a
 
 $(LIBOBJ): $(HDRS)
 
-$(LIB)/libjsoncalc.so: $(LIBOBJ) plugin.o
-	$(CC) $(LIBOBJ) plugin.o $(LIBS) -shared -o $(LIB)/libjsoncalc.so
+$(LIB)/libjx.so: $(LIBOBJ) plugin.o
+	$(CC) $(LIBOBJ) plugin.o $(LIBS) -shared -o $(LIB)/libjx.so
 
-$(LIB)/libjsoncalc.a: $(LIBOBJ) pluginstatic.o
-	$(RM) $(LIB)/libjsoncalc.a
-	ar q $(LIB)/libjsoncalc.a $(LIBOBJ) pluginstatic.o
+$(LIB)/libjx.a: $(LIBOBJ) pluginstatic.o
+	$(RM) $(LIB)/libjx.a
+	ar q $(LIB)/libjx.a $(LIBOBJ) pluginstatic.o
 
 pluginstatic.o: plugin.c
 	$(CC) $(CFLAGS) $(STATIC) -c plugin.c -o pluginstatic.o
@@ -35,8 +35,8 @@ clean:
 	$(RM) $(LIBOBJ)
 	$(RM) plugin.o
 	$(RM) pluginstatic.o
-	$(RM) $(LIB)/libjsoncalc.so
-	$(RM) $(LIB)/libjsoncalc.a
+	$(RM) $(LIB)/libjx.so
+	$(RM) $(LIB)/libjx.a
 
 tags: $(LIBSRC)
 	ctags $(LIBSRC)

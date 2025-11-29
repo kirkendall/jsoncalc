@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jsoncalc.h>
+#include <jx.h>
 #include <assert.h>
 
 /* This file defines functions useful for processing arrays, especially
@@ -12,10 +12,10 @@
  * can also safely call this on objects to iterate over the members, but
  * objects are never deferred.
  */
-#ifdef JSON_DEBUG_MEMORY
-# undef json_first
+#ifdef JX_DEBUG_MEMORY
+# undef jx_first
 #endif
-json_t *json_first(json_t *arr)
+jx_t *jx_first(jx_t *arr)
 {
 	/* Defend against NULL */
 	if (!arr)
@@ -26,7 +26,7 @@ json_t *json_first(json_t *arr)
 	 * This is handy when processing data converted from XML, since XML
 	 * doesn't really have arrays.
 	 */
-	if (arr->type != JSON_ARRAY) {
+	if (arr->type != JX_ARRAY) {
 		/* If a non-array is passed, and it isn't part of an array,
 		 * then * return it as though it was the only element in a
 		 * one-element array.  Else NULL.
@@ -37,143 +37,143 @@ json_t *json_first(json_t *arr)
 	}
 
 	/* Non-deferred arrays are easy */
-	if (!json_is_deferred_array(arr))
+	if (!jx_is_deferred_array(arr))
 		return arr->first;
 
 	/* Call the deferred array's "first" function */
-	return (*((jsondef_t *)(arr->first))->fns->first)(arr);
+	return (*((jxdef_t *)(arr->first))->fns->first)(arr);
 }
 
 /* Return the next element of an array, or NULL if there are no more elements.
  * You can also safely call this on object members to interate over the members,
  * but objects are never deferred.
  */
-json_t *json_next(json_t *elem)
+jx_t *jx_next(jx_t *elem)
 {
-	json_t *result;
+	jx_t *result;
 
 	/* Defend against NULL */
 	if (!elem)
 		return NULL;
 
 	/* Non-deferred arrays are easy */
-	if (!json_is_deferred_element(elem))
+	if (!jx_is_deferred_element(elem))
 		return elem->next; /* undeferred */
 
 	/* Call the ->next function */
-	result = (*((jsondef_t *)(elem->next))->fns->next)(elem);
+	result = (*((jxdef_t *)(elem->next))->fns->next)(elem);
 	if (!result)
-		json_break(elem);
+		jx_break(elem);
 	return result;
 }
 
 /* Terminate a first/next loop prematurely.  This only matters when scanning
  * a deferred array.
  */
-void json_break(json_t *elem)
+void jx_break(jx_t *elem)
 {
-	jsondef_t *def;
+	jxdef_t *def;
 
 	/* If not deferred, do nothing */
-	if (!json_is_deferred_element(elem))
+	if (!jx_is_deferred_element(elem))
 		return;
 
-	/* Free the JSON_DEFER node.  If it requires special freeing,
+	/* Free the JX_DEFER node.  If it requires special freeing,
 	 * do that first.
 	 */
-	def = (jsondef_t *)elem->next; /* deferred */
+	def = (jxdef_t *)elem->next; /* deferred */
 	if (def->fns->free)
 		(*def->fns->free)(elem);
-	json_free(elem->next);
+	jx_free(elem->next);
 	elem->next = NULL;
 
 	/* Free the element itself */
-	json_free(elem);
+	jx_free(elem);
 }
 
 /* Test whether the current element is the last element in an array.  For
  * deferred arrays, this will NOT invalidate elem.
  */
-int json_is_last(const json_t *elem)
+int jx_is_last(const jx_t *elem)
 {
-	jsondef_t	*def;
+	jxdef_t	*def;
 
 	/* If not deferred, this is easy */
-	if (!json_is_deferred_element(elem))
+	if (!jx_is_deferred_element(elem))
 		return elem->next ? 0 : 1; /* undeferred */
 
 	/* Otherwise use the deferred type's islast() function */
-	def = (jsondef_t *)elem->next;
+	def = (jxdef_t *)elem->next;
 	return (*def->fns->islast)(elem);
 }
 
-/* NOTE: The json_is_deferred_array() and json_is_deferred_element() functions
+/* NOTE: The jx_is_deferred_array() and jx_is_deferred_element() functions
  * both test whether deferred array logic is necessary.  It's tempting to fold
- * these two functions together as a single json_is_deferred() function but
+ * these two functions together as a single jx_is_deferred() function but
  * that won't work for nested arrays -- you could have a deferred array of
  * undeferred arrays, and need to be able to classify a nested array separately
  * as deferred (element) and undeferred (array).
  */
 
 /* Test whether a given array is deferred. */
-int json_is_deferred_array(const json_t *arr)
+int jx_is_deferred_array(const jx_t *arr)
 {
 	if (arr
-	 && arr->type == JSON_ARRAY
+	 && arr->type == JX_ARRAY
 	 && arr->first
-	 && arr->first->type == JSON_DEFER)
+	 && arr->first->type == JX_DEFER)
 		return 1;
 	return 0;
 }
 /* Test whether a given item is an element of a deferred array. */
-int json_is_deferred_element(const json_t *elem)
+int jx_is_deferred_element(const jx_t *elem)
 {
-	if (elem && elem->next && elem->next->type == JSON_DEFER) /* undeferred */
+	if (elem && elem->next && elem->next->type == JX_DEFER) /* undeferred */
 		return 1;
 	return 0;
 }
 
 /* Convert a deferred file to undeferred.  The conversion is done in-place,
  * meaning the same "arr" node is used for the array, and arr->first will
- * simply point to the actual first element instead of a JSON_DEFER node.
+ * simply point to the actual first element instead of a JX_DEFER node.
  */
-void json_undefer(json_t *arr)
+void jx_undefer(jx_t *arr)
 {
-	json_t	*undeferred, *scan;
+	jx_t	*undeferred, *scan;
 
 	/* If already undeferred, just leave it */
-	if (!json_is_deferred_array(arr))
+	if (!jx_is_deferred_array(arr))
 		return;
 
 	/* Copy the elements into a new array */
-	undeferred = json_array();
-	for (scan = json_first(arr); scan; scan = json_next(scan))
-		json_append(undeferred, json_copy(scan));
+	undeferred = jx_array();
+	for (scan = jx_first(arr); scan; scan = jx_next(scan))
+		jx_append(undeferred, jx_copy(scan));
 
-	/* Replace the JSON_DEFER node with the new array's contents */
-	json_free(arr->first);
+	/* Replace the JX_DEFER node with the new array's contents */
+	jx_free(arr->first);
 	arr->first = undeferred->first;
 
 	/* Clean up */
 	undeferred->first = NULL;
-	json_free(undeferred);
+	jx_free(undeferred);
 }
 
 /******************************************************************************/
 /* The following implement the "..." operator as a deferred array. */
 
 typedef struct {
-	jsondef_t basic;/* normal stuff */
+	jxdef_t basic;/* normal stuff */
 	int	from;	/* starting integer */
 	int	to;	/* ending integer */
 } jell_t;
 
-static json_t *jell_first(json_t *defarray);
-static json_t *jell_next(json_t *defelem);
-static int jell_islast(const json_t *defelem);
-static json_t *jell_byindex(json_t *defarray, int idx);
+static jx_t *jell_first(jx_t *defarray);
+static jx_t *jell_next(jx_t *defelem);
+static int jell_islast(const jx_t *defelem);
+static jx_t *jell_byindex(jx_t *defarray, int idx);
 
-static jsondeffns_t jell_fns = {
+static jxdeffns_t jell_fns = {
 	/* size */	sizeof(jell_t),
 	/* desc */	"Ellipsis",
 	/* first */	jell_first,
@@ -185,19 +185,19 @@ static jsondeffns_t jell_fns = {
 };
 
 /* Return the first element */
-static json_t *jell_first(json_t *defarray)
+static jx_t *jell_first(jx_t *defarray)
 {
-	json_t *result;
+	jx_t *result;
 	jell_t *jell;
 
-	assert(defarray->first->type == JSON_DEFER);
+	assert(defarray->first->type == JX_DEFER);
 	jell = (jell_t *)defarray->first;
 
 	/* Allocate an array for the first element */
-	result = json_from_int(jell->from);
+	result = jx_from_int(jell->from);
 
-	/* Because this is a deferred element, make it's ->next be JSON_DEFER */
-	result->next = json_defer(&jell_fns);
+	/* Because this is a deferred element, make it's ->next be JX_DEFER */
+	result->next = jx_defer(&jell_fns);
 	((jell_t *)result->next)->from = ((jell_t *)defarray->first)->from;
 	((jell_t *)result->next)->to = ((jell_t *)defarray->first)->to;
 
@@ -205,45 +205,45 @@ static json_t *jell_first(json_t *defarray)
 }
 
 /* Move to the next element */
-static json_t *jell_next(json_t *defelem)
+static jx_t *jell_next(jx_t *defelem)
 {
-	assert(defelem->next->type == JSON_DEFER);
+	assert(defelem->next->type == JX_DEFER);
 	assert(defelem->text[1] == 'i');
 
 	/* Increment the value */
-	JSON_INT(defelem) ++;
+	JX_INT(defelem) ++;
 
 	/* If it exceeds "to" then free it and return NULL */
-	if (JSON_INT(defelem) > ((jell_t *)defelem->next)->to)
+	if (JX_INT(defelem) > ((jell_t *)defelem->next)->to)
 		return NULL;
 
 	return defelem;
 }
 
 /* Test whether the current element is the last element */
-static int jell_islast(const json_t *defelem)
+static int jell_islast(const jx_t *defelem)
 {
-	assert(defelem->next->type == JSON_DEFER);
+	assert(defelem->next->type == JX_DEFER);
 	assert(defelem->text[1] == 'i');
 
 	/* If it exceeds "to" then free it and return NULL */
-	return (JSON_INT(defelem) >= ((jell_t *)defelem->next)->to);
+	return (JX_INT(defelem) >= ((jell_t *)defelem->next)->to);
 }
 
-static json_t *jell_byindex(json_t *defarray, int idx)
+static jx_t *jell_byindex(jx_t *defarray, int idx)
 {
 	jell_t	*jell, *jell2;
-	json_t	*result;
-	assert(defarray->type == JSON_ARRAY && defarray->first && defarray->first->type == JSON_DEFER);
+	jx_t	*result;
+	assert(defarray->type == JX_ARRAY && defarray->first && defarray->first->type == JX_DEFER);
 
 	/* If outside of array bounds, return NULL */
 	jell = (jell_t *)(defarray->first);
-	if (idx < 0 || idx >= json_length(defarray))
+	if (idx < 0 || idx >= jx_length(defarray))
 		return NULL;
 
-	/* Allocate a new json_t to store the element.  Mark it as deferred */
-	result = json_from_int(jell->from + idx);
-	result->next = json_defer(&jell_fns);
+	/* Allocate a new jx_t to store the element.  Mark it as deferred */
+	result = jx_from_int(jell->from + idx);
+	result->next = jx_defer(&jell_fns);
 	jell2 = (jell_t *)(defarray->first);
 	jell2->from = jell->from;
 	jell2->to = jell->to;
@@ -254,19 +254,19 @@ static json_t *jell_byindex(json_t *defarray, int idx)
 
 
 /* Allocate a deferred array for a range of integers */
-json_t *json_defer_ellipsis(int from, int to)
+jx_t *jx_defer_ellipsis(int from, int to)
 {
-	json_t	*result;
+	jx_t	*result;
 
 	/* Allocate a normal array */
-	result = json_array();
+	result = jx_array();
 
 	/* If from > to then we're done!  Nothing to defer */
 	if (from > to)
 		return result;
 
 	/* Allocate a jell_t as ->first */
-	result->first = json_defer(&jell_fns);
+	result->first = jx_defer(&jell_fns);
 
 	/* Store the integer range */
 	((jell_t *)result->first)->from = from;
@@ -274,7 +274,7 @@ json_t *json_defer_ellipsis(int from, int to)
 
 	/* Store the size */
 	result->text[1] = 'n'; /* not a table, just an array of integers */
-	JSON_ARRAY_LENGTH(result) = to - from + 1;
+	JX_ARRAY_LENGTH(result) = to - from + 1;
 
 	return result;
 }

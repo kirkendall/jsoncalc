@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Objects</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc - Objects">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx - Objects">
     <meta name="keywords" content="object">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -21,9 +21,9 @@
     This is why we're talking about "object generators" instead of
     "object literals".
     <p>
-    JsonCalc also allows you to use ":??" instead of ":" to conditionally
+    jx also allows you to use ":??" instead of ":" to conditionally
     add/assign a member only if the value is not null.
-    If you're using a JsonCalc script to assemble data from another source,
+    If you're using a jx script to assemble data from another source,
     this makes it easy to add members to the result only if we have a value
     to stuff into that member.
     <p>
@@ -99,14 +99,14 @@
       <ul>
 
         <li>It's worth pointing out that any JSON object is also a
-            syntactically-correct JsonCalc object generator.
-            You can copy any chunk of JSON data into a JsonCalc script and
+            syntactically-correct jx object generator.
+            You can copy any chunk of JSON data into a jx script and
             have it work as intended.
 
-        <li>Although JsonCalc is case-insensitive, you can still define objects
+        <li>Although jx is case-insensitive, you can still define objects
             with members whose names differ only in case.
             When searching for a member within an object,
-            JsonCalc first tries to find it using a case-sensitive search.
+            jx first tries to find it using a case-sensitive search.
             If that fails, then it tries a case-insensitive search.
             <div class="example">
 	      <kbd>var obj = {"key":"metal thing", "Key":"Francis Scott"}</kbd>
@@ -123,7 +123,7 @@
 
         <li>JavaScript's object notation doesn't allow you to omit the
             key-colon.
-            That's purely a JsonCalc feature.
+            That's purely a jx feature.
 
 	<li>In addition to the
 	    JavaScript-like <var>key</var>:</var>value</var> notation,

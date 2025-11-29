@@ -14,8 +14,8 @@ table.layout {
 	background-image: linear-gradient(45deg, white, transparent);
 }
 #content {
-	height: calc(97vh - 4em);
-	max-height: calc(97vh - 4em);
+	height: calc(97vh - 5em);
+	max-height: calc(97vh - 5em);
 	overflow: auto;
 }
 a, a:visited {

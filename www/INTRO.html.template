@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JsonCalc</title>
-    <link rel="stylesheet" type="text/css" href="jsoncalc.css">
-    <meta name="description" content="jsoncalc introduction">
-    <meta name="keywords" content="jsoncalc, introduction, intro, welcome">
+    <title>jx</title>
+    <link rel="stylesheet" type="text/css" href="jx.css">
+    <meta name="description" content="jx introduction">
+    <meta name="keywords" content="jx, introduction, intro, welcome">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script>
@@ -31,16 +31,16 @@
     </script>
   </head>
   <body>
-    <h1 style="display:none">JsonCalc</h1>
+    <h1 style="display:none">jx</h1>
     <div id="mainpanels">
 
       <div>
-        <h2>What is JsonCalc?</h2>
+        <h2>What is jx?</h2>
         <a target="_PARENT" href="index.html?main=shell">Examples in a shell script</a>
         <a target="_PARENT" href="index.html?main=interactive">Examples of interactive use</a>
-        <a target="_PARENT" href="index.html?main=download">How to download/install JsonCalc</a>
+        <a target="_PARENT" href="index.html?main=download">How to download/install jx</a>
         <p>
-        <strong>JsonCalc</strong> is a C library for manipulating JSON data,
+        <strong>jx</strong> is a C library for manipulating JSON data,
         and a program that uses that library.  The program is intended to be
         used for exploring JSON data, or converting it to other formats.
         <p>
@@ -49,7 +49,7 @@
         and SQL.  There are also some unique added features but mostly it's
         intended to be close enough to JavaScript and SQL that if you're
         familiar with those two languages then you can be productive with
-        <strong>JsonCalc</strong> right away.
+        <strong>jx</strong> right away.
       </div>
 
       <div>
@@ -65,12 +65,12 @@
         <a target="_PARENT" href="index.html?f">Function reference</a>
         <a target="_PARENT" href="index.html?cmd">Command reference</a>
         <p>
-        <strong>JsonCalc</strong> began as an interactive data exploration tool,
+        <strong>jx</strong> began as an interactive data exploration tool,
         then it acquired functions and variables as ways to easily repeat common
         actions.
         From there, it grew just a bit more to become a useful scripting tool.
         <p>
-        Even if you only use <tt>JsonCalc</tt> interactively, all of the
+        Even if you only use <tt>jx</tt> interactively, all of the
         scripting features are available.
         You might as well know about them.
       </div>

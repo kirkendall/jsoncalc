@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Assignment</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc Assignment - Store a value in a variable">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx Assignment - Store a value in a variable">
     <meta name="keywords" content="command, assignment, command reference, lvalue=expr">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -28,7 +28,7 @@
       If the <var>lvalue</var> contains an array before the assignment,
       then you can append an item to the array by placing an empty set
       of square brackets at the end of the <var>lvalue</var>.
-      This is intended to make up for the fact that JsonCalc doesn't
+      This is intended to make up for the fact that jx doesn't
       have an <var>array</var>.<tt>push(</tt><var>expr</var><tt>)</tt>
       function.
       <p>
@@ -109,16 +109,16 @@
 	<li>JavaScript (and many other C-derived languages) supports many
 	    assignments that combine another operator and assignment, such as
 	    <tt>+=</tt> to add <var>expr</var> to <var>lvalue</var>.
-	    At present, JsonCalc <em>does not</em> have those.
+	    At present, jx <em>does not</em> have those.
 
 	<li>JavaScript has a <tt>??=</tt> operator which is sort of the
-	    opposite of JsonCalc's <tt>=??</tt> operator.
+	    opposite of jx's <tt>=??</tt> operator.
 	    It only performs an assignment if the variable's old value is
 	    <tt>null</tt> or <tt>undefined</tt>.
-	    JsonCalc doesn't have <tt>??=</tt> and JavaScript doesn't have
+	    jx doesn't have <tt>??=</tt> and JavaScript doesn't have
 	    <tt>=??</tt>.
 
-	<li>In object generators, JsonCalc also has a <tt>:??</tt> notation
+	<li>In object generators, jx also has a <tt>:??</tt> notation
 	    for adding a member to the object only if its value would be
 	    non-NULL.
 	    Both <tt>=??</tt> and <tt>:??</tt> are meant to relate to the

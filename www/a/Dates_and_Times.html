@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>Dates and Times</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc Dates and Times">
-    <meta name="keywords" content="string, object, datetime, jsoncalc, article, Dates and Times">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx Dates and Times">
+    <meta name="keywords" content="string, object, datetime, jx, article, Dates and Times">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -22,7 +22,7 @@
     Months aren't always 31 days.
     Years aren't always 365 days.
     Time zones.
-    Having said that, though, JsonCalc's date and time system is about as
+    Having said that, though, jx's date and time system is about as
     easy to use as you could hope for.
     It is simple and consistent &mdash; a clean interface to messy data.
 
@@ -66,7 +66,7 @@
       <kbd>typeOf("2025-01-01", true)</kbd>
       <samp>"date"</samp>
       This shows that dates are strings, but if you pass an extra
-      <tt>true</tt> then JsonCalc can distinguish date strings from other
+      <tt>true</tt> then jx can distinguish date strings from other
       strings.
       The same is true for other times, datetimes, and periods.
     </div>
@@ -204,7 +204,7 @@
     "years", "months", "days", "hours", "minutes", or "seconds"
     and may be abbreviated &mdash; most of them to just the first letter.
     For months use "mo" and for minutes use "mi".
-    If you just say "m" then JsonCalc will attempt to guess which of those
+    If you just say "m" then jx will attempt to guess which of those
     two units you wanted.
     <p>
     Passing just a unit name (without a replacement number value for it)
@@ -283,7 +283,7 @@
     since the start of 1970.
     This is the Unix standard <tt>time_t</tt> format,
     and is used for file access timestamps and the like.
-    JsonCalc's <tt>now</tt> variable returns a <tt>time_t</tt> value.
+    jx's <tt>now</tt> variable returns a <tt>time_t</tt> value.
     <div class="example">
       <kbd>now.date(true)</kbd>
       <samp>{"year":2024,"month":12,"day":25}</samp>
@@ -315,10 +315,10 @@
     </div>
 
     <h2>Parsing Other Date/Time Formats</h2>
-    JsonCalc is case-insensitive when parsing periods.
+    jx is case-insensitive when parsing periods.
     The "T" separateing date from time in a datetime can also be lowercase "t".
     <p>
-    JsonCalc can also parse RFC 3335 datetimes,
+    jx can also parse RFC 3335 datetimes,
     which look like ISO 8601 datetimes except the "T" is replaced with a space.
     This datetime format is used by MySQL.
     It can also parse RFC 5322 datetimes, which look like "Wed, 25 Dec 2024 18:10:21 -0800" and are used in email headers.
@@ -338,7 +338,7 @@
     some other format afterward.
 
     <h2>Generating Other Date/Time Formats</h2>
-    When generating a datetime string, JsonCalc will always use an ISO 8601
+    When generating a datetime string, jx will always use an ISO 8601
     string format by default.
     <p>
     You can generate a string value in a locale-specific format by passing

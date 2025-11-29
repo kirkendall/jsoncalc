@@ -1,15 +1,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* Elements with the same value in a sort field are collected in a linked list.
  * "arraybuf" is the head of that list, and "value" points to the member that
  * we're sorting by.
  */
 typedef struct {
-	json_t	arraybuf;
-	json_t	*value;
+	jx_t	arraybuf;
+	jx_t	*value;
 	double	dvalue;
 } bucket_t;
 
@@ -28,17 +28,17 @@ static int cmpascending(const void *v1, const void *v2)
 		return 0;
 
 	/* Booleans before numbers or strings */
-	if (b1->value->type == JSON_BOOLEAN && b2->value->type == JSON_BOOLEAN)
+	if (b1->value->type == JX_BOOLEAN && b2->value->type == JX_BOOLEAN)
 		return strcmp(b1->value->text, b2->value->text);
-	if (b1->value->type == JSON_BOOLEAN || b2->value->type == JSON_BOOLEAN)
+	if (b1->value->type == JX_BOOLEAN || b2->value->type == JX_BOOLEAN)
 		return -1;
 
 	/* Strings before numbers */
-	if (b1->value->type == JSON_STRING && b2->value->type == JSON_STRING)
-		return json_mbs_casecmp(b1->value->text, b2->value->text);
-	if (b1->value->type == JSON_STRING)
+	if (b1->value->type == JX_STRING && b2->value->type == JX_STRING)
+		return jx_mbs_casecmp(b1->value->text, b2->value->text);
+	if (b1->value->type == JX_STRING)
 		return -1;
-	if (b2->value->type == JSON_STRING)
+	if (b2->value->type == JX_STRING)
 		return 1;
 
 	/* Numbers */
@@ -59,17 +59,17 @@ static int cmpdescending(const void *v1, const void *v2)
 /* This helper function does the real sorting, after parameters have been
  * checked.
  */
-static void jcsort(json_t *array, json_t *orderby, int grouping)
+static void jcsort(jx_t *array, jx_t *orderby, int grouping)
 {
-	json_t	*elem, *value;
+	jx_t	*elem, *value;
 	int	descending;
 	int	nbuckets, used, b, b2;
 	bucket_t *bucket;
 	double	dvalue;
 
 	descending = 0;
-	if (orderby && orderby->type == JSON_BOOLEAN) {
-		descending = json_is_true(orderby);
+	if (orderby && orderby->type == JX_BOOLEAN) {
+		descending = jx_is_true(orderby);
 		orderby = orderby->next; /* undeferred */
 	}
 
@@ -84,9 +84,9 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 		 */
 		if (grouping && array->first) {
 			elem = array->first;
-			array->first = json_array();
-			json_append(array->first, elem);
-			JSON_END_POINTER(array) = array->first;
+			array->first = jx_array();
+			jx_append(array->first, elem);
+			JX_END_POINTER(array) = array->first;
 		}
 		return;
 	}
@@ -100,7 +100,7 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	 */
 	while (array->first) {
 		/* If user aborted, then quit */
-		if (json_interrupt)
+		if (jx_interrupt)
 			return;
 
 		/* Pull the element out of the array */
@@ -109,9 +109,9 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 		elem->next = NULL; /* undeferred */
 
 		/* Fetch its sort value. */
-		value = json_by_expr(elem, orderby->text, NULL);
-		if (value && value->type == JSON_NUMBER)
-			dvalue = json_double(value);
+		value = jx_by_expr(elem, orderby->text, NULL);
+		if (value && value->type == JX_NUMBER)
+			dvalue = jx_double(value);
 
 		/* Find a bucket for this value. */
 		for (b = 0; b < used; b++) {
@@ -119,13 +119,13 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 				break;
 			else if (value
 			      && bucket[b].value
-			      && (value->type == JSON_STRING || value->type == JSON_BOOLEAN)
+			      && (value->type == JX_STRING || value->type == JX_BOOLEAN)
 			      && bucket[b].value->type == value->type) {
 				if (!strcmp(value->text, bucket[b].value->text))
 					break;
 			} else if (value
-			      && value->type == JSON_NUMBER
-			      && bucket[b].value->type == JSON_NUMBER) {
+			      && value->type == JX_NUMBER
+			      && bucket[b].value->type == JX_NUMBER) {
 				if (dvalue == bucket[b].dvalue)
 					break;
 			} else if (!bucket[b].value)
@@ -140,18 +140,18 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 				bucket = (bucket_t *)realloc(bucket, nbuckets * sizeof(bucket_t));
 				memset(&bucket[used], 0, (nbuckets - used) * sizeof(bucket_t));
 				for (b2 = used; b2 < nbuckets; b2++)
-					bucket[b2].arraybuf.type = JSON_ARRAY;
+					bucket[b2].arraybuf.type = JX_ARRAY;
 			}
 
 			/* Set its value */
 			bucket[b].value = value;
-			if (value && value->type == JSON_NUMBER)
+			if (value && value->type == JX_NUMBER)
 				bucket[b].dvalue = dvalue;
 			used++;
 		}
 
 		/* Add this element to the bucket */
-		json_append(&bucket[b].arraybuf, elem);
+		jx_append(&bucket[b].arraybuf, elem);
 	}
 
 	/* Sort the buckets */
@@ -162,17 +162,17 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 
 	/* Merge any buckets that have the same case-insensitive string value.
 	 * We only have to do this for strings, and we know each bucket contains
-	 * at least one item so JSON_END_POINTER() is non-NULL.
+	 * at least one item so JX_END_POINTER() is non-NULL.
 	 */
 	for (b = 0, b2 = 1; b2 < used; b2++) {
 		if (bucket[b].value
-		 && bucket[b].value->type == JSON_STRING
+		 && bucket[b].value->type == JX_STRING
 		 && bucket[b2].value
-		 && bucket[b2].value->type == JSON_STRING
-		 && !json_mbs_casecmp(bucket[b].value->text, bucket[b2].value->text)) {
+		 && bucket[b2].value->type == JX_STRING
+		 && !jx_mbs_casecmp(bucket[b].value->text, bucket[b2].value->text)) {
 			/* Same, case-insensitively.  Append b2 to b */
-			JSON_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first; /* undeferred */
-			JSON_END_POINTER(&bucket[b].arraybuf) = JSON_END_POINTER(&bucket[b2].arraybuf);
+			JX_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first; /* undeferred */
+			JX_END_POINTER(&bucket[b].arraybuf) = JX_END_POINTER(&bucket[b2].arraybuf);
 		} else {
 			b++;
 		}
@@ -193,21 +193,21 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
 	if (!grouping || orderby->next) { /* undeferred */
 		/* normal non-grouping sort */
 		array->first = bucket[0].arraybuf.first;
-		JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[0].arraybuf);
+		JX_END_POINTER(array) = JX_END_POINTER(&bucket[0].arraybuf);
 		for (b = 1; b < used; b++) {
-			JSON_END_POINTER(array)->next = bucket[b].arraybuf.first; /* undeferred */
-			JSON_END_POINTER(array) = JSON_END_POINTER(&bucket[b].arraybuf);
+			JX_END_POINTER(array)->next = bucket[b].arraybuf.first; /* undeferred */
+			JX_END_POINTER(array) = JX_END_POINTER(&bucket[b].arraybuf);
 		}
 	} else {
 		/* grouping, and this is the last sort/group key */
-		JSON_END_POINTER(array) = NULL;
+		JX_END_POINTER(array) = NULL;
 		for (b = 0; b < used; b++) {
-			elem = json_array();
+			elem = jx_array();
 			elem->first = bucket[b].arraybuf.first;
 			for (value = elem->first; value->next; value = value->next) { /* undeferred */
 			}
-			JSON_END_POINTER(elem) = value;
-			json_append(array, elem);
+			JX_END_POINTER(elem) = value;
+			jx_append(array, elem);
 		}
 	}
 
@@ -222,35 +222,35 @@ static void jcsort(json_t *array, json_t *orderby, int grouping)
  * The "grouping" parameter should be 0 for a normal sort, or 1 to group
  * items via nested arrays.
  */
-void json_sort(json_t *array, json_t *orderby, int grouping)
+void jx_sort(jx_t *array, jx_t *orderby, int grouping)
 {
-	json_t	*check;
+	jx_t	*check;
 	int	anykeys;
 
 	/* Check parameters. "array" must be a table, and "orderby" should
 	 * be a list (array, or linked list of elements from an array) of
 	 * field names and descending flags.
 	 */
-	if (!json_is_table(array)) {
-		/* EEE "json_sort() should be passed an array of objects" */
+	if (!jx_is_table(array)) {
+		/* EEE "jx_sort() should be passed an array of objects" */
 		return;
 	}
-	if (json_is_deferred_array(orderby)) {
-		/* EEE "json_sort() orderby should be an in-memory array (not deferred) */
+	if (jx_is_deferred_array(orderby)) {
+		/* EEE "jx_sort() orderby should be an in-memory array (not deferred) */
 		return;
 	}
-	if (orderby->type == JSON_ARRAY)
+	if (orderby->type == JX_ARRAY)
 		orderby = orderby->first;
 	anykeys = 0;
 	for (check = orderby; check; check = check->next) { /* undeferred */
-		if (check->type == JSON_STRING)
+		if (check->type == JX_STRING)
 			anykeys++;
-		else if (check->type != JSON_BOOLEAN) {
-			/* EEE json_sort() key list must be strings and booleans */
+		else if (check->type != JX_BOOLEAN) {
+			/* EEE jx_sort() key list must be strings and booleans */
 			return;
 		}
 		else if (!check->next) { /* undeferred */
-			/* EEE json_sort() key list can't end with a boolean */
+			/* EEE jx_sort() key list can't end with a boolean */
 			return;
 		}
 	}
@@ -260,7 +260,7 @@ void json_sort(json_t *array, json_t *orderby, int grouping)
 	}
 
 	/* Sorting only works on in-memory tables (not deferred) */
-	json_undefer(array);
+	jx_undefer(array);
 
 	/* Do the real sort */
 	jcsort(array, orderby, grouping);

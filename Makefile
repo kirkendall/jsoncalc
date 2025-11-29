@@ -2,7 +2,7 @@ BIN=	`pwd`/bin
 INC=	`pwd`/include
 LIB=	`pwd`/lib
 PLUGIN=	`pwd`/plugin
-CFLAGS=	-I$(INC) -DJSON_DEBUG_MEMORY
+CFLAGS=	-I$(INC) -DJX_DEBUG_MEMORY
 #CFLAGS=	-I$(INC)
 LDFLAGS=-L/usr/local/lib64 -L$(LIB)
 CC=	gcc -fpic -Wall
@@ -25,5 +25,5 @@ tags:
 
 wc:
 	@echo `find . -name '*.[ch]' -exec cat {} \; | wc -l` lines of C code
-	@echo `find . -name '*.jc' -exec cat {} \; | wc -l` lines of JsonCalc scripts
+	@echo `find . -name '*.jc' -exec cat {} \; | wc -l` lines of jx scripts
 	@echo `find www man -regex '.*\.\(html\|css\|sh\|man\|1\)' -exec cat {} \; | wc -l` lines of documentation

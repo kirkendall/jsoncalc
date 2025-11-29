@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>How to Add a Function (in C)</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc How to Add a Function (in C)">
-    <meta name="keywords" content="jsoncalc, article, How to Add a Function (in C)">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx How to Add a Function (in C)">
+    <meta name="keywords" content="jx, article, How to Add a Function (in C)">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -12,15 +12,15 @@
     <h4 class="timestamp">2025-05-10</h4>
     <center>
     <blockquote class="abstract">
-      Adding C functions to JsonCalc is fairly easy.
+      Adding C functions to jx is fairly easy.
       Most plugins do it.
-      When used in a JsonCalc expression, the arguments are collected into
+      When used in a jx expression, the arguments are collected into
       an array which is passed to the C function as a single argument.
       The arguments are automatically freed.
       The return value can't directly use any data from the arguments,
       but it can use copies.
-      Functions must be registered with the JsonCalc library before they can
-      be used in JsonCalc expressions.
+      Functions must be registered with the jx library before they can
+      be used in jx expressions.
       Aggregate functions can also be implemented.
       Resources used in the aggregate data can be automatically freed.
     </blockquote>
@@ -28,35 +28,35 @@
 
     This article describes how to add a function, written in C.
     We'll start with a simple function, and then move on to aggregate functions.
-    If you're only interested in using JsonCalc's expressions and script
+    If you're only interested in using jx's expressions and script
     language, not extending it, then you can skip this article.
     <p>
-    You'll see the <tt>json_t</tt> data type used a lot in this article.
+    You'll see the <tt>jx_t</tt> data type used a lot in this article.
     It's used to represent JSON values, including just about all data in
-    a JsonCalc script.
-    See the <a target="_PARENT" href="../index.html?a=The_json_t_Structure">The json_t Structure</a>
+    a jx script.
+    See the <a target="_PARENT" href="../index.html?a=The_jx_t_Structure">The jx_t Structure</a>
     for more info, if you're curious.
 
     <h2>Behavior of a function</h2>
 
     Each function is passed an array of arguments
-    (as a <tt>json_t</tt> with -&gt;type=JSON_ARRAY), and returns
-    a <tt>json_t</tt> result.
+    (as a <tt>jx_t</tt> with -&gt;type=JX_ARRAY), and returns
+    a <tt>jx_t</tt> result.
     Here's a quick example:
     <pre>
-	json_t *jfn_hrule(json_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
+	jx_t *jfn_hrule(jx_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
 	{
 		<b>int</b>	<var>length</var>, <var>i</var>;
-		json_t	*<var>result</var>;
+		jx_t	*<var>result</var>;
 
 		/* Check arguments */
-		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_NUMBER
-		 || (<var>length</var> = json_int(<var>args-&gt;first</var>)) < 0
+		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JX_NUMBER
+		 || (<var>length</var> = jx_int(<var>args-&gt;first</var>)) < 0
 		 || <var>args-&gt;first-&gt;next</var> != NULL)
-			<b>return</b> json_error_null(0, "The \"%s\" function takes non-negative number", "hrule");
+			<b>return</b> jx_error_null(0, "The \"%s\" function takes non-negative number", "hrule");
 
-		/* Allocate a json_t string as the result */
-		<var>result</var> = json_string("", <var>length</var>);
+		/* Allocate a jx_t string as the result */
+		<var>result</var> = jx_string("", <var>length</var>);
 
 		/* Fill it with hyphens */
 		<b>for</b> (<var>i</var> = 0; <var>i</var> &lt; <var>length</var>; <var>i</var>++)
@@ -80,31 +80,31 @@
     (see "<tt>man 3 regex</tt>" in Linux) will be passed as the
     <var>agdata</var>.
     Otherwise <var>agdata</var> can be a pointer to the current
-    <tt>json_context_t</tt>.
+    <tt>jx_context_t</tt>.
     </blockquote>
 
     <h2>Accessing parameters</h2>
-    The <var>args</var> parameter is a <tt>json_t</tt> array.
+    The <var>args</var> parameter is a <tt>jx_t</tt> array.
     You can assume it will never be a deferred array.
     This means you can use <tt>args-&gt;first</tt> to find the first argument,
     <tt>args-&gt;first-&gt;next</tt> for the second, and so on.
     <p>
-    The whole <var>args</var> array will be freed by the JsonCalc library
+    The whole <var>args</var> array will be freed by the jx library
     after your function returns.
     There are two consequences to this:
     <ul>
       <li>You don't need to free the arguments when you're done.
           That happens automatically.
       <li>The value that your function returns can't include any part of the
-          <var>args</var> <tt>json_t</tt> tree directly.
+          <var>args</var> <tt>jx_t</tt> tree directly.
           (This is discussed a bit more in the next section.)
     </ul>
     You should always check the types of arguments.
     Start by checking the <tt>-&gt;type</tt> field against the basic JSON
-    types such as JSON_STRING or JSON_NUMBER.
+    types such as JX_STRING or JX_NUMBER.
     If you need more detailed constraints than that, do it.
     The example at the top of this article checks to make sure the first
-    argument is a JSON_NULBER, that it isn't negative, and that no other
+    argument is a JX_NUMBER, that it isn't negative, and that no other
     arguments were passed.
     <p>
     Each built-in function is always passed at least one argument.
@@ -113,55 +113,55 @@
     Thus, you can assume <tt>args-&gt;first</tt> is never NULL.
 
     <h2>Returning a value</h2>
-    Each function returns a <tt>json_t</tt> value.
+    Each function returns a <tt>jx_t</tt> value.
     <p>
     The value should be freshly allocated.
     You <em>cannot</em> reuse parts of the arguments in your return value,
     because the arguments are automatically freed after the function returns.
     If you want to use part of the arguments in your response, use a copy
-    instead, e.g. by <tt>json_copy()</tt>.
+    instead, e.g. by <tt>jx_copy()</tt>.
     <p>
     Simple data types are easy to return, because there are functions to
     do exactly that:
     <table>
       <tr><th>Type</th><th>Function</th><th>Example<th></tr>
-      <tr><td>int</td><td>json_from_int(i)</td><td><b>return</b> json_from_int(12);</td></tr>
-      <tr><td>double</td><td>json_from_double(d)</td><td><b>return</b> json_from_double(12.3);</td></tr>
-      <tr><td>string</td><td>json_string(s,len)</td><td><b>return</b> json_string("Steve",-1);</td></tr>
-      <tr><td>boolean</td><td>json_boolean(b)</td><td><b>return</b> json_boolean(1);</td></tr>
-      <tr><td>null</td><td>json_null()</td><td><b>return</b> json_null();</td></tr>
+      <tr><td>int</td><td>jx_from_int(i)</td><td><b>return</b> jx_from_int(12);</td></tr>
+      <tr><td>double</td><td>jx_from_double(d)</td><td><b>return</b> jx_from_double(12.3);</td></tr>
+      <tr><td>string</td><td>jx_string(s,len)</td><td><b>return</b> jx_string("Steve",-1);</td></tr>
+      <tr><td>boolean</td><td>jx_boolean(b)</td><td><b>return</b> jx_boolean(1);</td></tr>
+      <tr><td>null</td><td>jx_null()</td><td><b>return</b> jx_null();</td></tr>
     </table>
     <p>
     I don't want to get too deep into creation of arrays and objects,
     but briefly:
-    Use <tt>json_array()</tt> or <tt>json_object()</tt> to allocate an empty
-    array or object, and then use <tt>json_append(container, data)</tt> to
+    Use <tt>jx_array()</tt> or <tt>jx_object()</tt> to allocate an empty
+    array or object, and then use <tt>jx_append(container, data)</tt> to
     add data to it.
     For objects, the data that you add must be allocated via
-    <tt>json_key(key,value)</tt> where <var>key</var> is a simple C string,
-    and <var>value</var> is a <tt>json_t</tt>.
+    <tt>jx_key(key,value)</tt> where <var>key</var> is a simple C string,
+    and <var>value</var> is a <tt>jx_t</tt>.
     <pre>
-	json_t *<var>array</var> = json_array();
-	json_append(<var>array</var>, json_from_int(1));
-	json_append(<var>array</var>, json_from_double(1.5));
-	json_append(<var>array</var>, json_string("Hello World", -1));
+	jx_t *<var>array</var> = jx_array();
+	jx_append(<var>array</var>, jx_from_int(1));
+	jx_append(<var>array</var>, jx_from_double(1.5));
+	jx_append(<var>array</var>, jx_string("Hello World", -1));
 
-	json_t *<var>object</var> = json_<var>object</var>();
-	json_append(<var>object</var>, json_key("sample", <var>array</var>));
+	jx_t *<var>object</var> = jx_<var>object</var>();
+	jx_append(<var>object</var>, jx_key("sample", <var>array</var>));
 
 	<em>/* The leaves object = {"sample":[1,1.5,"Hello World"]} */</em>
     </pre>
 
     <h2>Returning an error</h2>
     To return an error, use the
-    <tt>json_error_null(</tt><var>code</var>, <var>format</var>, ...)</tt>
+    <tt>jx_error_null(</tt><var>code</var>, <var>format</var>, ...)</tt>
     function.
     <p>
     The <var>code</var> argument is the internal identifier for that type of
     error.
     I suggest you just pass 0 there, at least at first.
     Later, if you find that your potential errors are very similar those used
-    elsewhere in JsonCalc, then you can use the same <var>code</var> and
+    elsewhere in jx, then you can use the same <var>code</var> and
     <var>format</var> here too.
     The main advantage of passing a non-0 <var>code</var> is that it may allow
     the <var>format</var> to be translated to the locale's language.
@@ -181,15 +181,15 @@
     <h2>Registering the function</h2>
 
     Once your C function is written and compiled (probably in a plugin),
-    it must be registered to make JsonCalc aware of it.
-    Functions are registered via the <tt>json_calc_function_hook()</tt>
+    it must be registered to make jx aware of it.
+    Functions are registered via the <tt>jx_calc_function_hook()</tt>
     function.
     This is passed the function name, a string describing the parameters,
     a string describing the return type, and a pointer to the C function.
     The parameter and return type strings should ideally resemble TypeScript
     declarations, though they're basically just comments so it isn't critical.
     <pre>
-	json_calc_function_hook("hrule", "width:number", "string", jfn_hrule);
+	jx_calc_function_hook("hrule", "width:number", "string", jfn_hrule);
     </pre>
 
     <h2>Aggregate functions</h2>
@@ -199,7 +199,7 @@
     Examples are the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
     and <a target="_PARENT" href="../index.html?f=count">count()</a> functions.
     <p>
-    In JsonCalc, an aggregate function is implemented as a pair of C functions:
+    In jx, an aggregate function is implemented as a pair of C functions:
     One to do the aggregation, and one to return the final result.
     For example, the aggregation half of the
     <a target="_PARENT" href="../index.html?f=avg">avg()</a>
@@ -210,7 +210,7 @@
     Aggregate functions invariably need a bit of persistent storage space.
     For example, the <a target="_PARENT" href="../index.html?f=avg">avg()</a>
     function needs to store the count and sum.
-    The JsonCalc library allocates space, initializes it to all-zeroes before
+    The jx library allocates space, initializes it to all-zeroes before
     the first call, and then passes a pointer into the functions via the
     <var>agdata</var> parameter.
     It's passed as a <tt>(void*)</tt> but functions can cast it to a pointer to
@@ -227,43 +227,43 @@
     <pre>
 	<em>/* Define a type for storing the aggregate data we need */</em>
 	<b>typedef</b> <b>struct</b> {
-	    json_t	*<var>str</var>;
+	    jx_t	*<var>str</var>;
 	    <b>int</b>		<var>width</var>;
 	} agwidest_t;
 
-	<b>void</b> jag_widest(json_t *<var>args</var>, <b>void</b> *<var>agdata)
+	<b>void</b> jag_widest(jx_t *<var>args</var>, <b>void</b> *<var>agdata)
 	{
 		agwidest_t</var> *ag = (agwidest_t *)<var>agdata</var>;
 		<b>int</b>	<var>width</var>;
 
 		<em>/* Ignore non-strings.  We could convert non-strings to strings</em>
-		<em> * via json_serialize() but I'm trying to keep this simple.</em>
+		<em> * via jx_serialize() but I'm trying to keep this simple.</em>
 		<em> */</em>
-		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JSON_STRING)
+		<b>if</b> (<var>args-&gt;first-&gt;type</var> != JX_STRING)
 			<b>return</b>;
 
 		<em>/* Find the width of this string */</em>
-		<var>width</var> = json_mbs_width(<var>args->first->text</var>);
+		<var>width</var> = jx_mbs_width(<var>args->first->text</var>);
 
 		<em>/* If longest so far, remember it.  If some other was being</em>
 		<em> * saved before, then free it now.</em>
 		<em> */</em>
 		<b>if</b> (!<var>ag-&gt;str</var> || <var>width</var> &gt; <var>ag-&gt;width</var>) {
 			<b>if</b> (<var>ag-&gt;str</var>)
-			      json_free(<var>ag-&gt;str</var>);
-			<var>ag-&gt;str</var> = json_copy(<var>args-&gt;first</var>);
+			      jx_free(<var>ag-&gt;str</var>);
+			<var>ag-&gt;str</var> = jx_copy(<var>args-&gt;first</var>);
 			<var>ag-&gt;width</var> = <var>width</var>;
 		}
 	}
 
-	json_t jfn_widest(json_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
+	jx_t jfn_widest(jx_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
 	{
 		agwidest_t *<var>ag</var> = (agwidest_t *)<var>agdata</var>;
-		json_t	*<var>result</var>;
+		jx_t	*<var>result</var>;
 
 		<em>/* If no strings were ever seen, return null */</em>
 		if (!<var>ag-&gt;str</var>)
-			<b>return</b> json_null();
+			<b>return</b> jx_null();
 
 		<em>/* Return the widest string.  Clobber the value in agdata</em>
 		 * so it isn't freed right away.
@@ -274,14 +274,14 @@
 	}
 
 	<em>/* ... and later, in some initialization code somewhere */</em>
-	json_calc_aggregate_hook(
-		"widest",		<em>/* name of the function in JsonCalc expressions */</em>
+	jx_calc_aggregate_hook(
+		"widest",		<em>/* name of the function in jx expressions */</em>
 		"s:str",		<em>/* arguments -- a single string each time */</em>
 		"str",			<em>/* return type is also a string */</em>
 		jfn_widest,		<em>/* the function that returns the final value */</em>
 		jag_widest,		<em>/* the function that finds the widest-so-far */</em>
 		<b>sizeof</b>(agwidest_t),	<em>/* amount of storage space needed. */</em>
-		JSONFUNC_JSONFREE);	<em>/* automatically free the json_t in agwidest_t */</em>
+		JXFUNC_JXFREE);	<em>/* automatically free the jx_t in agwidest_t */</em>
     </pre>
     It could be used like this:
     <div class="example">
@@ -293,49 +293,49 @@
     The bit about automatically freeing resources in the <var>agdata</var>
     requires a bit more discussion.
     <p>
-    There are two flags you can pass to <tt>json_calc_aggregate_hook()</tt>
-    for the final parameter: JSONFUNC_FREE and JSONFUNC_JSONFREE.
-    For JSONFUNC_FREE, the first bytes of the <var>agdata</var> are assumed
+    There are two flags you can pass to <tt>jx_calc_aggregate_hook()</tt>
+    for the final parameter: JXFUNC_FREE and JXFUNC_JXFREE.
+    For JXFUNC_FREE, the first bytes of the <var>agdata</var> are assumed
     to be a pointer to memory that was allocated via <tt>malloc()</tt> or
     its friends; when the <var>agdata</var> is no longer needed, if those
     bytes represent a non-NULL pointer then <tt>free()</tt> will automatically
     be called on that pointer, to free whatever it was pointing to.
-    The JSONFUNC_JSONFREE flag does the same, but assumes it is a <tt>json_t</tt>
-    pointer which must be freed via <tt>json_free()</tt>.
+    The JXFUNC_JXFREE flag does the same, but assumes it is a <tt>jx_t</tt>
+    pointer which must be freed via <tt>jx_free()</tt>.
     If you use both flags together (via the bitwise-OR operator, |),
-    then JsonCalc assumes the <var>agdata</var> starts with a pointer to
-    call <tt>free()</tt> on followed by a pointer to call <tt>json_free()</tt>
+    then jx assumes the <var>agdata</var> starts with a pointer to
+    call <tt>free()</tt> on followed by a pointer to call <tt>jx_free()</tt>
     on.
-    The example above uses JSONFUNC_JSONFREE because the first field in the
-    <tt>agwidest_t</tt> data type is a <tt>json_t</tt> pointer.
+    The example above uses JXFUNC_JXFREE because the first field in the
+    <tt>agwidest_t</tt> data type is a <tt>jx_t</tt> pointer.
     <p>
     Automatic freeing isn't just convenient; it's <em>necessary</em>.
     The final value function (<tt>jfn_widest()</tt> in the above example)
     can't be depended on to free it, because that function might never be
-    called, depending on the JsonCalc expression it's used in.
+    called, depending on the jx expression it's used in.
     <p>
     The <tt>jfn_widest()</tt> function returns the longest string.
-    It <em>could have</em> returned a <tt>json_copy()</tt> copy of the
-    string and then allowed JSONFUNC_JSONFREE to free the copy in the
+    It <em>could have</em> returned a <tt>jx_copy()</tt> copy of the
+    string and then allowed JXFUNC_JXFREE to free the copy in the
     <var>agdata</var>, but it's more efficient to just return it directly
     and set the pointer in the <var>agdata</var> to NULL to prevent
-    JSONFUNC_JSONFREE from freeing it.
+    JXFUNC_JXFREE from freeing it.
 
     <h2>Adding a function in src/lib/calcfunc.c</h2>
 
     The built-in functions are all implemented in exactly the same manner
     as described above, with one difference:
-    Instead of registering them via <tt>json_calc_function_hook()</tt> or
-    <tt>json_calc_aggregate_hook()</tt>, they're directly added to the
+    Instead of registering them via <tt>jx_calc_function_hook()</tt> or
+    <tt>jx_calc_aggregate_hook()</tt>, they're directly added to the
     internal linked-list of functions, via a series of initialized variables.
     It looks clunky, but it allows us to avoid having something like a
-    <tt>json_init()</tt>.
-    There is no <tt>json_init()</tt> function because it isn't needed.
+    <tt>jx_init()</tt>.
+    There is no <tt>jx_init()</tt> function because it isn't needed.
 
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td><a target="_PARENT" href="../index.html?a=The_json_t_Structure">The json_t Structure</a></td><td>Details about the <tt>json_t</tt> data type</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?a=The_jx_t_Structure">The jx_t Structure</a></td><td>Details about the <tt>jx_t</tt> data type</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?a=How_to_Write_a_Plugin">How to Write a Plugin</a></td><td>Step-by-step guide to writing new plugins</td></tr>
       </table>
     </details>

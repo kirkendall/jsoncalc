@@ -2,27 +2,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
-/* This file contains functions to help jsoncalc handle binary data */
+/* This file contains functions to help jx handle binary data */
 
 /*============================================================================*/
 /* The following implement a deferred array, so we can store the data in binary
- * instead of a json_t array.  Much smaller, much faster.
+ * instead of a jx_t array.  Much smaller, much faster.
  */
 typedef struct {
-	jsondef_t def;
+	jxdef_t def;
 	const char	*data;
 	size_t	len;
 	int	index;
-} jsonblob_t;
-static json_t *blobFirst(json_t *array);
-static json_t *blobNext(json_t *elem);
-static int blobIsLast(const json_t *elem);
-static void blobFree(json_t *array_or_elem);
-static json_t *blobByIndex(json_t *array, int index);
-static jsondeffns_t blobfns = {
-	sizeof(jsonblob_t),
+} jxblob_t;
+static jx_t *blobFirst(jx_t *array);
+static jx_t *blobNext(jx_t *elem);
+static int blobIsLast(const jx_t *elem);
+static void blobFree(jx_t *array_or_elem);
+static jx_t *blobByIndex(jx_t *array, int index);
+static jxdeffns_t blobfns = {
+	sizeof(jxblob_t),
 	"Blob",
 	blobFirst,
 	blobNext,
@@ -34,20 +34,20 @@ static jsondeffns_t blobfns = {
 
 
 /* Return the first element of a blob */
-static json_t *blobFirst(json_t *array)
+static jx_t *blobFirst(jx_t *array)
 {
-	jsonblob_t *blob = (jsonblob_t *)array->first;
-	jsonblob_t *nextblob;
-	json_t *result;
+	jxblob_t *blob = (jxblob_t *)array->first;
+	jxblob_t *nextblob;
+	jx_t *result;
 	if (blob->len == 0)
 		return NULL;
-	result = json_from_int(blob->data[0] & 0xff);
+	result = jx_from_int(blob->data[0] & 0xff);
 
-	/* We need a new copy of the JSON_DEFER node.  It can share the same
-	 * data buffer as the  array's JSON_DEFER though.
+	/* We need a new copy of the JX_DEFER node.  It can share the same
+	 * data buffer as the  array's JX_DEFER though.
 	 */
-	result->next = json_defer(&blobfns);
-	nextblob = (jsonblob_t *)result->next;
+	result->next = jx_defer(&blobfns);
+	nextblob = (jxblob_t *)result->next;
 	nextblob->data = blob->data;
 	nextblob->len = blob->len;
 	nextblob->index = 0;
@@ -55,34 +55,34 @@ static json_t *blobFirst(json_t *array)
 }
 
 /* Return the next element of a blob */
-static json_t *blobNext(json_t *elem)
+static jx_t *blobNext(jx_t *elem)
 {
-	jsonblob_t *blob = (jsonblob_t *)elem->next;
-	json_t *result;
+	jxblob_t *blob = (jxblob_t *)elem->next;
+	jx_t *result;
 	blob->index++;
 	if (blob->index >= blob->len)
 		return NULL;
 	elem->next = NULL;
-	json_free(elem);
-	result = json_from_int(blob->data[blob->index] & 0xff);
-	result->next = (json_t *)blob;
+	jx_free(elem);
+	result = jx_from_int(blob->data[blob->index] & 0xff);
+	result->next = (jx_t *)blob;
 	return result;
 }
 
 /* Test whether a given element is the last in the deferred array */
-static int blobIsLast(const json_t *elem)
+static int blobIsLast(const jx_t *elem)
 {
-	jsonblob_t *blob = (jsonblob_t *)elem->next;
+	jxblob_t *blob = (jxblob_t *)elem->next;
 	return (blob->index + 1 >= blob->len);
 }
 
 /* Do the specific cleanup needed for deferred blobs */
-static void blobFree(json_t *array_or_elem)
+static void blobFree(jx_t *array_or_elem)
 {
-	jsonblob_t *blob = (jsonblob_t *)array_or_elem->next;
+	jxblob_t *blob = (jxblob_t *)array_or_elem->next;
 
 	/* No special action for an element */
-	if (array_or_elem->type != JSON_ARRAY)
+	if (array_or_elem->type != JX_ARRAY)
 		return;
 
 	/* Free the blob's memory, unless it is a memory-mapped file in which
@@ -95,20 +95,20 @@ static void blobFree(json_t *array_or_elem)
 }
 
 /* Look up a byte at a given index */
-static json_t *blobByIndex(json_t *array, int index)
+static jx_t *blobByIndex(jx_t *array, int index)
 {
-	jsonblob_t *blob = (jsonblob_t *)array->first;
-	jsonblob_t *nextblob;
-	json_t *result;
+	jxblob_t *blob = (jxblob_t *)array->first;
+	jxblob_t *nextblob;
+	jx_t *result;
 	if (index < 0 || index >= blob->len)
 		return NULL;
-	result = json_from_int(blob->data[index] & 0xff);
+	result = jx_from_int(blob->data[index] & 0xff);
 
 	/* We need to mark this as a deferred element, by making ->next point
-	 * to a JSON_DEFER node.  This is similar to what json_first() does.
+	 * to a JX_DEFER node.  This is similar to what jx_first() does.
 	 */
-	result->next = json_defer(&blobfns);
-	nextblob = (jsonblob_t *)result->next;
+	result->next = jx_defer(&blobfns);
+	nextblob = (jxblob_t *)result->next;
 	nextblob->data = blob->data;
 	nextblob->len = blob->len;
 	nextblob->index = index;
@@ -121,7 +121,7 @@ static json_t *blobByIndex(json_t *array, int index)
  * length that Latin1 text would be after conversion to UTF-8.  (Binary and
  * UTF-8 are both "len" bytes long.)
  */
-jsonblobconv_t json_blob_best(const char *data, size_t len, size_t *reflatin1len)
+jxblobconv_t jx_blob_best(const char *data, size_t len, size_t *reflatin1len)
 {
 	int notutf8, zero;
 	size_t latin1len, chlen, pos, i;
@@ -184,51 +184,51 @@ jsonblobconv_t json_blob_best(const char *data, size_t len, size_t *reflatin1len
 	if (reflatin1len)
 		*reflatin1len = latin1len;
 	if (zero)
-		return JSON_BLOB_BYTES;
+		return JX_BLOB_BYTES;
 	else if (notutf8)
-		return JSON_BLOB_LATIN1;
+		return JX_BLOB_LATIN1;
 	else
-		return JSON_BLOB_UTF8;
+		return JX_BLOB_UTF8;
 }
 
-/* Convert binary data to a json_t.  If it can't be converted (because UTF-8
+/* Convert binary data to a jx_t.  If it can't be converted (because UTF-8
  * was requested but the data isn't valid UTF-8) then return NULL.
  */
-json_t *json_blob_convert(const char *data, size_t len, jsonblobconv_t conversion)
+jx_t *jx_blob_convert(const char *data, size_t len, jxblobconv_t conversion)
 {
-	jsonblobconv_t best;
+	jxblobconv_t best;
 	size_t	latin1len;
 	char	*c;
 	const char *scan;
-	jsonfile_t *file;
-	json_t	*result;
-	jsonblob_t *blob;
+	jxfile_t *file;
+	jx_t	*result;
+	jxblob_t *blob;
 
 	/* Scan the data to determine how to convert */
-	best = json_blob_best(data, len, conversion == JSON_BLOB_BYTES ? NULL : &latin1len);
+	best = jx_blob_best(data, len, conversion == JX_BLOB_BYTES ? NULL : &latin1len);
 
 	/* If UTF-8 was requested but data is malformed, then return NULL */
-	if (conversion == JSON_BLOB_UTF8 && best != JSON_BLOB_UTF8)
+	if (conversion == JX_BLOB_UTF8 && best != JX_BLOB_UTF8)
 		return NULL;
 
 	/* If "any" was requested, use the best.  If "STRING" then use "utf8" 
 	 * or "latin1", even if the best was "binary".
 	 */
-	if (conversion == JSON_BLOB_ANY)
+	if (conversion == JX_BLOB_ANY)
 		conversion = best;
-	else if (conversion == JSON_BLOB_STRING)
-		conversion = (best == JSON_BLOB_BYTES ? JSON_BLOB_LATIN1 : best);
+	else if (conversion == JX_BLOB_STRING)
+		conversion = (best == JX_BLOB_BYTES ? JX_BLOB_LATIN1 : best);
 
 	/* Convert it */
 	switch (conversion) {
 
-	case JSON_BLOB_UTF8:
+	case JX_BLOB_UTF8:
 		/* Easiest, just allocate a string */
-		return json_string(data, len);
+		return jx_string(data, len);
 
-	case JSON_BLOB_LATIN1:
+	case JX_BLOB_LATIN1:
 		/* Allocate space for the conversion */
-		result = json_string("", latin1len);
+		result = jx_string("", latin1len);
 
 		/* Convert it */
 		c = result->text;
@@ -257,18 +257,18 @@ json_t *json_blob_convert(const char *data, size_t len, jsonblobconv_t conversio
 
 		return result;
 
-	case JSON_BLOB_BYTES:
+	case JX_BLOB_BYTES:
 		/* Is this the entire contents of a file?  If so, we can use
 		 * its buffer.
 		 */
-		file = json_file_containing(data, NULL);
+		file = jx_file_containing(data, NULL);
 		if (file && (data != file->base || len != file->size))
 			file = NULL;
 
 		/* Allocate a deferred array */
-		result = json_array();
-		result->first = json_defer(&blobfns);
-		blob = (jsonblob_t *)result->first;
+		result = jx_array();
+		result->first = jx_defer(&blobfns);
+		blob = (jxblob_t *)result->first;
 		blob->def.file = file;
 		if (file) {
 			blob->data = file->base;
@@ -279,50 +279,50 @@ json_t *json_blob_convert(const char *data, size_t len, jsonblobconv_t conversio
 			memcpy((char *)blob->data, data, len);
 			blob->len = len;
 		}
-		JSON_ARRAY_LENGTH(result) = len;
+		JX_ARRAY_LENGTH(result) = len;
 		result->text[1] = 'n';
 		return result;
 
-	case JSON_BLOB_ANY:
-	case JSON_BLOB_STRING:
+	case JX_BLOB_ANY:
+	case JX_BLOB_STRING:
 		/* Can't happen.  These values get mapped to one of the others*/
 		;
 	}
 	abort();
 }
 
-/* Convert a json_t to blob data and return the length.  If conversion isn't
+/* Convert a jx_t to blob data and return the length.  If conversion isn't
  * possible then return 0.  You may pass NULL for data if you just want length.
  */
-size_t json_blob_unconvert(json_t *json, char *data, jsonblobconv_t conversion){
-	json_t	*scan;
+size_t jx_blob_unconvert(jx_t *json, char *data, jxblobconv_t conversion){
+	jx_t	*scan;
 	unsigned char *utf8;
 	int	byte;
 	size_t	len;
 
-	if (json->type == JSON_ARRAY) {
+	if (json->type == JX_ARRAY) {
 		/* NOTE: If json is already a blob, this is easy.  However,
-		 * handling that would involve returning a json_t which this
+		 * handling that would involve returning a jx_t which this
 		 * function can't to.  We assume the blob test happens before
 		 * this function is called.
 		 */
 
 		/* Do it the hard way -- scan the whole array */
-		for (scan = json_first(json); scan; scan = json_next(scan)) {
-			if (scan->type != JSON_NUMBER)
+		for (scan = jx_first(json); scan; scan = jx_next(scan)) {
+			if (scan->type != JX_NUMBER)
 				return 0;
-			byte = json_int(scan);
+			byte = jx_int(scan);
 			if (byte < 0 || byte >= 256)
 				return 0;
 			if (data)
 				*data++ = byte;
 		}
-		return json_length(json);
-	} else if (json->type != JSON_STRING)
+		return jx_length(json);
+	} else if (json->type != JX_STRING)
 		return 0;
 
 	/* Its a string.  If UTF-8 then that's easy. */
-	if (conversion != JSON_BLOB_LATIN1) {
+	if (conversion != JX_BLOB_LATIN1) {
 		len = strlen(json->text);
 		if (data)
 			memcpy(data, json->text, len);
@@ -357,36 +357,36 @@ size_t json_blob_unconvert(json_t *json, char *data, jsonblobconv_t conversion){
 
 }
 
-/* Do a full conversion, from one json_t to another */
-json_t *json_blob(json_t *in, jsonblobconv_t convout, jsonblobconv_t convin)
+/* Do a full conversion, from one jx_t to another */
+jx_t *jx_blob(jx_t *in, jxblobconv_t convout, jxblobconv_t convin)
 {
 	char *data, *mustfree;
 	size_t	len;
-	jsonblob_t *inblob;
-	json_t	*result;
+	jxblob_t *inblob;
+	jx_t	*result;
 
 	/* Convert the data to a blob.  If it is a deferred "Blob" array, this
 	 * is trivial.
 	 */
-	inblob = (jsonblob_t *)in->first;
+	inblob = (jxblob_t *)in->first;
 	mustfree = NULL;
-	if (json_is_deferred_array(in) && inblob->def.fns == &blobfns) {
+	if (jx_is_deferred_array(in) && inblob->def.fns == &blobfns) {
 		/* Easy! Just use the blob data */
 		data = (char *)inblob->data; /* discarding "const" */
 		len = inblob->len;
 	} else {
 		/* Need to convert it, and store the result in a new buffer */
-		len = json_blob_unconvert(in, NULL, convin);
+		len = jx_blob_unconvert(in, NULL, convin);
 		if (len == 0)
-			return json_error_null(NULL, "badblob:Could not convert data to a blob");
+			return jx_error_null(NULL, "badblob:Could not convert data to a blob");
 		data = mustfree = (char *)malloc(len);
-		(void)json_blob_unconvert(in, data, convin);
+		(void)jx_blob_unconvert(in, data, convin);
 	}
 
 	/* Convert it to the requested output format */
-	result = json_blob_convert(data, len, convout);
+	result = jx_blob_convert(data, len, convout);
 	if (!result)
-		result = json_error_null(NULL, "badutf8:Data is not valid UTF-8");
+		result = jx_error_null(NULL, "badutf8:Data is not valid UTF-8");
 	if (mustfree)
 		free(mustfree);
 	return result;
@@ -395,12 +395,12 @@ json_t *json_blob(json_t *in, jsonblobconv_t convout, jsonblobconv_t convin)
 /* Return NULL if not a blob, else return a pointer to its data and store the
  * length at *reflen.
  */
-const char *json_blob_data(json_t *json, size_t *reflen)
+const char *jx_blob_data(jx_t *json, size_t *reflen)
 {
-	jsonblob_t *blob;
-	if (!json_is_deferred_array(json))
+	jxblob_t *blob;
+	if (!jx_is_deferred_array(json))
 		return NULL;
-	blob = (jsonblob_t *)json->first;
+	blob = (jxblob_t *)json->first;
 	if (blob->def.fns != &blobfns)
 		return NULL;
 
@@ -413,16 +413,16 @@ const char *json_blob_data(json_t *json, size_t *reflen)
 /* Parser for binary files */
 
 /* Test whether this is the best parser for the given data */
-int json_blob_test(const char *str, size_t len)
+int jx_blob_test(const char *str, size_t len)
 {
-	return json_blob_best(str, len, NULL) == JSON_BLOB_BYTES;
+	return jx_blob_best(str, len, NULL) == JX_BLOB_BYTES;
 }
 
 
-/* Parse it, and return a json_t */
-json_t *json_blob_parse(const char *str, size_t len, const char **refend, const char **referr)
+/* Parse it, and return a jx_t */
+jx_t *jx_blob_parse(const char *str, size_t len, const char **refend, const char **referr)
 {
 	if (refend)
 		*refend = str + len;
-	return json_blob_convert(str, len, JSON_BLOB_BYTES);
+	return jx_blob_convert(str, len, JX_BLOB_BYTES);
 }

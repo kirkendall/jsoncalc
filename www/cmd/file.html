@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>file</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc file - Select a JSON file to use">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx file - Select a JSON file to use">
     <meta name="keywords" content="command, command reference, file">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -16,12 +16,12 @@
       <br/>file <var>filename</var>
       <br/>file (<var>expression</var>)
       <dd>
-      When you invoke the <b>jsoncalc</b> program with multiple JSON files
+      When you invoke the <b>jx</b> program with multiple JSON files
       named on the command line for interactive use, it normally loads them one at a time for
       processing.
       The <tt>file</tt> command lets you switch between files.
       <p>
-      This is only useful for when you're running <b>jsoncalc</b> interactively.
+      This is only useful for when you're running <b>jx</b> interactively.
       In batch mode, it runs the commands you provide via
       <b>-c</b><var>command</var> or <b>-f</b><var>scriptfile</var>
       separately on each named file, without the need for <tt>file</tt>.
@@ -52,7 +52,7 @@
 	<samp>first.json</samp>
 	<kbd>file +</kbd>
 	<samp>second.json</samp>
-        These examples assume you started by running "<tt>jsoncalc first.json second.json third.json</tt>".
+        These examples assume you started by running "<tt>jx first.json second.json third.json</tt>".
         Running the <tt>file</tt> command without arguments causes the name of
         the current file to be displayed.
         Running <tt>file +</tt> moves to the next file, and displays its name.

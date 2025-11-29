@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>How to Write a Plugin</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc How to Write a Plugin">
-    <meta name="keywords" content="jsoncalc, article, plugin">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx How to Write a Plugin">
+    <meta name="keywords" content="jx, article, plugin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -15,7 +15,7 @@
     <blockquote class="abstract">
       Start by copying <tt>src/plugins/example/</tt> to another directory
       within <tt>src/plugin/</tt>.
-      Your plugin will need to include &lt;jsoncalc.h&gt;.
+      Your plugin will need to include &lt;jx.h&gt;.
       It must define a function named <tt>plugin</tt><var>name</var><tt>()</tt> which takes no parameters
       and returns NULL on success or an error string on failure.
       Compile to position-independent code.
@@ -38,8 +38,8 @@
     </div>
 
     <h2>Source Code</h2>
-    Your plugin's *.c source file will need to include the &lt;jsoncalc.h&gt;
-    file so it can access JsonCalc's data types and functions.
+    Your plugin's *.c source file will need to include the &lt;jx.h&gt;
+    file so it can access jx's data types and functions.
     Some of the functions declared there use (FILE*), you'll also need
     to include &lt;stdio.h&gt;.
     You'll almost certainly need to include other headers too, but those
@@ -51,14 +51,14 @@
     <tt>plugin</tt><var>name</var><tt>()</tt> function.
     This is called when the plugin is first loaded, and it is responsible
     for doing any initialization such as registering new functions or
-    commands with JsonCalc.
+    commands with jx.
     It has no parameters.
     This function should return NULL on success, or an error message on failure.
     <p>
     The absolute minimum plugin, therefore, looks like this:
     <pre>
 	#include &lt;stdio.h&gt;
-	#include &lt;json.h&gt;
+	#include &lt;jx.h&gt;
 
 	<b>char</b> *pluginhello(<b>void</b>)
 	{
@@ -80,7 +80,7 @@
 
     <h2>Config Settings</h2>
     When <tt>init()</tt> is called,
-    JsonCalc's <tt>json_config</tt> variable has been initialized to contain
+    jx's <tt>jx_config</tt> variable has been initialized to contain
     the library's own configuration settings, but their final values have not been
     reloaded from the config file or command-line options yet.
     Your <tt>init()</tt> function should take this opportunity to add its own
@@ -96,10 +96,10 @@
 	<b>char</b> *pluginscreamer(<b>void</b>)
 	{
 	    <i>/* Set the settings for the "screamer" plugin */</i>
-	    json_t	*section, *settings;
-	    section = json_by_name(json_config, "plugin");
-	    settings = json_parse_string(screamer_settings);
-	    json_append(section, json_key("screamer", settings));
+	    jx_t	*section, *settings;
+	    section = jx_by_name(jx_config, "plugin");
+	    settings = jx_parse_string(screamer_settings);
+	    jx_append(section, jx_key("screamer", settings));
 	    <b>return</b> NULL;
 	}
     </pre>
@@ -119,14 +119,14 @@
     and this is near the start of it.
     The full sequence goes something like this:
     <ol>
-      <li>The JsonCalc library's default options are loaded into the
-          <tt>json_config</tt> variable.  The config file is loaded at
+      <li>The jx library's default options are loaded into the
+          <tt>jx_config</tt> variable.  The config file is loaded at
           this time too, just so we have a list of persistent plugins.
       <li>The command-line flags are scanned to determine whether this is
           going to be interactive or batch mode.  And also adjust the list
           of persistent plugins.
       <li>If interactive, then persistent plugins are loaded,
-          adding their options to <tt>json_config</tt>.
+          adding their options to <tt>jx_config</tt>.
       <li>The command-line flags are scanned again to locate and load
           any non-persistent plugins.  So all plugins are loaded at this
 	  point, but we still only have hardcoded defaults for some options.
@@ -139,11 +139,11 @@
           <b>-D</b><var>directory</var>,
           or <b>-L</b><var>plugin,settings</var>.
       <li>The command-line flags are scanned a fourth time, to add
-          non-persistent settings to <tt>json_config</tt> &mdash;
+          non-persistent settings to <tt>jx_config</tt> &mdash;
           either <b>-s</b><var>settings</var>,
           <b>-d</b><var>directory</var>,
           or <b>-l</b><var>plugin,settings</var>.
-      <li>Finally, scripts start to run or the user sees a "JsonCalc&gt;" prompt.
+      <li>Finally, scripts start to run or the user sees a "jx&gt;" prompt.
     </ol>
     <p>
     One implication of this is, <tt>plugin</tt><var>name</var><tt>()</tt>
@@ -152,29 +152,29 @@
     feature of the plugin, e.g. by calling a function that the plugin provides.
       
     <h2>Hooks to Register Your Plugin's Services</h2>
-    Every plugin adds some type of service to JsonCalc.
-    The JsonCalc library defines functions to let you register the functions,
+    Every plugin adds some type of service to jx.
+    The jx library defines functions to let you register the functions,
     commands, etc.
 
     <h3>Adding Functions</h3>
-    Your plugin can add functions (written in C) to the JsonCalc expression
-    syntax via the <tt>json_calc_function_hook()</tt>.
+    Your plugin can add functions (written in C) to the jx expression
+    syntax via the <tt>jx_calc_function_hook()</tt>.
     For full details on how to do this, see the
     <a target="_PARENT" href="../index.html?a=How_to_Add_a_Function">How to Add a Function</a> article.
     Briefly, though, the way to do it is:
     <ul>
       <li>Write your function in C.
-          It should take two arguments: a <tt>json_t*</tt> containing an array
+          It should take two arguments: a <tt>jx_t*</tt> containing an array
           of argument values, and a <tt>void*</tt> which can mostly be ignored.
-          The function should return a <tt>json_t*</tt> as the result.
-          To indicate an error, use <tt>json_error_null()</tt> to generate
+          The function should return a <tt>jx_t*</tt> as the result.
+          To indicate an error, use <tt>jx_error_null()</tt> to generate
           the return value.
           <pre>
             #include &lt;unistd.h&gt;
-            #include &lt;json.h&gt;
-	    json_t *jfn_getpid(json_t *args, <b>void</b> *agdata)
+            #include &lt;jx.h&gt;
+	    jx_t *jfn_getpid(jx_t *args, <b>void</b> *agdata)
 	    {
-		<b>return</b> json_from_int(getpid());
+		<b>return</b> jx_from_int(getpid());
 	    }
           </pre>
       <li>Register the function.  This should be done in your plugin's
@@ -182,11 +182,11 @@
 	  <pre>
 	    <b>char</b> *pluginposix(<b>void</b>)
 	    {
-	        json_calc_function_hook("getpid", "", "number", jfn_getpid);
+	        jx_calc_function_hook("getpid", "", "number", jfn_getpid);
 	        <b>return</b> NULL;
 	    }
 	  </pre>
-      <li>Your function will be available for use in JsonCalc expressions
+      <li>Your function will be available for use in jx expressions
           whenever your plugin is loaded.
           <div class="example">
             <kbd>getpid()</kbd>
@@ -198,14 +198,14 @@
     <h3>Adding Commands</h3>
     Adding new commands is very similar to adding new functions:
     Write some functions in C, and then register those functions with
-    JsonCalc via a <tt>json_cmd_hook()</tt> function.
+    jx via a <tt>jx_cmd_hook()</tt> function.
     For details, see <a target="_PARENT" href="../index.html?a=How_to_Add_Commands">How to Add Commands</a>.
     Briefly, the process is:
     <ul>
       <li>Write a function to parse the command's parameters.
-	  The JsonCalc library has a number of functions to help you
+	  The jx library has a number of functions to help you
 	  with that.
-	  The function should return a <tt>jsoncmd_t*</tt> containing
+	  The function should return a <tt>jxcmd_t*</tt> containing
 	  the parsed command, or NULL if there's nothing that needs to be
 	  run later.
 	  (Function definitions are stored when parsed, for example,
@@ -217,10 +217,10 @@
 	  This is passed the value returned by the parser, and the
 	  context stack.
 	  It should return NULL on success if there is no returned value,
-	  or a jsoncmdout_t value to indicate success with a returned value,
+	  or a jxcmdout_t value to indicate success with a returned value,
 	  an error, or a few other things like <b>break</b> or <b>continue</b>.
       <li>Register the parser and runner, along with the command's name,
-	  via the <tt>json_cmd_hook()</tt> library function.
+	  via the <tt>jx_cmd_hook()</tt> library function.
     </ul>
     <p>
     As a simple example, here's command that writes parenthesized text
@@ -228,29 +228,29 @@
 
     <pre>
 	#include &lt;stdio.h&gt;
-	#include &lt;json.h&gt;
+	#include &lt;jx.h&gt;
 
 	<i>/* Parse a stderr command */</i>
-	<b>static</b> jsoncmd_t *parse_stderr(jsonsrc_t *src, jsoncmdout_t **referr)
+	<b>static</b> jxcmd_t *parse_stderr(jxsrc_t *src, jxcmdout_t **referr)
 	{
 	    <b>char</b> *text;
-	    jsoncmd_t *cmd;
+	    jxcmd_t *cmd;
 
 	    /* Parse the parenthesized text */
-	    text = json_cmd_parse_paren(src);
+	    text = jx_cmd_parse_paren(src);
 	    <b>if</b> (!text) {
-		*referr = json_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
+		*referr = jx_cmd_src_error(src, 0, "The %s command expect text in parentheses", "stderr");
 		<b>return</b> NULL;
 	    }
 
 	    /* Build a command */
-	    cmd = json_cmd(src, "stderr");
+	    cmd = jx_cmd(src, "stderr");
 	    cmd-&gt;key = text;
 	    <b>return</b> cmd;
 	}
 
 	<i>/* Run a stderr command */</i>
-	<b>static</b> jsoncmdout_t *run_stderr(jsoncmd_t *cmd, jsoncontext_t *context)
+	<b>static</b> jxcmdout_t *run_stderr(jxcmd_t *cmd, jxcontext_t *context)
 	{
 	    fprintf(stderr, "%s\n", cmd-&gt;key);
 	}
@@ -258,7 +258,7 @@
 	<i>/* ... and later, in the plugin's initialization function... */</i>
 	<b>char</b> *pluginmyplugin()
 	{
-	    json_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
+	    jx_cmd_hook("myplugin", "stderr", parse_stderr, run_stderr);
 	    <b>return</b> NULL;
 	}
     </pre>
@@ -276,7 +276,7 @@
 
     <h3>Adding Global Variables and Constants</h3>
     Variables and constants are stored in the context.
-    The <b>jsoncalc</b> program creates a context for the main process, and
+    The <b>jx</b> program creates a context for the main process, and
     usually that's all you need.
     If you want to create another thread, you'll need another context for it,
     but that's unlikely.
@@ -291,9 +291,9 @@
 	  It will return a new top of the stack after you've added your
 	  layers.
 	  <p>
-	  There's a <tt>json_context(context, data, flags)</tt> function
+	  There's a <tt>jx_context(context, data, flags)</tt> function
 	  for adding layers.
-	  The <tt>data</tt> parameter is a json_t object, and the members
+	  The <tt>data</tt> parameter is a jx_t object, and the members
 	  will be either vars or consts depending on the flags.
 	  The new context layer will also have a few other fields that you
 	  might want to modify, including a
@@ -306,15 +306,15 @@
 	  for vars and another for consts.
       <li>Second, the plugin's <tt>plugin</tt><var>name</var>()</tt> function
           should register the context adder function via
-          <tt>json_context_hook()</tt>.
+          <tt>jx_context_hook()</tt>.
       <li>Later, your vars and consts will be available for use in any
 	  expression.
     </ul>
     <p>
     The <b>-d</b><var>directory</var> autoload directories are implemented
     this way.
-    The <b>jsoncalc</b> program defines an autoload function and uses
-    <tt>json_context_hook()</tt> to insert a layer that uses it.
+    The <b>jx</b> program defines an autoload function and uses
+    <tt>jx_context_hook()</tt> to insert a layer that uses it.
     If an expression tries to use a variable that isn't defined (i.e.,
     not yet a member of the layer's "data" object), then the autoload
     function searches through the directory list for a file with the
@@ -326,22 +326,22 @@
     and "falso" which return the boolean <tt>true</tt> and <tt>false</tt>
     values.
     <pre>
-	jsoncontext_t *miContexto(jsoncontext_t *context)
+	jxcontext_t *miContexto(jxcontext_t *context)
 	{
-	    json_t *obj = json_object();
-	    json_append(obj, json_key("verdad", json_boolean(1)));
-	    json_append(obj, json_key("falso", json_boolean(0)));
-	    <b>return</b> json_context(context, obj, 0);
+	    jx_t *obj = jx_object();
+	    jx_append(obj, jx_key("verdad", jx_boolean(1)));
+	    jx_append(obj, jx_key("falso", jx_boolean(0)));
+	    <b>return</b> jx_context(context, obj, 0);
 	}
 
 	<b>char</b> *pluginmyplugin()
 	{
-	    json_context_hook(miContexto);
+	    jx_context_hook(miContexto);
 	    <b>return</b> NULL;
 	}
     </pre>
     <p>
-    Once your plugin is loaded, and the <b>jsoncalc</b> creates its context,
+    Once your plugin is loaded, and the <b>jx</b> creates its context,
     your data will be available.
     <div class="example">
       <kbd>verdad</kbd>
@@ -381,10 +381,10 @@
     working location.
 
     <h2>Script Plugins</h2>
-    It is also possible to write a plugin as a JsonCalc script,
+    It is also possible to write a plugin as a jx script,
     with no new C code at all.
     This tends to work well for simple plugins &mdash;
-    things that JsonCalc could easily be configured to do without a plugin,
+    things that jx could easily be configured to do without a plugin,
     but you want the easy distributability of plugins.
     For example, OAUTH2 authentication is pretty simple, so that'd be a
     good candidate.
@@ -395,7 +395,7 @@
     <h2>Documentation</h2>
     Your plugin's documentation should reside in a "www" directory under
     the plugin's source directory.
-    This should mimic the structure of <b>jsoncalc</b>'s own "www" &mdash;
+    This should mimic the structure of <b>jx</b>'s own "www" &mdash;
     functions in "www/f/", commands in "www/cmd", and the main intro in
     "www/index.html".
     <p>
@@ -433,7 +433,7 @@
       <li>Add some examples.  The &lt;div class="example"&gt; block is used
           for examples.  Generally each example should get its own block.
           Within the block &lt;kbd&gt; is used to mark the text that a user
-          could type into JsonCalc, and &lt;samp&gt; is used for the expected
+          could type into jx, and &lt;samp&gt; is used for the expected
           result of that command.  You can follow that with text (inside
           &lt;div class="example"&gt;
           but outside of &lt;kbd&gt; or &lt;samp&gt;)
@@ -463,7 +463,7 @@
     During installation ("make install"), all of the documentation gets copied
     into a shared directory where users can access it even without
     internet access.
-    <b>jsoncalc</b>'s built-in help facility will access it.
+    <b>jx</b>'s built-in help facility will access it.
 
   </body>
 </html>

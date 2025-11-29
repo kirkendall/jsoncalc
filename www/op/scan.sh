@@ -12,7 +12,7 @@ do
 	*)
 		# Extract info from the file
 		description=$(sed -n 's/.*<meta name="description" content=".* - \([^"]*\) operators\?".*/\1/p' $i)
-		sections=$(sed -n 's/.*<meta name="keywords" content="\(.*\), jsoncalc[^"]*".*/\1/p' $i | tr -d ,)
+		sections=$(sed -n 's/.*<meta name="keywords" content="\(.*\), jx[^"]*".*/\1/p' $i | tr -d ,)
 		htmlops=$(sed -n 's/.*<meta name="keywords" content=".*, operator reference, \([^"]*\)".*/\1/p' $i);
 		operators=$(echo $htmlops| sed 's/,//g;s/\&lt;/</g;s/\&gt;/>/g;s/\&amp;/\&/g')
 

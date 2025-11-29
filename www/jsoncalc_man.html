@@ -13,12 +13,12 @@
        table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
        h1      { text-align: center }
 </style>
-<title>jsoncalc</title>
+<title>jx</title>
 
 </head>
 <body>
 
-<h1 align="center">jsoncalc</h1>
+<h1 align="center">jx</h1>
 
 <a href="#NAME">NAME</a><br>
 <a href="#SYNOPSIS">SYNOPSIS</a><br>
@@ -42,7 +42,7 @@
 </h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">jsoncalc
+<p style="margin-left:11%; margin-top: 1em">jx
 &minus; JSON calculator and reformatter</p>
 
 <h2>SYNOPSIS
@@ -51,7 +51,7 @@
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+<p style="margin-left:11%; margin-top: 1em"><b>jx</b>
 [<i>OPTION</i>] [<i>file.jc</i>]
 [<i>name</i><b>=</b><i>value</i>] [<i>file.json</i>]...</p>
 
@@ -61,7 +61,7 @@
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+<p style="margin-left:11%; margin-top: 1em"><b>jx</b>
 is a tool for examining or modifying JSON data. It can be
 run interactively or in batch mode. It integrates well with
 shell scripts.</p>
@@ -99,7 +99,7 @@ you want.</p>
 
 
 <p>Also, if the first file named after the last option
-appears to contain a JsonCalc script instead of JSON data,
+appears to contain a jx script instead of JSON data,
 then it will be loaded like <b>-f</b><i>file.</i></p></td></tr>
 </table>
 
@@ -109,7 +109,7 @@ then it will be loaded like <b>-f</b><i>file.</i></p></td></tr>
 of scripts to automatically load when running interactively.
 This is persistent across interactive sessions. Later, to
 persistently remove a script from that list, you can invoke
-<b>jsoncalc</b> with a <b>-F-</b><i>scriptfile</i> flag. You
+<b>jx</b> with a <b>-F-</b><i>scriptfile</i> flag. You
 can also use lowercase <b>-f-</b><i>scriptfile</i> to
 temporarily remove <i>scriptfile</i> from the list for a
 single session.</p>
@@ -141,9 +141,9 @@ it clear.</p></td></tr>
 <td width="78%">
 
 
-<p>This option allows JsonCalc to update any data files
+<p>This option allows jx to update any data files
 named on the command line, if their data was changed via
-assignments. This is often used when JsonCalc is
+assignments. This is often used when jx is
 constructing JSON documents from other data sources such as
 environment variables or <i>name</i><b>=</b><i>value</i>
 arguments on the shell command line.</p></td></tr>
@@ -157,11 +157,11 @@ arguments on the shell command line.</p></td></tr>
 <td width="78%">
 
 
-<p>These affect JsonCalc&rsquo;s behavior when trying to
+<p>These affect jx&rsquo;s behavior when trying to
 load a file that doesn&rsquo;t exist. Normally that&rsquo;s
 an error, but <b>-o</b> and <b>-a</b> cause it to load
 missing files as empty objects or arrays, respectively. This
-can be handy if you&rsquo;re using JsonCalc to construct a
+can be handy if you&rsquo;re using jx to construct a
 JSON document from scratch. You&rsquo;ll usually want
 <b>-u</b> too.</p></td></tr>
 <tr valign="top" align="left">
@@ -178,7 +178,7 @@ JSON document from scratch. You&rsquo;ll usually want
 such as invoking an external shell command, or
 reading/writing files not named on the command line. This
 software is distributed with no guarantees of any kind. And
-even if <b>jsoncalc</b> itself is perfect, plugins might not
+even if <b>jx</b> itself is perfect, plugins might not
 be.</p> </td></tr>
 </table>
 
@@ -187,8 +187,8 @@ be.</p> </td></tr>
 <p style="margin-left:22%;">Causes any unresolved names in
 an expression to be interpreted as a request to load
 <i>dir</i>/<i>name</i>.json as variable <i>name</i>. For
-example, if you invoke JsonCalc with <b>-d</b><i>foo</i> and
-then use the name &quot;bar&quot; in an expression, JsonCalc
+example, if you invoke jx with <b>-d</b><i>foo</i> and
+then use the name &quot;bar&quot; in an expression, jx
 will load foo/bar.json into the &quot;bar&quot; variable.
 This happens on demand; it doesn&rsquo;t proactively load
 all files in the &quot;foo&quot; directory into
@@ -255,9 +255,9 @@ array to be output entirely on one line. A triple
 
 <p style="margin-left:22%;">This loads a plugin. Most
 plugins are binary files that get linked into
-<b>jsoncalc</b> at runtime, to provide new functions,
+<b>jx</b> at runtime, to provide new functions,
 commands, file formats, or other features. Some plugins may
-be implemented in <b>jsoncalc</b>&rsquo;s scripting
+be implemented in <b>jx</b>&rsquo;s scripting
 language. If a plugin supports settings, then you can set
 them by appending them after the plugin&rsquo;s name, with a
 comma as a delimiter.</p>
@@ -294,7 +294,7 @@ so.</p>
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>jsoncalc</b>
+<p style="margin-left:11%; margin-top: 1em"><b>jx</b>
 can run in interactive mode or in batch mode.</p>
 
 <p style="margin-left:11%; margin-top: 1em">The selection
@@ -321,7 +321,7 @@ first file is loaded.</p>
 all data files are loaded, one after the other, and any
 scripts or commands will be executed separately for each
 one. If no data files are named on the command line, and
-stdin is a file or pipe, then <b>jsoncalc</b> will read from
+stdin is a file or pipe, then <b>jx</b> will read from
 stdin and write to stdout.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Either way, any
@@ -336,7 +336,7 @@ convenience, interactive sessions can set some flags
 <b>-D</b><i>directory,</i> and
 <b>-L</b><i>plugins</i><b>)</b> persistently. If you often
 need the &quot;csv&quot; plugin for your interactive
-sessions, you can invoke <b>jsoncalc</b> once with a
+sessions, you can invoke <b>jx</b> once with a
 <b>-Lcsv</b> flag and then it&rsquo;ll always be loaded for
 your interactive sessions. Later, if you decide you
 don&rsquo;t want to autoload the &quot;csv&quot; plugin, you
@@ -377,7 +377,7 @@ example, <b>-spretty</b> will enable pretty-printing, and
 <p style="margin-left:11%; margin-top: 1em">Some options
 are strings that have a list of preferred values associated
 with them. You can give just the value, without a name, and
-<b>jsoncalc</b> will figure out which name it belongs to.
+<b>jx</b> will figure out which name it belongs to.
 For example, there&rsquo;s a &quot;table&quot; setting with
 a list of preferred values that includes &quot;sh&quot; (for
 a format that works well on shell scripts), so if you want
@@ -437,7 +437,7 @@ of multiple <i>name</i>=<i>value</i> pairs, giving the
 values for all columns of the table in that row. In a shell
 script, you can read the lines and evaluate them one-by-one
 like this: <br>
-jsoncalc -ssh -c scores sampledata/test.json | while read
+jx -ssh -c scores sampledata/test.json | while read
 row <br>
 do <br>
 eval $row <br>
@@ -449,7 +449,7 @@ done</p>
 the output to be a single object then you can use
 <b>bash</b>(1)&rsquo;s &quot;$(...)&quot; notation, like
 this: <br>
-eval $(jsoncalc -ssh -c
+eval $(jx -ssh -c
 &rsquo;scores[name:&quot;Paul&quot;]&rsquo;
 sampledata/test.json) <br>
 echo &quot;$name scored $score&quot;</p>
@@ -462,7 +462,7 @@ echo &quot;$name scored $score&quot;</p>
 <p style="margin-left:11%; margin-top: 1em">The expression
 syntax resembles that of JavaScript expressions, but with
 database-like extensions. For a full description of the
-syntax, see the JsonCalc web page. In short, though, the
+syntax, see the jx web page. In short, though, the
 extensions are:</p>
 
 <table width="100%" border="0" rules="none" frame="void"
@@ -573,7 +573,7 @@ appending to an array variable.</p></td></tr>
 statement.</p> </td></tr>
 </table>
 
-<p style="margin-left:11%; margin-top: 1em">JsonCalc also
+<p style="margin-left:11%; margin-top: 1em">jx also
 implements many JavaScript operators, functions, and
 commands. It does not support classes though, or functions
 that alter data such as <b>array</b>.splice(). It
@@ -590,45 +590,45 @@ thing.</p>
 </h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">jsoncalc</p>
+<p style="margin-left:11%; margin-top: 1em">jx</p>
 
-<p style="margin-left:22%;">Start <b>jsoncalc</b>
+<p style="margin-left:22%;">Start <b>jx</b>
 interactively, without any JSON data initially.</p>
 
-<p style="margin-left:11%;">jsoncalc -lmath</p>
+<p style="margin-left:11%;">jx -lmath</p>
 
-<p style="margin-left:22%;">Start <b>jsoncalc</b>
+<p style="margin-left:22%;">Start <b>jx</b>
 interactively, with the &quot;math&quot; plugin loaded. This
 adds nearly all of the functions and constants from
 JavaScript&rsquo;s Math class.</p>
 
-<p style="margin-left:11%;">jsoncalc file.json</p>
+<p style="margin-left:11%;">jx file.json</p>
 
-<p style="margin-left:22%;">Start <b>jsoncalc</b>
+<p style="margin-left:22%;">Start <b>jx</b>
 interactively using the contents of file.json as variable
 <b>data.</b></p>
 
-<p style="margin-left:11%;">jsoncalc -d.</p>
+<p style="margin-left:11%;">jx -d.</p>
 
-<p style="margin-left:22%;">Start <b>jsoncalc</b>
+<p style="margin-left:22%;">Start <b>jx</b>
 interactively. Any *.json files in the directory
 &quot;.&quot; can be accessed simply by using their basename
 as a variable name, e.g. using the name <i>parts</i> in an
 expression would load the file <i>./parts.json</i> into the
 <i>parts</i> variable.</p>
 
-<p style="margin-left:11%;">jsoncalc -p file.json</p>
+<p style="margin-left:11%;">jx -p file.json</p>
 
 <p style="margin-left:22%;">Pretty-print file.json. This is
 non-interactive because <b>-p</b> was used without
 <b>-i</b>.</p>
 
-<p style="margin-left:11%;">jsoncalc -c 2+2</p>
+<p style="margin-left:11%;">jx -c 2+2</p>
 
 <p style="margin-left:22%;">Start in batch mode, evaluate
 2+2 to output 4, and then quit.</p>
 
-<p style="margin-left:11%;">jsoncalc -u script.js data.json
+<p style="margin-left:11%;">jx -u script.js data.json
 data2.json</p>
 
 <p style="margin-left:22%;">Start in batch mode. For each
@@ -643,8 +643,8 @@ changes.</p>
 
 
 <p style="margin-left:11%; margin-top: 1em">The following
-examples assume you invoked <b>jsoncalc</b> as
-&quot;jsoncalc -dsampledata&quot;.</p>
+examples assume you invoked <b>jx</b> as
+&quot;jx -dsampledata&quot;.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -658,7 +658,7 @@ examples assume you invoked <b>jsoncalc</b> as
 <td width="78%">
 
 
-<p>This outputs 7. <b>jsoncalc</b> makes a pretty decent
+<p>This outputs 7. <b>jx</b> makes a pretty decent
 calculator.</p> </td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
@@ -681,14 +681,14 @@ from the left operand (an array) and applies the right
 operand (an expression) to them with &quot;this&quot; set to
 the array element&rsquo;s value. The {...} notation is an
 object generator. The result is an array of objects, which
-<b>jsoncalc</b> classifies as a table, so it is output as a
+<b>jx</b> classifies as a table, so it is output as a
 table.</p>
 
 <p style="margin-left:11%; margin-top: 1em">This is an
 example of ISO-8601 date/time/period calculation.</p>
 
 <p style="margin-left:22%;">It adds 12 days to Christmas,
-returning &quot;2025-01-06&quot;. <b>jsoncalc</b> makes date
+returning &quot;2025-01-06&quot;. <b>jx</b> makes date
 calculation easy. (If the strings didn&rsquo;t look like a
 date and a period, they would have been concatenated just as
 in JavaScript. If you want to concatenate strings, no
@@ -766,7 +766,7 @@ from test.scores group by run&quot;</p>
 &quot;SELECT&quot; command to extract basically the same
 information. Note that SQL will choose a default name for a
 computed column. Internally, the SQL &quot;SELECT&quot; is
-translated to <b>jsoncalc</b>&rsquo;s native expression
+translated to <b>jx</b>&rsquo;s native expression
 syntax so it&rsquo;s about as efficient either way.</p>
 
 
@@ -843,24 +843,24 @@ output method.</p>
 
 
 
-<p style="margin-left:11%; margin-top: 1em">~/.config/jsoncalc/</p>
+<p style="margin-left:11%; margin-top: 1em">~/.config/jx/</p>
 
 <p style="margin-left:22%;">This directory stores
-JsonCalc&rsquo;s configuration. It may also store temporary
+jx&rsquo;s configuration. It may also store temporary
 files such as caches and logs.</p>
 
 
 <p style="margin-left:11%;"><i>PATH</i>/plugin<i>plugin</i>.so</p>
 
 <p style="margin-left:22%;">Where <i>PATH</i> is a
-directory name from $JSONCALCPATH, this is where a binary
+directory name from $JXPATH, this is where a binary
 plugin may be found.</p>
 
 
 <p style="margin-left:11%;"><i>PATH</i>/<i>plugin</i>.jc</p>
 
 <p style="margin-left:22%;">Where <i>PATH</i> is a
-directory name from $JSONCALCPATH, this is where a script
+directory name from $JXPATH, this is where a script
 plugin may be found.</p>
 
 <h2>ENVIRONMENT
@@ -881,15 +881,15 @@ plugin may be found.</p>
 
 
 <p style="margin-top: 1em">This is used to find the
-<i>~/.config/jsoncalc</i> directory.</p></td></tr>
+<i>~/.config/jx</i> directory.</p></td></tr>
 </table>
 
-<p style="margin-left:11%;">$JSONCALCPATH</p>
+<p style="margin-left:11%;">$JXPATH</p>
 
 <p style="margin-left:22%;">This is a list of directories
-where JsonCalc&rsquo;s supporting files might be found. The
+where jx&rsquo;s supporting files might be found. The
 default value is derived from $LDLIBRARYPATH and also
-includes <i>~/.config/jsoncalc</i>.</p>
+includes <i>~/.config/jx</i>.</p>
 
 <h2>SEE ALSO
 <a name="SEE ALSO"></a>
@@ -902,7 +902,7 @@ includes <i>~/.config/jsoncalc</i>.</p>
 <b>gnome-terminal</b>(1)</p>
 
 <p style="margin-left:11%; margin-top: 1em">The home page
-for JsonCalc is http://www.jsoncalc.org/ <br>
+for jx is http://www.jxhub.net/ <br>
 <a href=""></a></p>
 
 <h2>AUTHOR

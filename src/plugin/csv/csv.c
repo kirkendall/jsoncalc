@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 static char *csvsettings = "{"
 	"\"backslash\":true,"	/* Use \x sequences when generating CSV */
@@ -22,7 +22,7 @@ static int crlf;
 static int headless;
 
 /* Output a single number, string, or symbol in CSV notation */
-static void csvsingle(json_t *elem, jsonformat_t *format)
+static void csvsingle(jx_t *elem, jxformat_t *format)
 {
 	char	*s;
 
@@ -32,22 +32,22 @@ static void csvsingle(json_t *elem, jsonformat_t *format)
 
 	/* Output values in a type-dependent way */
 	switch (elem->type) {
-	case JSON_NUMBER:
+	case JX_NUMBER:
 		/* could be binary int or double, or it could be text */
 		if (elem->text[0] == '\0' && elem->text[1] == 'i')
-			fprintf(format->fp, "%d", JSON_INT(elem));
+			fprintf(format->fp, "%d", JX_INT(elem));
 		else if (elem->text[0] == '\0' && elem->text[1] == 'd')
-			fprintf(format->fp, "%.*g", format->digits, JSON_DOUBLE(elem));
+			fprintf(format->fp, "%.*g", format->digits, JX_DOUBLE(elem));
 		else
 			fputs(elem->text, format->fp);
 		break;
-	case JSON_BOOLEAN:
+	case JX_BOOLEAN:
 		fputs(elem->text, format->fp);
 		break;
-	case JSON_NULL:
+	case JX_NULL:
 		fputs(format->null, format->fp);
 		break;
-	case JSON_STRING:
+	case JX_STRING:
 		putc('"', format->fp);
 		for (s = elem->text; *s; s++) {
 			if (*s == '\n') {
@@ -64,7 +64,7 @@ static void csvsingle(json_t *elem, jsonformat_t *format)
 				putc('"', format->fp);
 			} else if ((*s & 0x80) != 0 && format->ascii) {
 				char buf[13], *c;
-				s = (char *)json_mbs_ascii(s, buf);
+				s = (char *)jx_mbs_ascii(s, buf);
 				s--; /* because for-loop does s++ */
 				for (c = buf; *c; c++) {
 					if (*c == '\\')
@@ -83,30 +83,30 @@ static void csvsingle(json_t *elem, jsonformat_t *format)
 }
 
 /* Output a CSV table */
-static void csvprint(json_t *json, jsonformat_t *format)
+static void csvprint(jx_t *json, jxformat_t *format)
 {
-	json_t	*headers;
-	json_t	*row, *col;
+	jx_t	*headers;
+	jx_t	*row, *col;
 	char	*t;
 	int	first;
 
 	/* Check options */
-	backslash = json_is_true(json_config_get("plugin.csv", "backslash"));
-	crlf = json_is_true(json_config_get("plugin.csv", "crlf"));
-	headless = json_is_true(json_config_get("plugin.csv", "headless"));
+	backslash = jx_is_true(jx_config_get("plugin.csv", "backslash"));
+	crlf = jx_is_true(jx_config_get("plugin.csv", "crlf"));
+	headless = jx_is_true(jx_config_get("plugin.csv", "headless"));
 
 	/* Collect column names */
-	headers = json_explain(NULL, json->first, 0);
+	headers = jx_explain(NULL, json->first, 0);
 	if (!format->quick) {
 		for (row = json->first->next; row; row = row->next)
-			headers = json_explain(headers, row, 0);
+			headers = jx_explain(headers, row, 0);
 	}
 
 	/* Output column names, unless headless */
 	if (!headless) {
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */
-			t = json_text_by_key(col, "type");
+			t = jx_text_by_key(col, "type");
 			if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
 				continue;
 
@@ -116,17 +116,17 @@ static void csvprint(json_t *json, jsonformat_t *format)
 			first = 0;
 
 			/* Output the key */
-			csvsingle(json_by_key(col, "key"), format);
+			csvsingle(jx_by_key(col, "key"), format);
 		}
 		putc('\n', format->fp);
 	}
 
 	/* For each row... */
-	for (row = json->first; row && !json_interrupt; row = row->next) {
+	for (row = json->first; row && !jx_interrupt; row = row->next) {
 		/* Output each column.  Do it in header order, for consistency*/
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */
-			t = json_text_by_key(col, "type");
+			t = jx_text_by_key(col, "type");
 			if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
 				continue;
 
@@ -136,13 +136,13 @@ static void csvprint(json_t *json, jsonformat_t *format)
 			first = 0;
 
 			/* Output the data */
-			csvsingle(json_by_key(row, json_text_by_key(col, "key")), format);
+			csvsingle(jx_by_key(row, jx_text_by_key(col, "key")), format);
 		}
 		putc('\n', format->fp);
 	}
 
 	/* Free the column data */
-	json_free(headers);
+	jx_free(headers);
 }
 
 /*****************************************************************************/
@@ -155,12 +155,12 @@ static int pad;
  * store the pointer to the comma or newline after the cell there.  If the
  * cell text appears to be malformed, return NULL.
  */
-static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
+static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
 {
 	const char *cursor = *refcursor;
 	size_t clen, i, j;
 	int	digits;
-	json_t	*cell;
+	jx_t	*cell;
 
 	/* Skip whitespace */
 	while (cursor < &buf[len] && *cursor == ' ')
@@ -177,9 +177,9 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 	/* If nothing, return null or "" */
 	if (*cursor == ',' || *cursor == '\n') {
 		if (emptynull)
-			return json_null();
+			return jx_null();
 		else
-			return json_string("", 0);
+			return jx_string("", 0);
 	}
 
 	/* Is it quoted? */
@@ -205,7 +205,7 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 		 * double-quotes may also included in clen, but the excess is
 		 * not enough to worry about.
 		 */
-		cell = json_string("", clen - 1);
+		cell = jx_string("", clen - 1);
 
 		/* Copy the text into the string */
 		for (i = 1, j = 0; i < clen; ) {
@@ -221,7 +221,7 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 				case 't': cell->text[j++] = '\t'; break;
 				default:
 					if (isalpha(cursor[i + 1])) {
-						json_free(cell);
+						jx_free(cell);
 						return NULL;
 					}
 					cell->text[j++] = cursor[i + 1];
@@ -262,10 +262,10 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
 		}
 		if (digits && j == i) {
 			/* Yes, it's a number */
-			cell = json_number(cursor, i);
+			cell = jx_number(cursor, i);
 		} else {
 			/* It's a string */
-			cell = json_string(cursor, i);
+			cell = jx_string(cursor, i);
 		}
 
 		/* Move past the cell and any trailing whitespace */
@@ -293,9 +293,9 @@ static json_t *csvcell(const char *buf, size_t len, const char **refcursor)
  * column heading row as an array, and then pass that array as columns for the
  * remainder of the rows.
  */
-static json_t *csvrow(const char *buf, size_t len, const char **refcursor, json_t *columns)
+static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *columns)
 {
-	json_t	*row, *col, *cell;
+	jx_t	*row, *col, *cell;
 
 	/* If end of data, then return NULL.  This can mean hitting the end of
 	 * buf, or encountering an empty line.
@@ -309,10 +309,10 @@ static json_t *csvrow(const char *buf, size_t len, const char **refcursor, json_
 
 	/* Allocate the row */
 	if (columns) {
-		row = json_object();
+		row = jx_object();
 		col = columns->first;
 	} else {
-		row = json_array();
+		row = jx_array();
 		col = NULL;
 	}
 
@@ -323,24 +323,24 @@ static json_t *csvrow(const char *buf, size_t len, const char **refcursor, json_
 
 		/* If malformed, then and return an error */
 		if (!cell) {
-			json_free(row);
+			jx_free(row);
 			if (col)
-				return json_error_null(0, "Malformed %s data for \"%s\" column", "csv", col->text);
-			return json_error_null(0, "Malformed %s data in header", "csv");
+				return jx_error_null(0, "Malformed %s data for \"%s\" column", "csv", col->text);
+			return jx_error_null(0, "Malformed %s data in header", "csv");
 		}
 
 		/* If more data cells than column headings, return an error */
 		if (columns && !col) {
-			json_free(row);
-			return json_error_null(0, "Too many %s data columns", "csv");
+			jx_free(row);
+			return jx_error_null(0, "Too many %s data columns", "csv");
 		}
 
 		/* Append it to the row */
 		if (columns) {
-			json_append(row, json_key(col->text, cell));
+			jx_append(row, jx_key(col->text, cell));
 			col = col->next;
 		} else
-			json_append(row, cell);
+			jx_append(row, cell);
 
 		/* csvcell() leaves the cursor on the ending comma.  Move past
 		 * that for the next cell.
@@ -352,10 +352,10 @@ static json_t *csvrow(const char *buf, size_t len, const char **refcursor, json_
 	/* If this row is short, and we're supposed to pad short rows, do it */
 	while (pad && col) {
 		if (emptynull)
-			cell = json_null();
+			cell = jx_null();
 		else
-			cell = json_string("", 0);
-		json_append(row, json_key(col->text, cell));
+			cell = jx_string("", 0);
+		jx_append(row, jx_key(col->text, cell));
 		col = col->next;
 	}
 
@@ -370,7 +370,7 @@ static json_t *csvrow(const char *buf, size_t len, const char **refcursor, json_
 /* Return 1 if "str" appears to be CSV, else return 0 */
 static int csvtest(const char *str, size_t len)
 {
-	json_t *columns, *data;
+	jx_t *columns, *data;
 	const char *cursor;
 
 	/* Read the column headings */
@@ -378,8 +378,8 @@ static int csvtest(const char *str, size_t len)
 	columns = csvrow(str, len, &cursor, NULL);
 
 	/* If malformed or no info, then it isn't CSV */
-	if (!columns || columns->type == JSON_NULL || json_length(columns) < 2) {
-		json_free(columns);
+	if (!columns || columns->type == JX_NULL || jx_length(columns) < 2) {
+		jx_free(columns);
 		return 0;
 	}
 
@@ -387,45 +387,45 @@ static int csvtest(const char *str, size_t len)
 	data = csvrow(str, len, &cursor, NULL);
 
 	/* If malformed, no info, or too many data cells, then it isn't CSV */
-	if (!data || data->type == JSON_NULL || json_length(columns) < json_length(data)) {
-		json_free(columns);
-		json_free(data);
+	if (!data || data->type == JX_NULL || jx_length(columns) < jx_length(data)) {
+		jx_free(columns);
+		jx_free(data);
 		return 0;
 	}
 
 	/* It looks like CSV to me.  Clean up and return 1 */
-	json_free(columns);
-	json_free(data);
+	jx_free(columns);
+	jx_free(data);
 	return 1;
 }
 
 /* Parse "buf" and return its contents as a JSON table.  Store a pointer to
  * the end of the parsed text at "refend" unless "refend" is NULL.  If an error
  * is detected, store a pointer to the location of the error at "referr" (if
- * "referr" is not NULL) and return an json_t containing an error null.
+ * "referr" is not NULL) and return an jx_t containing an error null.
  */
-static json_t *csvparse(const char *buf, size_t len, const char **refend, const char **referr)
+static jx_t *csvparse(const char *buf, size_t len, const char **refend, const char **referr)
 {
-	json_t *columns, *row, *table;
+	jx_t *columns, *row, *table;
 	const char *cursor;
 
 	/* Check options */
-	headless = json_is_true(json_config_get("plugin.csv", "headless"));
-	emptynull = json_is_true(json_config_get("plugin.csv", "emptynull"));
-	pad = json_is_true(json_config_get("plugin.csv", "pad"));
+	headless = jx_is_true(jx_config_get("plugin.csv", "headless"));
+	emptynull = jx_is_true(jx_config_get("plugin.csv", "emptynull"));
+	pad = jx_is_true(jx_config_get("plugin.csv", "pad"));
 
 	/* If headless, then just parse each row as an array, and append the
 	 * row's array as an element to the document's array.  The result
-	 * isn't a "table" as JsonCalc defines it, but it's the best we can do.
+	 * isn't a "table" as jx defines it, but it's the best we can do.
 	 */
 	if (headless) {
-		table = json_array();
+		table = jx_array();
 		cursor = buf;
 		while (cursor < &buf[len] && *cursor != '\n') {
 			row = csvrow(buf, len, &cursor, columns);
 			if (!row)
 				break;
-			json_append(table, row);
+			jx_append(table, row);
 		}
 		return table;
 	}
@@ -433,7 +433,7 @@ static json_t *csvparse(const char *buf, size_t len, const char **refend, const 
 	/* Parse the heading row */
 	cursor = buf;
 	columns = csvrow(buf, len, &cursor, NULL);
-	if (!columns || columns->type == JSON_NULL || json_length(columns) < 2) {
+	if (!columns || columns->type == JX_NULL || jx_length(columns) < 2) {
 		/* Store the cursor position */
 		if (*refend)
 			*refend = cursor;
@@ -441,29 +441,29 @@ static json_t *csvparse(const char *buf, size_t len, const char **refend, const 
 			*referr = cursor;
 
 		/* If we got an error, return the error */
-		if (columns->type == JSON_NULL && !*columns->text)
+		if (columns->type == JX_NULL && !*columns->text)
 			return columns; /* an error */
 
 		/* Otherwise, generate an error and return it */
-		json_free(columns);
-		return json_error_null(0, "Unable to parse \"%s\" data", "csv");
+		jx_free(columns);
+		return jx_error_null(0, "Unable to parse \"%s\" data", "csv");
 	}
 
 	/* Parse each data row, and collect as an array of objects */
-	table = json_array();
+	table = jx_array();
 	while (cursor < &buf[len] && *cursor != '\n') {
 		row = csvrow(buf, len, &cursor, columns);
 		if (!row)
 			break;
-		if (row->type == JSON_NULL && *row->text) {
-			json_free(table);
+		if (row->type == JX_NULL && *row->text) {
+			jx_free(table);
 			return row;
 		}
-		json_append(table, row);
+		jx_append(table, row);
 	}
 
 	/* Clean up and return the data */
-	json_free(columns);
+	jx_free(columns);
 	if (refend)
 		*refend = cursor;
 	return table;
@@ -476,16 +476,16 @@ static json_t *csvparse(const char *buf, size_t len, const char **refend, const 
  */
 char *plugincsv()
 {
-	json_t	*section, *settings;
+	jx_t	*section, *settings;
 
 	/* Add options for CSV */
-	section = json_by_key(json_config, "plugin");
-	settings = json_parse_string(csvsettings);
-	json_append(section, json_key("csv", settings));
+	section = jx_by_key(jx_config, "plugin");
+	settings = jx_parse_string(csvsettings);
+	jx_append(section, jx_key("csv", settings));
 
 	/* Register the functions */
-	json_print_table_hook("csv", csvprint);
-	json_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
+	jx_print_table_hook("csv", csvprint);
+	jx_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
 
 	/* Success */
 	return NULL;

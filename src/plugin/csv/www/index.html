@@ -2,15 +2,15 @@
 <html>
   <head>
     <title>Adds the Ability to Parse and Generate CSV Data.</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc csv plugin summary">
-    <meta name="keywords" content="jsoncalc, csv plugin">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx csv plugin summary">
+    <meta name="keywords" content="jx, csv plugin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
   </head>
   <body>
     <h1>CSV Plugin</h1>
-    The <strong>csv</strong> plugin allows JsonCalc to read or write files
+    The <strong>csv</strong> plugin allows jx to read or write files
     in CSV format.
     <p>
     CSV is a plain text data format in which each line contains a single
@@ -79,13 +79,13 @@
               read each row as an array of values.
               You end up with an array of arrays, instead of an array of
               objects.
-              <em>This means it isn't a "table" as JsonCalc defines it.</em>
+              <em>This means it isn't a "table" as jx defines it.</em>
               You'll need to find a way to assign names to the cells,
               converting each row array into a row object.
               (See the <a target="_PARENT" href="../index.html?op=values">VALUES</a> operator.)
               <p>
-              JsonCalc can also write headless CSV data, but it must be a
-              table &mdash; the columns must be assigned names so JsonCalc
+              jx can also write headless CSV data, but it must be a
+              table &mdash; the columns must be assigned names so jx
               knows it's a table.
               When writing, all the <tt>headless</tt> option does is inhibit
               generation of the column label row.
@@ -136,7 +136,7 @@
     In a script, you could switch to CSV output by giving a <tt>set csv</tt>
     command.
     <p>
-    JsonCalc only pays attention to the "table" formatting option when it's
+    jx only pays attention to the "table" formatting option when it's
     outputting a table &mdash; a non-empty array of objects.
     If you read headless CSV data, you get an array of arrays, not an array
     of objects, so you can't output headless data until you assign names

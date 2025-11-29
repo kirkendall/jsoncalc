@@ -5,12 +5,12 @@
  */
 
 
-/* This file converts a json_t object to an XML string.  Returns the size of
+/* This file converts a jx_t object to an XML string.  Returns the size of
  * the string in bytes, not counting the terminating '\0' byte.  The string
  * itself is stored at "buf".  You can also pass a null "buf" to find the
  * length without actually generating it.
  */
-static size_t xmlTemplate(char *buf, json_t *data, const char *template)
+static size_t xmlTemplate(char *buf, jx_t *data, const char *template)
 {
 	return 0;
 }

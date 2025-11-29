@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>Working with Environment Variables</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc Working with Environment Variables">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, article, Working with Environment Variables">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx Working with Environment Variables">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, article, Working with Environment Variables">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -13,14 +13,14 @@
     <center>
     <blockquote class="abstract">
       Environment variables are managed by shells such as bash.
-      JsonCalc is often used in shell scripts, so environment variables
-      can be a useful way to get raw data into a JsonCalc script.
-      Jsoncalc lets you access environment variables using $NAME,
+      jx is often used in shell scripts, so environment variables
+      can be a useful way to get raw data into a jx script.
+      jx lets you access environment variables using $NAME,
       $NAME[expr], and getenv(expr).
     </blockquote>
     </center>
 
-    JsonCalc can be an effective way to build JSON documents from raw data,
+    jx can be an effective way to build JSON documents from raw data,
     but first you need a way to get the raw data into your script.
     One way to do that is by setting environment variables.
     <p>
@@ -29,15 +29,15 @@
     set a persistent environment variable via an "export" command, or
     pass any number of temporary environment variables into a program by
     listing the "<var>name</var>=<var>value</var>" before the program name.
-    If you're using JsonCalc in a shell script, this is often the easiest
-    way to pass values into JsonCalc.
+    If you're using jx in a shell script, this is often the easiest
+    way to pass values into jx.
     <p>
-    Environment variable names are case-sensitive, unlike most of JsonCalc.
+    Environment variable names are case-sensitive, unlike most of jx.
     Usually they're written entirely in uppercase, though they don't have
     to be.
     <p>
-    JsonCalc has three ways to access environment variables:  
-    $NAME notation used like a JsonCalc const,
+    jx has three ways to access environment variables:  
+    $NAME notation used like a jx const,
     $NAME[expr] notation to synthesize the full name by appending the
     result of the subscript expression, and the
     <a target="_PARENT" href="../index.html?f=getenv">getenv()</a> function.
@@ -61,16 +61,16 @@
     Often you'll want to pass many similar items into a script.
     Environment variable store strings, not arrays, so the next best thing
     is to append a number to the name of the environment.
-    For example, you could pass a bunch of part numbers into a JsonCalc
+    For example, you could pass a bunch of part numbers into a jx
     script via a series of environment variables named $partno1, $partno2,
     and so on.
-    JsonCalc's $<var>NAME</var>[<var>expr</var>] notation makes this easy
+    jx's $<var>NAME</var>[<var>expr</var>] notation makes this easy
     to access.
     <p>
     The subscript expression is evaluated first, and then appended to the name.
     If the subscript isn't a string already, then it will be converted to a
     string.
-    In the part number example, this means JsonCalc could access them as
+    In the part number example, this means jx could access them as
     <tt>$partno[i]</tt>.
     <div class="example">
       <kbd>$partno[1]</kbd>
@@ -112,7 +112,7 @@
 
     <h2>Putting It All Together in a Shell Script</h2>
     Here's a shell script that sets some environment variables, and runs
-    JsonCalc to add their values to a document.
+    jx to add their values to a document.
     <pre>
     #!/bin/sh
 
@@ -123,7 +123,7 @@
     export desc2="Tooth Paste"
     export qty2=1
 
-    custno=133 pono=2029 jsoncalc -c "
+    custno=133 pono=2029 jx -c "
     {
        custno: $custno,
        po: $pono,
@@ -152,8 +152,8 @@
     <p>
     First we set some environment variables storing the part information.
     Then we set a couple more (<tt>custno</tt> and <tt>pono</tt>) as we
-    invoke JsonCalc.
-    We use JsonCalc's "-c cmd" flag to pass the whole JsonCalc script as
+    invoke jx.
+    We use jx's "-c cmd" flag to pass the whole jx script as
     an argument.
     The script stuffs the environment variables into an object.
     The parts are collected in a "detail" member, as an array of objects.
@@ -164,7 +164,7 @@
     <tt>partno</tt>, <tt>desc</tt>, and <tt>qty</tt> values.
     The <tt>qty</tt> is converted from a string to an integer.
     Since the expression isn't assigned to a variable,
-    JsonCalc simply outputs it.
+    jx simply outputs it.
 
     <details>
       <summary>See Also</summary>

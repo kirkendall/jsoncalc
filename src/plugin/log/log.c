@@ -8,16 +8,16 @@
 #include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
-/* These are the default settings.  They are added to json_config by the
- * init() function, and then loaded by the main jsoncalc program via
- * json_config_load().
+/* These are the default settings.  They are added to jx_config by the
+ * init() function, and then loaded by the main jxcalc program via
+ * jx_config_load().
  */
 static char *config = "{"
 	"\"dir\":\"\","
-	"\"name-list\":[\"tty\",\"jsoncalc\"],"
-	"\"name\":\"jsoncalc\","
+	"\"name-list\":[\"tty\",\"jxcalc\"],"
+	"\"name\":\"jxcalc\","
 	"\"ext\":\".log\","
 	"\"rollover-list\":[\"daily\",\"size\",\"never\"],"
 	"\"rollover\":\"never\","
@@ -34,7 +34,7 @@ static char *config = "{"
 "}";
 
 
-static jsoncmdname_t *jcn_log;
+static jxcmdname_t *jcn_log;
 
 
 /* When logset is used to select a default log name, this is where it's stored.
@@ -46,7 +46,7 @@ static char *defaultname;
 /* Get a boolean config */
 static int getbool(char *key)
 {
-	return json_is_true(json_config_get("plugin.log", key));
+	return jx_is_true(jx_config_get("plugin.log", key));
 }
 
 /* Generate the name of a log file.  This incorporates directory name and
@@ -55,7 +55,7 @@ static int getbool(char *key)
  */
 static char *mkfilename(const char *logname, int ver)
 {
-	json_t	*dir, *ext;
+	jx_t	*dir, *ext;
 	char	*dirstr, *extstr, verstr[20];
 	size_t	len;
 	static size_t	alloclen;
@@ -63,11 +63,11 @@ static char *mkfilename(const char *logname, int ver)
 
 
 	/* Get the directory, defaulting to "." */
-	dir = json_config_get("plugin.log", "dir");
+	dir = jx_config_get("plugin.log", "dir");
 	dirstr = dir ? dir->text : ".";
 
 	/* Get the extension */
-	ext = json_config_get("plugin.log", "ext");
+	ext = jx_config_get("plugin.log", "ext");
 	extstr = ext ? ext->text : "log";
 
 	/* Convert the version number to a string */
@@ -139,9 +139,9 @@ static void datedelta(char buf[12], int days)
 /* Return the number of days/logs to keep */
 static int keep()
 {
-	json_t *val = json_config_get("plugin.log", "keep");
-	if (val && val->type == JSON_NUMBER)
-		return json_int(val);
+	jx_t *val = jx_config_get("plugin.log", "keep");
+	if (val && val->type == JX_NUMBER)
+		return jx_int(val);
 	return 0;
 }
 
@@ -149,7 +149,7 @@ static int keep()
 /* Do file rollover by date */
 static void rolldaily(const char *logname)
 {
-	json_t	*val;
+	jx_t	*val;
 	time_t	now;
 	struct tm tm;
 	int	utc;
@@ -236,7 +236,7 @@ static void rollsize(const char *logname)
 	char *incrname;
 	size_t	len;
 	struct stat st;
-	json_t	*val;
+	jx_t	*val;
 	off_t	bytes;
 	int	keeplogs, ver, highver;
 	int	fd;
@@ -253,9 +253,9 @@ static void rollsize(const char *logname)
 
 	/* Get the size limit */
 	bytes = 100000;
-	val = json_config_get("plugin.log", "bytes");
-	if (val && val->type == JSON_NUMBER)
-		bytes = json_int(val);
+	val = jx_config_get("plugin.log", "bytes");
+	if (val && val->type == JX_NUMBER)
+		bytes = jx_int(val);
 
 	/* Check the size of the log file */
 	if (fstat(fd, &st) < 0 || st.st_size < bytes) {
@@ -314,7 +314,7 @@ static FILE *switchfile(const char *logname)
 	static FILE *prevfp;
 	static char *prevname;
 	char	*filename;
-	json_t	*roll;
+	jx_t	*roll;
 
 	/* If same name, just keep using it */
 	if (prevfp && prevname && !strcmp(prevname, logname))
@@ -327,10 +327,10 @@ static FILE *switchfile(const char *logname)
 		free(prevname);
 
 	/* Do the rollover thing. */
-	roll = json_config_get("plugin.log", "rollover");
-	if (roll && roll->type == JSON_STRING && !strcmp(roll->text, "daily"))
+	roll = jx_config_get("plugin.log", "rollover");
+	if (roll && roll->type == JX_STRING && !strcmp(roll->text, "daily"))
 		rolldaily(logname);
-	else if (roll && roll->type == JSON_STRING && !strcmp(roll->text, "size"))
+	else if (roll && roll->type == JX_STRING && !strcmp(roll->text, "size"))
 		rollsize(logname);
 
 	/* Open the file.  If we can't open it, use stderr. */
@@ -344,14 +344,14 @@ static FILE *switchfile(const char *logname)
 	 */
 	if (ftell(prevfp) == 0) {
 		char today[12];
-		json_t *bytes = json_config_get("plugin.log", "bytes");
+		jx_t *bytes = jx_config_get("plugin.log", "bytes");
 		datedelta(today, 0);
-		if (roll->type != JSON_STRING)
+		if (roll->type != JX_STRING)
 			fprintf(prevfp, "%s never\n", today);
 		else if (!strcmp(roll->text, "daily"))
 			fprintf(prevfp, "%s daily %d", today, keep());
 		else if (!strcmp(roll->text, "size"))
-			fprintf(prevfp, "%s size(%dK) %d", today, json_int(bytes) / 1024, keep());
+			fprintf(prevfp, "%s size(%dK) %d", today, jx_int(bytes) / 1024, keep());
 		else
 			fprintf(prevfp, "%s never\n", today);
 	}
@@ -365,26 +365,26 @@ static FILE *switchfile(const char *logname)
 /* Parse a logset command.  Mostly this just sets the default output for any
  * following log commands.
  */
-static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	json_t	*setting, *err;
+	jx_t	*setting, *err;
 	char	*setstr;
 	const char *str;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 
 	/* Optional "name:", or just ":" to use the default name from config for the log, must not contain punctuation/whitespace */
 	if (*src->str == ':') {
 		src->str++; /* move past ":" */
 		free(defaultname);
-		setting = json_config_get("plugin.log", "name");
+		setting = jx_config_get("plugin.log", "name");
 		if (setting)
 			defaultname = strdup(setting->text);
 		else
 			defaultname = NULL;
 	} else if (isalpha(*src->str)) {
 		const char *before = src->str;
-		char *newname = json_cmd_parse_key(src, 0);
+		char *newname = jx_cmd_parse_key(src, 0);
 		if (!newname || *src->str != ':') {
 			src->str = before;
 		} else {
@@ -395,7 +395,7 @@ static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 
 	/* Optional log settings */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str && *src->str != ';' && *src->str != '}') {
 		/* Find the end of the command */
 		for (str = src->str; *str && !strchr(";}\n", *str); str++) {
@@ -408,12 +408,12 @@ static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			src->str++;
 
 		/* Parse it */
-		setting = json_by_expr(json_config, "plugin.log", NULL);
-		err = json_config_parse(setting, setstr, NULL);
+		setting = jx_by_expr(jx_config, "plugin.log", NULL);
+		err = jx_config_parse(setting, setstr, NULL);
 		free(setstr);
 		if (err) {
-			*referr = json_cmd_error(src->str, "%s", err->text);
-			json_free(err);
+			*referr = jx_cmd_error(src->str, "%s", err->text);
+			jx_free(err);
 		}
 	}
 
@@ -422,23 +422,23 @@ static jsoncmd_t *logset_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 }
 
 /* Placeholder - logset is handled entirely at compile time */
-static jsoncmdout_t *logset_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *logset_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	return NULL;
 }
 
-static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsonsrc_t start;
+	jxsrc_t start;
 	char	*name = NULL;
 	int	detail = 1;
-	jsoncalc_t	*list;
+	jxcalc_t	*list;
 	const char	*err;
-	jsoncmd_t *cmd;
+	jxcmd_t *cmd;
 
 	/* If the defaultname hasn't been set yet, then set it now */
 	if (!defaultname) {
-		json_t *j = json_config_get("plugin.log", "name");
+		jx_t *j = jx_config_get("plugin.log", "name");
 		defaultname = strdup(j->text);
 	}
 
@@ -447,11 +447,11 @@ static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	 */
 	start = *src;
 	if (*src->str == ':') {
-		json_t *setting = json_config_get("plugin.log", "name");
+		jx_t *setting = jx_config_get("plugin.log", "name");
 		if (setting)
 			name = strdup(setting->text);
 	} else if (isalpha(*src->str)) {
-		name = json_cmd_parse_key(src, 0);
+		name = jx_cmd_parse_key(src, 0);
 		if (!name || *src->str != ':') {
 			src->str = start.str;
 			if (name)
@@ -463,7 +463,7 @@ static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		name = strdup(defaultname);
 
 	/* Optional "n:" to set the detail number */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str >= '1' && *src->str <= '9' && src->str[1] == ':') {
 		detail = *src->str - '0';
 		src->str += 2;
@@ -476,41 +476,41 @@ static jsoncmd_t *log_parse(jsonsrc_t *src, jsoncmdout_t **referr)
  	list = NULL;
 	err = NULL;
 	do {
-		jsoncalc_t *item = json_calc_parse(src->str, &src->str, &err, FALSE);
+		jxcalc_t *item = jx_calc_parse(src->str, &src->str, &err, FALSE);
 		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
 			if (list)
-				json_calc_free(list);
+				jx_calc_free(list);
 			if (item)
-				json_calc_free(item);
-			*referr = json_cmd_error(start.str, err ? err : "Syntax error in \"%s\" expression", "log");
+				jx_calc_free(item);
+			*referr = jx_cmd_error(start.str, err ? err : "Syntax error in \"%s\" expression", "log");
 			return NULL;
 		}
-		list = json_calc_list(list, item);
+		list = jx_calc_list(list, item);
 	} while (*src->str++ == ',');
 
 	/* Build the command */
-	cmd = json_cmd(&start, jcn_log);
+	cmd = jx_cmd(&start, jcn_log);
 	cmd->calc = list;
 	cmd->key = name;
 	cmd->var = detail + '0';
 	return cmd;
 }
 
-static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t *list, *scan;
+	jx_t *list, *scan;
 	FILE	*out;
 	int	showdate, showtime, showpid, showfile, showline;
 	int	lastchar;
-	jsonformat_t tweaked;
+	jxformat_t tweaked;
 
 	/* If this detail level is too high, skip it */
-	scan = json_config_get("plugin.log", "detail");
-	if (cmd->var - '0' > json_int(scan))
+	scan = jx_config_get("plugin.log", "detail");
+	if (cmd->var - '0' > jx_int(scan))
 		return NULL;
 
 	/* Decide where to log */
-	tweaked = json_format_default;
+	tweaked = jx_format_default;
 	tweaked.fp = NULL;
 	if (strcmp("tty", cmd->key)) {
 		out = switchfile(cmd->key);
@@ -532,57 +532,57 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		else
 			localtime_r(&now, &tm);
 		if (showdate && showtime)
-			json_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s ",
+			jx_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 		else if (showdate)
-			json_user_printf(&tweaked, "log", "%4d-%02d-%02d ",
+			jx_user_printf(&tweaked, "log", "%4d-%02d-%02d ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 		else
-			json_user_printf(&tweaked, "log", "%02d:%02d:%02d%s ",
+			jx_user_printf(&tweaked, "log", "%02d:%02d:%02d%s ",
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 	}
 	if (showpid) {
-		json_user_printf(&tweaked, "log", "[%5d] ", (int)getpid());
+		jx_user_printf(&tweaked, "log", "[%5d] ", (int)getpid());
 	}
 	if (showfile || showline) {
 		int lineno;
-		jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
+		jxfile_t *jf = jx_file_containing(cmd->where, &lineno);
 		if (jf) { 
 			if (showfile)
-				json_user_printf(&tweaked, "log", "%s", jf->filename);
+				jx_user_printf(&tweaked, "log", "%s", jf->filename);
 			if (showfile && showline)
-				json_user_ch(':');
+				jx_user_ch(':');
 			if (showline)
-				json_user_printf(&tweaked, "log", "%d", lineno);
-			json_user_ch(' ');
+				jx_user_printf(&tweaked, "log", "%d", lineno);
+			jx_user_ch(' ');
 		}
 	}
 
 	/* Evaluate the expression list. */
-	list = json_calc(cmd->calc, *refcontext, NULL);
+	list = jx_calc(cmd->calc, *refcontext, NULL);
 
 	/* If it's an error then log the error instead of the expression */
-	if (json_is_null(list) && *list->text) {
-		json_user_printf(&tweaked, "log", "Expression error: %s\n", list->text);
+	if (jx_is_null(list) && *list->text) {
+		jx_user_printf(&tweaked, "log", "Expression error: %s\n", list->text);
 	} else {
 		/* Output each expression with a space delimiter */
 		lastchar = '\n';
 		for (scan = list->first; scan; scan = scan->next) {
 			/* Space between items */
 			if (scan != list->first)
-				json_user_ch(' ');
+				jx_user_ch(' ');
 
 			/* Output strings plainly (no quotes), but convert
 			 * anything else to a JSON string.
 			 */
-			if (scan->type == JSON_STRING) {
-				json_user_printf(&tweaked, "log", "%s", scan->text);
+			if (scan->type == JX_STRING) {
+				jx_user_printf(&tweaked, "log", "%s", scan->text);
 				if (*scan->text)
 					lastchar = scan->text[strlen(scan->text) - 1];
 			} else {
-				char *tmp = json_serialize(scan, NULL);
-				json_user_printf(&tweaked, "log", "%s", tmp);
+				char *tmp = jx_serialize(scan, NULL);
+				jx_user_printf(&tweaked, "log", "%s", tmp);
 				free(tmp);
 				lastchar = 'x'; /* Never empty, never '\n' */
 			}
@@ -590,11 +590,11 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 
 		/* If the last character wasn't a newline, then add a newline */
 		if (lastchar != '\n')
-			json_user_ch('\n');
+			jx_user_ch('\n');
 	}
 
 	/* Clean up */
-	json_free(list);
+	jx_free(list);
 
 	/* If supposed to flush, then do that */
 	if (tweaked.fp && getbool("flush"))
@@ -607,29 +607,29 @@ static jsoncmdout_t *log_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 /* Initialize the plugin */
 char *pluginlog(void)
 {
-	json_t	*settings, *plugin, *colornormal, *colorlog, *name;
+	jx_t	*settings, *plugin, *colornormal, *colorlog, *name;
 	char	*dir;
 
 	/* Set the default options.  The config file hasn't been loaded yet
-	 * so json_config just contains the default options which don't
+	 * so jx_config just contains the default options which don't
 	 * include any settings for this plugin yet.
 	 */
-	plugin = json_by_key(json_config, "plugin");
-	json_append(plugin, json_key("log", json_parse_string(config)));
+	plugin = jx_by_key(jx_config, "plugin");
+	jx_append(plugin, jx_key("log", jx_parse_string(config)));
 
 	/* Add an entry to config.styles for the "log" style */
-	json_config_style("log", NULL);
+	jx_config_style("log", NULL);
 
 	/* Most default options are hardcoded, but the "dir" setting should
-	 * be the first writable directory in the JSONCALCPATH.
+	 * be the first writable directory in the JXPATH.
 	 */
-	dir = json_file_path(NULL, NULL, NULL);
-	json_config_set("plugin.log", "dir", json_string(dir, -1));
+	dir = jx_file_path(NULL, NULL, NULL);
+	jx_config_set("plugin.log", "dir", jx_string(dir, -1));
 	free(dir);
 
 	/* Add the "log" and "logset" commands */
-	jcn_log = json_cmd_hook("log", "log", log_parse, log_run);
-	json_cmd_hook("log", "logset", logset_parse, logset_run);
+	jcn_log = jx_cmd_hook("log", "log", log_parse, log_run);
+	jx_cmd_hook("log", "logset", logset_parse, logset_run);
 
 	/* Success! */
 	return NULL;

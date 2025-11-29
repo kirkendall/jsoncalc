@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <ctype.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 #include "version.h"
 
 static const char *defaultconfig = "{"
@@ -166,237 +167,244 @@ static const char *defaultconfig = "{"
 
 
 /* This stores a pointer to the config data */
-json_t *json_config;
+jx_t *jx_config;
 
 /* This is a combination of all system data.  It is initialized by
- * json_config_load(), though other code may add to it.
+ * jx_config_load(), though other code may add to it.
  */
-json_t *json_system;
+jx_t *jx_system;
 
 /* Merge new settings into old settings. */
-static void merge(json_t *old, json_t *newload)
+static void merge(jx_t *old, jx_t *newload)
 {
-	json_t *newkey, *oldmem;
+	jx_t *newkey, *oldmem;
 
 	/* Only works on objects */
-	if (old->type != JSON_OBJECT || newload->type != JSON_OBJECT)
+	if (old->type != JX_OBJECT || newload->type != JX_OBJECT)
 		return;
 
 	/* For each new member */
 	for (newkey = newload->first; newkey; newkey = newkey->next) { /* object */
 		/* Look for a corresponding old member */
-		oldmem = json_by_key(old, newkey->text);
+		oldmem = jx_by_key(old, newkey->text);
 
 		/* If no corresponding old member, then add a copy of new */
 		if (!oldmem) {
-			json_append(old, json_key(newkey->text, json_copy(newkey->first)));
+			jx_append(old, jx_key(newkey->text, jx_copy(newkey->first)));
 			continue;
 		}
 
 		/* If both are objects, merge recursively */
-		if (oldmem->type == JSON_OBJECT && newkey->first->type == JSON_OBJECT) {
+		if (oldmem->type == JX_OBJECT && newkey->first->type == JX_OBJECT) {
 			merge(oldmem, newkey->first);
 			continue;
 		}
 
 		/* If both are some other type, then replace the value */
 		if (oldmem->type == newkey->first->type) {
-			json_append(old, json_key(newkey->text, json_copy(newkey->first)));
+			jx_append(old, jx_key(newkey->text, jx_copy(newkey->first)));
 			continue;
 		}
 
-		/* Otherwise ignore it.  This could happen if JsonCalc's
+		/* Otherwise ignore it.  This could happen if jx's
 		 * option format got redefined, so the new settings 
 		 */
 	}
 }
 
-/* Return an array of directory names to look in for files related to JsonCalc
+/* Add a directory name to the path, if the directory exists */
+static void addpath(jx_t *path, const char *dirname)
+{
+	if (access(dirname, F_OK) == 0)
+		jx_append(path, jx_string(dirname, -1));
+}
+
+/* Return an array of directory names to look in for files related to jx
  * -- plugins and documentation mostly.
  */
-static json_t *configpath(const char *envvar)
+static jx_t *configpath(const char *envvar)
 {
 	const char *env;
-	json_t *path, *entry;
-	int	isjsoncalcpath;
+	jx_t *path, *entry;
+	int	isjxpath;
 	size_t	len;
 
 	/* If no envvar then just fake it completely */
 	if (!envvar) {
-		path = json_array();
-		json_append(path, json_string("~/.config/jsoncalc", -1));
-		json_append(path, json_string("/usr/local/lib64/jsoncalc", -1));
-		json_append(path, json_string("/usr/local/lib/jsoncalc", -1));
-		json_append(path, json_string("/usr/lib64/jsoncalc", -1));
-		json_append(path, json_string("/usr/lib/jsoncalc", -1));
-		json_append(path, json_string("/lib64/jsoncalc", -1));
-		json_append(path, json_string("/lib/jsoncalc", -1));
-		json_append(path, json_string("/usr/local/share/jsoncalc", -1));
-		json_append(path, json_string("/usr/share/jsoncalc", -1));
+		path = jx_array();
+		jx_append(path, jx_string("~/.config/jx", -1));
+		addpath(path, "/usr/local/lib64/jx");
+		addpath(path, "/usr/local/lib/jx");
+		addpath(path, "/usr/lib64/jx");
+		addpath(path, "/usr/lib/jx");
+		addpath(path, "/lib64/jx");
+		addpath(path, "/lib/jx");
+		addpath(path, "/usr/local/share/jx");
+		addpath(path, "/usr/share/jx");
 		return path;
 	}
 
-	/* Fetch the value.  If unset, return NULL */
+	/* If an envvar was specified but it isn't set, return NULL */
 	env = getenv(envvar);
 	if (!env)
 		return NULL;
 
-	/* Distinguish between $JSONCALCPATH and other paths */
-	isjsoncalcpath = !strcmp(envvar, "JSONCALCPATH");
+	/* Distinguish between $JXPATH and other paths */
+	isjxpath = !strcmp(envvar, "JXPATH");
 
-	/* Start building an array of entries.  If not $JSONCALCPATH then
+	/* Start building an array of entries.  If not $JXPATH then
 	 * put the config directory first.
 	 */
-	path = json_array();
-	if (!isjsoncalcpath)
-		json_append(path, json_string("~/.config/jsoncalc", -1));
+	path = jx_array();
+	if (!isjxpath)
+		jx_append(path, jx_string("~/.config/jx", -1));
 
 	/* For each entry in the path... */
 	while (*env) {
 		/* Find the end of this entry */
-		for (len = 0; env[len] && env[len] != JSON_PATH_DELIM; len++) {
+		for (len = 0; env[len] && env[len] != JX_PATH_DELIM; len++) {
 		}
 
-		/* Convert it to a string.  If not from $JSONCALCPATH then
-		 * add "/jsoncalc" to the string.
+		/* Convert it to a string.  If not from $JXPATH then
+		 * add "/jx" to the string.
 		 */
 		if (len == 0)
-			entry = json_string(".", 1);
-		else if (isjsoncalcpath) {
-			entry = json_string(env, len);
+			entry = jx_string(".", 1);
+		else if (isjxpath) {
+			entry = jx_string(env, len);
 		} else {
-			entry = json_string(env, len + 9);
-			strcat(entry->text, "/jsoncalc");
+			entry = jx_string(env, len + 3);
+			strcat(entry->text, "/jx");
 		}
 
 		/* Add it to the path */
-		json_append(path, entry);
+		jx_append(path, entry);
 
 		/* Move to the next entry */
 		env += len;
-		if (*env == JSON_PATH_DELIM)
+		if (*env == JX_PATH_DELIM)
 			env++;
 	}
 
-	/* If not $JSONCALCPATH then add shared directories */
-	if (!isjsoncalcpath) {
-		json_append(path, json_string("/usr/local/share/jsoncalc", -1));
-		json_append(path, json_string("/usr/share/jsoncalc", -1));
+	/* If not $JXPATH then add shared directories */
+	if (!isjxpath) {
+		addpath(path, "/usr/local/share/jx");
+		addpath(path, "/usr/share/jx");
 	}
 	return path;
 }
 
 /* Load the configuration data, and return it */
-void json_config_load(const char *name)
+void jx_config_load(const char *name)
 {
 	char	*pathname;
-	json_t	*conf, *value;
+	jx_t	*conf, *value;
 
 	/* Load the default config */
-	json_config = json_parse_string(defaultconfig);
+	jx_config = jx_parse_string(defaultconfig);
 
-	/* If json_system isn't set up yet, then set it up now */
-	if (!json_system) {
-		json_system = json_object();
+	/* If jx_system isn't set up yet, then set it up now */
+	if (!jx_system) {
+		jx_system = jx_object();
 
 		/* We also want to add the path for plugins and documentation.
-		 * This is from $JSONCALCPATH, but if $JSONCALCPATH isn't set
+		 * This is from $JXPATH, but if $JXPATH isn't set
 		 * then we want to derive it from $LD_LIBRARY_PATH.  And if
 		 * $LD_LIBRARY_PATH isn't set then we simulate that too.
 		 */
-		value = configpath("JSONCALCPATH");
+		value = configpath("JXPATH");
 		if (!value)
 			value = configpath("LD_LIBRARY_PATH");
 		if (!value)
 			value = configpath(NULL);
-		json_append(json_system, json_key("path", value));
+		jx_append(jx_system, jx_key("path", value));
 
-		json_append(json_system, json_key("config", json_config));
-		pathname = json_file_path(NULL, NULL, NULL);
-		json_append(json_system, json_key("configdir", json_string(pathname, -1)));
+		jx_append(jx_system, jx_key("config", jx_config));
+		pathname = jx_file_path(NULL, NULL, NULL);
+		jx_append(jx_system, jx_key("configdir", jx_string(pathname, -1)));
 		free(pathname);
 
 		/* Add an empty list of plugins.  As plugins are loaded,
 		 * this will become populated.
 		 */
-		if (!json_plugins)
-			json_plugins = json_array();
-		json_append(json_system, json_key("plugins", json_plugins));
+		if (!jx_plugins)
+			jx_plugins = jx_array();
+		jx_append(jx_system, jx_key("plugins", jx_plugins));
 
 		/* Add a table of parsers.  Initially it'll contain only the
 		 * built-in JSON parser, but as plugins register their parsers
-		 * via json_parse_hook(), they'll be added here too.
+		 * via jx_parse_hook(), they'll be added here too.
 		 */
-		conf = json_array();
-		value = json_object();
-		json_append(value, json_key("name", json_string("json", -1)));
-		json_append(value, json_key("plugin", json_null()));
-		json_append(value, json_key("suffix", json_string(".json", -1)));
-		json_append(value, json_key("mimetype", json_string("application/json", -1)));
-		json_append(value, json_key("writable", json_boolean(1)));
-		json_append(conf, value);
-		value = json_object();
-		json_append(value, json_key("name", json_string("blob", -1)));
-		json_append(value, json_key("plugin", json_null()));
-		json_append(value, json_key("suffix", json_null()));
-		json_append(value, json_key("mimetype", json_string("application/octet-stream", -1)));
-		json_append(value, json_key("writable", json_boolean(1)));
-		json_append(conf, value);
-		json_append(json_system, json_key("parsers", conf));
+		conf = jx_array();
+		value = jx_object();
+		jx_append(value, jx_key("name", jx_string("json", -1)));
+		jx_append(value, jx_key("plugin", jx_null()));
+		jx_append(value, jx_key("suffix", jx_string(".json", -1)));
+		jx_append(value, jx_key("mimetype", jx_string("application/json", -1)));
+		jx_append(value, jx_key("writable", jx_boolean(1)));
+		jx_append(conf, value);
+		value = jx_object();
+		jx_append(value, jx_key("name", jx_string("blob", -1)));
+		jx_append(value, jx_key("plugin", jx_null()));
+		jx_append(value, jx_key("suffix", jx_null()));
+		jx_append(value, jx_key("mimetype", jx_string("application/octet-stream", -1)));
+		jx_append(value, jx_key("writable", jx_boolean(1)));
+		jx_append(conf, value);
+		jx_append(jx_system, jx_key("parsers", conf));
 
 		/* Add empty JSON and Math objects, for JS compatibility. */
-		json_append(json_system, json_key("JSON", json_object()));
-		json_append(json_system, json_key("Math", json_object()));
+		jx_append(jx_system, jx_key("JSON", jx_object()));
+		jx_append(jx_system, jx_key("Math", jx_object()));
 
 		/* Add a "Blob" object with constants selecting how to handle
 		 * binary data.
 		 */
-		value = json_object();
-		json_append(value, json_key("any", json_from_int(JSON_BLOB_ANY)));
-		json_append(value, json_key("string", json_from_int(JSON_BLOB_STRING)));
-		json_append(value, json_key("utf8", json_from_int(JSON_BLOB_UTF8)));
-		json_append(value, json_key("latin1", json_from_int(JSON_BLOB_LATIN1)));
-		json_append(value, json_key("bytes", json_from_int(JSON_BLOB_BYTES)));
-		json_append(json_system, json_key("Blob", value));
+		value = jx_object();
+		jx_append(value, jx_key("any", jx_from_int(JX_BLOB_ANY)));
+		jx_append(value, jx_key("string", jx_from_int(JX_BLOB_STRING)));
+		jx_append(value, jx_key("utf8", jx_from_int(JX_BLOB_UTF8)));
+		jx_append(value, jx_key("latin1", jx_from_int(JX_BLOB_LATIN1)));
+		jx_append(value, jx_key("bytes", jx_from_int(JX_BLOB_BYTES)));
+		jx_append(jx_system, jx_key("Blob", value));
 
-		/* Add members to json_system, describing the environment */
+		/* Add members to jx_system, describing the environment */
 
-		json_append(json_system, json_key("runmode", json_string("interactive", -1)));
-		json_append(json_system, json_key("update", json_boolean(0)));
-		json_append(json_system, json_key("version", json_number(JSON_VERSION, -1)));
-		json_append(json_system, json_key("copyright", json_string(JSON_COPYRIGHT, -1)));
+		jx_append(jx_system, jx_key("runmode", jx_string("interactive", -1)));
+		jx_append(jx_system, jx_key("update", jx_boolean(0)));
+		jx_append(jx_system, jx_key("version", jx_number(JX_VERSION, -1)));
+		jx_append(jx_system, jx_key("copyright", jx_string(JX_COPYRIGHT, -1)));
 
 	}
 
 	/* Look for the config file */
-	pathname = json_file_path(NULL, name, ".json");
+	pathname = jx_file_path(NULL, name, ".json");
 	if (!pathname)
 		return;
 
 	/* Parse it */
-	conf = json_parse_file(pathname);
+	conf = jx_parse_file(pathname);
 	if (!conf)
 		return;
-	if (conf->type != JSON_OBJECT) {
-		json_free(conf);
+	if (conf->type != JX_OBJECT) {
+		jx_free(conf);
 		return;
 	}
 
 	/* Merge its settings into the default config */
-	merge(json_config, conf);
+	merge(jx_config, conf);
 
 	/* Free the data from the file */
-	json_free(conf);
+	jx_free(conf);
 }
 
-/* Select whether this part of json_config gets saved.  It should save
+/* Select whether this part of jx_config gets saved.  It should save
  * everything except members that have names ending with "-list", and a
  * few others.
  */
-static int notlist(json_t *mem)
+static int notlist(jx_t *mem)
 {
 	/* Non-members are always kept */
-	if (mem->type != JSON_KEY)
+	if (mem->type != JX_KEY)
 		return 1;
 
 	/* Members named "batch" or "*-list" are skipped */
@@ -413,17 +421,17 @@ static int notlist(json_t *mem)
 }
 
 /* Save the config data */
-void json_config_save(const char *name)
+void jx_config_save(const char *name)
 {
 	char	*pathname;
-	json_t	*copy;
+	jx_t	*copy;
 	FILE	*fp;
 
 	/* We generally want to save options in the first writable directory
-	 * in the JSONCALCPATH, even if the "config.json" file doesn't exist
+	 * in the JXPATH, even if the "config.json" file doesn't exist
 	 * there yet.
 	 */
-	pathname = json_file_path(NULL, NULL, NULL);
+	pathname = jx_file_path(NULL, NULL, NULL);
 	if (pathname) {
 		char *tmp = malloc(strlen(pathname) + strlen(name) + 6);
 		strcpy(tmp, pathname);
@@ -432,7 +440,7 @@ void json_config_save(const char *name)
 		free(pathname);
 		pathname = tmp;
 	} else {
-		pathname = json_file_path(NULL, name, ".json");
+		pathname = jx_file_path(NULL, name, ".json");
 		if (!pathname)
 			return; /* no place to save it */
 	}
@@ -440,18 +448,18 @@ void json_config_save(const char *name)
 	/* We want to save everything EXCEPT members with names ending with
 	 * "-list".  Make a copy of the config with "-list" members removed.
 	 */
-	copy = json_copy_filter(json_config, notlist);
+	copy = jx_copy_filter(jx_config, notlist);
 
 	/* Write it to the file */
-	fp = json_file_update(pathname);
+	fp = jx_file_update(pathname);
 	if (fp) {
-		jsonformat_t fmt = json_format_default;
+		jxformat_t fmt = jx_format_default;
 		fmt.string = fmt.elem = fmt.sh = fmt.ascii = fmt.color = 0;
 		fmt.fp = fp;
-		json_print(copy, &fmt);
+		jx_print(copy, &fmt);
 		fclose(fp);
 	}
-	json_free(copy);
+	jx_free(copy);
 }
 
 /* Look up the section in config.styles for a given style.  There are two ways
@@ -463,31 +471,31 @@ void json_config_save(const char *name)
  * the plugin can directly modify member values as appropriate.  Note that
  * settings from -s/-S flags or the config file are loaded later.
  *
- * If called with a reference to a (json_t*) as the second argument, then it'll
+ * If called with a reference to a (jx_t*) as the second argument, then it'll
  * store the "config.styles" pointer there if the style is found.  If the style
  * is not found, the function will return NULL.  The config code itself uses
  * this method to avoid creating bogus/misspelled names.
  */
-json_t *json_config_style(const char *name, json_t **refstyles)
+jx_t *jx_config_style(const char *name, jx_t **refstyles)
 {
-	json_t *styles, *scan, *style;
+	jx_t *styles, *scan, *style;
 
 	/* Find "config.styles" */
-	styles = json_by_key(json_config, "styles");
-	assert(styles != NULL && styles->type == JSON_ARRAY);
+	styles = jx_by_key(jx_config, "styles");
+	assert(styles != NULL && styles->type == JX_ARRAY);
 
-	/* Scan for the requested style.  We don't use json_by_key_value()
+	/* Scan for the requested style.  We don't use jx_by_key_value()
 	 * for this because we hope to avoid converting the name from (char *)
-	 * to (json_t *).
+	 * to (jx_t *).
 	 */
-	for (scan = json_first(styles); scan; scan = json_next(scan)) {
-		assert(scan->type == JSON_OBJECT);
-		style = json_by_key(scan, "style");
-		assert(style && style->type == JSON_STRING);
-		if (!json_mbs_casecmp(style->text, name)) {
+	for (scan = jx_first(styles); scan; scan = jx_next(scan)) {
+		assert(scan->type == JX_OBJECT);
+		style = jx_by_key(scan, "style");
+		assert(style && style->type == JX_STRING);
+		if (!jx_mbs_casecmp(style->text, name)) {
 			/* Found!  Return it.  Note that config.styles is
 			 * not a deferred array, so we don't need to call
-			 * json_break()
+			 * jx_break()
 			 */
 			if (refstyles)
 				*refstyles = styles;
@@ -505,34 +513,34 @@ json_t *json_config_style(const char *name, json_t **refstyles)
 	 * to add it.  Start with a copy of "normal" (the first element of
 	 * config.styles) and stuff the new name into the copy.
 	 */
-	scan = json_copy(styles->first);
-	json_append(scan, json_key("style", json_string(name, -1)));
-	json_append(styles, scan);
+	scan = jx_copy(styles->first);
+	jx_append(scan, jx_key("style", jx_string(name, -1)));
+	jx_append(styles, scan);
 	return scan;
 }
 
 /* Get an option from a given section of the settings.  If you pass NULL
  * for the section name, then it'll look in the top level of the config data,
  * or in the "interactive" or "batch" subsection as appropriate.  Returns
- * the json_t of the found value, or NULL if not found.
+ * the jx_t of the found value, or NULL if not found.
  */
-json_t *json_config_get(const char *section, const char *key)
+jx_t *jx_config_get(const char *section, const char *key)
 {
-	json_t *jsect;
+	jx_t *jsect;
 
 	/* Locate the section.  If section is NULL, use the format settings */
 	if (section) {
-		jsect = json_by_expr(json_config, section, NULL); /* undeferred */
+		jsect = jx_by_expr(jx_config, section, NULL); /* undeferred */
 		if (!jsect)
 			return NULL;
 	} else {
-		jsect = json_by_key(json_config, json_text_by_key(json_system, "runmode"));
-		if (json_by_key(jsect, key) == NULL)
-			jsect = json_config;
+		jsect = jx_by_key(jx_config, jx_text_by_key(jx_system, "runmode"));
+		if (jx_by_key(jsect, key) == NULL)
+			jsect = jx_config;
 	}
 
 	/* Look for the requested key in that section */
-	return json_by_key(jsect, key);
+	return jx_by_key(jsect, key);
 }
 
 /* Set an option in a given section of the settings.  If you pass NULL for
@@ -540,29 +548,29 @@ json_t *json_config_get(const char *section, const char *key)
  * or in the "interactive" or "batch" subsection as appropriate.  If you
  * pass a non-NULL section name and that name doesn't exist, then it'll be
  * added.  THIS FUNCTION DOESN'T VERIFY THAT NAMES OR DATA TYPES ARE CORRECT.
- * Also, the "value" is incorporated into the json_config tree, so it can't be
- * used anywhere else in order to avoid memory issues.  Maybe use json_copy().
+ * Also, the "value" is incorporated into the jx_config tree, so it can't be
+ * used anywhere else in order to avoid memory issues.  Maybe use jx_copy().
  */
-void json_config_set(const char *section, const char *key, json_t *value)
+void jx_config_set(const char *section, const char *key, jx_t *value)
 {
-	json_t	*jsect;
+	jx_t	*jsect;
 
-	/* Locate the section.  If section is NULL, use all of json_config,
+	/* Locate the section.  If section is NULL, use all of jx_config,
 	 * or the "interactive" or "batch" subsection, as appropriate.
 	 * If a section name is given but the requested section doesn't exist,
 	 * then create an empty object to hold that section.
 	 */
 	if (section) {
 		/* Use the named section */
-		jsect = json_by_expr(json_config, section, NULL); /* undeferred */
+		jsect = jx_by_expr(jx_config, section, NULL); /* undeferred */
 		if (!jsect) {
 			if (!strncmp(section, "plugin.", 7)) {
-				jsect = json_by_key(json_config, "plugin");
-				json_append(jsect, json_key(section + 7, json_object()));
-				jsect = json_by_key(jsect, section + 7);
+				jsect = jx_by_key(jx_config, "plugin");
+				jx_append(jsect, jx_key(section + 7, jx_object()));
+				jsect = jx_by_key(jsect, section + 7);
 			} else {
-				jsect = json_object();
-				json_append(json_config, json_key(section, jsect));
+				jsect = jx_object();
+				jx_append(jx_config, jx_key(section, jsect));
 			}
 		}
 	} else {
@@ -570,13 +578,13 @@ void json_config_set(const char *section, const char *key, json_t *value)
 		 * or "batch" subsection, as appropriate, if the key already
 		 * exists there.
 		 */
-		jsect = json_by_key(json_config, json_text_by_key(json_system, "runmode"));
-		if (!json_by_key(jsect, key))
-			jsect = json_config;
+		jsect = jx_by_key(jx_config, jx_text_by_key(jx_system, "runmode"));
+		if (!jx_by_key(jsect, key))
+			jsect = jx_config;
 	}
 
 	/* Append the value to the section */
-	json_append(jsect, json_key(key, value));
+	jx_append(jsect, jx_key(key, value));
 }
 
 /* Parse an option string, and merge its settings into a given section.
@@ -601,19 +609,19 @@ void json_config_set(const char *section, const char *key, json_t *value)
  * also has the side-effect if disabling the use of commas as delimiters,
  * so all of the object's settings must be space-delimited.
  *
- * Returns NULL on success, or a json_t containing an error message if error.
+ * Returns NULL on success, or a jx_t containing an error message if error.
  */
-json_t *json_config_parse(json_t *config, const char *settings, const char **refend)
+jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 {
 	size_t	namelen, namealloc = 0, len;
 	int	negate;
 	char	*name = NULL;
 	const char *value;
-	json_t	*thisconfig, *found, *list, *jvalue;
+	jx_t	*thisconfig, *found, *list, *jvalue;
 
-	/* Passing NULL for config is equivalent to passing json_config */
+	/* Passing NULL for config is equivalent to passing jx_config */
 	if (!config)
-		config = json_config;
+		config = jx_config;
 
 	/* Until we hit the end... */
 	while (*settings && (!refend || *settings != ',')) {
@@ -635,7 +643,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 		}
 		if (namelen == 0) {
 			free(name);
-			return json_error_null(0, "Malformed option \"%s\"", settings);
+			return jx_error_null(0, "Malformed option \"%s\"", settings);
 		}
 
 		/* Make a copy of the name */
@@ -648,17 +656,17 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 
 		/* Look for an existing member with that key */
 		thisconfig = config;
-		found = json_by_key(config, name);
+		found = jx_by_key(config, name);
 
 		/* If not found in "config" then try the whole config, or
 		 * in the "styles" array.
 		 */
 		if (!found) {
-			thisconfig = json_config;
-			found = json_by_key(json_config, name);
+			thisconfig = jx_config;
+			found = jx_by_key(jx_config, name);
 		}
 		if (!found) {
-			found = json_config_style(name, &thisconfig);
+			found = jx_config_style(name, &thisconfig);
 		}
 
 		/* Followed by "=" ?  Or, equivalently, '.' to make deeply
@@ -667,7 +675,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 		if (settings[namelen] == '=' || settings[namelen] == '.') {
 			/* If the member doesn't exist, that's an error */
 			if (!found) {
-				found = json_error_null(0, "Unknown option \"%s\"", name);
+				found = jx_error_null(0, "Unknown option \"%s\"", name);
 				free(name);
 				return found;
 			}
@@ -677,11 +685,11 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 
 			/* Processing of the value depends on the type */
 			switch (found->type) {
-			case JSON_OBJECT:
+			case JX_OBJECT:
 				{
 					/* Recursively parse the object's settings */
 					const char *end;
-					jvalue = json_config_parse(found, settings + namelen + 1, &end);
+					jvalue = jx_config_parse(found, settings + namelen + 1, &end);
 					if (jvalue) {
 						/* Oops, we found an error */
 						free(name);
@@ -691,7 +699,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 				}
 				continue;
 
-			case JSON_BOOLEAN:
+			case JX_BOOLEAN:
 				/* should be true or false */
 				if (!strncasecmp(value, "true", 4) && !isalnum(value[4])) {
 					strcpy(found->text, "true");
@@ -701,11 +709,11 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					settings = value + 5;
 				} else {
 					free(name);
-					return json_error_null(0, "Invalid boolean option value \"%s\"", value);
+					return jx_error_null(0, "Invalid boolean option value \"%s\"", value);
 				}
 				continue;
 
-			case JSON_NUMBER:
+			case JX_NUMBER:
 				{
 					char	*lend, *dend;
 					long	l;
@@ -716,25 +724,25 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					l = strtol(value, &lend, 0);
 					if (lend == value) {
 						free(name);
-						return json_error_null(0, "Invalid number value \"%s\"", value);
+						return jx_error_null(0, "Invalid number value \"%s\"", value);
 					}
 					if (lend < dend) {
 						/* It's floating-point */
 						found->text[0] = 0;
 						found->text[1] = 'd';
-						JSON_DOUBLE(found) = d;
+						JX_DOUBLE(found) = d;
 						settings = dend;
 					} else {
 						/* It's integer */
 						found->text[0] = 0;
 						found->text[1] = 'i';
-						JSON_INT(found) = (int)l;
+						JX_INT(found) = (int)l;
 						settings = lend;
 					}
 				}
 				continue;
 
-			case JSON_STRING:
+			case JX_STRING:
 				/* May be quoted or unquoted */
 				if (*value == '"' || *value == '\'') {
 					size_t mbslen;
@@ -744,46 +752,46 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 						if (value[len] == '\\' && value[len + 1])
 							len++;
 					}
-					mbslen = json_mbs_unescape(NULL, value + 1, len - 1);
-					jvalue = json_string("", mbslen);
-					json_mbs_unescape(jvalue->text, value + 1, len - 1);
+					mbslen = jx_mbs_unescape(NULL, value + 1, len - 1);
+					jvalue = jx_string("", mbslen);
+					jx_mbs_unescape(jvalue->text, value + 1, len - 1);
 					settings = value + len + 1;
 				} else {
 					/* Unquoted */
 					for (len = 0; value[len] && value[len] != ',' && value[len] != ' '; len++) {
 					}
-					jvalue = json_string(value, len);
+					jvalue = jx_string(value, len);
 					settings = value + len;
 				}
-				json_append(thisconfig, json_key(name, jvalue));
+				jx_append(thisconfig, jx_key(name, jvalue));
 				continue;
 
 			default:
-				found = json_error_null(0, "Bad type for option \"%s\"", name);
+				found = jx_error_null(0, "Bad type for option \"%s\"", name);
 				free(name);
 				return found;
 			}
 
 		} else { /* name or noname without = */
-			if (found && found->type == JSON_BOOLEAN) {
+			if (found && found->type == JX_BOOLEAN) {
 				strcpy(found->text, negate ? "false" : "true" );
 				settings += namelen;
 				continue;
 			} else if (found) {
-				found = json_error_null(0, "Option \"%s\" is not boolean", name);
+				found = jx_error_null(0, "Option \"%s\" is not boolean", name);
 				free(name);
 				return found;
 			} else if (!strncmp(name, "no", 2)) {
 				thisconfig = config;
-				found = json_by_key(config, name + 2);
+				found = jx_by_key(config, name + 2);
 				if (!found) {
-					thisconfig = json_config;
-					found = json_by_key(json_config, name + 2);
+					thisconfig = jx_config;
+					found = jx_by_key(jx_config, name + 2);
 				}
 				/* NOTE: We don't need to check for a color name
 				 * because you can never say "set noprompt".
 				 */
-				if (found && found->type == JSON_BOOLEAN) {
+				if (found && found->type == JX_BOOLEAN) {
 					strcpy(found->text, "false");
 					settings += namelen;
 					continue;
@@ -793,20 +801,20 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 			/* If we get here, then the only remaining possibility
 			 * for success is if it's a value from an enumerated
 			 * list.  The list could only be in "config", not at
-			 * the top-level "json_config".  Look for lists!
+			 * the top-level "jx_config".  Look for lists!
 			 */
 			for (list = config->first; list; list = list->next) { /* object */
 				/* Skip if not "somename-list" array */
 				len = strlen(list->text);
 				if (len <= 5
 				 || strcasecmp(list->text + len - 5, "-list")
-				 || list->first->type != JSON_ARRAY)
+				 || list->first->type != JX_ARRAY)
 					continue;
 
 				/* For each element in the list... */
-				for (found = json_first(list->first); found; found = json_next(found)) {
+				for (found = jx_first(list->first); found; found = jx_next(found)) {
 					/* Skip if not a string */
-					if (found->type != JSON_STRING)
+					if (found->type != JX_STRING)
 						continue;
 
 					/* Skip if not a match.  Since the list
@@ -814,8 +822,8 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 					 * compare to "name" -- we need to look
 					 * at the "settings" string.
 					 */
-					len = json_mbs_len(found->text);
-					if (!json_mbs_ncasecmp(found->text, settings, len)
+					len = jx_mbs_len(found->text);
+					if (!jx_mbs_ncasecmp(found->text, settings, len)
 						&& !isalnum(settings[strlen(found->text)])) {
 						/* FOUND! */
 						goto BreakBreak;
@@ -824,7 +832,7 @@ json_t *json_config_parse(json_t *config, const char *settings, const char **ref
 			}
 
 			/* Dang.  What is this? */
-			found = json_error_null(0, "Unknown option \"%s\"", name);
+			found = jx_error_null(0, "Unknown option \"%s\"", name);
 			free(name);
 			return found;
 
@@ -843,14 +851,14 @@ BreakBreak:
 			name[namelen] = '\0';
 
 			/* Store the setting as a string */
-			json_append(config, json_key(name, json_string(found->text, -1)));
+			jx_append(config, jx_key(name, jx_string(found->text, -1)));
 
 			/* If the list was deferred (unlikely!) then let the
 			 * library know that we abandoned the scanning loop
 			 * before its end.  The "found" pointer will be invalid
 			 * after this.
 			 */
-			json_break(found);
+			jx_break(found);
 
 			/* Move past the enumerated value */
 			settings += strlen(found->text);

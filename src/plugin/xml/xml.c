@@ -6,7 +6,7 @@
 #undef _XOPEN_SOURCE
 #undef __USE_XOPEN
 #include <wchar.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This plugin adds support for XML parsing and generation */
 
@@ -39,64 +39,64 @@ static char *SETTINGS = "{"
 
 /*----------------------------------------------------------------------------*/
 
-/* Converts a json_t object to XML.  Basically the inverse of the parser. */
-static json_t *jfn_toXML(json_t *args, void *agdata)
+/* Converts a jx_t object to XML.  Basically the inverse of the parser. */
+static jx_t *jfn_toXML(jx_t *args, void *agdata)
 {
 	size_t len;
-	json_t *result;
+	jx_t *result;
 
 	len = xml_unparse(NULL, args->first);
-	result = json_string("", len);
+	result = jx_string("", len);
 	(void)xml_unparse(result->text, args->first);
 
 	return result;
 }
 
 /* Generates an XML document from a template. */
-static json_t *jfn_toTemplateXML(json_t *args, void *agdata)
+static jx_t *jfn_toTemplateXML(jx_t *args, void *agdata)
 {
 	return NULL;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static jsoncmdname_t *jcn_xmlEntity;
+static jxcmdname_t *jcn_xmlEntity;
 
 /* Parse an xmlEntity command */
-static jsoncmd_t *xmlEntity_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *xmlEntity_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsonsrc_t	start;
+	jxsrc_t	start;
 	char		*key = NULL;
-	jsoncalc_t	*calc = NULL;
+	jxcalc_t	*calc = NULL;
 	const char	*err;
-	jsoncmd_t	*cmd;
+	jxcmd_t	*cmd;
 
 	/* xmlEntity with no arguments is legitimate.  It will dump the table */
 	start = *src;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (!*src->str || *src->str == ';' || *src->str == '}') {
-		return json_cmd(&start, jcn_xmlEntity);
+		return jx_cmd(&start, jcn_xmlEntity);
 	}
 
 	/* Parse the key.  If no key, that's an error */
-	key = json_cmd_parse_key(src, 0);
+	key = jx_cmd_parse_key(src, 0);
 	if (!key)
 		goto Error;
 
 	/* Parse the "=".  If no "=", that's an error. */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str != '=')
 		goto Error;
 	src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Parse the value, as an expression */
-	calc = json_calc_parse(src->str, &src->str, &err, FALSE);
+	calc = jx_calc_parse(src->str, &src->str, &err, FALSE);
 	if (!calc || err || (*src->str && !strchr(";},", *src->str)))
 		goto Error;
 
 	/* Construct the command */
-	cmd = json_cmd(&start, jcn_xmlEntity);
+	cmd = jx_cmd(&start, jcn_xmlEntity);
 	cmd->key = key;
 	cmd->calc = calc;
 	return cmd;
@@ -105,52 +105,52 @@ Error:
 	if (key)
 		free(key);
 	if (calc)
-		json_calc_free(calc);
-	*referr = json_cmd_error(start.str, "xmlEntity:The %s command expects an entity=value argument");
+		jx_calc_free(calc);
+	*referr = jx_cmd_error(start.str, "xmlEntity:The %s command expects an entity=value argument");
 	return NULL;
 }
 
 /* Run an xmlEntity command */
-static jsoncmdout_t *xmlEntity_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *xmlEntity_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jsoncmd_t *dump;
-	jsoncmdout_t *result;
-	json_t	*value, *entity;
+	jxcmd_t *dump;
+	jxcmdout_t *result;
+	jx_t	*value, *entity;
 
 	/* If no key, then dump the entity list */
 	if (!cmd->key) {
-		dump = json_cmd_parse_string("config.plugin.xml.entity.keysValues().orderBy('key') # {entity:'&'+key+';',codepoint:value.length==1?('U+'+(value.charCodeAt()).hex(5)),text:value}");
-		result = json_cmd_run(dump, refcontext);
-		json_cmd_free(dump);
+		dump = jx_cmd_parse_string("config.plugin.xml.entity.keysValues().orderBy('key') # {entity:'&'+key+';',codepoint:value.length==1?('U+'+(value.charCodeAt()).hex(5)),text:value}");
+		result = jx_cmd_run(dump, refcontext);
+		jx_cmd_free(dump);
 		return result;
 	}
 
 	/* Evaluate the value.  Watch for errors. */
-	value = json_calc(cmd->calc, *refcontext, NULL);
-	if (json_is_error(value)) {
-		result = json_cmd_error(cmd->where, "%s", value->text);
-		json_free(value);
+	value = jx_calc(cmd->calc, *refcontext, NULL);
+	if (jx_is_error(value)) {
+		result = jx_cmd_error(cmd->where, "%s", value->text);
+		jx_free(value);
 		return result;
 	}
 
 	/* If the value is a number, convert it to a single character string */
-	if (value->type == JSON_NUMBER) {
-		wchar_t	number = (wchar_t)json_int(value);
+	if (value->type == JX_NUMBER) {
+		wchar_t	number = (wchar_t)jx_int(value);
 		int	in;
-		json_free(value);
-		value = json_string("", MB_CUR_MAX);
+		jx_free(value);
+		value = jx_string("", MB_CUR_MAX);
 		in = wctomb(value->text, number);
 		if (in > 0)
 			value->text[in] = '\0';
 	}
 
 	/* If the value still isn't a string, that's an error */
-	if (value->type != JSON_STRING)
-		return json_cmd_error(cmd->where, "xmlEntityType:The value of an entity should be either a string or a number");
+	if (value->type != JX_STRING)
+		return jx_cmd_error(cmd->where, "xmlEntityType:The value of an entity should be either a string or a number");
 
 	/* Add/update the entity list */
-	entity = json_by_expr(json_config, "plugin.xml.entity", NULL);
-	json_append(entity, json_key(cmd->key, value));
+	entity = jx_by_expr(jx_config, "plugin.xml.entity", NULL);
+	jx_append(entity, jx_key(cmd->key, value));
 
 	/* Success! */
 	return NULL;
@@ -164,22 +164,22 @@ static jsoncmdout_t *xmlEntity_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
  */
 char *pluginxml()
 {
-	json_t	*section, *settings;
+	jx_t	*section, *settings;
 
 	/* Register the settings */
-	settings = json_parse_string(SETTINGS);
-	section = json_by_key(json_config, "plugin");
-	json_append(section, json_key("xml", settings));
+	settings = jx_parse_string(SETTINGS);
+	section = jx_by_key(jx_config, "plugin");
+	jx_append(section, jx_key("xml", settings));
 
 	/* Register the functions */
-	json_calc_function_hook("toXML", "document:object", "string", jfn_toXML);
-	json_calc_function_hook("toTemplateXML", "data:any, template:string", "string", jfn_toTemplateXML);
+	jx_calc_function_hook("toXML", "document:object", "string", jfn_toXML);
+	jx_calc_function_hook("toTemplateXML", "data:any, template:string", "string", jfn_toTemplateXML);
 
 	/* Register the commands */
-	jcn_xmlEntity = json_cmd_hook(NULL, "xmlEntity", xmlEntity_parse, xmlEntity_run);
+	jcn_xmlEntity = jx_cmd_hook(NULL, "xmlEntity", xmlEntity_parse, xmlEntity_run);
 
 	/* Register the XML data parser */
-	json_parse_hook("xml", "xml", ".xml", "application/xml", xml_test, xml_parse, NULL);
+	jx_parse_hook("xml", "xml", ".xml", "application/xml", xml_test, xml_parse, NULL);
 
 	/* Success */
 	return NULL;

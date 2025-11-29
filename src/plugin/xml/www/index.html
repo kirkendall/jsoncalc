@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>An XML Plugin</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc xml plugin summary">
-    <meta name="keywords" content="jsoncalc, xml plugin">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx xml plugin summary">
+    <meta name="keywords" content="jx, xml plugin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
   </head>
@@ -15,7 +15,7 @@
     <a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a> function
     to generate XML.
     <p>
-    Internally, jsoncalc represents parsed XML data the same way that it
+    Internally, jx represents parsed XML data the same way that it
     represents JSON data so all of the usual operators and functions can be
     used on it.
     At its heart, XML is a text markup language instead of a true data language
@@ -23,7 +23,7 @@
     Some of these quirks, and the way this plugin works around them, are:
     <ul>
       <li>XML can use many different character encodings.
-          JSON is nearly always UTF-8, and that's all jsoncalc supports, so
+          JSON is nearly always UTF-8, and that's all jx supports, so
           the XML plugin just assumes UTF-8 is the encoding of choice there too.
       <li>In XML, the outermost data wrapper always has a name.
           In JSON, it's normally just anonymous curly braces.
@@ -51,7 +51,7 @@
       <li>XML has namespaces, represented by an abbreviation and a colon at
           the start of a tag name or attribute name.
           This plugin stores the namespace with the tag name or attribute name.
-          However, jsoncalc's "loose" key lookup rules will bypass the
+          However, jx's "loose" key lookup rules will bypass the
           namespace, so you can ignore the namespace when convenient.
       <li>XML doesn't (natively) distinguish between data types.  Everything
           is tags or text.  If a string value happens to look like a number
@@ -61,14 +61,14 @@
           array.  This plugin generates an array for repeating tags, but
           it isn't perfect.  An empty array disappears completely in XML,
           while a single-element array is indistinguishable from a simple
-          (not-array) value.  Some of jsoncalc's functions and operators
+          (not-array) value.  Some of jx's functions and operators
           are defined with these XML limitations in mind, but working with
           XML will never be as pleasant as JSON.
       <li>XML allows text and tags to be intermingled, as in
           <tt>&lt;name&gt;Duane &lt;i&gt;The Rock&lt;/i&gt; Johnson&lt;/name&gt;</tt>.
           This is common in text markup languages but it has no corresponding
           convention in data languages.
-          JSON and jsoncalc flat out can't handle it.
+          JSON and jx flat out can't handle it.
           XML very rarely uses it too, so <i>hopefully</i> this won't be a problem.
       <li>XML supports alternately-formatted character data via
 	  <tt>&lt;![CDATA[...]]&gt;</tt>.

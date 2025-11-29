@@ -8,7 +8,7 @@
 #include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This is the name of the file that stores a cache's settings */
 #define SETTINGS ".config"
@@ -28,14 +28,14 @@ static char *config = "{"
  */
 static char *cacheFile(const char *cache, char *index)
 {
-	json_t	*dir;
+	jx_t	*dir;
 	char	*dirstr, *extstr, verstr[20];
 	size_t	len;
 	char	*buf;
 
 
 	/* Get the directory, defaulting to "." */
-	dir = json_config_get("plugin.cache", "dir");
+	dir = jx_config_get("plugin.cache", "dir");
 	dirstr = dir ? dir->text : ".";
 
 	/* Compute the size needed for this name */
@@ -77,26 +77,26 @@ static char *safeName(char *name)
 	return NULL;
 }
 
-/* This is used with json_copy_filter() to copy config settings other than "dir"
+/* This is used with jx_copy_filter() to copy config settings other than "dir"
  */
-static int omitDir(json_t *json)
+static int omitDir(jx_t *json)
 {
-	if (json->type != JSON_KEY || strcmp(json->text, "dir"))
+	if (json->type != JX_KEY || strcmp(json->text, "dir"))
 		return 1;
 	return 0;
 }
 
 
 /* Clean a cache.  Can also be used to store settings.  Returns the current
- * settings, which the calling function must free via json_free() even if
+ * settings, which the calling function must free via jx_free() even if
  * passed settings.
  *
- * If an error is detected in the settings, then it returns a "null" json_t
+ * If an error is detected in the settings, then it returns a "null" jx_t
  * containing an appropriate error message.
  */
-static json_t *cleanCache(char *cache, json_t *newSettings)
+static jx_t *cleanCache(char *cache, jx_t *newSettings)
 {
-	json_t	*settings;
+	jx_t	*settings;
 	char	*filename;
 	time_t	now;
 	time_t	seconds;	/* derived from from "seconds" */
@@ -110,39 +110,39 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 	/* Load the settings */
 	filename = cacheFile(cache, SETTINGS);
 	if (access(filename, R_OK) < 0)
-		settings = json_copy_filter(json_by_expr(json_config, "plugin.cache", NULL), omitDir);
+		settings = jx_copy_filter(jx_by_expr(jx_config, "plugin.cache", NULL), omitDir);
 	else
-		settings = json_parse_file(filename);
+		settings = jx_parse_file(filename);
 
 	/* If given new settings, merge them into the current settings */
 	if (newSettings) {
 		/* Use the plugin settings as a list of valid names/types
 		 * of cache settings (other than "dir").
 		 */
-		json_t *scan, *tmp;
-		json_t *pluginSettings = json_by_expr(json_config, "plugin.cache", NULL);
+		jx_t *scan, *tmp;
+		jx_t *pluginSettings = jx_by_expr(jx_config, "plugin.cache", NULL);
 		for (scan = newSettings->first; scan; scan = scan->next) {
 			/* Validate the name/type via pluginSettings */
-			tmp = json_by_key(pluginSettings, scan->text);
+			tmp = jx_by_key(pluginSettings, scan->text);
 			if (!tmp) {
-				json_free(settings);
+				jx_free(settings);
 				free(filename);
-				return json_error_null(0, "Invalid setting name \"%s\" for %s()", scan->text, "cache");
+				return jx_error_null(0, "Invalid setting name \"%s\" for %s()", scan->text, "cache");
 			}
 			if (tmp->type != scan->first->type) {
-				json_free(settings);
+				jx_free(settings);
 				free(filename);
-				return json_error_null(0, "Setting \"%s\" has wrong data type for %s()", scan->text, "cache");
+				return jx_error_null(0, "Setting \"%s\" has wrong data type for %s()", scan->text, "cache");
 			}
 
 			/* Merge the value into settings */
-			json_append(settings, json_copy(scan));
+			jx_append(settings, jx_copy(scan));
 		}
 
 		/* Save these settings */
-		FILE *fp = json_file_update(filename);
+		FILE *fp = jx_file_update(filename);
 		if (fp) {
-			char *tmp = json_serialize(settings, NULL);
+			char *tmp = jx_serialize(settings, NULL);
 			fputs(tmp, fp);
 			free(tmp);
 			fclose(fp);
@@ -152,9 +152,9 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 
 	/* Extract the cleaning settings */
 	time(&now);
-	seconds = json_int(json_by_key(settings, "seconds"));
-	maxbytes = json_int(json_by_key(settings, "bytes"));
-	touch = json_is_true(json_by_key(settings, "touch"));
+	seconds = jx_int(jx_by_key(settings, "seconds"));
+	maxbytes = jx_int(jx_by_key(settings, "bytes"));
+	touch = jx_is_true(jx_by_key(settings, "touch"));
 
 	/* Scan the files in the cache */
 	filename = cacheFile(cache, "*");
@@ -198,11 +198,11 @@ static json_t *cleanCache(char *cache, json_t *newSettings)
 
 /*****************************************************************************/
 
-static json_t *jfn_cache(json_t *args, void *agdata)
+static jx_t *jfn_cache(jx_t *args, void *agdata)
 {
 	char	*cache, *index, *err;
-	json_t	*settings;
-	json_t	*data;
+	jx_t	*settings;
+	jx_t	*data;
 	char	*filename;
 	time_t	now;
 	time_t	seconds;	/* derived from from "seconds" */
@@ -210,28 +210,28 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 	struct stat st;
 
 	/* Get the cache name */
-	if (args->first->type != JSON_STRING)
-		return json_error_null(0, "%s() wants a cache name as first argument", "cache");
+	if (args->first->type != JX_STRING)
+		return jx_error_null(0, "%s() wants a cache name as first argument", "cache");
 	cache = args->first->text;
 	err = safeName(cache);
 	if (err)
-		return json_error_null(0, err, "cache", "cacheName");
+		return jx_error_null(0, err, "cache", "cacheName");
 
 	/* If nothing else, then fetch settings and return them */
 	if (!args->first->next)
 		return cleanCache(cache, NULL);
 
 	/* If given settings, store them */
-	if (args->first->next->type == JSON_OBJECT )
+	if (args->first->next->type == JX_OBJECT )
 		return cleanCache(cache, args->first->next);
 
 	/* Otherwise the second argument must be an index */
-	if (args->first->next->type != JSON_STRING)
-		return json_error_null(0, "%s() wants an index string or settings object as the second argument", "cache");
+	if (args->first->next->type != JX_STRING)
+		return jx_error_null(0, "%s() wants an index string or settings object as the second argument", "cache");
 	index = args->first->next->text;
 	err = safeName(index);
 	if (err)
-		return json_error_null(0, err, "cache", "index");
+		return jx_error_null(0, err, "cache", "index");
 
 	/* The third argument is data and can be absent or anything.  There
 	 * must not be a third item.
@@ -239,7 +239,7 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 	if (!args->first->next->next)
 		data = NULL;
 	else if (args->first->next->next->next)
-		return json_error_null(0, "The %() function takes at most 3 arguments", "cache");
+		return jx_error_null(0, "The %() function takes at most 3 arguments", "cache");
 	else
 		data = args->first->next->next;
 
@@ -249,12 +249,12 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 	/* Do we have new data? */
 	if (data) {
 		/* Write the data to the cache */
-		if (json_is_null(data))
+		if (jx_is_null(data))
 			unlink(filename);
 		else {
-			FILE *fp = json_file_update(filename);
+			FILE *fp = jx_file_update(filename);
 			if (fp) {
-				char *tmp = json_serialize(data, NULL);
+				char *tmp = jx_serialize(data, NULL);
 				fputs(tmp, fp);
 				free(tmp);
 				fclose(fp);
@@ -262,27 +262,27 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 		}
 
 		/* If limiting the cache by size, then clean the cache */
-		if (json_int(json_by_key(settings, "bytes")) > 0)
-			json_free(cleanCache(cache, NULL));
+		if (jx_int(jx_by_key(settings, "bytes")) > 0)
+			jx_free(cleanCache(cache, NULL));
 
 		/* Make a copy of the data to return */
-		data = json_copy(data);
+		data = jx_copy(data);
 	} else {
 		/* If the file exists but is old, then clean the cache */
 		time(&now);
-		seconds = json_int(json_by_key(settings, "seconds"));
-		touch = json_is_true(json_by_key(settings, "touch"));
+		seconds = jx_int(jx_by_key(settings, "seconds"));
+		touch = jx_is_true(jx_by_key(settings, "touch"));
 		if (stat(filename, &st) >= 0
 		 && (touch ? st.st_atime : st.st_mtime) + seconds < now)
-			json_free(cleanCache(cache, NULL));
+			jx_free(cleanCache(cache, NULL));
 
 		/* Try to read the data from a file */
-		data = json_parse_file(filename);
+		data = jx_parse_file(filename);
 
 		/* If unreadable FOR ANY REASON, just return NULL */
 		if (!data)
-			data = json_null();
-		if (json_is_null(data))
+			data = jx_null();
+		if (jx_is_null(data))
 			memset(data->text, 0, sizeof data->text);
 	}
 
@@ -295,30 +295,30 @@ static json_t *jfn_cache(json_t *args, void *agdata)
 /* Initialize the plugin */
 char *plugincache(void)
 {
-	json_t	*settings, *plugin, *jd;
+	jx_t	*settings, *plugin, *jd;
 	char	*dir;
 
 	/* Set the default options.  The config file hasn't been loaded yet
-	 * so json_config just contains the default options which don't
+	 * so jx_config just contains the default options which don't
 	 * include any settings for this plugin yet.
 	 */
-	plugin = json_by_key(json_config, "plugin");
-	json_append(plugin, json_key("cache", json_parse_string(config)));
+	plugin = jx_by_key(jx_config, "plugin");
+	jx_append(plugin, jx_key("cache", jx_parse_string(config)));
 
 	/* Most default options are hardcoded, but the "dir" setting should
-	 * be the first writable directory in the JSONCALCPATH.
+	 * be the first writable directory in the JXPATH.
 	 */
-	dir = json_file_path(NULL, NULL, NULL);
-	jd = json_string(dir, strlen(dir) + 6);
+	dir = jx_file_path(NULL, NULL, NULL);
+	jd = jx_string(dir, strlen(dir) + 6);
 	if (dir[strlen(dir) - 1] == '/')
 		strcat(jd->text, "cache");
 	else
 		strcat(jd->text, "cache");
-	json_config_set("plugin.cache", "dir", jd);
+	jx_config_set("plugin.cache", "dir", jd);
 	free(dir);
 
 	/* Register the cache() function */
-	json_calc_function_hook("cache", "cache:string, index?:string|object, data?:any", ":any", jfn_cache);
+	jx_calc_function_hook("cache", "cache:string, index?:string|object, data?:any", ":any", jfn_cache);
 
 	/* Success! */
 	return NULL;

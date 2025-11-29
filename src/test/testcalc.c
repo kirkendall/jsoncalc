@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <locale.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 #define GREEN	"\033[32;1m"
 #define RED	"\033[31;1m"
@@ -21,10 +21,10 @@ int show_expression = 0;
 /* Output a usage message and then exit */
 void usage()
 {
-        puts("jsontest [flags] [file...]");
+        puts("jxtest [flags] [file...]");
         puts("Flags: -m      Check for evidence of memory leaks during each test.");
         puts("       -e      Write each test to stderr before running. Helps for core dumps.");
-        puts("       -Jflags Debug: +/-/= a:abort c:json_calc_parse e:json_by_expr t:trace");
+        puts("       -Jflags Debug: +/-/= a:abort c:jx_calc_parse e:jx_by_expr t:trace");
         puts("This reads a series of tests from a file, and writes any inconsistencies to");
         puts("stdout. Input lines starting with # are section headers. Lines starting with");
         puts("name= define data to be used in tests later in the file. Lines that don't");
@@ -34,41 +34,41 @@ void usage()
 }
 
 /* Evaluate a single test */
-char *test(char *str, json_t *names)
+char *test(char *str, jx_t *names)
 {
-        jsoncontext_t *context;
-        jsoncalc_t *calc;
-        json_t  *result;
+        jxcontext_t *context;
+        jxcalc_t *calc;
+        jx_t  *result;
         char    *resultstr;
         const char *tail, *err;
         int	before, compiled;  
         int	calcleaks, parseleaks;
 
         /* Compile it */
-        before = json_debug_count;
-        calc = json_calc_parse(str, &tail, &err, 0);
+        before = jx_debug_count;
+        calc = jx_calc_parse(str, &tail, &err, 0);
         if (err)
                 printf("Error: %s\n", err);
         if (!calc)
                 return NULL;
-	compiled = json_debug_count;
+	compiled = jx_debug_count;
 
         /* Evaluate it */
-        context = json_context_std(json_copy(names));
-        result = json_calc(calc, context, NULL);
-        resultstr = json_serialize(result, NULL);
-        json_free(result);
+        context = jx_context_std(jx_copy(names));
+        result = jx_calc(calc, context, NULL);
+        resultstr = jx_serialize(result, NULL);
+        jx_free(result);
         while (context)
-		context = json_context_free(context);
+		context = jx_context_free(context);
 
-        /* Memory leak in json_calc? */
-        calcleaks = json_debug_count - compiled;
+        /* Memory leak in jx_calc? */
+        calcleaks = jx_debug_count - compiled;
         if (test_memleaks && calcleaks != 0)
-		printf("leak: %s (calc leaked %d json_t's)\n", str, calcleaks);
+		printf("leak: %s (calc leaked %d jx_t's)\n", str, calcleaks);
 
-        /* Clean up.  Memory leak in json_calc_parse()? */
-        json_calc_free(calc);
-        parseleaks = json_debug_count - before - calcleaks;
+        /* Clean up.  Memory leak in jx_calc_parse()? */
+        jx_calc_free(calc);
+        parseleaks = jx_debug_count - before - calcleaks;
         if (test_memleaks && parseleaks != 0)
 		printf("leak: %s (parser allocated %d leaked %d)\n", str, compiled - before, parseleaks);
 
@@ -84,10 +84,10 @@ void testfile(FILE *in, count_t *counts)
 	char	expression[1000];
 	char	*resultstr = NULL;
         char    *tmp;
-        json_t  *names;
+        jx_t  *names;
 
         /* Create an object for storing defined names */
-        names = json_object();
+        names = jx_object();
 
         /* For each line ... */
         while (fgets(buf, sizeof buf, in)) {
@@ -127,9 +127,9 @@ void testfile(FILE *in, count_t *counts)
                         }
                         if (*tmp == '=' && tmp[1] != '=') {
                                 *tmp++ = '\0';
-                                json_t *value = json_parse_string(tmp);
+                                jx_t *value = jx_parse_string(tmp);
                                 if (value)
-                                        json_append(names, json_key(buf, value));
+                                        jx_append(names, jx_key(buf, value));
                                 continue;
                         }
                 }
@@ -147,7 +147,7 @@ void testfile(FILE *in, count_t *counts)
         }
 
         /* Clean up the names */
-        json_free(names);
+        jx_free(names);
 }
 
 
@@ -158,10 +158,10 @@ int main(int argc, char **argv)
         setlocale(LC_ALL, "");
 
         /* Use ASCII output, because it's trickier than UTF-8 */
-        json_config_load("testcalc");
-        json_config_set(NULL, "ascii", json_boolean(1));
-        json_format_set(NULL, NULL);
-        json_config_set(NULL, "defersize", json_from_int(0));
+        jx_config_load("testcalc");
+        jx_config_set(NULL, "ascii", jx_boolean(1));
+        jx_format_set(NULL, NULL);
+        jx_config_set(NULL, "defersize", jx_from_int(0));
 
         /* Parse command-line flags */
         while ((ch = getopt(argc, argv, "meJ:")) >= 0)
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 		switch (ch) {
 		  case 'm': test_memleaks = 1;	break;
 		  case 'e': show_expression = 1;break;
-		  case 'J': json_debug(optarg);	break;
+		  case 'J': jx_debug(optarg);	break;
 		  default:
 			usage();
 		}

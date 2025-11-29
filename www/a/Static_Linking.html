@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>Statically-Linked Program</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc Statically-Linked Program">
-    <meta name="keywords" content="jsoncalc, article, Statically-Linked Program">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx Statically-Linked Program">
+    <meta name="keywords" content="jx, article, Statically-Linked Program">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -12,7 +12,7 @@
     <h4 class="timestamp">2025-07-20</h4>
     <center>
     <blockquote class="abstract">
-      "jcstatic" is a statically-linked version of JsonCalc.
+      "jxstatic" is a statically-linked version of jx.
       Statically linked programs are easier to install on remote systems
       because there's just one file to install and it avoids a lot of
       dependencies on other libraries.
@@ -22,7 +22,7 @@
     </blockquote>
     </center>
     <h2>What Is Static Linking?</h2>
-    "jcstatic" is a statically-linked version of the "jsoncalc" program.
+    "jxstatic" is a statically-linked version of the "jx" program.
     This refers to the way that libraries are incorporated into the program.
     <p>
     Libraries can be either statically linked or dynamically linked.
@@ -43,11 +43,11 @@
     <div class="example">
       <kbd>ls -l bin</kbd>
       <samp><pre style="font-size: 125%">total 2332
--rwxr-xr-x 1 steve users 2305240 Jul 20 16:14 jcstatic
--rwxr-xr-x 1 steve users   81352 Jul 20 13:38 jsoncalc</pre>
+-rwxr-xr-x 1 steve users 2305240 Jul 20 16:14 jxstatic
+-rwxr-xr-x 1 steve users   81352 Jul 20 13:38 jx</pre>
       </samp>
-      The "jcstatic" file is far larger than "jsoncalc" because it includes
-      the jsoncalc library, selected plugins, and any system libraries that
+      The "jxstatic" file is far larger than "jx" because it includes
+      the jx library, selected plugins, and any system libraries that
       any of those depend on.
     </div>
 
@@ -59,8 +59,8 @@
     If you hunt down that library and install it, then that'll often reveal
     yet another dependency.
     <p>
-    In the case of JsonCalc, when you install "jsoncalc" you must also install
-    "libjsoncalc.so" where "jsoncalc" can find it (usually <tt>/usr/lib64/</tt>
+    In the case of jx, when you install "jx" you must also install
+    "libjx.so" where "jx" can find it (usually <tt>/usr/lib64/</tt>
     on Linux systems).
     Any plugins that you want to use must also be copied over.
     And since the "curl" plugin depends on the libcurl.so library, you have
@@ -70,39 +70,39 @@
     that it depends on?
     <p>
     So installing a dynamically-linked program can be a big time waster,
-    and for a program like JsonCalc you might need it in a hurry.
-    The statically-linked version of JsonCalc includes (nearly) all of the
+    and for a program like jx you might need it in a hurry.
+    The statically-linked version of jx includes (nearly) all of the
     libraries that it depends on, in one big executable.
-    Just copy "jcstatic" to the other host and it will run.
+    Just copy "jxstatic" to the other host and it will run.
 
     <h2>Plugins</h2>
-    JsonCalc's plugins are really just dynamically-linked libraries,
-    and the statically-linked "jcstatic" program can't load them at run time.
+    jx's plugins are really just dynamically-linked libraries,
+    and the statically-linked "jxstatic" program can't load them at run time.
     This <em>does not mean</em> you can't use plugins.
     You just need to have the foresight to include the plugins you need in
-    the "jcstatic" executable.
+    the "jxstatic" executable.
     <p>
-    JsonCalc produces a static "libsoncalcplugins.a" library
+    jx produces a static "libsoncalcplugins.a" library
     containing all of the plugins.
-    This library is only used linking into "jcstatic", and the linker will
+    This library is only used linking into "jxstatic", and the linker will
     only include the plugins that you specifically want.
     <p>
-    This is separate from the "libjsoncalc.a" library containing the core of
-    JsonCalc, by the way.  Don't get them confused.
+    This is separate from the "libjx.a" library containing the core of
+    jx, by the way.  Don't get them confused.
     The version of the <tt>json_plugin_load()</tt> function in the static
-    "libjsoncalc.a" library contains a list of plugins to include in the binary.
-    By adjusting the list, you can make any plugin available to "jcstatic".
+    "libjx.a" library contains a list of plugins to include in the binary.
+    By adjusting the list, you can make any plugin available to "jxstatic".
     But there's a catch: Some of the plugins depend on other libraries, which
     may in turn depend on other libraries, all of which will get sucked into
-    "jcstatic", making it truly huge.
+    "jxstatic", making it truly huge.
     <p>
     Another consideration is that some of the libraries that a plugin depends
     on might not be available in statically-linked form.
     For example, my development system doesn't have a "libcurl.a" file anywhere
-    so I can't compile a version of "jcstatic" that includes the "curl" plugin.
+    so I can't compile a version of "jxstatic" that includes the "curl" plugin.
 
-    <h2>How to build "jcstatic" with plugins that you choose</h2>
-    You'll need JsonCalc's source code for this.
+    <h2>How to build "jxstatic" with plugins that you choose</h2>
+    You'll need jx's source code for this.
     <style>
       table.referencelist.steps td { vertical-align:top; }
       table.referencelist.steps td:nth-child(2) { font-family:monospace; font-size:125%; white-space:nowrap; }
@@ -128,15 +128,15 @@
       </td></tr>
       <tr><td>7</td><td>cd ../..<br/>make clean<br/>make</td><td>Do a clean "make" in the project top directory.</td></tr>
       <tr><td>8</td><td>ls -l bin</td><td>
-	Check to see if the "jcstatic" program was generated.
+	Check to see if the "jxstatic" program was generated.
 	If so, then <em>great!</em> you're done!
 	If not, it's probably because one or more plugins that you requested
 	depend on static libraries that aren't available.
         The next step helps with that.
       </td></tr>
-      <tr><td>9</td><td>cd src/jsoncalc<br/>make</td><td>
-        If "jcstatic" didn't compile, then go into the source directory of
-        the "jsoncalc" and "jcstatic" programs and run "make".
+      <tr><td>9</td><td>cd src/jx<br/>make</td><td>
+        If "jxstatic" didn't compile, then go into the source directory of
+        the "jx" and "jxstatic" programs and run "make".
         This is likely to generate a lot of output so you'll probably have to
         scroll back to see the good stuff.
         Look for one of two things:
@@ -158,7 +158,7 @@
       </td></tr>
     </table>
     <p>
-    In the end, <tt>bin/jcstatic</tt> is the statically-linked JsonCalc that
+    In the end, <tt>bin/jxstatic</tt> is the statically-linked jx that
     you wanted.
 
   </body>

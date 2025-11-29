@@ -6,7 +6,7 @@
 #include <wctype.h>
 #include <string.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 
 /* This is a collection of functions for dealing with strings of multi-byte
@@ -14,7 +14,7 @@
  */
 
 /* Count the characters (not bytes) in a mbs. */
-size_t json_mbs_len(const char *s)
+size_t jx_mbs_len(const char *s)
 {
         wchar_t wc;
         int     in;
@@ -32,11 +32,11 @@ size_t json_mbs_len(const char *s)
 }
 
 /* Count the width of a UTF-8 string.  This is different from the character
- * count json_mbs_len() or the byte count strlen(), partly because some
+ * count jx_mbs_len() or the byte count strlen(), partly because some
  * Unicode characters are doublewide, and diacritics are zerowide.  Also,
  * this function knows about newlines.
  */
-int json_mbs_width(const char *s)
+int jx_mbs_width(const char *s)
 {
         wchar_t wc;
         int     in;
@@ -77,7 +77,7 @@ int json_mbs_width(const char *s)
  * except that a newline at the end of the string doesn't count.  Most strings
  * are 1 row high.
  */
-int json_mbs_height(const char *s)
+int jx_mbs_height(const char *s)
 {
 	int	height;
 	for (height = 1; *s && s[1]; s++)
@@ -94,7 +94,7 @@ int json_mbs_height(const char *s)
  * non-NULL, it'll be set to point to the start of the line within s.
  * If refwidth is non-NULL the the column width is returned there.
  */
-size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth)
+size_t jx_mbs_line(const char *s, int line, char *buf, char **refstart, int *refwidth)
 {
 	const char	*start;
 	size_t	size;
@@ -154,7 +154,7 @@ size_t json_mbs_line(const char *s, int line, char *buf, char **refstart, int *r
  * characters.  Returns the length of the resulting string.  If you pass a
  * non-NULL buf pointer then the characters will be stored there.
  */
-size_t json_mbs_wrap_word(char *buf, const char *s, int width)
+size_t jx_mbs_wrap_word(char *buf, const char *s, int width)
 {
 	size_t len;
 	wchar_t wc;
@@ -238,7 +238,7 @@ size_t json_mbs_wrap_word(char *buf, const char *s, int width)
  * If you pass a non-NULL buf pointer then the characters will be stored
  * there.
  */
-size_t json_mbs_wrap_char(char *buf, const char *s, int width)
+size_t jx_mbs_wrap_char(char *buf, const char *s, int width)
 {
 	size_t len;
 	wchar_t wc;
@@ -298,7 +298,7 @@ size_t json_mbs_wrap_char(char *buf, const char *s, int width)
  * function returns the length of the canonized string in bytes, not counting
  * the terminating '\0' character (which it will add, just not count).
  */
-size_t json_mbs_simple_key(char *dest, const char *src)
+size_t jx_mbs_simple_key(char *dest, const char *src)
 {
 	size_t	lenbefore = strlen(src);
 	size_t len, dashlen;
@@ -418,7 +418,7 @@ size_t json_mbs_simple_key(char *dest, const char *src)
  * substring.  Returns a pointer to the start of the substring.  The string s
  * is not actually modified.
  */
-const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
+const char *jx_mbs_substr(const char *s, size_t start, size_t *reflimit)
 {
         wchar_t wc;
         int     in;
@@ -454,7 +454,7 @@ const char *json_mbs_substr(const char *s, size_t start, size_t *reflimit)
  * number of bytes (not characters) of "haystack" that match.  If the needle
  * isn't found, return NULL.
  */
-const char *json_mbs_str(const char *haystack, const char *needle, size_t *refccount, size_t *reflen, int last, int ignorecase)
+const char *jx_mbs_str(const char *haystack, const char *needle, size_t *refccount, size_t *reflen, int last, int ignorecase)
 {
 	wchar_t wc, nfirst;
 	size_t	nlen, ccount, foundccount;
@@ -473,7 +473,7 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
                 nfirst = towlower(nfirst); 
 
 	/* Also get the needle's length */
-	nlen = json_mbs_len(needle);
+	nlen = jx_mbs_len(needle);
 
 	/* Scan for matches */
 	ccount = foundccount = 0;
@@ -489,10 +489,10 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
 
 		/* Does the rest of the needle match too ? */
 		if (ignorecase) {
-			if (json_mbs_ncasecmp(haystack, needle, nlen) != 0)
+			if (jx_mbs_ncasecmp(haystack, needle, nlen) != 0)
 				continue;
 		} else {
-			if (json_mbs_ncmp(haystack, needle, nlen) != 0)
+			if (jx_mbs_ncmp(haystack, needle, nlen) != 0)
 				continue;
 		}
 
@@ -510,7 +510,7 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
 		*refccount = foundccount;
 	if (reflen && found) {
 		/* Convert character count to byte count */
-		json_mbs_substr(found, 0, &nlen);
+		jx_mbs_substr(found, 0, &nlen);
 		*reflen = nlen;
 	}
 	return found;
@@ -520,7 +520,7 @@ const char *json_mbs_str(const char *haystack, const char *needle, size_t *refcc
 /* Case-sensitive comparison.  Here we don't try to do anything fancy with
  * case or even locale().
  */
-int json_mbs_cmp(const char *s1, const char *s2)
+int jx_mbs_cmp(const char *s1, const char *s2)
 {
         return strcmp(s1, s2);
 }
@@ -528,10 +528,10 @@ int json_mbs_cmp(const char *s1, const char *s2)
 /* Case-sensitive comparison up to a given number length.  "len" is a character
  * count, not a byte count.
  */
-int json_mbs_ncmp(const char *s1, const char *s2, size_t len)
+int jx_mbs_ncmp(const char *s1, const char *s2, size_t len)
 {
         /* Convert len from character count to byte count */
-        const char *end = json_mbs_substr(s1, len, NULL);
+        const char *end = jx_mbs_substr(s1, len, NULL);
         len = (end - s1);
         return strncmp(s1, s2, len);
 }
@@ -541,7 +541,7 @@ int json_mbs_ncmp(const char *s1, const char *s2, size_t len)
  * still fit in the same buffer; if it won't, then the tail of the string is
  * *NOT* converted.
  */
-void json_mbs_tolower(char *s)
+void jx_mbs_tolower(char *s)
 {
         wchar_t wc;
         int     in;
@@ -566,7 +566,7 @@ void json_mbs_tolower(char *s)
  * still fit in the same buffer; if it won't, then the tail of the string is
  * *NOT* converted.
  */
-void json_mbs_toupper(char *s)
+void jx_mbs_toupper(char *s)
 {
         wchar_t wc;
         int     in;
@@ -593,10 +593,10 @@ void json_mbs_toupper(char *s)
  * in their preferred capitalization; if they end with "*" then only the start
  * of the string is compared.
  */
-void json_mbs_tomixed(char *s, json_t *exceptions)
+void jx_mbs_tomixed(char *s, jx_t *exceptions)
 {
-	json_t	arraybuf;
-	json_t	*ex;
+	jx_t	arraybuf;
+	jx_t	*ex;
 	int	firstword, capfirst;
 	wctype_t alnum;
 	wchar_t	wc;
@@ -608,8 +608,8 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
         memset(&state, 0, sizeof state);
 
 	/* Make sure the list of exceptions is an array */
-	if (!exceptions || exceptions->type != JSON_ARRAY) {
-		arraybuf.type = JSON_ARRAY;
+	if (!exceptions || exceptions->type != JX_ARRAY) {
+		arraybuf.type = JX_ARRAY;
 		arraybuf.first = exceptions;
 		exceptions = &arraybuf;
 	}
@@ -618,8 +618,8 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 	 * exceptions by scanning the exceptions list for the symbol "true".
 	 */
 	capfirst = 0;
-	for (ex = json_first(exceptions); ex && !capfirst; ex = json_next(ex))
-		if (ex->type == JSON_BOOLEAN && json_is_true(ex))
+	for (ex = jx_first(exceptions); ex && !capfirst; ex = jx_next(ex))
+		if (ex->type == JX_BOOLEAN && jx_is_true(ex))
 			capfirst = 1;
 
 	/* Get the "alnum" classifier */
@@ -645,8 +645,8 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 		if (capfirst && firstword)
 			ex = NULL;
 		else {
-			for (ex = json_first(exceptions); ex; ex = json_next(ex)) {
-				if (ex->type == JSON_STRING && !json_mbs_ncasecmp(ex->text, s, wlen))
+			for (ex = jx_first(exceptions); ex; ex = jx_next(ex)) {
+				if (ex->type == JX_STRING && !jx_mbs_ncasecmp(ex->text, s, wlen))
 					break;
 
 			}
@@ -678,7 +678,7 @@ void json_mbs_tomixed(char *s, json_t *exceptions)
 }
 
 /* Compare two strings in a case-insensitive way */
-int json_mbs_casecmp(const char *s1, const char *s2)
+int jx_mbs_casecmp(const char *s1, const char *s2)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
@@ -713,7 +713,7 @@ int json_mbs_casecmp(const char *s1, const char *s2)
 /* Compare two strings in a case-insensitive way, up to a given length.
  * "len" is a character count, not a byte count.
  */
-int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
+int jx_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
@@ -748,11 +748,11 @@ int json_mbs_ncasecmp(const char *s1, const char *s2, size_t len)
         return 1;
 }
 
-/* Compare an abbreviated name to the (possible) full name.  In json_calc(),
+/* Compare an abbreviated name to the (possible) full name.  In jx_calc(),
  * function names may be abbreviated to the first letter and any subsequent
  * uppercase letters.  For example, toUpperCase() can be written as tuc().
  */
-int json_mbs_abbrcmp(const char *abbr, const char *full)
+int jx_mbs_abbrcmp(const char *abbr, const char *full)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
@@ -813,7 +813,7 @@ int json_mbs_abbrcmp(const char *abbr, const char *full)
  * long to hold the two \uXXXX sequences.  Returns a pointer to the character
  * after the converted character.
  */
-const char *json_mbs_ascii(const char *str, char *buf)
+const char *jx_mbs_ascii(const char *str, char *buf)
 {
 	wchar_t	wc;
 	int	mbsize;
@@ -858,7 +858,7 @@ const char *json_mbs_ascii(const char *str, char *buf)
  * "quote" is another character to insert a backslash in front of, usually '"'.
  * "nonascii" can be 1 to convert non-ASCII to \uxxxx sequences.
  */
-size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jsonformat_t *format)
+size_t jx_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jxformat_t *format)
 {
         const char *end;
         size_t size;
@@ -895,7 +895,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
 				size += 6;
 				src++; /* for the first byte of UTF-8 */
 			} else if (format->ascii) {
-                                src = json_mbs_ascii(src, escape);
+                                src = jx_mbs_ascii(src, escape);
                                 src--; /* because of src++ in the for-loop */
 				if (dst)
 					strcpy(dst + size, escape);
@@ -965,7 +965,7 @@ size_t json_mbs_escape(char *dst, const char *src, size_t nbytes, int quote, jso
  * length.  If "dst" is NULL then just compute the length.  If nbytes is -1
  * then use strlen() to find the source string's length in bytes.
  */
-size_t json_mbs_unescape(char *dst, const char *src, size_t nbytes)
+size_t jx_mbs_unescape(char *dst, const char *src, size_t nbytes)
 {
         const char *end;
         size_t size;
@@ -1153,7 +1153,7 @@ size=nbytes;
  * is compared for equality in a case-insensitive way.  Return 1 for a match,
  * 0 for mismatch.
  */
-int json_mbs_like(const char *text, const char *pattern)
+int jx_mbs_like(const char *text, const char *pattern)
 {
         wchar_t wc1, wc2;
         int     in1, in2;
@@ -1185,7 +1185,7 @@ int json_mbs_like(const char *text, const char *pattern)
          */
         pattern++;
         while (*text) {
-                if (json_mbs_like(text, pattern))
+                if (jx_mbs_like(text, pattern))
                         return 1;
                 text += mbrtowc(&wc1, text, MB_CUR_MAX, &state);
         }

@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>unmime64</title>
-    <link rel="stylesheet" type="text/css" href="../../jsoncalc.css">
-    <meta name="description" content="jsoncalc unmime64 - Convert MIME base64 text back to its original data">
-    <meta name="keywords" content="string, jsoncalc, function reference, unmime64">
+    <link rel="stylesheet" type="text/css" href="../../jx.css">
+    <meta name="description" content="jx unmime64 - Convert MIME base64 text back to its original data">
+    <meta name="keywords" content="string, jx, function reference, unmime64">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -22,7 +22,7 @@
       it as a string is usually straightforward.
       It could be binary data that isn't a valid sequence of UTF-8 characters.
       If any issues prevent the data from being interpreted as UTF-8, then it
-      falls back on Latin-1 (which it then converts to UTF-8 since jsoncalc
+      falls back on Latin-1 (which it then converts to UTF-8 since jx
       always uses UTF-8 internally).
       You can also pass <tt>CURL.binUTF8</tt> or <tt>CURL.binLatin1</tt> as
       a second argument to force one interpretation or the other.
@@ -73,7 +73,7 @@
             single byte.  You can use the
             <a target="_PARENT" href="../../index.html?f=charCodeAt">charCodeAt()</a>
             function to convert the characters to numbers;
-            the fact that jsoncalc's use of UTF-8 internally causes some
+            the fact that jx's use of UTF-8 internally causes some
             characters to use more memory doesn't impact this at all.
       </ul>
     </details>

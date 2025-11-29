@@ -9,8 +9,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/stat.h>
-#include <jsoncalc.h>
-#include "jcprog.h"
+#include <jx.h>
+#include "jxprog.h"
 #include "version.h"
 
 
@@ -30,14 +30,14 @@ int restricted = 0;
 int allow_update = 0;
 
 /* -D -- This is a directory to check for autoload */
-json_t *autoload_list = NULL;
+jx_t *autoload_list = NULL;
 
 /* This is the context -- a stack of data that is available to expressions. */
-jsoncontext_t *context;
+jxcontext_t *context;
 
 /* These are lists of commands to execute once, or for each data file. */
-jsoncmd_t *autocmd = NULL; /* Once, from -Fscript */
-jsoncmd_t *initcmd = NULL; /* For each data file, from -ccommand or -fscript */
+jxcmd_t *autocmd = NULL; /* Once, from -Fscript */
+jxcmd_t *initcmd = NULL; /* For each data file, from -ccommand or -fscript */
 
 
 /* Output a debugging flag usage message */
@@ -46,8 +46,8 @@ void debug_usage()
 	puts("The -jflags option controls debugging flags.  The flags are single letters");
 	puts("indicating what should be debugged.  The flag letters are:");
 	puts("  a  Call abort() when an error is detected.");
-	puts("  e  Output info about json_by_expr() calls.");
-	puts("  c  Output info about json_calc() calls.");
+	puts("  e  Output info about jx_by_expr() calls.");
+	puts("  c  Output info about jx_calc() calls.");
 	puts("  t  Trace each command as it is run.");
 	puts("");
 	puts("You may also put a + or - or = between -j and the flags to alter the way the new");
@@ -60,7 +60,7 @@ void debug_usage()
 /* Output a usage message and then exit. */
 static void usage(char *fmt, char *data)
 {
-	puts("Usage: jsoncalc [flags] [script] [name=value]... [file.json]...");
+	puts("Usage: jx [flags] [script] [name=value]... [file.json]...");
 	puts("Flags: -c command        Evaluate command for each input file, and quit.");
 	puts("       -f/-F script      Run script for each input file, or once persistently.");
 	puts("       -i                Interactive.");
@@ -105,38 +105,38 @@ int isdirectory(const char *filename)
  * sampledata directory.  If it is the name of one of those files, then it
  * loads the file into memory and returns that.
  */
-json_t *autoload(char *key)
+jx_t *autoload(char *key)
 {
 	char    filename[1000];
-	json_t  *dir, *parser, *ext;
+	jx_t  *dir, *parser, *ext;
 
 	/* Scan for a key.json (or other known extensions) file in any of
 	 * the autoload directories.
 	 */
-	dir = json_by_key(json_config, "autoload");
-	if (!dir || dir->type != JSON_ARRAY)
+	dir = jx_by_key(jx_config, "autoload");
+	if (!dir || dir->type != JX_ARRAY)
 		return NULL;
-	for (dir = json_first(dir); dir; dir = json_next(dir)) {
-		if (dir->type != JSON_STRING)
+	for (dir = jx_first(dir); dir; dir = jx_next(dir)) {
+		if (dir->type != JX_STRING)
 			continue;
-		parser = json_by_key(json_system, "parsers");
+		parser = jx_by_key(jx_system, "parsers");
 		if (!parser)
 			continue;
-		for (parser = json_first(parser); parser; parser = json_next(parser)) {
-			if (parser->type != JSON_OBJECT)
+		for (parser = jx_first(parser); parser; parser = jx_next(parser)) {
+			if (parser->type != JX_OBJECT)
 				continue;
-			ext = json_by_key(parser, "suffix");
+			ext = jx_by_key(parser, "suffix");
 			if (!ext)
 				continue;
-			for (ext = json_first(ext); ext; ext = json_next(ext)) {
-				if (ext->type != JSON_STRING)
+			for (ext = jx_first(ext); ext; ext = jx_next(ext)) {
+				if (ext->type != JX_STRING)
 					continue;
 				sprintf(filename, "%s/%s%s", dir->text, key, ext->text);
 				if (access(filename, R_OK) == 0) {
-					json_break(ext);
-					json_break(parser);
-					json_break(dir);
-					return json_parse_file(filename);
+					jx_break(ext);
+					jx_break(parser);
+					jx_break(dir);
+					return jx_parse_file(filename);
 				}
 			}
 		}
@@ -151,10 +151,10 @@ json_t *autoload(char *key)
 /* This is a context hook.  It adds a layer a the standard context for
  * autoloading files from the -ddirectory.
  */
-static jsoncontext_t *autodir(jsoncontext_t *context)
+static jxcontext_t *autodir(jxcontext_t *context)
 {
 	/* Add the autoloader */
-	context = json_context(context, json_object(), JSON_CONTEXT_GLOBAL);
+	context = jx_context(context, jx_object(), JX_CONTEXT_GLOBAL);
 	context->autoload = autoload;
 	return context;
 }
@@ -197,29 +197,29 @@ char *jcreadscript(const char *filename)
 	return buf;
 }
 
-void run(jsoncmd_t *jc, jsoncontext_t **refcontext)
+void run(jxcmd_t *jc, jxcontext_t **refcontext)
 {
-	jsoncmdout_t *result;
+	jxcmdout_t *result;
 
-	result = json_cmd_run(jc, &context);
+	result = jx_cmd_run(jc, &context);
 	if (result) {
-		if (result->ret == &json_cmd_break)
-			json_user_printf(NULL, "debug", "RETURNED A \"BREAK\"\n");
-		else if (result->ret == &json_cmd_continue)
-			json_user_printf(NULL, "debug", "RETURNED A \"CONTINUE\"\n");
+		if (result->ret == &jx_cmd_break)
+			jx_user_printf(NULL, "debug", "RETURNED A \"BREAK\"\n");
+		else if (result->ret == &jx_cmd_continue)
+			jx_user_printf(NULL, "debug", "RETURNED A \"CONTINUE\"\n");
 		else if (result->ret) {
-			json_user_printf(NULL, "debug", "RETURNED A VALUE: ");
-			json_print(result->ret, NULL);
-			json_free(result->ret);
+			jx_user_printf(NULL, "debug", "RETURNED A VALUE: ");
+			jx_print(result->ret, NULL);
+			jx_free(result->ret);
 		} else {
 			if (result->where) {
 				int lineno;
-				jsonfile_t *jf = json_file_containing(result->where, &lineno);
+				jxfile_t *jf = jx_file_containing(result->where, &lineno);
 				if (jf)
-					json_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
+					jx_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
 			}
-			json_user_printf(NULL, "error", "%s", result->text);
-			json_user_printf(NULL, "normal", "\n");
+			jx_user_printf(NULL, "error", "%s", result->text);
+			jx_user_printf(NULL, "normal", "\n");
 		}
 		free(result);
 	}
@@ -246,8 +246,7 @@ int isscript(char *filename)
 		 || !strcasecmp(ext, ".wsdl")
 		 || !strcasecmp(ext, ".csv"))
 			return 0;
-		if (!strcasecmp(ext, ".jc")
-		 || !strcasecmp(ext, ".jsoncalc")
+		if (!strcasecmp(ext, ".jx")
 		 || !strcasecmp(ext, ".js")) /* I know, but it isn't data */
 			return 1;
 	}
@@ -279,9 +278,9 @@ int isscript(char *filename)
 }
 
 /* Delete a string from an array of strings */
-static void delete_from_array(json_t *array, const char *str)
+static void delete_from_array(jx_t *array, const char *str)
 {
-	json_t *scan, *lag;
+	jx_t *scan, *lag;
 
 	/* If array is empty, do nothing */
 	if (!array->first)
@@ -297,7 +296,7 @@ static void delete_from_array(json_t *array, const char *str)
 		else
 			array->first = scan->next;
 		scan->next = NULL;
-		json_free(scan);
+		jx_free(scan);
 	}
 }
 
@@ -306,7 +305,7 @@ static void delete_from_array(json_t *array, const char *str)
 int main(int argc, char **argv)
 {
 	int	i;
-	json_t	*args, *section, *err, *omitplugins, *omitscripts;
+	jx_t	*args, *section, *err, *omitplugins, *omitscripts;
 	char	*val, *plugin;
 	int	anypersistent = 0;
 	int	anyfiles = 0;
@@ -320,8 +319,8 @@ int main(int argc, char **argv)
 
 	/* Detect "--version" */
 	if (argc >= 2 && !strcmp(argv[1], "--version")) {
-		printf("jsoncalc %s\n", JSON_VERSION);
-		printf("Copyright %s\n", JSON_COPYRIGHT);
+		printf("jx %s\n", JX_VERSION);
+		printf("Copyright %s\n", JX_COPYRIGHT);
 		puts("Freely redistributable under the terms of the");
 		puts("GNU General Public License v3 or later.");
 		return 0;
@@ -334,26 +333,26 @@ int main(int argc, char **argv)
 	}
 
 	/* Try to load the config.  If not found, use built-in defaults.
-	 * This also sets up json_system and json_config.  It also fetches
+	 * This also sets up jx_system and jx_config.  It also fetches
 	 * the list of persistent plugins, if there is one.
 	 */
-	json_config_load("jsoncalc");
+	jx_config_load("jx");
 
 	/* The library's default settings don't include an "autoload" directory
 	 * list, "autoscript" script list, or "autoplugin" plugin list because
-	 * the library doesn't support those itself; the jsoncalc program does.
+	 * the library doesn't support those itself; the jx program does.
 	 * If we reloaded those values from the config file then keep them;
 	 * if they're missing from config then add them now.
 	 */
-	section = json_by_key(json_config, "autoload");
-	if (!section || section->type != JSON_ARRAY)
-		json_append(json_config, json_key("autoload", json_array()));
-	section = json_by_key(json_config, "autoscript");
-	if (!section || section->type != JSON_ARRAY)
-		json_append(json_config, json_key("autoscript", json_array()));
-	section = json_by_key(json_config, "autoplugin");
-	if (!section || section->type != JSON_ARRAY)
-		json_append(json_config, json_key("autoplugin", json_array()));
+	section = jx_by_key(jx_config, "autoload");
+	if (!section || section->type != JX_ARRAY)
+		jx_append(jx_config, jx_key("autoload", jx_array()));
+	section = jx_by_key(jx_config, "autoscript");
+	if (!section || section->type != JX_ARRAY)
+		jx_append(jx_config, jx_key("autoscript", jx_array()));
+	section = jx_by_key(jx_config, "autoplugin");
+	if (!section || section->type != JX_ARRAY)
+		jx_append(jx_config, jx_key("autoplugin", jx_array()));
 
 	/* Scan the options for things we need to know to decide whether this
 	 * will be batch or interactive.  Check whether the first arg after
@@ -362,8 +361,8 @@ int main(int argc, char **argv)
 	 * -l-plugin to temporarily remove a persistent plugin.
 	 */
 	interactive = -1;
-	omitplugins = json_array();
-	omitscripts = json_array();
+	omitplugins = jx_array();
+	omitscripts = jx_array();
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
@@ -377,14 +376,14 @@ int main(int argc, char **argv)
 			break;
 		case 'u':
 			allow_update = 1;
-			json_append(json_system, json_key("update", json_boolean(1)));
+			jx_append(jx_system, jx_key("update", jx_boolean(1)));
 			break;
 		case 'L':
 			/* Adjust the list of persistent plugins but DON'T LOAD
 			 * YET!  We'll load the whole persistent list after
 			 * we're done processing all -L flags, if interactive.
 			 */
-			section = json_by_key(json_config, "autoplugin");
+			section = jx_by_key(jx_config, "autoplugin");
 			plugin = strdup(optarg);
 			val = strchr(plugin, ',');
 			if (val)
@@ -397,7 +396,7 @@ int main(int argc, char **argv)
 				 * to the end of the list.
 				 */
 				delete_from_array(section, plugin);
-				json_append(section, json_string(plugin, -1));
+				jx_append(section, jx_string(plugin, -1));
 			}
 			free(plugin);
 			break;
@@ -409,7 +408,7 @@ int main(int argc, char **argv)
 			 */
 			if (optarg[0] == '-') {
 				/* Add it to the omitscripts list */
-				json_append(omitscripts, json_string(optarg + 1, val - optarg));
+				jx_append(omitscripts, jx_string(optarg + 1, val - optarg));
 			} else if (interactive == -1) {
 				/* Trying to decide if we're interactive or
 				 * batch.  Using -fscript suggests batch.
@@ -430,13 +429,13 @@ int main(int argc, char **argv)
 					val = optarg + strlen(optarg);
 
 				/* Add it to the omitplugins list */
-				json_append(omitplugins, json_string(optarg + 1, val - optarg));
+				jx_append(omitplugins, jx_string(optarg + 1, val - optarg));
 			}
 			break;
 
 		case '?':
-			json_free(omitplugins);
-			json_free(omitscripts);
+			jx_free(omitplugins);
+			jx_free(omitscripts);
 			usage(NULL, NULL);
 			break;
 		}
@@ -447,9 +446,9 @@ int main(int argc, char **argv)
 		interactive = 0;
 	optind = 1;
 
-	/* Set the runmode in json_system to "interactive" or "batch" */
+	/* Set the runmode in jx_system to "interactive" or "batch" */
 	val = interactive ? "interactive" : "batch";
-	json_append(json_system, json_key("runmode", json_string(val, -1)));
+	jx_append(jx_system, jx_key("runmode", jx_string(val, -1)));
 
 	/* When running in batch mode, we use a separate set of formatting
 	 * options which are NOT persistent, because we want batch scripts to
@@ -459,10 +458,10 @@ int main(int argc, char **argv)
 	 */
 	if (!interactive && isatty(1)) {
 		/* Copy "graphic", "color", and "table" from interactive */
-		section = json_by_key(json_config, "interactive");
-		json_config_set("batch", "graphic", json_copy(json_by_key(section, "graphic")));
-		json_config_set("batch", "color", json_copy(json_by_key(section, "color")));
-		json_config_set("batch", "table", json_copy(json_by_key(section, "table")));
+		section = jx_by_key(jx_config, "interactive");
+		jx_config_set("batch", "graphic", jx_copy(jx_by_key(section, "graphic")));
+		jx_config_set("batch", "color", jx_copy(jx_by_key(section, "color")));
+		jx_config_set("batch", "table", jx_copy(jx_by_key(section, "table")));
 	}
 
 	/* Load the persistent plugins.  We have to do this before we process
@@ -471,7 +470,7 @@ int main(int argc, char **argv)
 	 */
 	if (interactive) {
 		/* Plugins first */
-		section = json_by_key(json_config, "autoplugin");
+		section = jx_by_key(jx_config, "autoplugin");
 		for (args = section->first; args; args = args->next) {
 			/* Skip if in "omitplugins" list (abusing the "err" variable)*/
 			for (err = omitplugins->first; err; err = err->next)
@@ -481,17 +480,17 @@ int main(int argc, char **argv)
 				continue;
 
 			/* load it */
-			err = json_plugin_load(args->text);
+			err = jx_plugin_load(args->text);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
-				json_free(err);
+				jx_free(err);
 				exitcode = 1;
 				goto CleanExit;
 			}
 		}
 
 		/* Then scripts */
-		section = json_by_key(json_config, "autoscript");
+		section = jx_by_key(jx_config, "autoscript");
 		for (args = section->first; args; args = args->next) {
 			/* Skip if in "omitscripts" list (abusing the "err" variable)*/
 			for (err = omitscripts->first; err; err = err->next)
@@ -504,13 +503,13 @@ int main(int argc, char **argv)
 			 * we really care about) but we need to wait to execute
 			 * other parts of it until we've created the context.
 			 */
-			autocmd = json_cmd_append(autocmd, json_cmd_parse_file(optarg), NULL);
+			autocmd = jx_cmd_append(autocmd, jx_cmd_parse_file(optarg), NULL);
 		}
 	}
 
 	/* Free the "omitplugins" and "omitscripts" lists */
-	json_free(omitplugins);
-	json_free(omitscripts);
+	jx_free(omitplugins);
+	jx_free(omitscripts);
 
 	/* Parse persistent flags */
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
@@ -524,7 +523,7 @@ int main(int argc, char **argv)
 		anypersistent = 1;
 		switch (opt) {
 		case 'F':
-			section = json_by_key(json_config, "autoscript");
+			section = jx_by_key(jx_config, "autoscript");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -533,13 +532,13 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = json_string(optarg, -1);
+				args = jx_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
 			break;
 		case 'D':
-			section = json_by_key(json_config, "autoload");
+			section = jx_by_key(jx_config, "autoload");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -548,7 +547,7 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = json_string(optarg, -1);
+				args = jx_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
@@ -558,7 +557,7 @@ int main(int argc, char **argv)
 			 * loaded all persistent plugins.  All we're doing
 			 * here is adjusting each plugin's settings.
 			 */
-			section = json_by_key(json_config, "pluginlist");
+			section = jx_by_key(jx_config, "pluginlist");
 
 			/* Separate the settings from the name */
 			plugin = strdup(*optarg == '-' ? optarg + 1 : optarg);
@@ -567,9 +566,9 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 				/* Find this plugin's settings */
-				section = json_by_key(json_config, "plugin");
+				section = jx_by_key(jx_config, "plugin");
 				if (section)
-					section = json_by_key(section, plugin);
+					section = jx_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
 					exitcode = 1;
@@ -577,10 +576,10 @@ int main(int argc, char **argv)
 				}
 
 				/* Adjust the settings */
-				err = json_config_parse(section, val, NULL);
+				err = jx_config_parse(section, val, NULL);
 				if (err) {
 					puts(err->text);
-					json_free(err);
+					jx_free(err);
 					exitcode = 1;
 					goto CleanExit;
 				}
@@ -590,11 +589,11 @@ int main(int argc, char **argv)
 
 		case 'S':
 			/* Parse the options. */
-			section = json_by_key(json_config, "interactive");
-			err = json_config_parse(section, optarg, NULL);
+			section = jx_by_key(jx_config, "interactive");
+			err = jx_config_parse(section, optarg, NULL);
 			if (err) {
 				puts(err->text);
-				json_free(err);
+				jx_free(err);
 				exitcode = 1;
 				goto CleanExit;
 			}
@@ -605,22 +604,22 @@ int main(int argc, char **argv)
 
 	/* If any persistent settings were changed, save the config */
 	if (anypersistent)
-		json_config_save("jsoncalc");
+		jx_config_save("jx");
 
 	/* Register the autoload handler if we're interactive.  If we end up
 	 * not using autoload, having this registered will be only a minor
 	 * inefficiency.
 	 */
 	if (interactive)
-		json_context_hook(autodir);
+		jx_context_hook(autodir);
 
 	/* Create an object that will hold any name=value parameters, and
 	 * start a context using it.  We have to do this before our final
 	 * scan of command-line options because we need to know the context
 	 * while parsing -ccommand or -fscript options.
 	 */
-	args = json_object();
-	context = json_context_std(args);
+	args = jx_object();
+	context = jx_context_std(args);
 
 	/* Parse most remaining command-line flags.  In particular, we load
 	 * any scripts so that we can process the "plugin" commands they
@@ -629,23 +628,23 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
-			initcmd = json_cmd_append(initcmd, json_cmd_parse_string(optarg), context);
+			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_string(optarg), context);
 			break;
 		case 'f':
 			if (optarg[0] != '-')
-				initcmd = json_cmd_append(initcmd, json_cmd_parse_file(optarg), context);
+				initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(optarg), context);
 			break;
 		case 'r':
 			restricted = 1;
 			break;
 		case 'o':
-			json_file_new_type = 'o';
+			jx_file_new_type = 'o';
 			break;
 		case 'a':
-			json_file_new_type = 'a';
+			jx_file_new_type = 'a';
 			break;
 		case 'd':
-			section = json_by_key(json_config, "autoload");
+			section = jx_by_key(jx_config, "autoload");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -654,7 +653,7 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = json_string(optarg, -1);
+				args = jx_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
@@ -676,10 +675,10 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 			/* Load the plugin */
-			err = json_plugin_load(plugin);
+			err = jx_plugin_load(plugin);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
-				json_free(err);
+				jx_free(err);
 				exitcode = 1;
 				goto CleanExit;
 			}
@@ -687,12 +686,12 @@ int main(int argc, char **argv)
 			/* If there are options, process them now */
 			if (val && *val)
 			{ 
-				/* Find the json_config.plugin.{plugin} section.
+				/* Find the jx_config.plugin.{plugin} section.
 				 * If it doesn't exist, then fail.
 				 */
-				section = json_by_key(json_config, "plugin");
+				section = jx_by_key(jx_config, "plugin");
 				if (section)
-					section = json_by_key(section, plugin);
+					section = jx_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
 					exitcode = 1;
@@ -700,18 +699,18 @@ int main(int argc, char **argv)
 				}
 
 				/* Parse the options.  Watch for errors */
-				err = json_config_parse(section, val, NULL);
+				err = jx_config_parse(section, val, NULL);
 				if (err) {
 					fprintf(stderr, "%s\n", err->text);
-					json_free(err);
+					jx_free(err);
 					exitcode = 1;
 					goto CleanExit;
 				}
 			}
 			break;
 		case 's':
-			section = json_by_key(json_config, interactive ? "interactive" : "batch");
-			err = json_config_parse(section, optarg, NULL);
+			section = jx_by_key(jx_config, interactive ? "interactive" : "batch");
+			err = jx_config_parse(section, optarg, NULL);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				exitcode = 1;
@@ -722,7 +721,7 @@ int main(int argc, char **argv)
 			pretty++;
 			break;
 		case 'j':
-			if (*optarg == '?' || json_debug(optarg)) {
+			if (*optarg == '?' || jx_debug(optarg)) {
 				debug_usage();
 				goto CleanExit;
 			}
@@ -763,8 +762,8 @@ int main(int argc, char **argv)
 		default:val = "nopretty,json,oneline=70";
 		}
 
-		section = json_by_key(json_config, "batch");
-		err = json_config_parse(section, val, NULL);
+		section = jx_by_key(jx_config, "batch");
+		err = jx_config_parse(section, val, NULL);
 		if (err) {
 			fprintf(stderr, "%s\n", err->text);
 			exitcode = 1;
@@ -777,40 +776,40 @@ int main(int argc, char **argv)
 	 * then parse it like a -fscript flag.
 	 */
 	if (firstscript) {
-		initcmd = json_cmd_append(initcmd, json_cmd_parse_file(argv[optind]), context);
+		initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(argv[optind]), context);
 		optind++;
 	}
 
 	/* If -ccmd or -fscript resulted in an error (already reported) then
 	 * quit now.
 	 */
-	if (initcmd == JSON_CMD_ERROR || autocmd == JSON_CMD_ERROR) {
+	if (initcmd == JX_CMD_ERROR || autocmd == JX_CMD_ERROR) {
 		exitcode = 1;
 		goto CleanExit;
 	}
 
 	/* Set the formatting from the config */
-	json_format_set(NULL, NULL);
+	jx_format_set(NULL, NULL);
 
 	/* Add any name=value parameters to the "args" object that we created
 	 * when we started the context.  Also, add any data files named on
-	 * the command line, via json_context_file().
+	 * the command line, via jx_context_file().
 	 */
 	for (i = optind; i < argc; i++) {
-		json_t *tmp;
+		jx_t *tmp;
 
 		/* If it looks like a file, then add it to the list of files */
-		if (((strchr(argv[i], '.') && json_file_new_type != '\0')
+		if (((strchr(argv[i], '.') && jx_file_new_type != '\0')
 		  || !strcmp(argv[i], "-")
 		  || 0 == access(argv[i], F_OK))
 		 && !isdirectory(argv[i])) {
 			/* If it doesn't exist and no -a/-o was given, fail */
-			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && json_file_new_type == '\0'){
+			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && jx_file_new_type == '\0'){
 				perror(argv[i]);
 				exitcode = 1;
 				goto CleanExit;
 			}
-			json_context_file(context, argv[i], allow_update, NULL);
+			jx_context_file(context, argv[i], allow_update, NULL);
 			anyfiles = 1;
 		} else {
 			/* In a name=value string, separate the name from the value */
@@ -825,15 +824,15 @@ int main(int argc, char **argv)
 			 || !strcmp("true", val)
 			 || !strcmp("false", val)
 			 || !strcmp("null", val))
-				tmp = json_parse_string(val);
+				tmp = jx_parse_string(val);
 			else
-				tmp = json_string(val, -1);
-			json_append(args, json_key(argv[i], tmp));
+				tmp = jx_string(val, -1);
+			jx_append(args, jx_key(argv[i], tmp));
 		}
 	}
 
 	/* Start on the first file named on the command line, if any */
-	json_context_file(context, NULL, 0, NULL);
+	jx_context_file(context, NULL, 0, NULL);
 
 	/* If this was determined to be a batch invocation (not interactive)
 	 * but no -ccommand or -fscript flags were given, then assume "-cdata"
@@ -841,27 +840,27 @@ int main(int argc, char **argv)
 	 */
 	if (!interactive && !initcmd)
 	{
-		args = json_config_get("batch", "table");
+		args = jx_config_get("batch", "table");
 		if (args && (!strcmp(args->text, "grid") || !strcmp(args->text, "sh") || !strcmp(args->text, "csv")))
-			initcmd = json_cmd_parse_string("select");
+			initcmd = jx_cmd_parse_string("select");
 		else
-			initcmd = json_cmd_parse_string("data");
+			initcmd = jx_cmd_parse_string("data");
 	}
 
 	/* If batch mode and no filenames were named on the command line,
 	 * then assume "-", unless stdin is a tty.
 	 */
 	if (!interactive && !anyfiles && !isatty(0))
-		json_context_file(context, "-", 1, NULL);
+		jx_context_file(context, "-", 1, NULL);
 
 	/* Run any -Fscript scripts now, if interactive */
 	if (interactive) {
 		run(autocmd, &context);
 	}
-	json_cmd_free(autocmd);
+	jx_cmd_free(autocmd);
 
 	/* Start on the first file */
-	json_context_file(context, NULL, 0, NULL);
+	jx_context_file(context, NULL, 0, NULL);
 
 	/* Do either the batch or interactive thing */
 	if (interactive)
@@ -877,19 +876,19 @@ CleanExit:
 		 * file was modified.  Switching to the previous file is enough
 		 * to trigger this even if there was no previous file.
 		 */
-		i = JSON_CONTEXT_FILE_PREVIOUS;
-		json_context_file(context, NULL, 0, &i);
+		i = JX_CONTEXT_FILE_PREVIOUS;
+		jx_context_file(context, NULL, 0, &i);
 	}
 
 	/* Free the context stack */
 	while (context)
-		context = json_context_free(context);
+		context = jx_context_free(context);
 
 	/* Free the initialization commands (from -ccmd and -fffile) */
-	json_cmd_free(initcmd);
+	jx_cmd_free(initcmd);
 
 	/* Revert to normal text colors */
-	json_user_printf(NULL, "normal", "");
+	jx_user_printf(NULL, "normal", "");
 
 	/* Return the success/fail status */
 	return exitcode;

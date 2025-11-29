@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>find</title>
-    <link rel="stylesheet" type="text/css" href="../jsoncalc.css">
-    <meta name="description" content="jsoncalc find - Do a deep search for a value">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jsoncalc, function reference, find">
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx find - Do a deep search for a value">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, find">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -59,7 +59,7 @@
           If the match is an array element, but the array is the value of an
           object's member, then that member's key (i.e., the array's name)
           is used here.
-          As usual in JsonCalc, the member name comparison is case-insensitive.
+          As usual in jx, the member name comparison is case-insensitive.
           If there are no objects then this will be omitted.
         </td></tr>
 
@@ -68,7 +68,7 @@
         </td></tr>
 
         <tr><th>expr</th><td>
-          This is a string that looks like a JsonCalc (or JavaScript)
+          This is a string that looks like a jx (or JavaScript)
           expression for reaching the match.
           If you explicitly pass a <var>haystack</var> argument, then
           this will be relative to the <var>haystack</var>.
@@ -131,7 +131,7 @@
 	  </table>
         </samp>
         Here's an example using the default table.
-        To get this result, I invoked the <b>jsoncalc</b> program with the
+        To get this result, I invoked the <b>jx</b> program with the
         name of a *.json file; the contents of that file were thus available
         as "<tt>data</tt>".  The file contains a JSON array of objects,
         so the whole <tt>data</tt> is the default table.

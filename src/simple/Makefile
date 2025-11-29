@@ -2,11 +2,11 @@ LIB=	../../lib
 INC=	../../include
 CFLAGS=	-I$(INC)
 LDFLAGS=-L$(LIB)
-LDLIBS=	-ljsoncalc
+LDLIBS=	-ljx
 
 all: simple
 
-simple: simple.c $(LIB)/libjsoncalc.so
+simple: simple.c $(LIB)/libjx.so
 	$(CC) $(CFLAGS) $(LDFLAGS) simple.c $(LDLIBS) -o simple
 
 clean:

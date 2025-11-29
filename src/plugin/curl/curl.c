@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <curl/curl.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This plugin gives access to the "curl" library, for sending requests over
  * the internet using a wide variety of protocols.
@@ -106,9 +106,9 @@ static void curlcleanup(void)
 
 
 /* Convert a big header string into an array of header lines */
-static json_t *headerArray(char *header)
+static jx_t *headerArray(char *header)
 {
-	json_t *array = json_array();
+	jx_t *array = jx_array();
 	size_t	len;
 
 	/* Until we hit the blank line marking the end... */
@@ -116,7 +116,7 @@ static json_t *headerArray(char *header)
 		/* Look for the end of this line */
 		for (len = 1; header[len] >= ' '; len++) {
 		}
-		json_append(array, json_string(header, len));
+		jx_append(array, jx_string(header, len));
 		if (header[len] == '\r' && header[len + 1] == '\n')
 			header += len + 2;
 		else
@@ -130,19 +130,19 @@ static json_t *headerArray(char *header)
  * an object or string.  Returns the length of the string not counting the
  * terminating NUL byte.  If buf is non-NULL then the text is stored there.
  */
-static size_t urlencode(json_t *data, char *buf, int component)
+static size_t urlencode(jx_t *data, char *buf, int component)
 {
 	size_t	len, chunk;
 	char	*text;
-	json_t	*scan;
+	jx_t	*scan;
 	char	*special = " %";
 
 	if (component)
 		special = " %:/?&#";
 
-	if (data->type == JSON_STRING
-	 || data->type == JSON_BOOLEAN
-	 || (data->type == JSON_NUMBER && *data->text)) {
+	if (data->type == JX_STRING
+	 || data->type == JX_BOOLEAN
+	 || (data->type == JX_NUMBER && *data->text)) {
 		/* Printable ASCII is left unchanged except that spaces become
 		 * "+", "+" and "&" become %2B and %26 respectively, and every
 		 * other byte is converted to %xx hex.  This means multibyte
@@ -165,28 +165,28 @@ static size_t urlencode(json_t *data, char *buf, int component)
 		if (buf)
 			buf[len] = '\0';
 		return len;
-	} else if (data->type == JSON_NUMBER) {
+	} else if (data->type == JX_NUMBER) {
 		/* Convert to a string, and convert it recursively */
-		scan = json_string("", 40);
+		scan = jx_string("", 40);
 		if (data->text[1] == 'i')
-			snprintf(scan->text, 40, "%d", JSON_INT(data));
+			snprintf(scan->text, 40, "%d", JX_INT(data));
 		else
-			snprintf(scan->text, 40, "%g", JSON_DOUBLE(data));
+			snprintf(scan->text, 40, "%g", JX_DOUBLE(data));
 		len = urlencode(scan, buf, 1);
-		json_free(scan);
+		jx_free(scan);
 		return len;
-	} else if (data->type == JSON_NULL) {
+	} else if (data->type == JX_NULL) {
 		/* ignore it */
 		return 0;
-	} else if (data->type == JSON_OBJECT) {
+	} else if (data->type == JX_OBJECT) {
 		/* Convert to a series of name=value strings */
 		len = 0;
 		for (scan = data->first; scan; scan = scan->next) {
 			/* Skip if value is another object or an array.  Note
 			 * that since this is an object member, "scan" points
-			 * to a JSON_KEY and the value is scan->first.
+			 * to a JX_KEY and the value is scan->first.
 			 */
-			if (scan->first->type == JSON_OBJECT || scan->first->type == JSON_ARRAY)
+			if (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY)
 				continue;
 
 			/* If not first, then add a "&" */
@@ -237,19 +237,19 @@ typedef struct {
 /* Parse a series of flags.  For each one, either set a curl option directly
  * or update the data in "flags".
  *
- * This returns NULL on success, or a json_t error on failure.  For failure,
+ * This returns NULL on success, or a jx_t error on failure.  For failure,
  * the calling function is responsible for doing cleanup before returning,
  * including freeing flags->slist.
  */
-static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, receiver_t *rcv, json_t *more)
+static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, receiver_t *rcv, jx_t *more)
 {
-	json_t	*err;
+	jx_t	*err;
 	char	*str;
 
 	/* For each item in the list... */
 	for (; more; more = more->next) {
 		/* If it's an array, process it recursively */
-		if (more->type == JSON_ARRAY) {
+		if (more->type == JX_ARRAY) {
 			err = doFlags(fn, curl, data, flags, rcv, more->first);
 			if (err)
 				return err;
@@ -257,61 +257,61 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, r
 		}
 
 		/* If it isn't an option number, that's a problem */
-		if (more->type != JSON_NUMBER) {
-			if (more->type == JSON_STRING)
-				return json_error_null(NULL, "Bad extra argument \"%s\" passed to the %s() function", more->text, fn);
-			return json_error_null(NULL, "Bad extra argument passed to the %s() function", fn);
+		if (more->type != JX_NUMBER) {
+			if (more->type == JX_STRING)
+				return jx_error_null(NULL, "Bad extra argument \"%s\" passed to the %s() function", more->text, fn);
+			return jx_error_null(NULL, "Bad extra argument passed to the %s() function", fn);
 		}
 
 		/* Process each option flag separately */
-		switch (json_int(more)) {
+		switch (jx_int(more)) {
 		case OPT_PROXY_:
-			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(NULL, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
+			if (!more->next || more->next->type != JX_STRING)
+				return jx_error_null(NULL, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PROXY, more->text);
 			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
 			break;
 
 		case OPT_USERNAME_:
-			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(NULL, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
+			if (!more->next || more->next->type != JX_STRING)
+				return jx_error_null(NULL, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_easy_setopt(curl, CURLOPT_USERNAME, more->text);
 			break;
 		case OPT_PASSWORD_:
-			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(NULL, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
+			if (!more->next || more->next->type != JX_STRING)
+				return jx_error_null(NULL, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PASSWORD, more->text);
 			break;
 		case OPT_BEARER_:
-			if (!more->next || more->next->type != JSON_STRING)
-				return json_error_null(NULL, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
+			if (!more->next || more->next->type != JX_STRING)
+				return jx_error_null(NULL, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
 			break;
 		case OPT_CONTENT:
 			if (!data)
-				return json_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
+				return jx_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
 			flags->content = 1;
 			break;
 		case OPT_CONTENTTYPE_:
 			if (!more->next
-			 || more->next->type != JSON_STRING
+			 || more->next->type != JX_STRING
 			 || strchr(more->next->text, ':')
 			 || !strchr(more->next->text, '/')) {
-				return json_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+				return jx_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
 			}
 			more = more->next;
 			flags->reqcontenttype = more->text;
 			break;
 		case OPT_HEADER_:
 			more = more->next;
-			if (!more || more->type != JSON_STRING || !strchr(more->text, ':'))
-				return json_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+			if (!more || more->type != JX_STRING || !strchr(more->text, ':'))
+				return jx_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
 			flags->slist = curl_slist_append(flags->slist, more->text);
 			break;
 		case OPT_REQHEADERS:
@@ -322,11 +322,11 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, r
 			break;
 		case OPT_COOKIES:
 			/* If cookiejar is "" then make one up */
-			str = json_config_get("plugin.curl", "cookiejar")->text;
+			str = jx_config_get("plugin.curl", "cookiejar")->text;
 			if (!str || !*str)
 				str = tempcookiejar;
 			if (!str) {
-				str = json_file_path(NULL, NULL, NULL);
+				str = jx_file_path(NULL, NULL, NULL);
 				tempcookiejar = (char *)malloc(strlen(str) + 18);
 				strcpy(tempcookiejar, str);
 				strcat(tempcookiejar, "cookiejar.XXXXXX");
@@ -353,7 +353,7 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, r
 			rcv->debug = 1;
 			break;
 		default:
-			return json_error_null(NULL, "Invalid option number %d passed to %s()", json_int(more), fn);
+			return jx_error_null(NULL, "Invalid option number %d passed to %s()", jx_int(more), fn);
 		}
 
 	}
@@ -365,25 +365,25 @@ static json_t *doFlags(char *fn, CURL *curl, json_t *data, curlflags_t *flags, r
  * "GET" or "POST", but it could be "HEAD", "DELETE", or whatever.  "argsfirst"
  * is the first element of a JSON array of arguments.
  */
-static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
+static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 {
 	CURL	*curl;
 	CURLcode result;
 	char	*url, *str, *mustfree;
-	json_t	*data, *err;
+	jx_t	*data, *err;
 	curlflags_t flags = {NULL};
 	size_t	arglen;
 	receiver_t rcv = {0}, hdr = {0}, reqhdr = {0};
-	json_t	*more, *scan, *response;
+	jx_t	*more, *scan, *response;
 
 	/* Allocate a CURL handle */
 	curl = curl_easy_init();
 	if (!curl)
-		return json_error_null(NULL, "Failed to allocate a CURL handle in %s()", fn);
+		return jx_error_null(NULL, "Failed to allocate a CURL handle in %s()", fn);
 
 	/* First argument must be URL */
-	if (!argsfirst || argsfirst->type != JSON_STRING)
-		return json_error_null(NULL, "The %s() function requires a URL string", fn);
+	if (!argsfirst || argsfirst->type != JX_STRING)
+		return jx_error_null(NULL, "The %s() function requires a URL string", fn);
 	url = argsfirst->text;
 
 	/* If next arg isn't a number, then it must be data... except that if
@@ -391,11 +391,11 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	 */
 	data = NULL;
 	more = argsfirst->next;
-	if (more && more->type == JSON_NULL) {
+	if (more && more->type == JX_NULL) {
 		more = more->next;
 		/* but leave data set to NULL */
 	}
-	else if (more && more->type != JSON_NUMBER) {
+	else if (more && more->type != JX_NUMBER) {
 		data = more;
 		more = more->next;
 	}
@@ -418,7 +418,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	if (flags.content && !data) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return json_error_null(NULL, "The %s() function needs data to send", fn);
+		return jx_error_null(NULL, "The %s() function needs data to send", fn);
 	}
 
 	/* If a content type was given, and the content isn't a string, then
@@ -428,10 +428,10 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 	mustfree = str = NULL;
 	if (data) {
 		if (flags.reqcontenttype) {
-			if (data->type == JSON_STRING)
+			if (data->type == JX_STRING)
 				str = data->text;
 			else if (strstr(flags.reqcontenttype, "json") || strstr(flags.reqcontenttype, "JSON")) {
-				mustfree = str = json_serialize(data, NULL);
+				mustfree = str = jx_serialize(data, NULL);
 			} else if (strstr(flags.reqcontenttype, "form") || strstr(flags.reqcontenttype, "FORM")) {
 				size_t arglen = urlencode(data, NULL, 1);
 				mustfree = str = (char *)malloc(arglen + 1);
@@ -439,9 +439,9 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 			} else {
 				curl_easy_cleanup(curl);
 				curl_slist_free_all(flags.slist);
-				return json_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
+				return jx_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
 			}
-		} else if (data->type == JSON_STRING) {
+		} else if (data->type == JX_STRING) {
 			switch (*data->text) {
 			case '{': /* } */
 			case '[': flags.reqcontenttype = "application/json";	break;
@@ -449,20 +449,20 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 			default:  flags.reqcontenttype = "application/x-www-form-urlencoded";
 			}
 			str = data->text;
-		} else if (data->type == JSON_ARRAY) {
+		} else if (data->type == JX_ARRAY) {
 			flags.reqcontenttype = "application/json";
-			mustfree = str = json_serialize(data, NULL);
-		} else if (data->type == JSON_OBJECT) {
+			mustfree = str = jx_serialize(data, NULL);
+		} else if (data->type == JX_OBJECT) {
 			/* If all member values are strings or numbers, assume
 			 * HTML form otherwise assume JSON
 			 */
 			for (scan = data->first; scan; scan = scan->next) {
-				if (scan->first->type != JSON_STRING && scan->first->type != JSON_NUMBER && scan->first->type != JSON_BOOLEAN && scan->first->type != JSON_NULL)
+				if (scan->first->type != JX_STRING && scan->first->type != JX_NUMBER && scan->first->type != JX_BOOLEAN && scan->first->type != JX_NULL)
 					break;
 			}
 			if (scan) {
 				/* complex values, can't be a form so assume JSON */
-				str = json_serialize(data, NULL);
+				str = jx_serialize(data, NULL);
 				flags.reqcontenttype = "application/json";
 			} else {
 				/* simple values, it's probably form data */
@@ -474,7 +474,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		} else {
 			curl_easy_cleanup(curl);
 			curl_slist_free_all(flags.slist);
-			return json_error_null(NULL, "The %s() function can't guess the content type", fn);
+			return jx_error_null(NULL, "The %s() function can't guess the content type", fn);
 		}
 	}
 
@@ -539,7 +539,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 			free(hdr.buf);
 		if (mustfree)
 			free(mustfree);
-		return json_error_null(NULL, "CURL error: %s", curl_easy_strerror(result));
+		return jx_error_null(NULL, "CURL error: %s", curl_easy_strerror(result));
 	}
 
 	/* Maybe try to parse it; otherwise convert the returned data to a
@@ -552,36 +552,36 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 		 * display the error message as a warning and fall back on
 		 * returning the response as a string.
 		 */
-		response = json_parse_string(rcv.buf);
-		if (json_is_error(response)) {
-			if (json_is_true(json_by_expr(json_config, "plugin.curl.warn.badparse", NULL)))
+		response = jx_parse_string(rcv.buf);
+		if (jx_is_error(response)) {
+			if (jx_is_true(jx_by_expr(jx_config, "plugin.curl.warn.badparse", NULL)))
 				fprintf(stderr, "%s: %s\n", url, response->text);
-			json_free(response);
+			jx_free(response);
 			response = NULL;
 		}
 	}
 	if (!response)
-		response = json_string(rcv.buf ? rcv.buf : "", rcv.used);
+		response = jx_string(rcv.buf ? rcv.buf : "", rcv.used);
 
 	/* If supposed to return headers, then build an object containing
 	 * both the headers and the response.
 	 */
 	if (flags.reqheaders || flags.reqcontent || flags.headers) {
-		json_t *obj = json_object();
+		jx_t *obj = jx_object();
 		if (flags.reqheaders)
-			json_append(obj, json_key("reqHeaders", headerArray(reqhdr.buf)));
+			jx_append(obj, jx_key("reqHeaders", headerArray(reqhdr.buf)));
 		if (flags.reqcontent) {
-			json_t *value;
+			jx_t *value;
 			if (str && flags.content)
-				value = json_string(str, -1);
+				value = jx_string(str, -1);
 			else
-				value = json_null();
-			json_append(obj, json_key("reqContent", value));
+				value = jx_null();
+			jx_append(obj, jx_key("reqContent", value));
 		}
 		if (flags.headers)
-			json_append(obj, json_key("headers", headerArray(hdr.buf)));
-		json_append(obj, json_key("response", response));
-		json_append(obj, json_key("responseLength", json_from_int(rcv.used)));
+			jx_append(obj, jx_key("headers", headerArray(hdr.buf)));
+		jx_append(obj, jx_key("response", response));
+		jx_append(obj, jx_key("responseLength", jx_from_int(rcv.used)));
 		response = obj;
 	}
 
@@ -598,7 +598,7 @@ static json_t *curlHelper(char *fn, char *request, json_t *argsfirst)
 /* curlGet(url:string, data?:string|object, flags?:number|string|array,...):any
  * Read a URL using HTTP "GET"
  */
-static json_t *jfn_curlGet(json_t *args, void *agdata)
+static jx_t *jfn_curlGet(jx_t *args, void *agdata)
 {
 	return curlHelper("curlGet", "GET", args->first);
 }
@@ -606,7 +606,7 @@ static json_t *jfn_curlGet(json_t *args, void *agdata)
 /* curlPost(url:string, data:any|null, flags?:number|string|array,...):any
  * Send data via an HTTP "POST" request, and return the response string.
  */
-static json_t *jfn_curlPost(json_t *args, void *agdata)
+static jx_t *jfn_curlPost(jx_t *args, void *agdata)
 {
 	return curlHelper("curlPost", "POST", args->first);
 }
@@ -614,25 +614,25 @@ static json_t *jfn_curlPost(json_t *args, void *agdata)
 /* curlOther(verb:string, url:string, data:string|object|array, ...):any
  * Send data via an HTTP "POST" request, and return the response string.
  */
-static json_t *jfn_curlOther(json_t *args, void *agdata)
+static jx_t *jfn_curlOther(jx_t *args, void *agdata)
 {
-	if (args->first->type != JSON_STRING)
-		return json_error_null(NULL, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
+	if (args->first->type != JX_STRING)
+		return jx_error_null(NULL, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
 	return curlHelper("curlOther", args->first->text, args->first->next);
 }
 
-static json_t *jfn_encodeURI(json_t *args, void *agdata)
+static jx_t *jfn_encodeURI(jx_t *args, void *agdata)
 {
 	size_t	len;
-	json_t	*result;
+	jx_t	*result;
 
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 0);
 	if (len == 0)
-		return json_error_null(NULL, "Bad argument for %s()", "encodeURI");
+		return jx_error_null(NULL, "Bad argument for %s()", "encodeURI");
 
 	/* Allocate a result buffer */
-	result = json_string("", len);
+	result = jx_string("", len);
 
 	/* Store the text in the result */
 	urlencode(args->first, result->text, 0);
@@ -641,18 +641,18 @@ static json_t *jfn_encodeURI(json_t *args, void *agdata)
 	return result;
 }
 
-static json_t *jfn_encodeURIComponent(json_t *args, void *agdata)
+static jx_t *jfn_encodeURIComponent(jx_t *args, void *agdata)
 {
 	size_t	len;
-	json_t	*result;
+	jx_t	*result;
 
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 1);
 	if (len == 0)
-		return json_error_null(NULL, "Bad argument for %s()", "encodeURIComponent");
+		return jx_error_null(NULL, "Bad argument for %s()", "encodeURIComponent");
 
 	/* Allocate a result buffer */
-	result = json_string("", len);
+	result = jx_string("", len);
 
 	/* Store the text in the result */
 	urlencode(args->first, result->text, 1);
@@ -661,11 +661,11 @@ static json_t *jfn_encodeURIComponent(json_t *args, void *agdata)
 	return result;
 }
 
-static json_t *jfn_uuid(json_t *args, void *agdata)
+static jx_t *jfn_uuid(jx_t *args, void *agdata)
 {
 	int	fd, i;
 	char	bytes[16];
-	json_t	*result;
+	jx_t	*result;
 	char	*build;
 
 	/* Read 16 bytes from /dev/random or /dev/urandom.  If that fails,
@@ -683,7 +683,7 @@ static json_t *jfn_uuid(json_t *args, void *agdata)
 	}
 
 	/* Convert it to a string in 8-4-4-4-12 format. */
-	result = json_string("", 36);
+	result = jx_string("", 36);
 	for (i = 0, build = result->text; i < sizeof bytes; i++) {
 		if (i == 4 || i == 6 || i == 8 || i == 10)
 			*build++ = '-';
@@ -704,38 +704,38 @@ static json_t *jfn_uuid(json_t *args, void *agdata)
 const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* Convert a string to MIME base-64 encoding */
-static json_t *jfn_mime64(json_t *args, void *agdata)
+static jx_t *jfn_mime64(jx_t *args, void *agdata)
 {
 	size_t	len, i, j;
-	json_t	*result;
+	jx_t	*result;
 	char *data, *mustfree;
-	jsonblobconv_t conv;
+	jxblobconv_t conv;
 	char	*str, *end;
 	int	digit;
 
 	/* Look for conversion method */
 	if (args->first->next ) {
-		if (args->first->next->type != JSON_NUMBER)
+		if (args->first->next->type != JX_NUMBER)
 			goto BadArgs;
-		conv = json_int(args->first->next);
-		if (conv < JSON_BLOB_ANY || conv > JSON_BLOB_BYTES)
+		conv = jx_int(args->first->next);
+		if (conv < JX_BLOB_ANY || conv > JX_BLOB_BYTES)
 			goto BadArgs;
 	} else {
-		conv = JSON_BLOB_UTF8;
+		conv = JX_BLOB_UTF8;
 	}
 
 	/* We expect a single string as argument, or an array of bytes */
 	data = mustfree = NULL;
-	if ((data = (char *)json_blob_data(args->first, &len)) == NULL) {
-		if (args->first->type == JSON_STRING && conv == JSON_BLOB_UTF8){
+	if ((data = (char *)jx_blob_data(args->first, &len)) == NULL) {
+		if (args->first->type == JX_STRING && conv == JX_BLOB_UTF8){
 			data = args->first->text;
 			len = strlen(data); /* byte count */
 		} else {
-			len = json_blob_unconvert(args->first, NULL, conv);
+			len = jx_blob_unconvert(args->first, NULL, conv);
 			if (len == 0)
 				goto BadArgs;
 			data = mustfree = (char *)malloc(len);
-			(void)json_blob_unconvert(args->first, data, conv);
+			(void)jx_blob_unconvert(args->first, data, conv);
 		}
 	}
 
@@ -746,7 +746,7 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 	len = ((len + 2) / 3) * 4;
 
 	/* Allocate the result buffer */
-	result = json_string("", len);
+	result = jx_string("", len);
 
 	/* Convert each group of 3 bytes */
 	for (str = data, j = 0; str + 3 < end; str += 3) {
@@ -807,14 +807,14 @@ static json_t *jfn_mime64(json_t *args, void *agdata)
 	return result;
 
 BadArgs:
-	return json_error_null(NULL, "stringarg:The %s() function takes a single string or bytes array as its argument", "mime64");
+	return jx_error_null(NULL, "stringarg:The %s() function takes a single string or bytes array as its argument", "mime64");
 }
 
 /* Convert a MIME64 string back into data.  If the data doesn't look like
  * UTF-8 text, then each byte will be interpreted as a Latin-1 character and
  * converted to UTF-8.
  */
-static json_t *jfn_unmime64(json_t *args, void *agdata)
+static jx_t *jfn_unmime64(jx_t *args, void *agdata)
 {
 	char	*mimetext;
 	int	conversion;
@@ -823,18 +823,18 @@ static json_t *jfn_unmime64(json_t *args, void *agdata)
 	int	notutf8;
 	int	phase, i;
 	char	*c;
-	json_t	*result;
+	jx_t	*result;
 
 	/* Check arguments.  Mandatory first argument should be a string of
 	 * MIME64 data, second optional argument should be representation type.
 	 */
-	if (args->first->type != JSON_STRING)
-		return json_error_null(NULL, "stringargplus:The %s() function takes a string argument", "unmime64");
+	if (args->first->type != JX_STRING)
+		return jx_error_null(NULL, "stringargplus:The %s() function takes a string argument", "unmime64");
 	mimetext = args->first->text;
 	if (!args->first->next)
-		conversion = JSON_BLOB_ANY;
-	else if (args->first->next->type != JSON_NUMBER || (conversion = json_int(args->first->next)) <= JSON_BLOB_ANY || conversion > JSON_BLOB_BYTES) {
-		return json_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
+		conversion = JX_BLOB_ANY;
+	else if (args->first->next->type != JX_NUMBER || (conversion = jx_int(args->first->next)) <= JX_BLOB_ANY || conversion > JX_BLOB_BYTES) {
+		return jx_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
 	}
 
 	/* Convert the string to binary data.  It will never be longer than the
@@ -885,11 +885,11 @@ static json_t *jfn_unmime64(json_t *args, void *agdata)
 	/* NOTE: bpos now indicates the length of the binary data */
 
 	/* Try to convert to the requested format */
-	result = json_blob_convert(binary, bpos, conversion);
+	result = jx_blob_convert(binary, bpos, conversion);
 	if (!result)
-		result = json_error_null(NULL, "utf8:Data is not valid UTF-8");
+		result = jx_error_null(NULL, "utf8:Data is not valid UTF-8");
 
-	/* Discard the binary version of the data, and return the json_t */
+	/* Discard the binary version of the data, and return the jx_t */
 	free(binary);
 	return result;
 }
@@ -900,29 +900,29 @@ static json_t *jfn_unmime64(json_t *args, void *agdata)
  */
 char *plugincurl()
 {
-	json_t	*curl;
+	jx_t	*curl;
 
 	/* Store the curl plugin's settings */
-	curl = json_by_key(json_config, "plugin");
-	json_append(curl, json_key("curl", json_parse_string(settings)));
+	curl = jx_by_key(jx_config, "plugin");
+	jx_append(curl, jx_key("curl", jx_parse_string(settings)));
 
-	/* Add a "curl" object to json_system, to hold option consts */
-	curl = json_object();
-	json_append(curl, json_key("proxy_", json_from_int(OPT_PROXY_)));
-	json_append(curl, json_key("username_", json_from_int(OPT_USERNAME_)));
-	json_append(curl, json_key("password_", json_from_int(OPT_PASSWORD_)));
-	json_append(curl, json_key("bearer_", json_from_int(OPT_BEARER_)));
-	json_append(curl, json_key("content", json_from_int(OPT_CONTENT)));
-	json_append(curl, json_key("contentType_", json_from_int(OPT_CONTENTTYPE_)));
-	json_append(curl, json_key("header_", json_from_int(OPT_HEADER_)));
-	json_append(curl, json_key("reqHeaders", json_from_int(OPT_REQHEADERS)));
-	json_append(curl, json_key("reqContent", json_from_int(OPT_REQCONTENT)));
-	json_append(curl, json_key("cookies", json_from_int(OPT_COOKIES)));
-	json_append(curl, json_key("followLocation", json_from_int(OPT_FOLLOWLOCATION)));
-	json_append(curl, json_key("raw", json_from_int(OPT_RAW)));
-	json_append(curl, json_key("headers", json_from_int(OPT_HEADERS)));
-	json_append(curl, json_key("debugrcv", json_from_int(OPT_DEBUGRCV)));
-	json_append(json_system, json_key("CURL", curl));
+	/* Add a "curl" object to jx_system, to hold option consts */
+	curl = jx_object();
+	jx_append(curl, jx_key("proxy_", jx_from_int(OPT_PROXY_)));
+	jx_append(curl, jx_key("username_", jx_from_int(OPT_USERNAME_)));
+	jx_append(curl, jx_key("password_", jx_from_int(OPT_PASSWORD_)));
+	jx_append(curl, jx_key("bearer_", jx_from_int(OPT_BEARER_)));
+	jx_append(curl, jx_key("content", jx_from_int(OPT_CONTENT)));
+	jx_append(curl, jx_key("contentType_", jx_from_int(OPT_CONTENTTYPE_)));
+	jx_append(curl, jx_key("header_", jx_from_int(OPT_HEADER_)));
+	jx_append(curl, jx_key("reqHeaders", jx_from_int(OPT_REQHEADERS)));
+	jx_append(curl, jx_key("reqContent", jx_from_int(OPT_REQCONTENT)));
+	jx_append(curl, jx_key("cookies", jx_from_int(OPT_COOKIES)));
+	jx_append(curl, jx_key("followLocation", jx_from_int(OPT_FOLLOWLOCATION)));
+	jx_append(curl, jx_key("raw", jx_from_int(OPT_RAW)));
+	jx_append(curl, jx_key("headers", jx_from_int(OPT_HEADERS)));
+	jx_append(curl, jx_key("debugrcv", jx_from_int(OPT_DEBUGRCV)));
+	jx_append(jx_system, jx_key("CURL", curl));
 
 	/* Initialize CURL */
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
@@ -931,14 +931,14 @@ char *plugincurl()
 	}
 
 	/* Register the functions */
-	json_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);
-	json_calc_function_hook("curlPost", "url:string, data:any, ...", "string | any", jfn_curlPost);
-	json_calc_function_hook("curlOther", "verb:string, url:string, data?:any, ...", "string | any", jfn_curlOther);
-	json_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
-	json_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
-	json_calc_function_hook("uuid",  "", "string", jfn_uuid);
-	json_calc_function_hook("mime64",  "data:string", "string", jfn_mime64);
-	json_calc_function_hook("unmime64",  "data:string, convertsion?:number", "string", jfn_unmime64);
+	jx_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);
+	jx_calc_function_hook("curlPost", "url:string, data:any, ...", "string | any", jfn_curlPost);
+	jx_calc_function_hook("curlOther", "verb:string, url:string, data?:any, ...", "string | any", jfn_curlOther);
+	jx_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
+	jx_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
+	jx_calc_function_hook("uuid",  "", "string", jfn_uuid);
+	jx_calc_function_hook("mime64",  "data:string", "string", jfn_mime64);
+	jx_calc_function_hook("unmime64",  "data:string, convertsion?:number", "string", jfn_unmime64);
 
 	/* Success */
 	return NULL;

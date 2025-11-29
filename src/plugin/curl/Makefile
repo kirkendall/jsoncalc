@@ -20,7 +20,7 @@ plugincurl.so: $(OBJ)
 $(OBJ): $(SRC)
 
 trycurl: trycurl.c curl.c
-	$(CC) $(CFLAGS) trycurl.c $(LIBS) -L ../../../lib -ljsoncalc -o trycurl
+	$(CC) $(CFLAGS) trycurl.c $(LIBS) -L ../../../lib -ljx -o trycurl
 
 clean:
 	$(RM) $(PLUGIN)/plugincurl.so

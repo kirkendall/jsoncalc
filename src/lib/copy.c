@@ -1,26 +1,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* Even if memory debugging is enabled, here we're defining the non-debugging
- * version of the json_copy() and json_copy_filter() functions.
+ * version of the jx_copy() and jx_copy_filter() functions.
  */
-#ifdef JSON_DEBUG_MEMORY
-# undef json_copy
-# undef json_copy_filter
+#ifdef JX_DEBUG_MEMORY
+# undef jx_copy
+# undef jx_copy_filter
 #endif
 
 /* Return a deep copy of a json object... meaning that if "json" is a container
  * then its contents are deep-copied too.  The returned object will be identical
  * to the "json" object, but altering one will have no effect on the other.
  */
-json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
+jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
 {
-	json_t *copy;
-	json_t *tail = NULL;
-	json_t *scan;
-	json_t *sub;
+	jx_t *copy;
+	jx_t *tail = NULL;
+	jx_t *scan;
+	jx_t *sub;
 
 	/* Defend against NULL */
 	if (!json)
@@ -33,11 +33,11 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 	/* The top node's copy method depends on its type */
 	switch (json->type)
 	{
-	  case JSON_OBJECT:
-		copy = json_object();
+	  case JX_OBJECT:
+		copy = jx_object();
 		for (tail = NULL, scan = json->first; scan; scan = scan->next) /* object */
 		{
-			sub = json_copy_filter(scan, test);
+			sub = jx_copy_filter(scan, test);
 			if (!sub)
 				continue;
 			if (tail)
@@ -48,14 +48,14 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 		}
 		break;
 
-	  case JSON_ARRAY:
-		copy = json_array();
+	  case JX_ARRAY:
+		copy = jx_array();
 
 		/* For deferred arrays without a test, keep it deferred */
-		if (json_is_deferred_array(json) && !test) {
-			json_t basic;
-			jsondef_t *def = (jsondef_t *)json->first;
-			copy->first = json_defer(def->fns);
+		if (jx_is_deferred_array(json) && !test) {
+			jx_t basic;
+			jxdef_t *def = (jxdef_t *)json->first;
+			copy->first = jx_defer(def->fns);
 
 			/* We want to copy all data associated with this
 			 * deferred array, except for "basic".  We keep
@@ -73,35 +73,35 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 		}
 
 		/* Otherwise we scan, filter, and copy elements individually */
-		for (scan = json_first(json); scan; scan = json_next(scan))
+		for (scan = jx_first(json); scan; scan = jx_next(scan))
 		{
-			sub = json_copy_filter(scan, test);
+			sub = jx_copy_filter(scan, test);
 			if (!sub)
 				continue;
-			json_append(copy, sub);
+			jx_append(copy, sub);
 		}
 		break;
 
-	  case JSON_KEY:
-		return json_key(json->text, json_copy(json->first));
+	  case JX_KEY:
+		return jx_key(json->text, jx_copy(json->first));
 
-	  case JSON_STRING:
-	  case JSON_BOOLEAN:
-	  case JSON_NULL:
-		return json_simple(json->text, -1, json->type);
+	  case JX_STRING:
+	  case JX_BOOLEAN:
+	  case JX_NULL:
+		return jx_simple(json->text, -1, json->type);
 
-	  case JSON_NUMBER:
+	  case JX_NUMBER:
 		/* Numbers can be represented internally either as a string of
 		 * ASCII digits copied directly from a JSON document, or in
 		 * binary.  This affects the way we copy it.
 		 */
 		if (json->text[0])
-			return json_number(json->text, -1);
+			return jx_number(json->text, -1);
 		if (json->text[1] == 'i')
-			return json_from_int(JSON_INT(json));
-		return json_from_double(JSON_DOUBLE(json));
+			return jx_from_int(JX_INT(json));
+		return jx_from_double(JX_DOUBLE(json));
 
-	  case JSON_DEFER:
+	  case JX_DEFER:
 	  default:
 	  	return NULL; /* should never happen */
 	}
@@ -110,8 +110,8 @@ json_t *json_copy_filter(json_t *json, int (*test)(json_t *elem))
 	return copy;
 }
 
-json_t *json_copy(json_t *json)
+jx_t *jx_copy(jx_t *json)
 {
 	/* !!! It'd be nice if a deferred array was copied as deferred too */
-	return json_copy_filter(json, NULL);
+	return jx_copy_filter(json, NULL);
 }

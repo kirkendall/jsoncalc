@@ -8,116 +8,116 @@
 #include <locale.h>
 #include <regex.h>
 #include <assert.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* This handles commands.  Each script is a series of commands, so this is
  * pretty central.  While expressions use a decent LALR parser with operator
  * precedence (implemented in calcparse.c), commands use a simple recursive
  * descent parser.  This is because recursive descent parsers are more modular
  * and therefor easier to extend.  A plugin can register a new command by
- * calling json_cmd_hook() with the name, and pointers to the argument parsing
+ * calling jx_cmd_hook() with the name, and pointers to the argument parsing
  * function and run function.
  *
- * A command's parsers can use the json_cmd_parse_whitespace(),
- * json_cmd_parse_key(), json_cmd_parse_paren(), json_cmd_parse_curly()
- * functions.  Also json_calc_parse() of course.
+ * A command's parsers can use the jx_cmd_parse_whitespace(),
+ * jx_cmd_parse_key(), jx_cmd_parse_paren(), jx_cmd_parse_curly()
+ * functions.  Also jx_calc_parse() of course.
  */
 
 /* This array doesn't actually store anything; it just provides a distinct
- * value that can be used to recognize when json_cmd_parse() and
- * json_cmd_parse_string() detect an error.
+ * value that can be used to recognize when jx_cmd_parse() and
+ * jx_cmd_parse_string() detect an error.
  */
-jsoncmd_t JSON_CMD_ERROR[1];
+jxcmd_t JX_CMD_ERROR[1];
 
 /* Forward declarations for functions that implement the built-in commands */
-static jsoncmd_t    *if_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *while_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *for_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *break_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *case_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *default_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *default_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *try_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *throw_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *throw_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *var_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *const_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *function_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *return_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *void_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *file_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *import_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *print_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
-static jsoncmd_t    *set_parse(jsonsrc_t *src, jsoncmdout_t **referr);
-static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jxcmd_t    *if_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *if_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *while_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *while_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *for_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *for_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *break_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *break_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *continue_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *continue_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *switch_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *switch_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *case_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *case_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *default_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *default_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *try_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *try_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *throw_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *throw_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *var_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *var_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *const_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *const_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *function_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *function_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *return_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *return_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *void_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *void_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *explain_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *explain_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *file_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *file_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *import_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *import_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *plugin_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *plugin_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *print_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *print_run(jxcmd_t *cmd, jxcontext_t **refcontext);
+static jxcmd_t    *set_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *set_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 /* delete lvalue */
 /* throw [code],msg[,args] */
 /* help topic subtopic */
-static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext);
+static jxcmdout_t *calc_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 
 /* Linked list of command names */
-static jsoncmdname_t jcn_if =       {NULL,		"if",		if_parse,	if_run};
-static jsoncmdname_t jcn_while =    {&jcn_if,		"while",	while_parse,	while_run};
-static jsoncmdname_t jcn_for =      {&jcn_while,	"for",		for_parse,	for_run};
-static jsoncmdname_t jcn_break =    {&jcn_for,		"break",	break_parse,	break_run};
-static jsoncmdname_t jcn_continue = {&jcn_break,	"continue",	continue_parse,	continue_run};
-static jsoncmdname_t jcn_switch =   {&jcn_continue,	"switch",	switch_parse,	switch_run};
-static jsoncmdname_t jcn_case =     {&jcn_switch,	"case",		case_parse,	case_run};
-static jsoncmdname_t jcn_default =  {&jcn_case,		"default",	default_parse,	default_run};
-static jsoncmdname_t jcn_try =      {&jcn_default,	"try",		try_parse,	try_run};
-static jsoncmdname_t jcn_throw =    {&jcn_try,		"throw",	throw_parse,	throw_run};
-static jsoncmdname_t jcn_var =      {&jcn_throw,	"var",		var_parse,	var_run};
-static jsoncmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run};
-static jsoncmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
-static jsoncmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
-static jsoncmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
-static jsoncmdname_t jcn_explain =  {&jcn_void,		"explain",	explain_parse,	explain_run};
-static jsoncmdname_t jcn_file =     {&jcn_explain,	"file",		file_parse,	file_run};
-static jsoncmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
-static jsoncmdname_t jcn_plugin =   {&jcn_import,	"plugin",	plugin_parse,	plugin_run};
-static jsoncmdname_t jcn_print =    {&jcn_plugin,	"print",	print_parse,	print_run};
-static jsoncmdname_t jcn_set =	    {&jcn_print,	"set",		set_parse,	set_run};
-static jsoncmdname_t *names = &jcn_set;
+static jxcmdname_t jcn_if =       {NULL,		"if",		if_parse,	if_run};
+static jxcmdname_t jcn_while =    {&jcn_if,		"while",	while_parse,	while_run};
+static jxcmdname_t jcn_for =      {&jcn_while,	"for",		for_parse,	for_run};
+static jxcmdname_t jcn_break =    {&jcn_for,		"break",	break_parse,	break_run};
+static jxcmdname_t jcn_continue = {&jcn_break,	"continue",	continue_parse,	continue_run};
+static jxcmdname_t jcn_switch =   {&jcn_continue,	"switch",	switch_parse,	switch_run};
+static jxcmdname_t jcn_case =     {&jcn_switch,	"case",		case_parse,	case_run};
+static jxcmdname_t jcn_default =  {&jcn_case,		"default",	default_parse,	default_run};
+static jxcmdname_t jcn_try =      {&jcn_default,	"try",		try_parse,	try_run};
+static jxcmdname_t jcn_throw =    {&jcn_try,		"throw",	throw_parse,	throw_run};
+static jxcmdname_t jcn_var =      {&jcn_throw,	"var",		var_parse,	var_run};
+static jxcmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run};
+static jxcmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
+static jxcmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
+static jxcmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
+static jxcmdname_t jcn_explain =  {&jcn_void,		"explain",	explain_parse,	explain_run};
+static jxcmdname_t jcn_file =     {&jcn_explain,	"file",		file_parse,	file_run};
+static jxcmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
+static jxcmdname_t jcn_plugin =   {&jcn_import,	"plugin",	plugin_parse,	plugin_run};
+static jxcmdname_t jcn_print =    {&jcn_plugin,	"print",	print_parse,	print_run};
+static jxcmdname_t jcn_set =	    {&jcn_print,	"set",		set_parse,	set_run};
+static jxcmdname_t *names = &jcn_set;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
  */
-static jsoncmdname_t jcn_calc = {NULL, "<<calc>>", NULL, calc_run};
+static jxcmdname_t jcn_calc = {NULL, "<<calc>>", NULL, calc_run};
 
 /* These are used to indicate special results from a series of commands.
  * Their values are irrelevant; their unique addresses are what matters.
  */
-json_t json_cmd_break;		/* "break" statement */
-json_t json_cmd_continue;	/* "continue" statement */
-json_t json_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
+jx_t jx_cmd_break;		/* "break" statement */
+jx_t jx_cmd_continue;	/* "continue" statement */
+jx_t jx_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
 
 /* Add a new statement name, and its argument parser and runner. */
-jsoncmdname_t *json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argparser)(jsonsrc_t *src, jsoncmdout_t **referr), jsoncmdout_t *(*run)(jsoncmd_t *cmd, jsoncontext_t **refcontext))
+jxcmdname_t *jx_cmd_hook(char *pluginname, char *cmdname, jxcmd_t *(*argparser)(jxsrc_t *src, jxcmdout_t **referr), jxcmdout_t *(*run)(jxcmd_t *cmd, jxcontext_t **refcontext))
 {
-	/* Allocate a jsoncmdname_t for it */
-	jsoncmdname_t *sn = (jsoncmdname_t *)malloc(sizeof(jsoncmdname_t));
+	/* Allocate a jxcmdname_t for it */
+	jxcmdname_t *sn = (jxcmdname_t *)malloc(sizeof(jxcmdname_t));
 
 	/* Fill it */
 	sn->pluginname = pluginname;
@@ -134,11 +134,11 @@ jsoncmdname_t *json_cmd_hook(char *pluginname, char *cmdname, jsoncmd_t *(*argpa
 }
 
 /* Generate an error message */
-jsoncmdout_t *json_cmd_error(const char *where, const char *fmt, ...)
+jxcmdout_t *jx_cmd_error(const char *where, const char *fmt, ...)
 {
 	va_list	ap;
 	size_t	size;
-	jsoncmdout_t *result;
+	jxcmdout_t *result;
 
 	/* !!!Translate the message via catalog using "code".  EXCEPT if the
 	 * format is "%s" then assume it has already been translated.
@@ -150,10 +150,10 @@ jsoncmdout_t *json_cmd_error(const char *where, const char *fmt, ...)
 	va_end(ap);
 
 	/* Allocate the error structure with enough space for the message */
-	result = (jsoncmdout_t *)malloc(sizeof(jsoncmdout_t) + size);
+	result = (jxcmdout_t *)malloc(sizeof(jxcmdout_t) + size);
 
 	/* Fill the error structure */
-	memset(result, 0, sizeof(jsoncmdout_t) + size);
+	memset(result, 0, sizeof(jxcmdout_t) + size);
 	result->where = where;
 	va_start(ap, fmt);
 	vsnprintf(result->text, size + 1, fmt, ap);
@@ -170,7 +170,7 @@ jsoncmdout_t *json_cmd_error(const char *where, const char *fmt, ...)
  *****************************************************************************/
 
 /* Skip past whitespace and comments.  This may include newlines. */
-void json_cmd_parse_whitespace(jsonsrc_t *src)
+void jx_cmd_parse_whitespace(jxsrc_t *src)
 {
 	do {
 		/* Actual whitespace */
@@ -186,7 +186,7 @@ void json_cmd_parse_whitespace(jsonsrc_t *src)
 }
 
 /* Skip past whitespace, comments, and an optional type declaration */
-void json_cmd_parse_whitespace_or_type(jsonsrc_t *src, char **refstr)
+void jx_cmd_parse_whitespace_or_type(jxsrc_t *src, char **refstr)
 {
 	int	nest;
 	int	quote;
@@ -195,7 +195,7 @@ void json_cmd_parse_whitespace_or_type(jsonsrc_t *src, char **refstr)
 	int	len;
 
 	/* Skip whitespace and some comments */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* If no "?:" or ":" then no type.  We're done. */
 	if (*src->str == '?')
@@ -324,13 +324,13 @@ void json_cmd_parse_whitespace_or_type(jsonsrc_t *src, char **refstr)
  * quoted with " or ' to be considered keys, or 0 to only allow alphanumeric
  * keys or `-quoted keys.
  */
-char *json_cmd_parse_key(jsonsrc_t *src, int quotable)
+char *jx_cmd_parse_key(jxsrc_t *src, int quotable)
 {
 	size_t	len, unescapedlen;
 	char	*key;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	if (isalpha(*src->str) || *src->str == '_') {
 		/* Unquoted alphanumeric name */
@@ -355,16 +355,16 @@ char *json_cmd_parse_key(jsonsrc_t *src, int quotable)
 			if (src->str[len] == '\\' && src->str[len + 1])
 				len++;
 		}
-		unescapedlen = json_mbs_unescape(NULL, src->str+1, len - 1);
+		unescapedlen = jx_mbs_unescape(NULL, src->str+1, len - 1);
 		key = (char *)malloc(unescapedlen + 1);
-		json_mbs_unescape(key, src->str+1, len - 1);
+		jx_mbs_unescape(key, src->str+1, len - 1);
 		key[unescapedlen] = '\0';
 		src->str += len + 1;
 	} else
 		return NULL;
 
 	/* Skip trailing whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return the key */
 	return key;
@@ -376,7 +376,7 @@ char *json_cmd_parse_key(jsonsrc_t *src, int quotable)
  * the parentheses themselves) as a dynamically-allocated string, or NULL if
  * not a valid parenthesized expression.
  */
-char *json_cmd_parse_paren(jsonsrc_t *src)
+char *jx_cmd_parse_paren(jxsrc_t *src)
 {
 	int	nest;
 	char	quote;
@@ -385,7 +385,7 @@ char *json_cmd_parse_paren(jsonsrc_t *src)
 	char	*paren;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* If not a parentheses, fail */
 	if (*src->str != '(')
@@ -415,37 +415,37 @@ char *json_cmd_parse_paren(jsonsrc_t *src)
 	src->str = scan;
 
 	/* Skip trailing whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return the contents of the parentheses */
 	return paren;
 }
 
 /* Allocate a statement, and initialize it */
-jsoncmd_t *json_cmd(jsonsrc_t *src, jsoncmdname_t *name)
+jxcmd_t *jx_cmd(jxsrc_t *src, jxcmdname_t *name)
 {
-	jsoncmd_t *cmd = (jsoncmd_t *)malloc(sizeof(jsoncmd_t));
-	memset(cmd, 0, sizeof(jsoncmd_t));
+	jxcmd_t *cmd = (jxcmd_t *)malloc(sizeof(jxcmd_t));
+	memset(cmd, 0, sizeof(jxcmd_t));
 	cmd->where = src->str;
 	cmd->name = name;
 	return cmd;
 }
 
 /* Free a statement, and any related statements or data */
-void json_cmd_free(jsoncmd_t *cmd)
+void jx_cmd_free(jxcmd_t *cmd)
 {
-	/* Defend against NULL and JSON_CMD_ERROR */
-	if (!cmd || cmd == JSON_CMD_ERROR)
+	/* Defend against NULL and JX_CMD_ERROR */
+	if (!cmd || cmd == JX_CMD_ERROR)
 		return;
 
 	/* Free related data */
 	if (cmd->key)
 		free(cmd->key);
 	if (cmd->calc)
-		json_calc_free(cmd->calc);
-	json_cmd_free(cmd->sub);
-	json_cmd_free(cmd->more);
-	json_cmd_free(cmd->nextcmd);
+		jx_calc_free(cmd->calc);
+	jx_cmd_free(cmd->sub);
+	jx_cmd_free(cmd->more);
+	jx_cmd_free(cmd->nextcmd);
 
 	/* Free the cmd itself */
 	free(cmd);
@@ -455,16 +455,16 @@ void json_cmd_free(jsoncmd_t *cmd)
  * an error message and return NULL.  If it is a function definition, return
  * it instead of processing it immediately.
  */
-jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
+jxcmd_t *jx_cmd_parse_single(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmdname_t	*sn;
+	jxcmdname_t	*sn;
 	size_t 		len;
-	jsoncalc_t	*calc;
+	jxcalc_t	*calc;
 	const char	*where, *end, *err;
-	jsoncmd_t	*cmd;
+	jxcmd_t	*cmd;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	where = src->str;
 
 	/* If it's an empty command, then return NULL */
@@ -481,7 +481,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	for (sn = names; sn; sn = sn->other) {
 		len = strlen(sn->name);
 		end = src->str + len;
-		if (!json_mbs_ncasecmp(sn->name, src->str, len)
+		if (!jx_mbs_ncasecmp(sn->name, src->str, len)
 		 && (!isalnum(*end) && *end != '_'))
 			break;
 	}
@@ -491,7 +491,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 	 * us keep them separate.  If it looks like a function call then ignore
 	 * the command.
 	 */
-	if (sn && *end == '(' && json_calc_function_by_name(sn->name))
+	if (sn && *end == '(' && jx_calc_function_by_name(sn->name))
 		sn = NULL;
 
 	/* If it's a statement, use the statement's parser */
@@ -502,10 +502,10 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 
 	/* Hopefully it is an assignment or an output expression.  Parse it. */
 	end = err = NULL;
-	calc = json_calc_parse(src->str, &end, &err, 1);
+	calc = jx_calc_parse(src->str, &end, &err, 1);
 	if (!calc || err || (*end && *end != ';' && *end != '}')) {
 		if (calc)
-			json_calc_free(calc);
+			jx_calc_free(calc);
 		if (!err) {
 			/* Parsing ended prematurely, but without an error
 			 * message.  We need to figure out why it ended
@@ -517,7 +517,7 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 				 * so we can report it as an unknown command.
 				 */
 				src->str = where;
-				vagueerr = json_cmd_parse_key(src, 0);
+				vagueerr = jx_cmd_parse_key(src, 0);
 				if (src->str < src->buf + src->size)
 					afterch = *src->str;
 			}
@@ -527,29 +527,29 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
 			 * consts, but we don't have a context yet.) Otherwise,
 			 * treat it as an unknown command.
 			 */
-			if (vagueerr && afterch == '(' && !json_calc_function_by_name(vagueerr))
-				*referr = json_cmd_error(where, "unkFunc:Unknown function %s()", vagueerr);
+			if (vagueerr && afterch == '(' && !jx_calc_function_by_name(vagueerr))
+				*referr = jx_cmd_error(where, "unkFunc:Unknown function %s()", vagueerr);
 			else if (vagueerr && afterch != '.' && afterch != '[')
-				*referr = json_cmd_error(where, "unkCmd:Unknown command \"%s\"", vagueerr);
+				*referr = jx_cmd_error(where, "unkCmd:Unknown command \"%s\"", vagueerr);
 			else
-				*referr = json_cmd_error(where, "syntax:Expression syntax error");
+				*referr = jx_cmd_error(where, "syntax:Expression syntax error");
 			if (vagueerr)
 				free(vagueerr);
 		} else {
-			*referr = json_cmd_error(where, "%s", err);
+			*referr = jx_cmd_error(where, "%s", err);
 		}
 		return NULL;
 	}
 
-	/* Stuff it into a jsoncmd_t */
-	cmd = json_cmd(src, &jcn_calc);
+	/* Stuff it into a jxcmd_t */
+	cmd = jx_cmd(src, &jcn_calc);
 	cmd->calc = calc;
 
 	/* Move past the end of the statement */
 	src->str = end;
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return it */
 	return cmd;
@@ -560,20 +560,20 @@ jsoncmd_t *json_cmd_parse_single(jsonsrc_t *src, jsoncmdout_t **referr)
  * allowed, and should generate an error message.  An empty set of curly braces
  * is allowed, though, and should return a "NO OP" statement.
  */
-jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
+jxcmd_t *jx_cmd_parse_curly(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd, *current;
+	jxcmd_t *cmd, *current;
 
 	/* Skip whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Expect a '{'.  For anything else, assume it's a single statement. */
 	if (*src->str == '{') {
 		src->str++;
-		cmd = current = json_cmd_parse_single(src, referr);
+		cmd = current = jx_cmd_parse_single(src, referr);
 		while (*referr == NULL && *src->str != '}') {
-			current->nextcmd = json_cmd_parse_single(src, referr);
-			json_cmd_parse_whitespace(src);
+			current->nextcmd = jx_cmd_parse_single(src, referr);
+			jx_cmd_parse_whitespace(src);
 			if (current->nextcmd)
 				current = current->nextcmd;
 			if (*referr)
@@ -582,21 +582,21 @@ jsoncmd_t *json_cmd_parse_curly(jsonsrc_t *src, jsoncmdout_t **referr)
 		if (*src->str == '}')
 			src->str++;
 	} else {
-		cmd = json_cmd_parse_single(src, referr);
+		cmd = jx_cmd_parse_single(src, referr);
 	}
 
 	/* Skip trailing whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return it */
 	return cmd;
 }
 
-jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
+jxcmd_t *jx_cmd_parse(jxsrc_t *src)
 {
-	jsoncmdout_t *result = NULL;
-	jsoncmd_t *cmd, *firstcmd, *nextcmd;
-	jsonfile_t *jf;
+	jxcmdout_t *result = NULL;
+	jxcmd_t *cmd, *firstcmd, *nextcmd;
+	jxfile_t *jf;
 	int	lineno;
 
 	/* If first line starts with "#!" then skip to second line */
@@ -606,21 +606,21 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 	}
 
 	/* For each statement... */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	firstcmd = cmd = NULL;
 	while (src->str < src->buf + src->size && *src->str) {
 		/* Parse it */
-		nextcmd = json_cmd_parse_single(src, &result);
+		nextcmd = jx_cmd_parse_single(src, &result);
 
 		/* If error then report it and quit */
 		if (result) {
-			jf = json_file_containing(result->where, &lineno);
+			jf = jx_file_containing(result->where, &lineno);
 			if (jf)
-				json_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
-			json_user_printf(NULL, "error", "%s\n", result->text);
+				jx_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
+			jx_user_printf(NULL, "error", "%s\n", result->text);
 			free(result);
-			json_cmd_free(firstcmd);
-			return JSON_CMD_ERROR;
+			jx_cmd_free(firstcmd);
+			return JX_CMD_ERROR;
 		}
 
 		/* It could be NULL, which is *NOT* an error.  That would be
@@ -640,22 +640,22 @@ jsoncmd_t *json_cmd_parse(jsonsrc_t *src)
 		cmd->where = src->str;
 
 		/* Skip whitespace */
-		json_cmd_parse_whitespace(src);
+		jx_cmd_parse_whitespace(src);
 	}
 
 	/* Return the commands.  Might be NULL. */
 	return firstcmd;
 }
 
-/* Parse a string as jsoncalc commands.  If an error is detected then an
+/* Parse a string as jxcalc commands.  If an error is detected then an
  * error message will be output and this will return NULL.  However, NULL
  * can also be returned if the text is empty, or only contains function
  * definitions, so NULL is *not* an error indication; it just means there's
  * nothing to execute or free.
  */
-jsoncmd_t *json_cmd_parse_string(char *text)
+jxcmd_t *jx_cmd_parse_string(char *text)
 {
-	jsonsrc_t srcbuf;
+	jxsrc_t srcbuf;
 
 	/* Fill the src buffer */
 	srcbuf.buf = text;
@@ -663,7 +663,7 @@ jsoncmd_t *json_cmd_parse_string(char *text)
 	srcbuf.size = strlen(text);
 
 	/* Parse it */
-	return json_cmd_parse(&srcbuf);
+	return jx_cmd_parse(&srcbuf);
 }
 
 
@@ -673,16 +673,16 @@ jsoncmd_t *json_cmd_parse_string(char *text)
  * definitions, so NULL is *not* an error indication; it just means there's
  * nothing to execute or free.
  */
-jsoncmd_t *json_cmd_parse_file(const char *filename) 
+jxcmd_t *jx_cmd_parse_file(const char *filename) 
 {
-	jsonfile_t *jf;
-	jsoncmd_t *cmd;
-	jsonsrc_t srcbuf;
+	jxfile_t *jf;
+	jxcmd_t *cmd;
+	jxsrc_t srcbuf;
 
 	/* Load the file into memory.  We'll keep it loaded forever, so we can
 	 * use it to report error locations and maybe do other debugging.
 	 */
-	jf = json_file_load(filename);
+	jf = jx_file_load(filename);
 	if (!jf) {
 		perror(filename);
 		return NULL;
@@ -694,37 +694,37 @@ jsoncmd_t *json_cmd_parse_file(const char *filename)
 	srcbuf.size = jf->size;
 
 	/* Parse it */
-	cmd = json_cmd_parse(&srcbuf);
+	cmd = jx_cmd_parse(&srcbuf);
 
 	/* Return it */
 	return cmd;
 }
 
 /* Run a series of statements, and return the result */
-jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+jxcmdout_t *jx_cmd_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jsoncmdout_t *result = NULL;
+	jxcmdout_t *result = NULL;
 
 	while (cmd && !result) {
-		assert(cmd != JSON_CMD_ERROR);
+		assert(cmd != JX_CMD_ERROR);
 
 		/* Maybe output trace info */
-		if (json_debug_flags.trace) {
+		if (jx_debug_flags.trace) {
 			int lineno;
-			jsonfile_t *jf = json_file_containing(cmd->where, &lineno);
+			jxfile_t *jf = jx_file_containing(cmd->where, &lineno);
 			if (jf)
-				json_user_printf(NULL, "debug", "%s:%d: ", jf->filename, lineno);
+				jx_user_printf(NULL, "debug", "%s:%d: ", jf->filename, lineno);
 			if (cmd->key)
-				json_user_printf(NULL, "debug", "%s %s\n", cmd->name->name, cmd->key);
+				jx_user_printf(NULL, "debug", "%s %s\n", cmd->name->name, cmd->key);
 			else
-				json_user_printf(NULL, "debug", "%s\n", cmd->name->name);
+				jx_user_printf(NULL, "debug", "%s\n", cmd->name->name);
 		}
 
 		/* Run the command */
 		result = (*cmd->name->run)(cmd, refcontext);
 
 		/* If mismatched "case", then skip ahead to the next case */
-		if (result && result->ret == &json_cmd_case_mismatch) {
+		if (result && result->ret == &jx_cmd_case_mismatch) {
 			/* We're handling this result here.  Free it */
 			free(result);
 			result = NULL;
@@ -746,28 +746,28 @@ jsoncmdout_t *json_cmd_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 }
 
 /* Invoke a user-defined function, and return its value */
-json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
+jx_t *jx_cmd_fncall(jx_t *args, jxfunc_t *fn, jxcontext_t *context)
 {
-	jsoncmdout_t *result;
-	json_t	*out;
+	jxcmdout_t *result;
+	jx_t	*out;
 
 	assert(fn->user);
 
 	/* Add the call frame to the context stack */
-	context = json_context_func(context, fn, args);
+	context = jx_context_func(context, fn, args);
 
 	/* Run the body of the function */
-	result = json_cmd_run(fn->user, &context);
+	result = jx_cmd_run(fn->user, &context);
 
 	/* Decode the "result" response */
 	if (!result) /* Function terminated without "return" -- use null */
-		out = json_null();
+		out = jx_null();
 	else if (!result->ret)
-		out = json_error_null(result->where, "%s", result->text);
-	else if (result->ret == &json_cmd_break) /* "break" */
-		out = json_error_null(result->where, "break:Misuse of \"break\"");
-	else if (result->ret == &json_cmd_continue) /* "continue" */
-		out = json_error_null(result->where, "continue:Misuse of \"continue\"");
+		out = jx_error_null(result->where, "%s", result->text);
+	else if (result->ret == &jx_cmd_break) /* "break" */
+		out = jx_error_null(result->where, "break:Misuse of \"break\"");
+	else if (result->ret == &jx_cmd_continue) /* "continue" */
+		out = jx_error_null(result->where, "continue:Misuse of \"continue\"");
 	else /* "return" */
 		out = result->ret;
 
@@ -776,9 +776,9 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
 		free(result);
 
 	/* Clean up the context, possibly including local vars and consts */
-	while ((context->flags & JSON_CONTEXT_ARGS) == 0)
-		context = json_context_free(context);
-	context = json_context_free(context);
+	while ((context->flags & JX_CONTEXT_ARGS) == 0)
+		context = jx_context_free(context);
+	context = jx_context_free(context);
 
 	/* Return the result */
 	return out;
@@ -791,27 +791,27 @@ json_t *json_cmd_fncall(json_t *args, jsonfunc_t *fn, jsoncontext_t *context)
  * Either way, the commands from "added" are no longer valid when this
  * function returns; you don't need to store it or free it.
  */
-jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t *context)
+jxcmd_t *jx_cmd_append(jxcmd_t *existing, jxcmd_t *added, jxcontext_t *context)
 {
-	jsoncmd_t *nextcmd, *end;
+	jxcmd_t *nextcmd, *end;
 #if 0
-	jsoncmdout_t *result;
+	jxcmdout_t *result;
 #endif
 
-	/* If "existing" is JSON_CMD_ERROR then just return it unchanged. */
-	if (existing == JSON_CMD_ERROR)
+	/* If "existing" is JX_CMD_ERROR then just return it unchanged. */
+	if (existing == JX_CMD_ERROR)
 		return existing;
 
 	/* If "added" is NULL, do nothing */
 	if (!added)
 		return existing;
 
-	/* If "added" is JSON_CMD_ERROR then free the "existing" list (if any)
-	 * and return JSON_CMD_ERROR.
+	/* If "added" is JX_CMD_ERROR then free the "existing" list (if any)
+	 * and return JX_CMD_ERROR.
 	 */
-	if (added == JSON_CMD_ERROR) {
-		json_cmd_free(existing);
-		return JSON_CMD_ERROR;
+	if (added == JX_CMD_ERROR) {
+		jx_cmd_free(existing);
+		return JX_CMD_ERROR;
 	}
 
 	/* If "existing" is non-NULL then move to the end of the list */
@@ -829,9 +829,9 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 #if 0
 		/* Maybe execute "const" and "var" now */
 		if (context && (added->name->run == var_run || added->name->run == const_run)) {
-			result = json_cmd_run(added, &context);
+			result = jx_cmd_run(added, &context);
 			free(result);
-			json_cmd_free(added);
+			jx_cmd_free(added);
 			continue;
 		}
 #endif
@@ -854,96 +854,96 @@ jsoncmd_t *json_cmd_append(jsoncmd_t *existing, jsoncmd_t *added, jsoncontext_t 
 /* Everything after this is for parsing and running built-in commands.      */
 /****************************************************************************/
 
-static jsoncmd_t *if_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *if_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char	*str;
 	const char	*end, *err = NULL;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_if);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_if);
 
 	/* Get the condition */
-	str = json_cmd_parse_paren(src);
+	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = json_cmd_error(src->str, "Missing \"%s\" condition", "if");
+		*referr = jx_cmd_error(src->str, "Missing \"%s\" condition", "if");
 		return parsed;
 	}
 
 	/* Parse the condition */
-	parsed->calc = json_calc_parse(str, &end, &err, 0);
+	parsed->calc = jx_calc_parse(str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
 		free(str);
 		if (err)
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 		else
-			*referr = json_cmd_error(src->str, "Syntax error in \"%s\" condition", "if");
+			*referr = jx_cmd_error(src->str, "Syntax error in \"%s\" condition", "if");
 		return parsed;
 	}
 	free(str);
 
 	/* Get the "then" statements */
-	parsed->sub = json_cmd_parse_curly(src, referr);
+	parsed->sub = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		return parsed;
 
 	/* If followed by "else" then parse the "else" statements */
 	if (!strncmp(src->str, "else", 4) && !isalnum((src->str)[4])) {
 		src->str += 4;
-		parsed->more = json_cmd_parse_curly(src, referr);
+		parsed->more = jx_cmd_parse_curly(src, referr);
 	}
 
 	/* Return it */
 	return parsed;
 }
 
-static jsoncmdout_t *if_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *if_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t *jsbool = json_calc(cmd->calc, *refcontext, NULL);
-	int	bool = json_is_true(jsbool);
-	json_free(jsbool);
+	jx_t *jsbool = jx_calc(cmd->calc, *refcontext, NULL);
+	int	bool = jx_is_true(jsbool);
+	jx_free(jsbool);
 	if (bool)
-		return json_cmd_run(cmd->sub, refcontext);
+		return jx_cmd_run(cmd->sub, refcontext);
 	else
-		return json_cmd_run(cmd->more, refcontext);
+		return jx_cmd_run(cmd->more, refcontext);
 }
 
-static jsoncmd_t *while_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *while_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char	*str;
 	const char *end, *err = NULL;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_while);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_while);
 
 	/* Get the condition */
-	str = json_cmd_parse_paren(src);
+	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = json_cmd_error(src->str, "Missing \"%s\" condition", "while");
+		*referr = jx_cmd_error(src->str, "Missing \"%s\" condition", "while");
 		return parsed;
 	}
 
 	/* Parse the condition */
-	parsed->calc = json_calc_parse(str, &end, &err, 0);
+	parsed->calc = jx_calc_parse(str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
 		free(str);
 		if (err)
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 		else
-			*referr = json_cmd_error(src->str, "Syntax error in \"while\" condition");
+			*referr = jx_cmd_error(src->str, "Syntax error in \"while\" condition");
 		return parsed;
 	}
 	free(str);
 
 	/* Get the "loop" statements */
-	parsed->sub = json_cmd_parse_curly(src, referr);
+	parsed->sub = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		return parsed;
 
@@ -951,13 +951,13 @@ static jsoncmd_t *while_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return parsed;
 }
 
-static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *while_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	for (;;) {
 		/* Evaluate the condition */
-		json_t *jsbool = json_calc(cmd->calc, *refcontext, NULL);
-		int	bool = json_is_true(jsbool);
-		json_free(jsbool);
+		jx_t *jsbool = jx_calc(cmd->calc, *refcontext, NULL);
+		int	bool = jx_is_true(jsbool);
+		jx_free(jsbool);
 
 		/* If the condition is false, then terminate the loop */
 		if (!bool)
@@ -966,10 +966,10 @@ static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* Run the loop body.  If it has an error, then return the
 		 * error; otherwise continue to loop.
 		 */
-		jsoncmdout_t *result = json_cmd_run(cmd->sub, refcontext);
+		jxcmdout_t *result = jx_cmd_run(cmd->sub, refcontext);
 
 		/* If we got a "continue" then ignore it and stay in the loop */
-		if (result && result->ret == &json_cmd_continue) {
+		if (result && result->ret == &jx_cmd_continue) {
 			free(result);
 			result = NULL;
 		}
@@ -979,7 +979,7 @@ static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			/* If we got a "break", ignore it.  Otherwise ("return"
 			 * or an error) return it.
 			 */
-			if (result && result->ret == &json_cmd_break) {
+			if (result && result->ret == &jx_cmd_break) {
 				free(result);
 				result = NULL;
 			}
@@ -988,23 +988,23 @@ static jsoncmdout_t *while_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 }
 
-static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *for_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char	*str = NULL;
 	const char *end, *err = NULL;
-	jsonsrc_t	parensrc;
+	jxsrc_t	parensrc;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_for);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_for);
 
 	/* Get the loop attributes */
-	str = json_cmd_parse_paren(src);
+	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = json_cmd_error(src->str, "Missing \"%s\" attributes", "for");
+		*referr = jx_cmd_error(src->str, "Missing \"%s\" attributes", "for");
 		goto CleanUpAfterError;
 	}
 
@@ -1013,20 +1013,20 @@ static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	if (!strncasecmp(parensrc.str, "var", 3) && isspace(parensrc.str[3])) {
 		parsed->var = 1;
 		parensrc.str += 3;
-		json_cmd_parse_whitespace(&parensrc);
+		jx_cmd_parse_whitespace(&parensrc);
 	}
 	else if (!strncasecmp(parensrc.str, "const", 5) && isspace(parensrc.str[5])) {
 		parsed->var = 1;
 		parensrc.str += 5;
-		json_cmd_parse_whitespace(&parensrc);
+		jx_cmd_parse_whitespace(&parensrc);
 	}
-	parsed->key = json_cmd_parse_key(&parensrc, 1);
+	parsed->key = jx_cmd_parse_key(&parensrc, 1);
 	if (parsed->key && parensrc.str[0] == '=') {
 		parensrc.str++;
-		json_cmd_parse_whitespace(&parensrc);
+		jx_cmd_parse_whitespace(&parensrc);
 	} else if (parsed->key && !strncasecmp(parensrc.str, "of", 2) && !isalnum(parensrc.str[2]) && parensrc.str[2] != '_') {
 		parensrc.str += 2;
-		json_cmd_parse_whitespace(&parensrc);
+		jx_cmd_parse_whitespace(&parensrc);
 	} else {
 		/* If we parsed a key, it wasn't part of "key =/of expr",
 		 * it was the first word of "expr".  Clean up!
@@ -1038,17 +1038,17 @@ static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		parsed->var = 0;
 		parensrc.str = str;
 	}
-	parsed->calc = json_calc_parse(parensrc.str, &end, &err, 0);
+	parsed->calc = jx_calc_parse(parensrc.str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
 		if (err)
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 		else
-			*referr = json_cmd_error(src->str, "Syntax error in \"\" expression", "for");
+			*referr = jx_cmd_error(src->str, "Syntax error in \"\" expression", "for");
 		goto CleanUpAfterError;
 	}
 
 	/* Get the "loop" statements */
-	parsed->sub = json_cmd_parse_curly(src, referr);
+	parsed->sub = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		goto CleanUpAfterError;
 
@@ -1060,151 +1060,151 @@ static jsoncmd_t *for_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 CleanUpAfterError:
 	if (str)
 		free(str);
-	json_cmd_free(parsed);
+	jx_cmd_free(parsed);
 	return NULL;
 }
 
-static jsoncmdout_t *for_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *for_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t	*array, *scan;
-	jsoncontext_t *layer;
-	jsoncmdout_t *result = NULL;
+	jx_t	*array, *scan;
+	jxcontext_t *layer;
+	jxcmdout_t *result = NULL;
 
 	/* Evaluate the for-loop's array expression */
-	array = json_calc(cmd->calc, *refcontext, NULL);
-	if (!array || array->type != JSON_ARRAY) {
-		if (json_is_error(array))
-			return json_cmd_error(cmd->where, "%s", array->text);
-		return json_cmd_error(cmd->where, "forNotArray:\"%s\" expression is not an array", "for");
+	array = jx_calc(cmd->calc, *refcontext, NULL);
+	if (!array || array->type != JX_ARRAY) {
+		if (jx_is_error(array))
+			return jx_cmd_error(cmd->where, "%s", array->text);
+		return jx_cmd_error(cmd->where, "forNotArray:\"%s\" expression is not an array", "for");
 	}
 
 	/* Without "var", look for an existing variable to use for the loop. */
-	if (!cmd->var && cmd->key && json_context_by_key(*refcontext, cmd->key, &layer) != NULL) {
+	if (!cmd->var && cmd->key && jx_context_by_key(*refcontext, cmd->key, &layer) != NULL) {
 		/* Make sure the variable isn't a "const" */
-		if (layer->flags & JSON_CONTEXT_CONST) {
-			json_free(array);
-			return json_cmd_error(cmd->where, "forConst:\"%s\" variable \"%s\" is a %s", "for", cmd->key, "const");
+		if (layer->flags & JX_CONTEXT_CONST) {
+			jx_free(array);
+			return jx_cmd_error(cmd->where, "forConst:\"%s\" variable \"%s\" is a %s", "for", cmd->key, "const");
 		}
 
 		/* Okay, we have an existing variable! */
-		for (scan = json_first(array); scan; scan = json_next(scan)) {
+		for (scan = jx_first(array); scan; scan = jx_next(scan)) {
 			/* Store the value in the variable */
-			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
+			jx_append(layer->data, jx_key(cmd->key, jx_copy(scan)));
 
 			/* Execute the body of the loop */
-			result = json_cmd_run(cmd->sub, refcontext);
+			result = jx_cmd_run(cmd->sub, refcontext);
 
 			/* Ignore "continue" and stay in loop.  For anything
 			 * else other than NULL, exit the loop.
 			 */
-			if (result && result->ret == &json_cmd_continue) {
+			if (result && result->ret == &jx_cmd_continue) {
 				free(result);
 				result = NULL;
 			}
 			if (result) {
-				json_break(scan);
+				jx_break(scan);
 				break;
 			}
 		}
 	} else if (cmd->key) {
 		/* Add a context for store the variable */
-		layer = json_context(*refcontext, json_object(), 0);
+		layer = jx_context(*refcontext, jx_object(), 0);
 
 		/* Loop over the elements */
-		for (scan = json_first(array); scan; scan = json_next(scan)) {
+		for (scan = jx_first(array); scan; scan = jx_next(scan)) {
 			/* Store the value in the variable */
-			json_append(layer->data, json_key(cmd->key, json_copy(scan)));
+			jx_append(layer->data, jx_key(cmd->key, jx_copy(scan)));
 
 			/* Execute the body of the loop */
-			result = json_cmd_run(cmd->sub, &layer);
+			result = jx_cmd_run(cmd->sub, &layer);
 
 			/* Ignore "continue" and stay in loop.  For anything
 			 * else other than NULL, exit the loop.
 			 */
-			if (result && result->ret == &json_cmd_continue) {
+			if (result && result->ret == &jx_cmd_continue) {
 				free(result);
 				result = NULL;
 			}
 			if (result) {
-				json_break(scan);
+				jx_break(scan);
 				break;
 			}
 		}
 
 		/* Clean up */
-		json_context_free(layer);
+		jx_context_free(layer);
 
 	} else { /* Anonymous loop */
 		/* Loop over the elements */
-		for (scan = json_first(array); scan; scan = json_next(scan)) {
+		for (scan = jx_first(array); scan; scan = jx_next(scan)) {
 			/* Add a "this" layer */
-			layer = json_context(*refcontext, scan, JSON_CONTEXT_THIS | JSON_CONTEXT_NOFREE);
+			layer = jx_context(*refcontext, scan, JX_CONTEXT_THIS | JX_CONTEXT_NOFREE);
 
 			/* Run the body of the loop */
-			result = json_cmd_run(cmd->sub, &layer);
+			result = jx_cmd_run(cmd->sub, &layer);
 
 			/* Ignore "continue" and stay in loop.  For anything
 			 * else other than NULL, exit the loop.
 			 */
-			if (result && result->ret == &json_cmd_continue) {
+			if (result && result->ret == &jx_cmd_continue) {
 				free(result);
 				result = NULL;
 			}
 			if (result) {
-				json_break(scan);
+				jx_break(scan);
 				break;
 			}
 
 			/* Remove the "this" layer */
-			json_context_free(layer);
+			jx_context_free(layer);
 		}
 	}
 
 	/* Free the array */
-	json_free(array);
+	jx_free(array);
 
 	/* If we got a "break" pseudo-error, ignore it.  Otherwise (real error
 	 * or "return" pseudo-error) return it.
 	 */
-	if (result && result->ret == &json_cmd_break) {
+	if (result && result->ret == &jx_cmd_break) {
 		free(result);
 		result = NULL;
 	}
 	return result;
 }
 
-static jsoncmd_t *try_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *try_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char		*str = NULL;
-	jsonsrc_t	parensrc;
+	jxsrc_t	parensrc;
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_try);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_try);
 
 	/* Get the "try" statements */
-	parsed->sub = json_cmd_parse_curly(src, referr);
+	parsed->sub = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		goto CleanUpAfterError;
 
 	/* Expect "catch" */
 	if (strncasecmp(src->str, "catch", 5) || !strchr(" \t\n\r({", src->str[5])) {
-		*referr = json_cmd_error(src->str, "Missing \"%s\"", "catch");
+		*referr = jx_cmd_error(src->str, "Missing \"%s\"", "catch");
 		goto CleanUpAfterError;
 	}
 	src->str += 5;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Optional name within parentheses */
 	if (*src->str == '(') {
 		/* Get the parenthesized expression */
-		str = json_cmd_parse_paren(src);
+		str = jx_cmd_parse_paren(src);
 
 		/* It should be a single name */
 		parensrc.str = str;
-		parsed->key = json_cmd_parse_key(&parensrc, 1);
+		parsed->key = jx_cmd_parse_key(&parensrc, 1);
 		if (*parensrc.str) {
-			*referr = json_cmd_error(src->str, "The argument to \"%s\" should be a single name", "catch");
+			*referr = jx_cmd_error(src->str, "The argument to \"%s\" should be a single name", "catch");
 			goto CleanUpAfterError;
 		}
 
@@ -1214,7 +1214,7 @@ static jsoncmd_t *try_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 
 	/* Get the "catch" statements */
-	parsed->more = json_cmd_parse_curly(src, referr);
+	parsed->more = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		goto CleanUpAfterError;
 
@@ -1226,23 +1226,23 @@ static jsoncmd_t *try_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 CleanUpAfterError:
 	if (str)
 		free(str);
-	json_cmd_free(parsed);
+	jx_cmd_free(parsed);
 	return NULL;
 }
 
-static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *try_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jsoncmdout_t *result;
-	jsoncontext_t *caught;
-	json_t *obj, *contextobj;
-	jsonfile_t *jf;
+	jxcmdout_t *result;
+	jxcontext_t *caught;
+	jx_t *obj, *contextobj;
+	jxfile_t *jf;
 	int lineno;
 	char *scan;
 
 	/* Run the "try" statements.  For any result other than an error,
 	 * just return it.
 	 */
-	result = json_cmd_run(cmd->sub, refcontext);
+	result = jx_cmd_run(cmd->sub, refcontext);
 	if (!result || result->ret)
 		return result;
 
@@ -1256,77 +1256,77 @@ static jsoncmdout_t *try_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	if (cmd->key) {
 
 		/* Build the object describing the error */
-		obj = json_object();
-		jf = json_file_containing(result->where, &lineno);
+		obj = jx_object();
+		jf = jx_file_containing(result->where, &lineno);
 		if (jf) {
-			json_append(obj, json_key("filename", json_string(jf->filename, -1)));
-			json_append(obj, json_key("line", json_from_int(lineno)));
+			jx_append(obj, jx_key("filename", jx_string(jf->filename, -1)));
+			jx_append(obj, jx_key("line", jx_from_int(lineno)));
 		}
 		for (scan = result->text; isalnum(*scan); scan++) {
 		}
 		if (*scan == ':') {
-			json_append(obj, json_key("key", json_string(result->text, (scan - result->text))));
+			jx_append(obj, jx_key("key", jx_string(result->text, (scan - result->text))));
 			scan++;
 		} else {
 			scan = result->text;
 		}
-		json_append(obj, json_key("message", json_string(scan, -1)));
+		jx_append(obj, jx_key("message", jx_string(scan, -1)));
 
 		/* Make that object be inside another object, using key as the
 		 * the member name.
 		 */
-		contextobj = json_object();
-		json_append(contextobj, json_key(cmd->key, obj));
+		contextobj = jx_object();
+		jx_append(contextobj, jx_key(cmd->key, obj));
 
 		/* Stuff it in a context, using the key as the name */
-		caught = json_context(*refcontext, contextobj, 0);
+		caught = jx_context(*refcontext, contextobj, 0);
 
 		/* Run the "catch" block with this context */
-		result = json_cmd_run(cmd->more, &caught);
+		result = jx_cmd_run(cmd->more, &caught);
 
 		/* Free the context. This also frees the data allocated above.*/
-		json_context_free(caught);
+		jx_context_free(caught);
 	} else {
 		/* Just run the "catch" block with the same context */
-		result = json_cmd_run(cmd->more, &caught);
+		result = jx_cmd_run(cmd->more, &caught);
 	}
 
 	return result;
 }
 
 
-static jsoncmd_t *throw_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *throw_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	const char	*end, *err, *pct;
-	jsoncalc_t	*jc;
+	jxcalc_t	*jc;
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_throw);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_throw);
 
 	/* Parse the first (only?) argument. */
 	jc = NULL;
 	end = err = NULL;
 	if (*src->str && *src->str != ';' && *src->str != '}') {
-		jc = json_calc_parse(src->str, &end, &err, 0);
-		if (!jc || jc->op != JSONOP_LITERAL)
+		jc = jx_calc_parse(src->str, &end, &err, 0);
+		if (!jc || jc->op != JXOP_LITERAL)
 			goto BadArgs;
 		src->str = end;
 
 		/* Allow an error code */
-		if (jc && jc->u.literal->type == JSON_NUMBER) {
+		if (jc && jc->u.literal->type == JX_NUMBER) {
 			/* Store the number in 'var' */
-			parsed->var = json_int(jc->u.literal);
+			parsed->var = jx_int(jc->u.literal);
 
 			/* Don't need this expression anymore */
-			json_calc_free(jc);
+			jx_calc_free(jc);
 			jc = NULL;
 
 			/* Try for another expression, if "," */
 			if (*end == ',') {
 				src->str = end + 1;
-				jc = json_calc_parse(src->str, &end, &err, 0);
-				if (!jc || err || jc->op != JSONOP_LITERAL)
+				jc = jx_calc_parse(src->str, &end, &err, 0);
+				if (!jc || err || jc->op != JXOP_LITERAL)
 					goto BadArgs;
 				src->str = end;
 			}
@@ -1336,14 +1336,14 @@ static jsoncmd_t *throw_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Allow error text (a string literal).  If none, then use "Throw" */
 	if (!jc)
 		parsed->key = strdup("throw");
-	else if (jc->u.literal->type != JSON_STRING)
+	else if (jc->u.literal->type != JX_STRING)
 		goto BadArgs;
 	else {
 		/* Store the string in 'key' */
 		parsed->key = strdup(jc->u.literal->text);
 
 		/* Don't need this expression anymore */
-		json_calc_free(jc);
+		jx_calc_free(jc);
 		jc = NULL;
 	}
 
@@ -1363,7 +1363,7 @@ static jsoncmd_t *throw_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 		/* Parse it */
 		src->str++;
-		jc = json_calc_parse(src->str, &end, &err, 0);
+		jc = jx_calc_parse(src->str, &end, &err, 0);
 		if (!jc || err)
 			goto BadArgs;
 		src->str = end;
@@ -1386,56 +1386,56 @@ static jsoncmd_t *throw_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 BadArgs:
 	if (jc)
-		json_calc_free(jc);
-	json_cmd_free(parsed);
-	*referr = json_cmd_error(src->str, "Bad parameters to %s", "throw");
+		jx_calc_free(jc);
+	jx_cmd_free(parsed);
+	*referr = jx_cmd_error(src->str, "Bad parameters to %s", "throw");
 	return NULL;
 }
 
-static jsoncmdout_t *throw_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *throw_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jsoncmdout_t *result;
-	json_t	*arg;
+	jxcmdout_t *result;
+	jx_t	*arg;
 
 	/* If there's an argument, evaluate it. */
 	arg = NULL;
 	if (cmd->calc) {
-		arg = json_calc(cmd->calc, *refcontext, NULL);
+		arg = jx_calc(cmd->calc, *refcontext, NULL);
 	}
 
 	/* Always return an error -- maybe with an argument */
-	result = json_cmd_error(cmd->where, cmd->key, arg ? arg->text : "");
+	result = jx_cmd_error(cmd->where, cmd->key, arg ? arg->text : "");
 
 	/* Clean up */
 	if (arg)
-		json_free(arg);
+		jx_free(arg);
 
 	return result;
 }
 
 /* This is a helper function for global/local var/const declarations */
-static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cmd)
+static jxcmd_t *gvc_parse(jxsrc_t *src, jxcmdout_t **referr, jxcmd_t *cmd)
 {
-	jsoncmd_t *first = cmd;
+	jxcmd_t *first = cmd;
 	const char	*end, *err;
 
 	/* Expect a name possibly followed by ":type" and/or "=expr" */
 	for (;;) {
-		cmd->key = json_cmd_parse_key(src, 1);
+		cmd->key = jx_cmd_parse_key(src, 1);
 		if (!cmd->key) {
-			*referr = json_cmd_error(src->str, "Name expected after %s", cmd->name->name);
-			json_cmd_free(first);
+			*referr = jx_cmd_error(src->str, "Name expected after %s", cmd->name->name);
+			jx_cmd_free(first);
 			return NULL;
 		}
-		json_cmd_parse_whitespace_or_type(src, NULL);
+		jx_cmd_parse_whitespace_or_type(src, NULL);
 		if (*src->str == '=') {
 			err = NULL;
 			src->str++;
-			cmd->calc = json_calc_parse(src->str, &end, &err, 0);
+			cmd->calc = jx_calc_parse(src->str, &end, &err, 0);
 			src->str = end;
 			if (err) {
-				*referr = json_cmd_error(src->str, "%s", err);
-				json_cmd_free(first);
+				*referr = jx_cmd_error(src->str, "%s", err);
+				jx_cmd_free(first);
 				return NULL;
 			}
 		}
@@ -1443,8 +1443,8 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 		/* That may be followed by a comma and another declaration */
 		if (*src->str == ',') {
 			src->str++;
-			json_cmd_parse_whitespace(src);
-			cmd->more = json_cmd(src, first->name);
+			jx_cmd_parse_whitespace(src);
+			cmd->more = jx_cmd(src, first->name);
 			cmd = cmd->more;
 			cmd->flags = first->flags;
 		}
@@ -1460,10 +1460,10 @@ static jsoncmd_t *gvc_parse(jsonsrc_t *src, jsoncmdout_t **referr, jsoncmd_t *cm
 	return first;
 }
 
-static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *gvc_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t	*value, *error;
-	jsoncmd_t *each;
+	jx_t	*value, *error;
+	jxcmd_t *each;
 
 	/* A single statement can declare multiple vars/consts */
 	error = NULL;
@@ -1471,8 +1471,8 @@ static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* Evaluate the value. If error, remember it */
 		value = NULL;
 		if (each->calc) {
-			value = json_calc(each->calc, *refcontext, NULL);
-			if (json_is_error(value)) {
+			value = jx_calc(each->calc, *refcontext, NULL);
+			if (jx_is_error(value)) {
 				if (error)
 					free(value);
 				else
@@ -1481,23 +1481,23 @@ static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 			}
 		}
 		if (!value)
-			value = json_null();
+			value = jx_null();
 
 		/* Add it to the context */
-		if (!json_context_declare(refcontext, each->key, value, each->flags)) {
+		if (!jx_context_declare(refcontext, each->key, value, each->flags)) {
 			/* Duplicate! */
-			json_free(value);
-			return json_cmd_error(each->where, "redeclare:Duplicate %s \"%s\"",
-				(each->flags & JSON_CONTEXT_CONST) ? "const" : "var",
+			jx_free(value);
+			return jx_cmd_error(each->where, "redeclare:Duplicate %s \"%s\"",
+				(each->flags & JX_CONTEXT_CONST) ? "const" : "var",
 				each->key);
 		}
 	}
 
 	/* If we encountered an error in an initializer, return it */
 	if (error) {
-		jsoncmdout_t *result;
-		result = json_cmd_error(cmd->where, "%s", error->text);
-		json_free(error);
+		jxcmdout_t *result;
+		result = jx_cmd_error(cmd->where, "%s", error->text);
+		jx_free(error);
 		return result;
 	}
 
@@ -1505,106 +1505,106 @@ static jsoncmdout_t *gvc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	return NULL;
 }
 
-static jsoncmd_t *break_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *break_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd = json_cmd(src, &jcn_break);
+	jxcmd_t *cmd = jx_cmd(src, &jcn_break);
 
 	/* No arguments or other components, but we still need to skip ";" */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str == ';')
 		src->str++;
 	return cmd;
 }
 
-static jsoncmdout_t *break_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *break_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Return a "break" pseudo-error */
-	jsoncmdout_t *result = json_cmd_error(cmd->where, "");
-	result->ret = &json_cmd_break;
+	jxcmdout_t *result = jx_cmd_error(cmd->where, "");
+	result->ret = &jx_cmd_break;
 	return result;
 }
 
-static jsoncmd_t *continue_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *continue_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd = json_cmd(src, &jcn_continue);
+	jxcmd_t *cmd = jx_cmd(src, &jcn_continue);
 
 	/* No arguments or other components, but we still need to skip ";" */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str == ';')
 		src->str++;
 	return cmd;
 }
 
-static jsoncmdout_t *continue_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *continue_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Return a "continue" pseudo-error */
-	jsoncmdout_t *result = json_cmd_error(cmd->where, "");
-	result->ret = &json_cmd_continue;
+	jxcmdout_t *result = jx_cmd_error(cmd->where, "");
+	result->ret = &jx_cmd_continue;
 	return result;
 }
 
-static jsoncmd_t *var_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *var_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd = json_cmd(src, &jcn_var);
-	cmd->flags = JSON_CONTEXT_VAR;
+	jxcmd_t *cmd = jx_cmd(src, &jcn_var);
+	cmd->flags = JX_CONTEXT_VAR;
 	return gvc_parse(src, referr, cmd);
 }
 
-static jsoncmdout_t *var_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *var_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	return gvc_run(cmd, refcontext);
 }
 
-static jsoncmd_t *const_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *const_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd = json_cmd(src, &jcn_var);
-	cmd->flags = JSON_CONTEXT_CONST;
+	jxcmd_t *cmd = jx_cmd(src, &jcn_var);
+	cmd->flags = JX_CONTEXT_CONST;
 	return gvc_parse(src, referr, cmd);
 }
 
-static jsoncmdout_t *const_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *const_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	return gvc_run(cmd, refcontext);
 }
 
 /* Output a description of a function */
-static void describefn(jsonfunc_t *f)
+static void describefn(jxfunc_t *f)
 {
-	json_t	*params = NULL;
+	jx_t	*params = NULL;
 
 	if (f->fn)
-		json_user_printf(NULL, "normal", "builtin ");
+		jx_user_printf(NULL, "normal", "builtin ");
 	if (f->agfn)
-		json_user_printf(NULL, "normal", "aggregate ");
-	json_user_printf(NULL, "normal", "function %s", f->name);
+		jx_user_printf(NULL, "normal", "aggregate ");
+	jx_user_printf(NULL, "normal", "function %s", f->name);
 	if (f->args)
-		json_user_printf(NULL, "normal", "(%s)", f->args);
+		jx_user_printf(NULL, "normal", "(%s)", f->args);
 	else {
-		json_user_ch('(');
+		jx_user_ch('(');
 		for (params = f->userparams->first; params; params = params->next) /* undeferred */
-			json_user_printf(NULL, "normal", "%s%s", params->text, params->next ? ", " : ""); /* undeferred */
-		json_user_ch(')');
+			jx_user_printf(NULL, "normal", "%s%s", params->text, params->next ? ", " : ""); /* undeferred */
+		jx_user_ch(')');
 	}
 	if (f->returntype)
-		json_user_printf(NULL, "normal", ":%s", f->returntype);
-	json_user_ch('\n');
+		jx_user_printf(NULL, "normal", ":%s", f->returntype);
+	jx_user_ch('\n');
 }
 
-static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *function_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	char	*fname;
-	jsonsrc_t paren; /* Used for scanning parameter source */
-	json_t	*params = NULL;
-	jsoncmd_t *body = NULL;
+	jxsrc_t paren; /* Used for scanning parameter source */
+	jx_t	*params = NULL;
+	jxcmd_t *body = NULL;
 	char	*returntype = NULL;;
 
 	paren.buf = NULL;
 
 	/* Function name */
-	fname = json_cmd_parse_key(src, 1);
+	fname = jx_cmd_parse_key(src, 1);
 	if (!fname) {
 		/* Describe all user-defined functions */
-		jsonfunc_t *f = json_calc_function_first();
+		jxfunc_t *f = jx_calc_function_first();
 		for (; f; f = f->other) {
 			if (!f->fn)
 				describefn(f);
@@ -1613,14 +1613,14 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 
 	/* Parameter list (the parenthesized text) */
-	paren.buf = paren.str = json_cmd_parse_paren(src);
+	paren.buf = paren.str = jx_cmd_parse_paren(src);
 	if (!paren.buf) {
 		/* No parameter list, so just describe the named function and
 		 * return NULL.
 		 */
-		jsonfunc_t *f = json_calc_function_by_name(fname);
+		jxfunc_t *f = jx_calc_function_by_name(fname);
 		if (!f) {
-			*referr = json_cmd_error(src->str, "Unknown function \"%s\"", fname);
+			*referr = jx_cmd_error(src->str, "Unknown function \"%s\"", fname);
 			goto Error;
 		}
 
@@ -1633,25 +1633,25 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	paren.size = strlen(paren.buf);
 
 	/* Parameters within the parenthesized text */
-	params = json_object();
-	json_cmd_parse_whitespace(&paren);
+	params = jx_object();
+	jx_cmd_parse_whitespace(&paren);
 	while (*paren.str) {
 		char	*pname;
-		json_t	*defvalue;
+		jx_t	*defvalue;
 
 		/* Parameter name */
-		pname = json_cmd_parse_key(&paren, 0);
+		pname = jx_cmd_parse_key(&paren, 0);
 		if (!pname) {
-			*referr = json_cmd_error(src->str, "Missing parameter name");
+			*referr = jx_cmd_error(src->str, "Missing parameter name");
 			goto Error;
 		}
 
 		/* Possibly a type declaration */
-		json_cmd_parse_whitespace_or_type(&paren, NULL);
+		jx_cmd_parse_whitespace_or_type(&paren, NULL);
 
 		/* If followed by = then use a default */
 		if (*paren.str == '=') {
-			jsoncalc_t *calc;
+			jxcalc_t *calc;
 			const char	*end, *err;
 
 			/* Move past the '=' */
@@ -1659,36 +1659,36 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 			/* Parse the expression */
 			err = NULL;
-			calc = json_calc_parse(paren.str, &end, &err, 0);
+			calc = jx_calc_parse(paren.str, &end, &err, 0);
 			if (err) {
-				*referr = json_cmd_error(src->str, "%s in default value", err);
+				*referr = jx_cmd_error(src->str, "%s in default value", err);
 				goto Error;
 			}
 			if (*end && *end != ',') {
-				*referr = json_cmd_error(src->str, "Syntax error near %.10s", end);
+				*referr = jx_cmd_error(src->str, "Syntax error near %.10s", end);
 				goto Error;
 			}
 			paren.str = end;
 
 			/* Evaluate the expression */
-			defvalue = json_calc(calc, NULL, NULL);
-			if (json_is_error(defvalue)) {
+			defvalue = jx_calc(calc, NULL, NULL);
+			if (jx_is_error(defvalue)) {
 				if (defvalue->first)
-					*referr = json_cmd_error((const char *)defvalue->first, "%s", defvalue->text);
+					*referr = jx_cmd_error((const char *)defvalue->first, "%s", defvalue->text);
 				else
-					*referr = json_cmd_error(src->str, "%s", defvalue->text);
+					*referr = jx_cmd_error(src->str, "%s", defvalue->text);
 				goto Error;
 			}
 
 			/* Free the expression */
-			json_calc_free(calc);
+			jx_calc_free(calc);
 		} else {
 			/* Use null as the default value */
-			defvalue = json_null();
+			defvalue = jx_null();
 		}
 
 		/* Add the parameter to the params object */
-		json_append(params, json_key(pname, defvalue));
+		jx_append(params, jx_key(pname, defvalue));
 
 		/* Free the name */
 		free(pname);
@@ -1696,17 +1696,17 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		/* If followed by comma, skip the comma */
 		if (*paren.str == ',') {
 			paren.str++;
-			json_cmd_parse_whitespace(&paren);
+			jx_cmd_parse_whitespace(&paren);
 		}
 	}
 
 	/* Parentheses may be followed by a return type declaration */
-	json_cmd_parse_whitespace_or_type(src, &returntype);
+	jx_cmd_parse_whitespace_or_type(src, &returntype);
 
 	/* Body -- if no body, that's okay */
 	if (*src->str == '{')
-		body = json_cmd_parse_curly(src, referr);
-	else if (json_calc_function_by_name(fname)) {
+		body = jx_cmd_parse_curly(src, referr);
+	else if (jx_calc_function_by_name(fname)) {
 		/* No body but the function is already defined -- we were
 		 * just redundantly declaring an already-defined function.
 		 */
@@ -1718,9 +1718,9 @@ static jsoncmd_t *function_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 	/* Define it! */
 	if (!*referr) {
-		if (json_calc_function_user(fname, params, (char *)paren.buf, returntype, body)) {
+		if (jx_calc_function_user(fname, params, (char *)paren.buf, returntype, body)) {
 			/* Tried to redefine a built-in, which isn't allowed. */
-			*referr = json_cmd_error(src->str, "Can't redefine built-in function \"%s\"", fname);
+			*referr = jx_cmd_error(src->str, "Can't redefine built-in function \"%s\"", fname);
 			goto Error;
 		}
 
@@ -1737,113 +1737,113 @@ Error:
 	if (paren.buf)
 		free((char *)paren.buf);
 	if (params)
-		json_free(params);
+		jx_free(params);
 	if (returntype)
 		free(returntype);
 	if (body)
-		json_cmd_free(body);
+		jx_cmd_free(body);
 	return NULL;
 }
 
-static jsoncmdout_t *function_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *function_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Can't happen */
 	return NULL;
 }
 
-static jsoncmd_t *return_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *return_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncalc_t *calc;
+	jxcalc_t *calc;
 	const char	*end, *err;
-	jsoncmd_t *cmd;
-	jsonsrc_t start;
+	jxcmd_t *cmd;
+	jxsrc_t start;
 
 	/* Allocate a cmd */
 	start = *src;
 
 	/* The return value is optional */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str && *src->str != ';' && *src->str != '}') {
 		/* Parse the expression */
 		err = NULL;
-		calc = json_calc_parse(src->str, &end, &err, 0);
+		calc = jx_calc_parse(src->str, &end, &err, 0);
 		if (err) {
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 			if (calc)
-				json_calc_free(calc);
+				jx_calc_free(calc);
 			return NULL;
 		}
 		if (*end && (*end != ';' && *end != '}')) {
-			*referr = json_cmd_error(src->str, "Syntax error near %.10s", end);
+			*referr = jx_cmd_error(src->str, "Syntax error near %.10s", end);
 			if (calc)
-				json_calc_free(calc);
+				jx_calc_free(calc);
 			return NULL;
 		}
 		src->str = end;
 
 	} else {
 		/* With no expression, assume "null */
-		calc = json_calc_parse("null", NULL, NULL, 0);
+		calc = jx_calc_parse("null", NULL, NULL, 0);
 	}
 
 	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Build the command, and return it */
-	cmd = json_cmd(&start, &jcn_return);
+	cmd = jx_cmd(&start, &jcn_return);
 	cmd->calc = calc;
 	return cmd;
 }
 
-static jsoncmdout_t *return_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *return_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	/* Return a 'return" pseudo-error, returning whatever json_calc() gives
-	 * us.  If json_calc() returns an actual error, so be it.  If that
+	/* Return a 'return" pseudo-error, returning whatever jx_calc() gives
+	 * us.  If jx_calc() returns an actual error, so be it.  If that
 	 * error doesn't include the position of the error, then use the
 	 * position of this "return" command.
 	 */
-	jsoncmdout_t *err = json_cmd_error(cmd->where, "");
-	err->ret = json_calc(cmd->calc, *refcontext, NULL);
-	if (json_is_error(err->ret) && !err->ret->first)
-		err->ret->first = (json_t *)cmd->where;
+	jxcmdout_t *err = jx_cmd_error(cmd->where, "");
+	err->ret = jx_calc(cmd->calc, *refcontext, NULL);
+	if (jx_is_error(err->ret) && !err->ret->first)
+		err->ret->first = (jx_t *)cmd->where;
 	return err;
 }
 
-static jsoncmd_t *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *switch_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char	*str;
 	const char *end, *err = NULL;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_switch);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_switch);
 
 	/* Get the condition */
-	str = json_cmd_parse_paren(src);
+	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = json_cmd_error(src->str, "Missing \"%s\" expression", "switch");
+		*referr = jx_cmd_error(src->str, "Missing \"%s\" expression", "switch");
 		return parsed;
 	}
 
 	/* Parse the expression */
-	parsed->calc = json_calc_parse(str, &end, &err, 0);
+	parsed->calc = jx_calc_parse(str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
 		free(str);
 		if (err)
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 		else
-			*referr = json_cmd_error(src->str, "Syntax error in \"%s\" expression", "switch");
+			*referr = jx_cmd_error(src->str, "Syntax error in \"%s\" expression", "switch");
 		return parsed;
 	}
 	free(str);
 
 	/* Get the "body" statements */
-	parsed->sub = json_cmd_parse_curly(src, referr);
+	parsed->sub = jx_cmd_parse_curly(src, referr);
 	if (*referr)
 		return parsed;
 
@@ -1851,48 +1851,48 @@ static jsoncmd_t *switch_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return parsed;
 }
 
-static jsoncmdout_t *switch_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *switch_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jsoncontext_t *layer;
-	json_t	*switchcase;
-	jsoncmdout_t *result;
+	jxcontext_t *layer;
+	jx_t	*switchcase;
+	jxcmdout_t *result;
 
 	/* Evaluate the expression */
-	switchcase = json_calc(cmd->calc, *refcontext, NULL);
+	switchcase = jx_calc(cmd->calc, *refcontext, NULL);
 
 	/* Add a context for store the "switchcase" variable */
-	layer = json_context(*refcontext, json_object(), 0);
+	layer = jx_context(*refcontext, jx_object(), 0);
 
 	/* Store the value in the variable */
-	json_append(layer->data, json_key("switchcase", switchcase));
+	jx_append(layer->data, jx_key("switchcase", switchcase));
 
 	/* Execute the body of the switch */
-	result = json_cmd_run(cmd->sub, &layer);
+	result = jx_cmd_run(cmd->sub, &layer);
 
 	/* If exited with a "break", ignore it */
-	if (result && result->ret == &json_cmd_break) {
+	if (result && result->ret == &jx_cmd_break) {
 		free(result);
 		result = NULL;
 	}
 
 	/* Clean up */
-	json_context_free(layer);
+	jx_context_free(layer);
 
 	return result;
 }
 
-static jsoncmd_t *case_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *case_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 	char	*str;
 	const char *end, *err = NULL;
 	int	len, quote, nest, escape;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_case);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_case);
 
 	/* Extract the case.  This is trickier than it sounds -- we can't just
 	 * parse it because it should end with a ":", and ":" is a valid
@@ -1916,7 +1916,7 @@ static jsoncmd_t *case_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 			nest--;
 	}
 	if (len == 0 || src->str[len] != ':') {
-		*referr = json_cmd_error(src->str, "Missing or malformed \"%s\" expression", "case");
+		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" expression", "case");
 		return parsed;
 	}
 	str = (char *)malloc(len + 1);
@@ -1924,13 +1924,13 @@ static jsoncmd_t *case_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	str[len] = '\0';
 
 	/* Parse the case.  */
-	parsed->calc = json_calc_parse(str, &end, &err, 0);
+	parsed->calc = jx_calc_parse(str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
 		free(str);
 		if (err)
-			*referr = json_cmd_error(src->str, "%s", err);
+			*referr = jx_cmd_error(src->str, "%s", err);
 		else
-			*referr = json_cmd_error(src->str, "Syntax error in \"%s\" expression", "case");
+			*referr = jx_cmd_error(src->str, "Syntax error in \"%s\" expression", "case");
 		return parsed;
 	}
 	free(str);
@@ -1942,35 +1942,35 @@ static jsoncmd_t *case_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return parsed;
 }
 
-static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *case_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t	*switchcase;
+	jx_t	*switchcase;
 	int	match;
 
 	/* Fetch the "switchcase" value.  Note that we only look in the top
 	 * context layer so that if switch statements are nested, we don't see
-	 * the outer one.  Use json_by_key() instead of json_context_by_key().
+	 * the outer one.  Use jx_by_key() instead of jx_context_by_key().
 	 */
-	switchcase = json_by_key((*refcontext)->data, "switchcase");
+	switchcase = jx_by_key((*refcontext)->data, "switchcase");
 	if (!switchcase)
-		return json_cmd_error(cmd->where, "case:Can't use \"%s\" outside of \"%s\"", "case", "switch");
+		return jx_cmd_error(cmd->where, "case:Can't use \"%s\" outside of \"%s\"", "case", "switch");
 
 	/* If "null" then continue with next command */
-	if (json_is_null(switchcase))
+	if (jx_is_null(switchcase))
 		return NULL;
 
 	/* Compare the case value to switchcase.
 	 * 
 	 * One optimization: If the value is a literal then we don't bother
-	 * calling json_calc(), mostly so we can avoid allocating and freeing
+	 * calling jx_calc(), mostly so we can avoid allocating and freeing
 	 * the value.
 	 */
-	if (cmd->calc->op == JSONOP_LITERAL) {
-		match = json_equal(cmd->calc->u.literal, switchcase);
+	if (cmd->calc->op == JXOP_LITERAL) {
+		match = jx_equal(cmd->calc->u.literal, switchcase);
 	} else {
-		json_t *thiscase = json_calc(cmd->calc, *refcontext, NULL);
-		match = json_equal(thiscase, switchcase);
-		json_free(thiscase);
+		jx_t *thiscase = jx_calc(cmd->calc, *refcontext, NULL);
+		match = jx_equal(thiscase, switchcase);
+		jx_free(thiscase);
 	}
 
 	/* Anything else should match exactly.  If this does, then
@@ -1982,31 +1982,31 @@ static jsoncmdout_t *case_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* Match!  Change "switchcase" to null, and continue on to
 		 * the next statement.
 		 */
-		json_append((*refcontext)->data, json_key("switchcase", json_null()));
+		jx_append((*refcontext)->data, jx_key("switchcase", jx_null()));
 		return NULL;
 	} else {
 		/* No match!  Leave "switchcase" unchanged, and skip to the
 		 * next "case" or "default" statement.
 		 */
-		jsoncmdout_t *result = json_cmd_error(cmd->where, "");
-		result->ret = &json_cmd_case_mismatch;
+		jxcmdout_t *result = jx_cmd_error(cmd->where, "");
+		result->ret = &jx_cmd_case_mismatch;
 		return result;
 	}
 }
 
-static jsoncmd_t *default_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *default_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t	*parsed;
+	jxcmd_t	*parsed;
 
 	/* Skip leading whitespace */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
-	/* Allocate the jsoncmd_t for it */
-	parsed = json_cmd(src, &jcn_default);
+	/* Allocate the jxcmd_t for it */
+	parsed = jx_cmd(src, &jcn_default);
 
 	/* Ends with a colon */
 	if (*src->str != ':') {
-		*referr = json_cmd_error(src->str, "Syntax error in \"%s\"", "default");
+		*referr = jx_cmd_error(src->str, "Syntax error in \"%s\"", "default");
 		return parsed;
 	}
 	src->str++;
@@ -2015,41 +2015,41 @@ static jsoncmd_t *default_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return parsed;
 }
 
-static jsoncmdout_t *default_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *default_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* The "default" command always continues to the next command */
 	return NULL;
 }
 
-static jsoncmd_t *void_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *void_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncalc_t *calc;
+	jxcalc_t *calc;
 	const char	*end, *err;
-	jsoncmd_t *cmd;
-	jsonsrc_t start;
+	jxcmd_t *cmd;
+	jxsrc_t start;
 
 	/* Allocate a cmd */
 	start = *src;
 
 	/* The expression is mandatory */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (!*src->str || *src->str == ';' || *src->str == '}') {
-		json_cmd_error(src->str, "The \"%s\" command requires an expression", "void");
+		jx_cmd_error(src->str, "The \"%s\" command requires an expression", "void");
 	}
 
 	/* Parse the expression */
 	err = NULL;
-	calc = json_calc_parse(src->str, &end, &err, 0);
+	calc = jx_calc_parse(src->str, &end, &err, 0);
 	if (err) {
-		*referr = json_cmd_error(src->str, "%s", err);
+		*referr = jx_cmd_error(src->str, "%s", err);
 		if (calc)
-			json_calc_free(calc);
+			jx_calc_free(calc);
 		return NULL;
 	}
 	if (*end && (*end != ';' && *end != '}')) {
-		*referr = json_cmd_error(src->str, "Syntax error near %.10s", end);
+		*referr = jx_cmd_error(src->str, "Syntax error near %.10s", end);
 		if (calc)
-			json_calc_free(calc);
+			jx_calc_free(calc);
 		return NULL;
 	}
 	src->str = end;
@@ -2057,48 +2057,48 @@ static jsoncmd_t *void_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Build the command, and return it */
-	cmd = json_cmd(&start, &jcn_void);
+	cmd = jx_cmd(&start, &jcn_void);
 	cmd->calc = calc;
 	return cmd;
 }
 
-static jsoncmdout_t *void_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *void_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Evaluate the expression but return NULL */
-	json_free(json_calc(cmd->calc, *refcontext, NULL));
+	jx_free(jx_calc(cmd->calc, *refcontext, NULL));
 	return NULL;
 }
 
-static jsoncmd_t *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *explain_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	const char	*end, *err;
-	jsoncmd_t *cmd;
+	jxcmd_t *cmd;
 
 	/* Allocate a cmd */
-	cmd = json_cmd(src, &jcn_explain);
+	cmd = jx_cmd(src, &jcn_explain);
 
 	/* Three ways to go: "explain" explains the default table, "explain?"
 	 * says where the default table is located, and "explain expr" explains
 	 * the result of an expression.
 	 */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (!*src->str || *src->str == ';' || *src->str == '}') {
 		/* Use the default */
 	} else if (*src->str == '?') {
 		/* Use the default, but suppress the actual "explain" table */
 		cmd->var = 1;
 		src->str++;
-		json_cmd_parse_whitespace(src);
+		jx_cmd_parse_whitespace(src);
 	} else {
 		/* Use an expression */
 		err = NULL;
-		cmd->calc = json_calc_parse(src->str, &end, &err, 0);
+		cmd->calc = jx_calc_parse(src->str, &end, &err, 0);
 		if (err) {
-			*referr = json_cmd_error(src->str, "%s", err);
-			json_cmd_free(cmd);
+			*referr = jx_cmd_error(src->str, "%s", err);
+			jx_cmd_free(cmd);
 			return NULL;
 		}
 		src->str = end;
@@ -2106,34 +2106,34 @@ static jsoncmd_t *explain_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 	/* Detect cruft after the arguments */
 	if (*src->str && (*src->str != ';' && *src->str != '}')) {
-		*referr = json_cmd_error(src->str, "Syntax error near %.10s", end);
-		json_cmd_free(cmd);
+		*referr = jx_cmd_error(src->str, "Syntax error near %.10s", end);
+		jx_cmd_free(cmd);
 		return NULL;
 	}
 
 	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return the command */
 	return cmd;
 }
 
-static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *explain_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t	*table, *mustfree, *columns;
+	jx_t	*table, *mustfree, *columns;
 	char	*expr;
 
 	/* Is there an expression, explicitly naming a table? */
 	if (!cmd->calc) {
 		/* No, so look for a default table */
-		table = json_context_default_table(*refcontext, &expr);
+		table = jx_context_default_table(*refcontext, &expr);
 		mustfree = NULL;
 
 		/* If no table, say so */
 		if (!table)
-			return json_cmd_error(cmd->where, "noDefTable:No default table");
+			return jx_cmd_error(cmd->where, "noDefTable:No default table");
 	} else {
 		/* Yes, so evaluate it.
 		 *
@@ -2144,21 +2144,21 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		 * For this reason, I'm not going to bother trying to optimize
 		 * this for simple expressions.
 		 */
-		table = json_calc(cmd->calc, *refcontext, NULL);
+		table = jx_calc(cmd->calc, *refcontext, NULL);
 		mustfree = table;
 		expr = NULL;
 	}
 
 	/* Detect errors */
-	if (json_is_error(table)) {
-		jsoncmdout_t *out = json_cmd_error(cmd->where, "%s", table->text);
-		json_free(table);
+	if (jx_is_error(table)) {
+		jxcmdout_t *out = jx_cmd_error(cmd->where, "%s", table->text);
+		jx_free(table);
 		return out;
 	}
-	if (!json_is_table(table)) {
+	if (!jx_is_table(table)) {
 
-		jsoncmdout_t *out = json_cmd_error(cmd->where, "explainNotTable:Not a table");
-		json_free(table);
+		jxcmdout_t *out = jx_cmd_error(cmd->where, "explainNotTable:Not a table");
+		jx_free(table);
 		return out;
 	}
 
@@ -2168,33 +2168,33 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 		/* If it is a deferred array, then we might want to check only
 		 * some of the rows.
 		 */
-		if (json_is_deferred_array(table)) {
+		if (jx_is_deferred_array(table)) {
 			int deferexplain = 0;
-			json_t *jc = json_by_key(json_config, "deferexplain");
-			if (jc && jc->type == JSON_NUMBER)
-				deferexplain = json_int(jc);
+			jx_t *jc = jx_by_key(jx_config, "deferexplain");
+			if (jc && jc->type == JX_NUMBER)
+				deferexplain = jx_int(jc);
 			if (deferexplain >= 1) {
-				for (table = json_first(table); deferexplain > 0 && table; deferexplain--, table = json_next(table))
-					columns = json_explain(columns, table, 0);
-				json_break(table);
+				for (table = jx_first(table); deferexplain > 0 && table; deferexplain--, table = jx_next(table))
+					columns = jx_explain(columns, table, 0);
+				jx_break(table);
 			}
 		}
 		if (!columns) {
-			for (table = json_first(table); table; table = json_next(table))
-				columns = json_explain(columns, table, 0);
+			for (table = jx_first(table); table; table = jx_next(table))
+				columns = jx_explain(columns, table, 0);
 		}
-		json_print(columns, NULL);
+		jx_print(columns, NULL);
 	}
 
 	/* If we have an expr for the default table, output it */
 	if (expr)
-		json_user_printf(NULL, "normal", "%s\n", expr);
+		jx_user_printf(NULL, "normal", "%s\n", expr);
 
 	/* Clean up */
 	if (columns)
-		json_free(columns);
+		jx_free(columns);
 	if (mustfree)
-		json_free(mustfree);
+		jx_free(mustfree);
 	if (expr)
 		free(expr);
 
@@ -2202,13 +2202,13 @@ static jsoncmdout_t *explain_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	return NULL;
 }
 
-static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *file_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	const char	*end, *err;
-	jsoncmd_t *cmd;
+	jxcmd_t *cmd;
 
 	/* Allocate a cmd */
-	cmd = json_cmd(src, &jcn_file);
+	cmd = jx_cmd(src, &jcn_file);
 
 	/* Many possible ways to invoke this.  Most commands have a strict
 	 * syntax, but file is intended mostly for interactive use and should
@@ -2219,7 +2219,7 @@ static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	 *   file word	Move to the named file.  If new, append it.
 	 *   file (expr)Move to the result of expr
 	 */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (!*src->str || *src->str == ';' || *src->str == '}') {
 		/* "file" with no arguments */
 	} else if (*src->str == '+' || *src->str == '-') {
@@ -2227,28 +2227,28 @@ static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		char ch[2];
 		ch[0] = *src->str++;
 		ch[1] = '\0';
-		json_cmd_parse_whitespace(src);
+		jx_cmd_parse_whitespace(src);
 		if (*src->str && *src->str != ';' && *src->str != '}') {
-			*referr = json_cmd_error(src->str, "Bad use of \"%s\" or \"%s\"", "file+", "file-");
+			*referr = jx_cmd_error(src->str, "Bad use of \"%s\" or \"%s\"", "file+", "file-");
 			return NULL;
 		}
 		cmd->key = strdup(ch);
 	} else if (*src->str == '(') {
 		/* Get the expression */
-		char *str = json_cmd_parse_paren(src);
+		char *str = jx_cmd_parse_paren(src);
 		if (!str) {
-			*referr = json_cmd_error(src->str, "Missing ) in \"%s\" expression", "file");
+			*referr = jx_cmd_error(src->str, "Missing ) in \"%s\" expression", "file");
 			return cmd;
 		}
 
 		/* Parse the expression */
-		cmd->calc = json_calc_parse(str, &end, &err, 0);
+		cmd->calc = jx_calc_parse(str, &end, &err, 0);
 		if (err || *end || !cmd->calc) {
 			free(str);
 			if (err)
-				*referr = json_cmd_error(src->str, "%s", err);
+				*referr = jx_cmd_error(src->str, "%s", err);
 			else
-				*referr = json_cmd_error(src->str, "Syntax error in \"%s\" expression", "file");
+				*referr = jx_cmd_error(src->str, "Syntax error in \"%s\" expression", "file");
 			return cmd;
 		}
 		free(str);
@@ -2266,90 +2266,90 @@ static jsoncmd_t *file_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 
 		/* Move past the end of the name */
 		src->str = end;
-		json_cmd_parse_whitespace(src);
+		jx_cmd_parse_whitespace(src);
 	}
 
 	/* Move past the ';', if there is one */
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Return the command */
 	return cmd;
 }
 
-static jsoncmdout_t *file_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *file_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t *files, *elem;
-	int	current = JSON_CONTEXT_FILE_SAME;
+	jx_t *files, *elem;
+	int	current = JX_CONTEXT_FILE_SAME;
 
 	/* Determine what type of "file" invocation this is */
 	if (cmd->calc) {
 		/* "file (calc) -- Evaluate the expression. */
-		json_t *result = json_calc(cmd->calc, *refcontext, NULL);
+		jx_t *result = jx_calc(cmd->calc, *refcontext, NULL);
 
 		/* If we got an error, then return the error */
-		if (json_is_error(result)) {
-			jsoncmdout_t *err = json_cmd_error(cmd->where, "%s", result->text);
-			json_free(result);
+		if (jx_is_error(result)) {
+			jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", result->text);
+			jx_free(result);
 			return err;
 		}
 
 		/* If it's a number, then select a file by index */
-		if (result->type == JSON_NUMBER) {
-			current = json_int(result);
-			files = json_context_file(*refcontext, NULL, 0, &current);
-			json_free(result);
-		} else if (result->type == JSON_STRING) {
-			current = JSON_CONTEXT_FILE_NEXT;
-			files = json_context_file(*refcontext, result->text, 0, &current);
-			json_free(result);
+		if (result->type == JX_NUMBER) {
+			current = jx_int(result);
+			files = jx_context_file(*refcontext, NULL, 0, &current);
+			jx_free(result);
+		} else if (result->type == JX_STRING) {
+			current = JX_CONTEXT_FILE_NEXT;
+			files = jx_context_file(*refcontext, result->text, 0, &current);
+			jx_free(result);
 		} else {
-			json_free(result);
-			return json_cmd_error(cmd->where, "fileExpr:file expressions should return a number or string.");
+			jx_free(result);
+			return jx_cmd_error(cmd->where, "fileExpr:file expressions should return a number or string.");
 		}
 	} else if (!cmd->key) {
 		/* "file" with no args -- display the current filename */
-		files = json_context_file(*refcontext, NULL, 0, &current);
+		files = jx_context_file(*refcontext, NULL, 0, &current);
 	} else if (!strcmp(cmd->key, "+")) {
 		/* "file +" -- Move to the next file in the list */
-		current = JSON_CONTEXT_FILE_NEXT;
-		files = json_context_file(*refcontext, NULL, 0, &current);
+		current = JX_CONTEXT_FILE_NEXT;
+		files = jx_context_file(*refcontext, NULL, 0, &current);
 	} else if (!strcmp(cmd->key, "-")) {
 		/* "file -" -- Move to the previous file in the list */
-		current = JSON_CONTEXT_FILE_PREVIOUS;
-		files = json_context_file(*refcontext, NULL, 0, &current);
+		current = JX_CONTEXT_FILE_PREVIOUS;
+		files = jx_context_file(*refcontext, NULL, 0, &current);
 	} else {
 		/* "file filename" -- Move to the named file */
-		current = JSON_CONTEXT_FILE_NEXT;
-		files = json_context_file(*refcontext, cmd->key, 0, &current);
+		current = JX_CONTEXT_FILE_NEXT;
+		files = jx_context_file(*refcontext, cmd->key, 0, &current);
 	}
 
 	/* After all that, display the current file's name */
-	elem = json_by_index(files, current);
-	files = json_by_key(elem, "filename");
-	if (!files || files->type != JSON_STRING)
-		json_user_printf(NULL, "normal", "%s\n", "(no files)");
+	elem = jx_by_index(files, current);
+	files = jx_by_key(elem, "filename");
+	if (!files || files->type != JX_STRING)
+		jx_user_printf(NULL, "normal", "%s\n", "(no files)");
 	else
-		json_user_printf(NULL, "normal", "%s\n", files->text);
-	json_break(files);
-	json_break(elem);
+		jx_user_printf(NULL, "normal", "%s\n", files->text);
+	jx_break(files);
+	jx_break(elem);
 
 	/* Return success always */
 	return NULL;
 }
 
 
-static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	const char	*end;
 	char	*filename;
 	FILE	*fp;
-	jsoncmd_t *code, *cmd;
-	jsonsrc_t start = *src;
+	jxcmd_t *code, *cmd;
+	jxsrc_t start = *src;
 
 	/* Parse the name. */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	for (end = src->str; *end && *end != ';' && *end != '}'; end++){
 	}
 	while (end > src->str && end[-1] == ' ')
@@ -2359,7 +2359,7 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	filename[end - src->str] = '\0';
 	src->str = end;
 
-	/* If the filename has no extension, then assume ".jc" */
+	/* If the filename has no extension, then assume ".jx" */
 	end = strrchr(filename, '/');
 	if (end)
 		end++;
@@ -2367,24 +2367,24 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		end = filename;
 	end = strchr(end, '.');
 	if (!end)
-		strcat(filename, ".jc");
+		strcat(filename, ".jx");
 
 	/* For security's sake, make sure the name doesn't start with "/"
 	 * or contain "../"
 	 */
 	if (filename[0] == '/' || strstr(filename, "../")) {
-		*referr = json_cmd_error(start.str, "Unsafe file name to import: \"%s\"", filename);
+		*referr = jx_cmd_error(start.str, "Unsafe file name to import: \"%s\"", filename);
 		return NULL;
 	}
 
 	/* If the file doesn't exist or is unreadable, fail */
 	if (access(filename, F_OK) < 0) {
-		*referr = json_cmd_error(start.str, "Import file \"%s\" does not exist", filename);
+		*referr = jx_cmd_error(start.str, "Import file \"%s\" does not exist", filename);
 		return NULL;
 	}
 	fp = fopen(filename, "r");
 	if (!fp) {
-		*referr = json_cmd_error(start.str, "Import file \"%s\" is unreadable", filename);
+		*referr = jx_cmd_error(start.str, "Import file \"%s\" is unreadable", filename);
 		return NULL;
 	}
 	fclose(fp);
@@ -2395,38 +2395,38 @@ static jsoncmd_t *import_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	 * the context but we don't have a context at parse time.
 	 */
 	cmd = NULL;
-	code = json_cmd_parse_file(filename);
-	if (code && code != JSON_CMD_ERROR) {
-		cmd = json_cmd(&start, &jcn_import);
+	code = jx_cmd_parse_file(filename);
+	if (code && code != JX_CMD_ERROR) {
+		cmd = jx_cmd(&start, &jcn_import);
 		cmd->sub = code;
 	}
 
 	/* Move past the ';', if there is one */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (*src->str == ';')
 		src->str++;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* Probably nothing left to do at runtime... except maybe vars */
 	return cmd;
 }
 
-static jsoncmdout_t *import_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *import_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Declare variables and such */
-	return json_cmd_run(cmd->sub, refcontext);
+	return jx_cmd_run(cmd->sub, refcontext);
 }
 
 
-static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *plugin_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	size_t len;
 	char	quote;
 	char	*str, *settings;
-	json_t	*err, *section;
+	jx_t	*err, *section;
 
 	/* Find the end of the command */
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	for (len = 0, quote = 0; src->str[len] && (quote || !strchr(";\n}", src->str[len])); len++) {
 		/* Handle backslash in a quoted string */
 		if (quote && src->str[len] == '\\' && src->str[len + 1])
@@ -2455,32 +2455,32 @@ static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 		settings = "";
 
 	/* Load the plugin */
-	err = json_plugin_load(str);
+	err = jx_plugin_load(str);
 	if (err) {
 		if (err->first)
-			*referr = json_cmd_error((char *)err->first, "%s", err->text);
+			*referr = jx_cmd_error((char *)err->first, "%s", err->text);
 		else
-			*referr = json_cmd_error(src->str, "%s", err->text);
+			*referr = jx_cmd_error(src->str, "%s", err->text);
 		return NULL;
 	}
 
 	/* Process the settings, if any */
 	if (*settings) {
 		/* Find where this plugins settings are stored */
-		section = json_by_key(json_config, "plugin");
-		section = json_by_key(section, str);
+		section = jx_by_key(jx_config, "plugin");
+		section = jx_by_key(section, str);
 		if (!section) {
-			*referr = json_cmd_error(src->str, "The \"%s\" plugin doesn't use settings", str);
+			*referr = jx_cmd_error(src->str, "The \"%s\" plugin doesn't use settings", str);
 			return NULL;
 		}
 
 		/* Adjust the settings */
-		err = json_config_parse(section, settings, NULL);
+		err = jx_config_parse(section, settings, NULL);
 		if (err) {
 			if (err->first)
-				*referr = json_cmd_error((char *)err->first, "%s", err->text);
+				*referr = jx_cmd_error((char *)err->first, "%s", err->text);
 			else
-				*referr = json_cmd_error(src->str, "%s", err->text);
+				*referr = jx_cmd_error(src->str, "%s", err->text);
 			return NULL;
 		}
 
@@ -2490,22 +2490,22 @@ static jsoncmd_t *plugin_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	return NULL;
 }
 
-static jsoncmdout_t *plugin_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *plugin_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Plugins are loaded at parse time, not run time */
 	return NULL;
 }
 
 /* Print a value.  If it's a string, print it without quotes or backslashes. */
-static jsoncmd_t *print_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *print_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd;
-	jsonsrc_t start;
-	jsoncalc_t *item, *list;
+	jxcmd_t *cmd;
+	jxsrc_t start;
+	jxcalc_t *item, *list;
 	const char	*err;
 
 	start = *src;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 	if (!*src->str || *src->str == ';' || *src->str == '}') {
 		/* "print" with no arguments does nothing */
 		return NULL;
@@ -2517,34 +2517,34 @@ static jsoncmd_t *print_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	list = NULL;
 	err = NULL;
 	do {
-		item = json_calc_parse(src->str, &src->str, &err, FALSE);
+		item = jx_calc_parse(src->str, &src->str, &err, FALSE);
 		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
 			if (list)
-				json_calc_free(list);
-			*referr = json_cmd_error(start.str, err ? err : "printSyntax:Syntax error in \"%s\" expression", "print");
+				jx_calc_free(list);
+			*referr = jx_cmd_error(start.str, err ? err : "printSyntax:Syntax error in \"%s\" expression", "print");
 			return NULL;
 		}
-		list = json_calc_list(list, item);
+		list = jx_calc_list(list, item);
 	} while (*src->str++ == ',');
 
 	/* Build the command */
-	cmd = json_cmd(&start, &jcn_print);
+	cmd = jx_cmd(&start, &jcn_print);
 	cmd->calc = list;
 	return cmd;
 }
 
-static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *print_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t	*list, *scan;
+	jx_t	*list, *scan;
 	char	lastchar;
 
 	/* Evaluate the expression list */
-	list = json_calc(cmd->calc, *refcontext, NULL);
+	list = jx_calc(cmd->calc, *refcontext, NULL);
 
 	/* If error, then return the error */
-	if (json_is_error(list)) {
-		jsoncmdout_t *err = json_cmd_error(cmd->where, "%s", list->text);
-		json_free(list);
+	if (jx_is_error(list)) {
+		jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", list->text);
+		jx_free(list);
 		return err;
 	}
 
@@ -2552,59 +2552,59 @@ static jsoncmdout_t *print_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	 * added spaces or anything.  For strings, output the string literally.
 	 */
 	lastchar = '\n';
-	for (scan = json_first(list); scan; scan = json_next(scan)) {
-		if (scan->type == JSON_STRING) {
-			json_user_printf(NULL, "normal", "%s", scan->text, stdout);
+	for (scan = jx_first(list); scan; scan = jx_next(scan)) {
+		if (scan->type == JX_STRING) {
+			jx_user_printf(NULL, "normal", "%s", scan->text, stdout);
 			if (*scan->text)
 				lastchar = scan->text[strlen(scan->text) - 1];
 		} else {
-			char *tmp = json_serialize(scan, NULL);
-			json_user_printf(NULL, "normal", "%s", tmp);
+			char *tmp = jx_serialize(scan, NULL);
+			jx_user_printf(NULL, "normal", "%s", tmp);
 			free(tmp);
 			lastchar = 'x'; /* Never empty, never '\n' */
 		}
 	}
 
 	/* If the last character wasn't a newline, remember that. */
-	json_print_incomplete_line = (lastchar != '\n');
+	jx_print_incomplete_line = (lastchar != '\n');
 
 	/* Clean up */
-	json_free(list);
+	jx_free(list);
 	return NULL;
 }
 
 /* Set an option. */
-static jsoncmd_t *set_parse(jsonsrc_t *src, jsoncmdout_t **referr)
+static jxcmd_t *set_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
-	jsoncmd_t *cmd;
-	jsonsrc_t start;
-	jsoncalc_t *calc;
+	jxcmd_t *cmd;
+	jxsrc_t start;
+	jxcalc_t *calc;
 	char	*str;
 	const char *end, *err;
 	size_t	len;
 
 	start = *src;
-	json_cmd_parse_whitespace(src);
+	jx_cmd_parse_whitespace(src);
 
 	/* The options settings can be either explicit text, or a parenthesized
 	 * expression that returns a string.
 	 */
 	if (*src->str == '(') {
 		/* Parenthesized expression -- Get it in a string */
-		str = json_cmd_parse_paren(src);
+		str = jx_cmd_parse_paren(src);
 		if (!str) {
-			*referr = json_cmd_error(src->str, "Missing ) in \"%s\" expression", "set");
+			*referr = jx_cmd_error(src->str, "Missing ) in \"%s\" expression", "set");
 			return NULL;
 		}
 
 		/* Parse it */
-		calc = json_calc_parse(str, &end, &err, 0);
+		calc = jx_calc_parse(str, &end, &err, 0);
 		if (!calc || err || (*src->str && !strchr(";},", *src->str))) {
 			free(str);
 			if (err)
-				*referr = json_cmd_error(start.str, "%s", err);
+				*referr = jx_cmd_error(start.str, "%s", err);
 			else
-				*referr = json_cmd_error(start.str, "setSyntax:Syntax error in \"%s\" expression", "set");
+				*referr = jx_cmd_error(start.str, "setSyntax:Syntax error in \"%s\" expression", "set");
 			return NULL;
 		}
 
@@ -2626,31 +2626,31 @@ static jsoncmd_t *set_parse(jsonsrc_t *src, jsoncmdout_t **referr)
 	}
 
 	/* Build the command */
-	cmd = json_cmd(&start, &jcn_set);
+	cmd = jx_cmd(&start, &jcn_set);
 	cmd->calc = calc;
 	cmd->key = str;
 	return cmd;
 }
 
-static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *set_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	json_t *result, *section, *conferr;
+	jx_t *result, *section, *conferr;
 	char	*str;
 
 	/* Are we using an expression to generate the settings on-the-fly? */
 	if (cmd->calc) {
 		/* Evaluate it */
-		result = json_calc(cmd->calc, *refcontext, NULL);
-		if (json_is_error(result)) {
-			jsoncmdout_t *err = json_cmd_error(cmd->where, "%s", result->text);
-			json_free(result);
+		result = jx_calc(cmd->calc, *refcontext, NULL);
+		if (jx_is_error(result)) {
+			jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", result->text);
+			jx_free(result);
 			return err;
 		}
 
 		/* Value must be a string */
-		if (result->type != JSON_STRING) {
-			json_free(result);
-			return json_cmd_error(cmd->where, "setString:set expression must return a string");
+		if (result->type != JX_STRING) {
+			jx_free(result);
+			return jx_cmd_error(cmd->where, "setString:set expression must return a string");
 		}
 
 		/* Use the string's text */
@@ -2662,58 +2662,58 @@ static jsoncmdout_t *set_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
 	}
 
 	/* Parse it, and store the changes.  */
-	section = json_by_key(json_config, json_text_by_key(json_system, "runmode"));
-	conferr = json_config_parse(section, str, NULL);
+	section = jx_by_key(jx_config, jx_text_by_key(jx_system, "runmode"));
+	conferr = jx_config_parse(section, str, NULL);
 	if (conferr) {
-		jsoncmdout_t *err = json_cmd_error(cmd->where, "%s", conferr->text);
-		json_free(conferr);
+		jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", conferr->text);
+		jx_free(conferr);
 		if (result)
-			json_free(result);
+			jx_free(result);
 		return err;
 	}
 
 	/* Make the changes effective in the format */
-	json_format_set(NULL, NULL);
+	jx_format_set(NULL, NULL);
 
 	/* Clean up */
 	if (result)
-		json_free(result);
+		jx_free(result);
 	return NULL;
 }
 
 
 /* Handle an assignment or output expression */
-static jsoncmdout_t *calc_run(jsoncmd_t *cmd, jsoncontext_t **refcontext)
+static jxcmdout_t *calc_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	/* Calculate the result of the expression.   If it's an assignment,
 	 * then this will do the assignment too.
 	 */
-	json_t *result = json_calc(cmd->calc, *refcontext, NULL);
+	jx_t *result = jx_calc(cmd->calc, *refcontext, NULL);
 
-	/* If we got an error ("null" with text), then convert to jsoncmdout_t */
-	if (json_is_error(result)) {
-		jsoncmdout_t *err = json_cmd_error(result->first ? (const char *)result->first : cmd->where, "%s", result->text);
-		json_free(result);
+	/* If we got an error ("null" with text), then convert to jxcmdout_t */
+	if (jx_is_error(result)) {
+		jxcmdout_t *err = jx_cmd_error(result->first ? (const char *)result->first : cmd->where, "%s", result->text);
+		jx_free(result);
 		return err;
 	}
 
 	/* If not an assignment, then it's an output.  Output it! */
-	if (cmd->calc->op != JSONOP_ASSIGN
-	 && cmd->calc->op != JSONOP_APPEND
-	 && cmd->calc->op != JSONOP_MAYBEASSIGN) {
+	if (cmd->calc->op != JXOP_ASSIGN
+	 && cmd->calc->op != JXOP_APPEND
+	 && cmd->calc->op != JXOP_MAYBEASSIGN) {
 		/* Print the result */
-		json_print(result, NULL);
+		jx_print(result, NULL);
 
 		/* Give the user interface a chance to save the result.  If
 		 * it doesn't want to do that, then free it.
 		 */
-		if (!json_user_result(result))
-			json_free(result);
+		if (!jx_user_result(result))
+			jx_free(result);
 	} else {
 		/* For assignment, a copy of the result is already saved to
 		 * we can discard it.
 		 */
-		json_free(result);
+		jx_free(result);
 	}
 
 	return NULL;

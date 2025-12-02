@@ -12,16 +12,23 @@ int jx_length(jx_t *container)
 	if (!container)
 		return 0;
 
+	/* This is mostly for arrays, but we a special case we also allow it
+	 * to count the members in an object.
+	 */
+	if (container->type == JX_OBJECT) {
+		for (len = 0, scan = container->first; scan; len++, scan = scan->next) {
+		}
+		return len;
+	}
+
 	/* Defend against invalid arguments */
-	if (container->type != JX_ARRAY && container->type != JX_OBJECT)
-	{
+	if (container->type != JX_ARRAY) {
 		/* EEE "Attempt to find length of a non-array" */
 		return 0;
 	}
 
 	/* For arrays, we might be able to use a shortcut */
-	if (container->type == JX_ARRAY)
-	{
+	if (container->type == JX_ARRAY) {
 		if (container->first == 0)
 			return 0;
 		if (JX_ARRAY_LENGTH(container) > 0)
@@ -29,8 +36,7 @@ int jx_length(jx_t *container)
 	}
 
 	/* Count the elements */
-	for (len = 0, scan = jx_first(container); scan; len++, scan = jx_next(scan))
-	{
+	for (len = 0, scan = jx_first(container); scan; len++, scan = jx_next(scan)) {
 	}
 
 	/* Store the count */

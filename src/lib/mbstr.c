@@ -193,6 +193,7 @@ size_t jx_mbs_wrap_word(char *buf, const char *s, int width)
 		/* Count the width of the word */
 		w = 0;
 		word = s;
+		in = 0;
 		while ((*s & 0xff) > ' ') {
 			in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
 			s += in;
@@ -249,7 +250,7 @@ size_t jx_mbs_wrap_char(char *buf, const char *s, int width)
 	memset(&state, 0, sizeof state);
 
 	/* For each character... */
-	for (len = 0, column = 0; *s; s += in) {
+	for (len = 0, column = 0, in = 0; *s; s += in) {
 		/* Delete control characters */
 		if (*s >= '\0' && *s < ' ')
 			continue;
@@ -323,7 +324,8 @@ size_t jx_mbs_simple_key(char *dest, const char *src)
                 src += in;
                 if (iswcntrl(wc) || iswspace(wc))
 			continue;
-		if (dest && in >= (out = wctomb(dummy, wc)))
+		out = wctomb(dummy, wc);
+		if (dest && in >= out)
 			wctomb(dest + len, wc);
 		len += out;
 	}
@@ -975,7 +977,6 @@ size_t jx_mbs_unescape(char *dst, const char *src, size_t nbytes)
         char dummy[MB_CUR_MAX];
 
 
-size=nbytes;
         /* If nbytes is -1 then use strlen to find the true length */
         if (nbytes == (size_t)-1)
                 nbytes = strlen(src);

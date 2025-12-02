@@ -20,7 +20,7 @@
       <p>
       The transformations performed include:
       <ul>
-        <li>Everything before the first ":" is deleted.
+        <li>Everything up to the first ":" is deleted.
         <li>Control characters are deleted.
         <li>Zero-width characters (diacritics, mostly) are deleted.
         <li>Precomposed diacritics are converted to their base letter.
@@ -33,9 +33,10 @@
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>simpleKey()</kbd>
-	<samp>Returned value</samp>
-        Description of the example.  Explain why it works.
+	<kbd>simpleKey("ns1:Xml-Tag")</kbd>
+	<samp>"XMLTAG"</samp>
+        The XML namespace is stripped off, the "-" is deleted, and the
+        remainder is converted to all uppercase.
       </div>
 
     </details>
@@ -44,12 +45,12 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Deleting everything before ":" is intended to let you access XML
-            symbols without worrying about namespaces.
+        <li>Deleting everything up to the first ":" is intended to let you
+	    access XML symbols without worrying about namespaces.
 	<li>Deleting "-" helps with data from languages that allow hyphens
 	    as part of a name, such as XML and CSS.
 	<li>Deleting "_" lets us avoid the snakes-vs-camels debate.
-	<li>Converting to uppercase avoid a lot of frustration, for example
+	<li>Converting to uppercase avoids a lot of frustration, for example
 	    whether an identifier member's key ends with "Id" or "ID".
 	<li>Removing diacritics just saves time when typing.
 	<li>The simplified string never requires more bytes than the original string.

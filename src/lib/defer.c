@@ -28,7 +28,7 @@ jx_t *jx_first(jx_t *arr)
 	 */
 	if (arr->type != JX_ARRAY) {
 		/* If a non-array is passed, and it isn't part of an array,
-		 * then * return it as though it was the only element in a
+		 * then return it as though it was the only element in a
 		 * one-element array.  Else NULL.
 		 */
 		if (!arr->next) /* object */

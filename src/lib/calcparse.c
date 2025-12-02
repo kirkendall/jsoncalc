@@ -766,6 +766,7 @@ static jxcalc_t *jcalloc(token_t *token)
 {
 	jxcalc_t *jc;
 	size_t len, size;
+	char	*end;
 
 	/* Some tokens don't need to be allocated dynamically */
 	switch (token->op) {
@@ -811,7 +812,7 @@ static jxcalc_t *jcalloc(token_t *token)
 			jx_mbs_unescape(jc->u.literal->text, token->full + 1, token->len - 2);
 	} else if (token->op == JXOP_NUMBER) {
 		jc->op = JXOP_LITERAL;
-		if (*token->full == '0' && token->full[1] && strchr("0123456789XxOoBb", token->full[1])) {
+		if (*token->full == '0' && token->len > 1 && strchr("0123456789XxOoBb", token->full[1])) {
 			long	value;
 			int	radix;
 			const char	*digits = token->full;
@@ -823,7 +824,10 @@ static jxcalc_t *jcalloc(token_t *token)
 			}
 			value = strtol(digits, NULL, radix);
 			jc->u.literal = jx_from_int((int)value);
-		} else if (strchr(token->full, '.') || strchr(token->full, 'e') || strchr(token->full, 'E')) {
+		} else if (((end = strchr(token->full, '.')) != NULL
+			 || (end = strchr(token->full, 'e')) != NULL
+			 || (end = strchr(token->full, 'E')) != NULL)
+			&& end < token->full + token->len) {
 			jc->u.literal = jx_from_double(atof(token->full));
 		} else {
 			jc->u.literal = jx_from_int(atoi(token->full));

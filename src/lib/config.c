@@ -643,6 +643,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 		}
 		if (namelen == 0) {
 			free(name);
+			if (refend)
+				*refend = settings;
 			return jx_error_null(0, "Malformed option \"%s\"", settings);
 		}
 
@@ -677,6 +679,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			if (!found) {
 				found = jx_error_null(0, "Unknown option \"%s\"", name);
 				free(name);
+				if (refend)
+					*refend = settings;
 				return found;
 			}
 
@@ -693,6 +697,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 					if (jvalue) {
 						/* Oops, we found an error */
 						free(name);
+						if (refend)
+							*refend = settings;
 						return jvalue;
 					}
 					settings = end;
@@ -709,6 +715,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 					settings = value + 5;
 				} else {
 					free(name);
+					if (refend)
+						*refend = settings;
 					return jx_error_null(0, "Invalid boolean option value \"%s\"", value);
 				}
 				continue;
@@ -724,6 +732,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 					l = strtol(value, &lend, 0);
 					if (lend == value) {
 						free(name);
+						if (refend)
+							*refend = settings;
 						return jx_error_null(0, "Invalid number value \"%s\"", value);
 					}
 					if (lend < dend) {
@@ -769,6 +779,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			default:
 				found = jx_error_null(0, "Bad type for option \"%s\"", name);
 				free(name);
+				if (refend)
+					*refend = settings;
 				return found;
 			}
 
@@ -780,6 +792,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			} else if (found) {
 				found = jx_error_null(0, "Option \"%s\" is not boolean", name);
 				free(name);
+				if (refend)
+					*refend = settings;
 				return found;
 			} else if (!strncmp(name, "no", 2)) {
 				thisconfig = config;
@@ -834,6 +848,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			/* Dang.  What is this? */
 			found = jx_error_null(0, "Unknown option \"%s\"", name);
 			free(name);
+			if (refend)
+				*refend = settings;
 			return found;
 
 BreakBreak:

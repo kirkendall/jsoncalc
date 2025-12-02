@@ -92,6 +92,8 @@ static jx_t *jfn_parse(jx_t *args, void *agdata);
 static jx_t *jfn_parseInt(jx_t *args, void *agdata);
 static jx_t *jfn_parseFloat(jx_t *args, void *agdata);
 static jx_t *jfn_find(jx_t *args, void *agdata);
+static jx_t *jfn_hash(jx_t *args, void *agdata);
+static jx_t *jfn_diff(jx_t *args, void *agdata);
 static jx_t *jfn_date(jx_t *args, void *agdata);
 static jx_t *jfn_time(jx_t *args, void *agdata);
 static jx_t *jfn_dateTime(jx_t *args, void *agdata);
@@ -191,8 +193,10 @@ static jxfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data:any", "s
 static jxfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", "any",		jfn_parse};
 static jxfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", "number",		jfn_parseInt};
 static jxfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
-static jxfunc_t find_jf	 = {&parseFloat_jf,  "find", 	    "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
-static jxfunc_t date_jf        = {&find_jf,	     "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
+static jxfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
+static jxfunc_t hash_jf        = {&find_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
+static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new:array|object", "table", jfn_diff};
+static jxfunc_t date_jf        = {&diff_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
 static jxfunc_t time_jf        = {&date_jf,        "time",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_time};
 static jxfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
 static jxfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, action?:string|number|true, ...", "null",	jfn_timeZone};
@@ -2226,6 +2230,36 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 	/* Return the result */
 	return result;
 }
+
+
+static jx_t *jfn_hash(jx_t *args, void *agdata)
+{
+	int	hash = 0;
+
+	if (args->first->next) {
+		if (args->first->next->type != JX_NUMBER || args->first->next->next)
+			return jx_error_null(NULL, "badargs:Bad arguments passed to %s()", "hash");
+		hash = jx_int(args->first->next);
+	}
+	return jx_from_int(jx_hash(args->first, hash));
+}
+
+static jx_t *jfn_diff(jx_t *args, void *agdata)
+{
+	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
+	jx_t	*oldjx, *newjx;
+	char	*defaulttable;
+
+	if (args->first->next) {
+		oldjx = args->first;
+		newjx = args->first->next;
+	} else {
+		oldjx = jx_context_default_table(recon->context, &defaulttable);
+		newjx = args->first;
+	}
+	return jx_diff(oldjx, newjx);
+}
+
 
 static jx_t *jfn_blob(jx_t *args, void *agdata)
 {

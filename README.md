@@ -1,15 +1,15 @@
-# JsonCalc
+# jx
 
-JsonCalc is program for exploring or converting JSON data.
+jx is program for exploring or converting JSON data.
 It is a versatile tool that is easy to learn and can handle big data.
 Its main features are:
 
 * It uses a syntax that's a combination of JavaScript and SQL.
-  If you're familiar with those two languages then JsonCalc should be
+  If you're familiar with those two languages then jx should be
   fairly intuitive.
   There are a few added operators and functions for things like filtering
   arrays and joining tables, but they're easy to learn.
-  A major goal for JsonCalc is that it should _not_ have a steep learning curve.
+  A major goal for jx is that it should _not_ have a steep learning curve.
 
   - Javascript features include nearly all operators, and the most common
     functions,  Many statements are available too.  You can define consts,
@@ -31,11 +31,11 @@ Its main features are:
     completion.  (Currently this is implemented via the GNU Readline library
     but I'm running into its limitations pretty hard, so this may change.)
 
-  - When used in a shell script, you can pass values in to JsonCalc via
+  - When used in a shell script, you can pass values in to jx via
     _name_=_value_ arguments on the command line, or via environment variables.
     Collecting JSON output is easy.
     If you want your shell to process rows of a table, that's pretty easy too
-    because JsonCalc supports a "shell" output format, where each row is output
+    because jx supports a "shell" output format, where each row is output
     as a line of _name_=_value_ pairs with shell quoting.
 
   - When used as a self-contained scripting language, it can easily generate
@@ -52,7 +52,7 @@ Its main features are:
   It feels almost as important as name completion.
 
 * Most of the logic is implemented in a library.
-  Implementing it this way allows you to embed JsonCalc in other programs.
+  Implementing it this way allows you to embed jx in other programs.
   The library has "hooks" that let you add your own extensions to the syntax.
   You can also use its low-level functions to manipulate JSON data in your
   own C/C++ programs.
@@ -82,10 +82,10 @@ Its main features are:
 * It fully supports UTF-8 text.
   The grid output is aware that not all Unicode characters are the same width.
 
-* JsonCalc is well documented.
+* jx is well documented.
 
   - Online documentation is available at
-    [https://www.jsoncalc.net](https://www.jsoncalc.net).
+    [https://www.jxhub.net](https://www.jxhub.net).
     This site is mostly intended to serve as a quick reference, but there
     are also some tutorials there.
 

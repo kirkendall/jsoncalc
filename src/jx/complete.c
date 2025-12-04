@@ -203,7 +203,7 @@ char *member_name_generator(const char *text, int state)
 	strcpy(buf, text);
 
 	/* If first, then reset scan */
-	if (!state)
+	if (!state || !scan)
 		scan = completion_container->first;
 	else
 		scan = scan->next;

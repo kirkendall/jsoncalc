@@ -179,10 +179,12 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 			}
 		}
 
-		/* Generate the closing tag.  If pretty-printing, add a '\n' */
+		/* Generate the closing tag. */
 		xml_unparse_add("</", state);
 		xml_unparse_add(dup ? dup : tagname, state);
 		xml_unparse_add(">", state);
+		if (dup)
+			free(dup);
 	} else {
 		/* No so end the opening tag with " />" or " ?>" */
 		if (*tagname == '?')
@@ -228,10 +230,10 @@ static void xml_unparse_name(const char *name, xml_unparse_state_t *state, int s
 		strcat(state->namebuf, state->suffix);
 }
 
-/* This file converts a jx_t object to an XML string.  Returns the size of
- * the string in bytes, not counting the terminating '\0' byte.  The string
- * itself is stored at "buf", but you can also pass a null "buf" to find the
- * length without actually generating it.
+/* This file converts a jx_t object to an XML string.  Returns (in "state")
+ * the size of the string in bytes, not counting the terminating '\0' byte.
+ * The string itself is stored at "buf", but you can also pass a NULL "buf"
+ * to find the length without actually generating it.
  */
 static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 {

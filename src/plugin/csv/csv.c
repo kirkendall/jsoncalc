@@ -402,11 +402,11 @@ static int csvtest(const char *str, size_t len)
 /* Parse "buf" and return its contents as a JSON table.  Store a pointer to
  * the end of the parsed text at "refend" unless "refend" is NULL.  If an error
  * is detected, store a pointer to the location of the error at "referr" (if
- * "referr" is not NULL) and return an jx_t containing an error null.
+ * "referr" is not NULL) and return a jx_t containing an error null.
  */
 static jx_t *csvparse(const char *buf, size_t len, const char **refend, const char **referr)
 {
-	jx_t *columns, *row, *table;
+	jx_t *columns = NULL, *row, *table;
 	const char *cursor;
 
 	/* Check options */
@@ -441,7 +441,7 @@ static jx_t *csvparse(const char *buf, size_t len, const char **refend, const ch
 			*referr = cursor;
 
 		/* If we got an error, return the error */
-		if (columns->type == JX_NULL && !*columns->text)
+		if (columns && columns->type == JX_NULL && !*columns->text)
 			return columns; /* an error */
 
 		/* Otherwise, generate an error and return it */

@@ -557,7 +557,6 @@ int main(int argc, char **argv)
 			 * loaded all persistent plugins.  All we're doing
 			 * here is adjusting each plugin's settings.
 			 */
-			section = jx_by_key(jx_config, "pluginlist");
 
 			/* Separate the settings from the name */
 			plugin = strdup(*optarg == '-' ? optarg + 1 : optarg);
@@ -679,6 +678,7 @@ int main(int argc, char **argv)
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				jx_free(err);
+				free(plugin);
 				exitcode = 1;
 				goto CleanExit;
 			}
@@ -694,6 +694,7 @@ int main(int argc, char **argv)
 					section = jx_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
+					free(plugin);
 					exitcode = 1;
 					goto CleanExit;
 				}
@@ -703,10 +704,12 @@ int main(int argc, char **argv)
 				if (err) {
 					fprintf(stderr, "%s\n", err->text);
 					jx_free(err);
+					free(plugin);
 					exitcode = 1;
 					goto CleanExit;
 				}
 			}
+			free(plugin);
 			break;
 		case 's':
 			section = jx_by_key(jx_config, interactive ? "interactive" : "batch");

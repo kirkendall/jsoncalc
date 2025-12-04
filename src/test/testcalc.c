@@ -86,6 +86,11 @@ void testfile(FILE *in, count_t *counts)
         char    *tmp;
         jx_t  *names;
 
+        /* Initialize section.  It'll be updated with real section names as
+         * tests are read.
+         */
+	strcpy(section, "Before first section");
+
         /* Create an object for storing defined names */
         names = jx_object();
 

@@ -2,16 +2,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <locale.h>
-#include <jsoncalc.h>
+#include <jx.h>
 
 /* Run a single test */
 static int singletest(char *settings)
 {
-	json_t	*err;
+	jx_t	*err;
 
-	err = json_config_parse(NULL, settings, 0);
+	err = jx_config_parse(NULL, settings, 0);
 	if (!err) {
-		json_print(json_config, NULL);
+		jx_print(jx_config, NULL);
 		return 1;
 	}
 	if (isatty(0))
@@ -19,7 +19,7 @@ static int singletest(char *settings)
 	else {
 		puts(err->text);
 	}
-	json_free(err);
+	jx_free(err);
 	return 0;
 }
 
@@ -27,19 +27,19 @@ int main(int argc, char **argv)
 {
 	int	i;
 	char	buf[100], *eol;
-	json_t	*dummy;
+	jx_t	*dummy;
 
 	setlocale(LC_ALL,"");
-	json_config_load("textconfig");
+	jx_config_load("textconfig");
 
 	/* Add a dummy plugin */
-	dummy = json_object();
-	json_append(dummy, json_key("host", json_string("localhost", -1)));
-	json_append(dummy, json_key("db", json_string("", -1)));
-	json_append(dummy, json_key("user", json_string("", -1)));
-	json_append(json_by_key(json_config, "plugin"), json_key("dummy",dummy));
+	dummy = jx_object();
+	jx_append(dummy, jx_key("host", jx_string("localhost", -1)));
+	jx_append(dummy, jx_key("db", jx_string("", -1)));
+	jx_append(dummy, jx_key("user", jx_string("", -1)));
+	jx_append(jx_by_key(jx_config, "plugin"), jx_key("dummy",dummy));
 
-	json_print(json_config, NULL);
+	jx_print(jx_config, NULL);
 	if (argc <= 1) {
 		for (;;) {
 			if (isatty(0))

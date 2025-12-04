@@ -21,4 +21,4 @@ clean:
 	$(RM) pluginmath.so
 	$(RM) $(OBJ)
 	$(RM) $(WWW)/plugin/math.html
-	(RM) $(WWW)/f/math/*.html
+	$(RM) $(WWW)/f/math/*.html

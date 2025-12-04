@@ -841,8 +841,6 @@ static jx_t *jfn_unmime64(jx_t *args, void *agdata)
 	 * mimetext.
 	 */
 	binary = (char *)calloc(1, strlen(mimetext));
-	bpos = 0;
-	phase = 0;
 	for (bpos = 0, phase = 0; *mimetext && *mimetext != '='; mimetext++) {
 		/* Convert a single character to 6 data bits.  If not a valid
 		 * mime64 character, skip it.

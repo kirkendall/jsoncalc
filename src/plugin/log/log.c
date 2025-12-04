@@ -222,9 +222,9 @@ static void rolldaily(const char *logname)
 	logfile = mkfilename(logname, 0);
 	if (keep() > 0) {
 		strcpy(oldlog + len + 1, logdate);
-		rename(logname, oldlog);
+		rename(logfile, oldlog);
 	} else {
-		unlink(logname);
+		unlink(logfile);
 	}
 }
 
@@ -269,11 +269,11 @@ static void rollsize(const char *logname)
 
 	/* Delete any old versions */
 	filename = mkfilename(logname, -1);
+	highver = 0;
 	if (0 == glob(filename, GLOB_NOSORT|GLOB_NOESCAPE, NULL, &globbuf)) {
 		/* For each match... */
 		filename = mkfilename(logname, 0);
 		len = strlen(filename);
-		highver = 0;
 		for (i = 0; i < globbuf.gl_pathc; i++) {
 			/* Skip if doesn't start with logname.  This could
 			 * happen if logname had funny characters in it.
@@ -299,9 +299,10 @@ static void rollsize(const char *logname)
 	incrname = strdup(mkfilename(logname, highver + 1));
 	for (i = highver; i >= 0; i--) {
 		filename = mkfilename(logname, i);
-		rename(logname, incrname);
-		strcpy(incrname, logname); /* yes, it will fit */
+		rename(filename, incrname);
+		strcpy(incrname, filename); /* yes, it will fit */
 	}
+	free(incrname);
 
 	/* Done!  Close the file and free the lock */
 	close(fd);
@@ -346,11 +347,11 @@ static FILE *switchfile(const char *logname)
 		char today[12];
 		jx_t *bytes = jx_config_get("plugin.log", "bytes");
 		datedelta(today, 0);
-		if (roll->type != JX_STRING)
+		if (roll && roll->type != JX_STRING)
 			fprintf(prevfp, "%s never\n", today);
-		else if (!strcmp(roll->text, "daily"))
+		else if (roll && !strcmp(roll->text, "daily"))
 			fprintf(prevfp, "%s daily %d", today, keep());
-		else if (!strcmp(roll->text, "size"))
+		else if (roll && !strcmp(roll->text, "size"))
 			fprintf(prevfp, "%s size(%dK) %d", today, jx_int(bytes) / 1024, keep());
 		else
 			fprintf(prevfp, "%s never\n", today);
@@ -478,6 +479,7 @@ static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
 	do {
 		jxcalc_t *item = jx_calc_parse(src->str, &src->str, &err, FALSE);
 		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
+			free(name);
 			if (list)
 				jx_calc_free(list);
 			if (item)
@@ -499,7 +501,6 @@ static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
 static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
 	jx_t *list, *scan;
-	FILE	*out;
 	int	showdate, showtime, showpid, showfile, showline;
 	int	lastchar;
 	jxformat_t tweaked;
@@ -513,7 +514,7 @@ static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 	tweaked = jx_format_default;
 	tweaked.fp = NULL;
 	if (strcmp("tty", cmd->key)) {
-		out = switchfile(cmd->key);
+		tweaked.fp = switchfile(cmd->key);
 	}
 
 	/* Write any line info */

@@ -191,6 +191,7 @@ static jx_t *cleanCache(char *cache, jx_t *newSettings)
 			}
 		}
 	}
+	free(filename);
 
 	/* Return the settings */
 	return settings;
@@ -247,6 +248,7 @@ static jx_t *jfn_cache(jx_t *args, void *agdata)
 	filename = cacheFile(cache, index);
 
 	/* Do we have new data? */
+	settings = jx_by_expr(jx_config, "plugin.cache", NULL);
 	if (data) {
 		/* Write the data to the cache */
 		if (jx_is_null(data))
@@ -285,6 +287,7 @@ static jx_t *jfn_cache(jx_t *args, void *agdata)
 		if (jx_is_null(data))
 			memset(data->text, 0, sizeof data->text);
 	}
+	free(filename);
 
 	return data;
 }
@@ -295,7 +298,7 @@ static jx_t *jfn_cache(jx_t *args, void *agdata)
 /* Initialize the plugin */
 char *plugincache(void)
 {
-	jx_t	*settings, *plugin, *jd;
+	jx_t	*plugin, *jd;
 	char	*dir;
 
 	/* Set the default options.  The config file hasn't been loaded yet

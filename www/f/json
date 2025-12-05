@@ -47,7 +47,7 @@ description
 	  * Parameter names should be wrapped in <var> tags.
 
 	  * A few other words whould be highlighted, mostly "-ljson"
-	    and "jsoncalc".
+	    and "jx".
 
 examples (optional)
 	An array of example objects, similar to what the description can use.
@@ -94,6 +94,6 @@ The disadvantages are:
    language.  So now I'm contemplating using a real data language as a
    text markup language?
 
-It'd be interesting to see if I could come up with a jsoncalc script that
+It'd be interesting to see if I could come up with a jx script that
 converts its own documentation to HTML.  There's *a lot* of work I'd need
 to do before I could even consider that.

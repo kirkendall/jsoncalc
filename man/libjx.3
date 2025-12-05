@@ -1,30 +1,30 @@
-.TH json_calc 3
+.TH jx_calc 3
 .SH NAME
-json_calc, json_calc_parse, json_calc_function, json_calc_free \- More extensive expression evaluator for the JSON library.
+jx_calc, jx_calc_parse, jx_calc_function, jx_calc_free \- More extensive expression evaluator for the JSON library.
 .SH SYNTAX
 \fB#include <json.h>\fR
 .br
-\fBjsoncalc_t\fR *json_calc_parse(\fBchar\fR *\fIfmt\fR, \fBchar\fR *\fIrefend\fR, \fBchar\fR *\fIreferr\fR);
+\fBjxcalc_t\fR *jx_calc_parse(\fBchar\fR *\fIfmt\fR, \fBchar\fR *\fIrefend\fR, \fBchar\fR *\fIreferr\fR);
 .br
-\fBvoid\fR json_calc_free(\fBjsoncalc_t\fR *\fIcalc\fR);
+\fBvoid\fR jx_calc_free(\fBjxcalc_t\fR *\fIcalc\fR);
 .br
-\fBvoid\fR *json_calc_function(\fBchar\fR *\fIname\fR, json_calc_function_t *func);
+\fBvoid\fR *jx_calc_function(\fBchar\fR *\fIname\fR, jx_calc_function_t *func);
 .br
-\fBjsoncalc_t\fR *json_calc_calls(\fBjsoncalc_t\fR *\fIcalc\fR, \fBchar\fR *\fIname\fR, \fBjsoncalc_t\fR *\fIafter\fR);
+\fBjxcalc_t\fR *jx_calc_calls(\fBjxcalc_t\fR *\fIcalc\fR, \fBchar\fR *\fIname\fR, \fBjxcalc_t\fR *\fIafter\fR);
 .br
-\fBjson_t\fR *json_calc(\fBjsoncalc_t\fR *\fIcalc\fR, \fBjson_t\fR *\fIthis\fR, \fBjson_t\fR *\fIcontext\fR);
+\fBjx_t\fR *jx_calc(\fBjxcalc_t\fR *\fIcalc\fR, \fBjx_t\fR *\fIthis\fR, \fBjx_t\fR *\fIcontext\fR);
 
 .SH DESCRIPTION
 Although the
 .B json
 library contains a 
-.I json_by_expr()
+.I jx_by_expr()
 function for diving into a JSON object using a series of names and subscripts,
 sometimes we want more.
 The functions described here provide full-featured expression parser and evaluator that acts on the
 .B JSON
 library's
-.I json_t
+.I jx_t
 data.
 
 .SH "EXPRESSION SYNTAX"
@@ -53,7 +53,7 @@ Expressions can also use field names.
 The names may refer to objects generated within the expression
 (see "ARRAYS AND OBJECTS", below)
 or to parsed JSON data \- the
-.I json_calc()
+.I jx_calc()
 function lets you pass in a "this" object and "context" array of objects;
 all will be searched for a given name, making the found value available in
 the expression.
@@ -154,38 +154,38 @@ and then evaluate it repeatedly on different data.
 .P
 Parsing is simple.
 The
-.BI "json_calc_parse(char *" source )
+.BI "jx_calc_parse(char *" source )
 function parses it and returns the parsed expression as a
-.B (jsoncalc_t *)
+.B (jxcalc_t *)
 pointer.
 .nf
-    jsoncalc_t *calc = json_calc_parse("{name:first+' '+last, job:title}");
+    jxcalc_t *calc = jx_calc_parse("{name:first+' '+last, job:title}");
 .fi
 .P
 When you're no longer need the parsed expression, you can call
-.BI "json_calc_free(jsoncalc_t *" calc )
+.BI "jx_calc_free(jxcalc_t *" calc )
 to free it.
 .nf
-    json_calc_free(calc);
+    jx_calc_free(calc);
 .fi
  
 .SH EVALUATING
 Once parsed, you can evaluate the expression against JSON data using the
-.BI "json_calc(jsoncalc_t *" calc ", json_t *" this ", json_t *\fIcontext\fR)"
+.BI "jx_calc(jxcalc_t *" calc ", jx_t *" this ", jx_t *\fIcontext\fR)"
 function.
 The
 .I calc
 parameter is the parsed expression returned by 
-.BI "jsoncalc(" str ).
+.BI "jxcalcparse(" str ).
 The
 .I this
 parameter is a
-.B json_t*
+.B jx_t*
 that the expression should be applied to; it provides values where the expression uses a name.
 The
 .I context
 parameter is a
-.B json_t*
+.B jx_t*
 that uses an array of JSON objects to provide more context; if a name can't be
 resolved in
 .I this
@@ -214,10 +214,10 @@ Built-in functions were described above, but you can add your own too.
 They'll be written in C (or another language callable from C) and should
 have definitions that look like this:
 .nf
-    json_t *myFunction(json_t *this, json_t *more, jsoncalc_t *call)
+    jx_t *myFunction(jx_t *this, jx_t *more, jxcalc_t *call)
     {
         /* fun stuff here */
-        return json_symbol("true", -1);;
+        return jx_symbol("true", -1);;
     }
 .fi
 For function calls written as a member function ("expr.myFunction()"),
@@ -225,7 +225,7 @@ For function calls written as a member function ("expr.myFunction()"),
 i.e. the result of "expr" in the example.
 If there are other parameters in the parentheses,
 then they'll be provided as a
-.B json_t
+.B jx_t
 array in the "more" parameter.
 .P
 For function calls written as a global function ("myFunction(expr)"),
@@ -234,13 +234,13 @@ Every global function call must have at least one parameter.
 If there are more parameters, they are collected in a separate array and
 passed to your function as the "more" parameter.
 .P
-The "call" parameter is a pointer to the function call node in the jsoncalc_t
+The "call" parameter is a pointer to the function call node in the jxcalc_t
 tree of the parsed expression.
 This is intended to serve as a unique identifier for the function call.
 
 .SS "AGGREGATE FUNCTIONS"
 Expressions handled by
-.B json_calc()
+.B jx_calc()
 don't have any side-effects, but since added functions are implemented in C
 it is possible to write functions that have side-effects.
 This could be as simple as counting records, or as complex as a database query.
@@ -257,18 +257,18 @@ function in multiple places within an expression,
 the "call" parameter gives you a way to keep the counts separate.
 .P
 There is a
-.B json_calc_calls()
+.B jx_calc_calls()
 function that allows you to test whether a given expression uses a given
 function, and if it does then return the subexpression that represents it.
 For example, you could use
-.B json_calc_calls()
+.B jx_calc_calls()
 to evaluate just the aggregate functions within the expression for each
 record in a group,
 and then finish up by evaluating the entire expression for one representative
 record in the group.
 
 .SH EXAMPLE
-Here's an example of a  program using json_calc() and related functions.
+Here's an example of a  program using jx_calc() and related functions.
 This is a complete program, which takes three parameters:
 the name of a file containing JSON data,
 the name of an array within that data,
@@ -277,34 +277,34 @@ The results are collected and output at the end.
 .nf
 
     #include <stdio.h>
-    #include <json.h>
+    #include <jx.h>
 
-    jsoncalc_t *calc;
+    jxcalc_t *calc;
 
     /* Process a single record */
-    json_t *process(json_parse_t *state, json_t *element)
+    jx_t *process(jx_parse_t *state, jx_t *element)
     {
-        return json_calc(calc, element, NULL);
+        return jx_calc(calc, element, NULL);
     }
 
     int main(int argc, char **argv)
     {
-        json_t  *data;
-        json_parse_t state;
+        jx_t  *data;
+        jx_parse_t state;
 
         if (argc != 4) {
             printf("Usage: %s filename arrayname calc\n");
             exit(2);
         }
 
-        calc = json_calc_parse(argv[3]);
-        json_parse_begin(&state, 30);
-        (void)json_parse_divert(&state, argv[2], process);
-        (void)json_parse_file(&state, argv[1]);
-        data = json_parse_end(&state);
-        json_print(json_by_key(data, argv[2]), stdout, 0);
-        json_free(data);
-        json_calc_free(calc);
+        calc = jx_calc_parse(argv[3]);
+        jx_parse_begin(&state, 30);
+        (void)jx_parse_divert(&state, argv[2], process);
+        (void)jx_parse_file(&state, argv[1]);
+        data = jx_parse_end(&state);
+        jx_print(jx_by_key(data, argv[2]), stdout, 0);
+        jx_free(data);
+        jx_calc_free(calc);
         return 0;
     }
 
@@ -317,9 +317,8 @@ of combined names, you could run the example as...
     ./example cust.json customers 'firstname + " " + lastname'
 .fi
 .SH "SEE ALSO"
-.BR json_parse_file(3),
-.BR jsontool (1),
-.BR jsonsql (1)
+.BR jx_parse_file(3),
+.BR jx (1)
 .P
 The JSON standard is defined in RFC-8259 (which replaced RFC-7159 in 2017)
 and in ECMA-404.

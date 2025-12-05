@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JsonCalc Plugins</title>
+    <title>JX Plugins</title>
     <link rel="stylesheet" type="text/css" href="../jx.css">
     <meta name="description" content="jx plugin summary">
     <meta name="keywords" content="jx, plugin reference">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>JsonCalc Plugins</h1>
+    <h1>JX Plugins</h1>
     This is a list of plugins that are available to the
     <strong>jx</strong> program.
     <p>

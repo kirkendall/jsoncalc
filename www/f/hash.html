@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>hash</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx hash - Generate a hash value summarizing data">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, hash">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>hash - Generate a hash value summarizing data</h1>
+    <dl>
+      <dt>hash(<var>data</var>:any, <var>seed</var>?:number=0):number
+      <dd>
+      The <tt>hash()</tt> function derives an integer value from <var>data</var>
+      using a Fletcher-style checksum.
+      The value is intended to serve as a distinctive "fingerprint" of the data,
+      allowing you to compare two values for equality very quickly.
+      Internally, the <a target="_PARENT" href="../index.html?f=diff">diff()</a>
+      function uses this hash value to quickly compare values and find
+      differences.
+      <p>
+      The <var>seed</var> is usually omitted and defaults to 0.
+      The only reason to pass a non-zero <var>seed</var> would be if you
+      wanted to generate a single hash value across a combination of values.
+      <p>
+      Comparison is strict, like the <a target="_PARENT" href="../index.html?op=equal">===</a> operator.
+      Strings and member keys (names) are case sensitive.
+      The order in which an object's members are listed does <em>not</em> matter.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>hash(1)</kbd>
+	<samp>-548771574</samp>
+	A simple example to get started.
+	Notice that the returned integer can be negative.
+      </div>
+      
+      <div class="example">
+	<kbd>hash({a:1,b:"test"})</kbd>
+	<samp>863060940</samp>
+	<kbd>hash({b:"test",a:1})</kbd>
+	<samp>863060940</samp>
+	For objects, the order in which members are listed doesn't matter.
+      </div>
+
+      <div class="example">
+	<kbd>hash({a:1,b:"Test"})</kbd>
+	<samp>858866604</samp>
+	<kbd>hash({a:1,B:"test"})</kbd>
+	<samp>-1444461652</samp>
+	The first example here shows that strings are case sensitive;
+	uppercase letters will result in a difference hash value than
+	lowercase letters.
+	The second example shows that the same is true for member keys.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>No hash function is perfect; it's always possible that two
+            different data values will generate the same hash value.
+            Ideally, if two values have the same hash value, you should
+            follow that up by comparing the values directly via the
+            <a target="_PARENT" href="../index.html?op=equal">===</a> operator.
+
+	<li><strong>jx</strong> sometimes stores numbers as text, and sometimes
+	    as binary.  The hash function tries to convert text to binary,
+	    but limits of precision can lead to different hash values for
+	    inputs that look identical.
+
+	<li>Similarly, binary numbers may be stored as integers or
+	    floating point.  The hash function does <em>not</em>
+	    attempt to convert integers to floating point when converting,
+	    so an integer 2 and floating point 2.0 will generate different
+	    hash values.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=diff">diff()</td><td>Returns a table of differences</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=equal">===</td><td>Strict equality comparison operator</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

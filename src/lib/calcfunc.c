@@ -195,7 +195,7 @@ static jxfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", 
 static jxfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
 static jxfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
 static jxfunc_t hash_jf        = {&find_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
-static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new:array|object", "table", jfn_diff};
+static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new?:array|object, style?:number=config.diffstyle", "table", jfn_diff};
 static jxfunc_t date_jf        = {&diff_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
 static jxfunc_t time_jf        = {&date_jf,        "time",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_time};
 static jxfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
@@ -2249,15 +2249,28 @@ static jx_t *jfn_diff(jx_t *args, void *agdata)
 	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
 	jx_t	*oldjx, *newjx;
 	char	*defaulttable;
+	jxdiffstyle_t style;
 
-	if (args->first->next) {
+	/* Check the arguments.  We could be passed two items to diff, or one
+	 * to diff against the default table.  We can also be passed a number
+	 * to treat as the diff style, defaulting to the "diffstyle" config
+	 * setting.
+	 */
+	style = jx_config_get_int(NULL, "diffstyle");
+	if (args->first->next && args->first->next->type != JX_NUMBER) {
+		/* Two things to diff, maybe with a style after that */
 		oldjx = args->first;
 		newjx = args->first->next;
+		if (args->first->next->next && args->first->next->next->type == JX_NUMBER)
+			style = (jxdiffstyle_t)jx_int(args->first->next->next);
 	} else {
+		/* One thing to compare to the default table */
 		oldjx = jx_context_default_table(recon->context, &defaulttable);
 		newjx = args->first;
+		if (args->first->next && args->first->next->type == JX_NUMBER)
+			style = (jxdiffstyle_t)jx_int(args->first->next);
 	}
-	return jx_diff(oldjx, newjx);
+	return jx_diff(oldjx, newjx, style);
 }
 
 

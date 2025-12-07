@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>diff</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx diff - List the differences between two arrays or objects">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, diff">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>diff - List the differences between two arrays or objects</h1>
+    <dl>
+      <dt>diff(<var>old</var>:array|object, <var>new</var>?:array|object, <var>style</var>:number):table
+      <dd>
+      The <tt>diff()</tt> function returns a table listing the differences
+      between two arrays or two objects.
+      If you only pass one array, it will be compared to the default table
+      (usually the <tt>data</tt> variable or a member within it).
+      <p>
+      When comparing objects, it first sorts the members by key (name) so that
+      the order of members doesn't matter.
+      Also, the "index", "old", and/or "new" columns' values will be member keys
+      instead of array subscripts.
+      Remember that you can use <var>object</var>["<var>key</var>"] to access a
+      member so this should be pretty intuitive.
+      <p>
+      You can control the format of the table by passing a <var>style</var>
+      number.
+      If you don't pass a <var>style</var> then
+      the value of <tt>config.diffstyle</tt> is used as the default.
+      You can use <a target="_PARENT" href="../index.html?cmd=set">set&nbsp;diffstyle=<var>number</var></a> to change the default.
+      Style  numbers are formed by doing a bitwise-OR of the following constants,
+      defined in the <tt>Diff</tt> object:
+      <table class="reference">
+        <tr><th>Symbol</th><th>Meaning</th></tr>
+        <tr><td>Diff.value</td><td>
+          This causes the value of any mismatched items to be included in
+          the result table, in a "value" column (or "oldvalue" and "newvalue"
+          when used with <tt>Diff.beside</tt>).
+          Strings will be clipped in the hope of keeping
+          the table narrow enough to fit your screen's width.
+          If the value is an object or array, it will be converted to a string
+          (and also clipped).
+	</td></tr>
+	<tr><td>Diff.span</td><td>
+	  Without this, each differing entry in the arrays/objects will be
+	  listed as a separate row in the result table.
+	  With <tt>Diff.span</tt> though, each cluster of differing lines
+	  will get a row instead, resulting in a more concise table.
+	  This adds a "span" column (or "oldspan" and "newspan" when used
+	  with <tt>Duff.beside</tt>).
+	</td></tr>
+	<tr><td>Diff.beside</td><td>
+	  Without this, each differing entry from either input array/object
+	  is given its own row in the result table.
+	  With <tt>Diff.beside</tt>, the <var>old</var> and <var>new</var>
+	  entries are both shown on the same row of the table.
+	  This can make the differences easier to understand.
+	  The columns for storing the index are renamed from "index" to
+	  "old" and "new".
+	  For entries that exist in <var>old</var> but not <var>new</var>
+	  (i.e., deleted entries), the "new" column will be <tt>null</tt>.
+	  For inserted entries, the "old" column will be <tt>null</tt>.
+        </td></tr>
+        <tr><td>Diff.edit</td><td>
+          This adds an "edit" column to the result table, describing what
+          changed.
+          It will be "delete" for entries in <var>old</var> but not <var>new</var>,
+          or "insert" for entries in <var>new</var> but not <var>old</var>.
+          When using <tt>Diff.beside</tt>,
+          it can also be "change" if two entries are different.
+	</td></tr>
+        <tr><td>Diff.context</td><td>
+          This is <em>not supported yet</em>.
+          The intent is that it will include some non-differing lines around
+          differences, so you can get a better feel for where the differences
+          are.
+	</td></tr>
+      </table>
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var b1=["zero","one","two","three","four","four.5","five","six"]</kbd>
+	<kbd>var b2=["zero","two","two.5","three","four","five","six","seven"]</kbd>
+	<kbd>diff(b1, b2)</kbd>
+	<samp>
+	  <table>
+	  <tr><th>old</th><th>oldvalue</th><th>edit</th><th>new</th><th>newvalue</th></tr>
+	  <tr><td>1</td><td>one</td><td>delete</td><td></td><td></td></tr>
+	  <tr><td></td><td></td><td>insert</td><td>2</td><td>two.5</td></tr>
+	  <tr><td>4</td><td>fore</td><td>change</td><td>4</td><td>four</td></tr>
+	  <tr><td>5</td><td>four.5</td><td>delete</td><td></td><td></td></tr>
+	  <tr><td></td><td></td><td>insert</td><td>7</td><td>seven</td></tr>
+	  </table>
+	</samp>
+        We define two arrays of strings, and then use <tt>diff()</tt> to list
+        the differences.
+        Since we didn't specify a style, it used <tt>config.diffstyle</tt>
+        which, by default, includes the <tt>Diff.value</tt>,
+        <tt>Diff.beside</tt>, and <tt>Diff.edit</tt> bits.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The <tt>Diff</tt> object also defines a <tt>bits</tt> member,
+          which is a list of the bit names suitable for use with the
+          <a target="_PARENT" href="../index.html?f=nameBits">nameBits()</a>
+          function.
+          <div class="example">
+            <kbd>nameBits(config.diffstyle, Diff.bits, "|")</kbd>
+            <samp>"value|beside|edit"</samp>
+	    The <tt>config.diffstyle</tt> setting is just a number.
+	    This expression decodes the bits in it, so you can see what
+	    the number means.
+	  </div>
+
+	<li>Often, <tt>diff()</tt> will be used to compare two tables
+	  (arrays of objects).
+	  If <tt>diff()</tt> says that an object has changed between the
+	  two tables, you can then use <tt>diff()</tt> on the two objects
+	  to see what that change is.
+	  <div class="example">
+	    <kbd>var origstyles = config.styles</kbd>
+	    <kbd>set error=boxed</kbd>
+	    <kbd>diff(origstyles, config.styles)</kbd>
+	    <samp>
+	      <table>
+	        <tr><th>old</th><th>oldvalue</th><th>edit</th><th>new</th><th>newvalue</th></tr>
+	        <tr><td>3</td><td>{"style":"error","bold":true,"di</td><td>change</td><td>3</td><td>{"style":"error","bold":true,"di</td></tr>
+	      </table>
+	    </samp>
+	    <kbd>diff(origstyles[3], config.styles[3])</kbd>
+	    <samp>
+	      <table>
+	        <tr><th>old</th><th>oldvalue</th><th>edit</th><th>new</th><th>newvalue</th></tr>
+	        <tr><td>boxed</td><td>false</td><td>change</td><td>boxed</td><td>true</td></tr>
+	      </table>
+	    </samp>
+	    First we save a copy of <tt>config.styles</tt>,
+	    then we change one of the styles and use <tt>diff()</tt>
+	    to find the changed row.
+	    Then we run <tt>diff()</tt> a second time to find the difference
+	    between the old and new version of that row.
+	    This shows that <tt>boxed</tt> was changed from <tt>false</tt>
+	    to <tt>true</tt>.
+	  </div>
+
+	<li>For the sake of speed, the <tt>diff()</tt> function compares the
+	  <a target="_PARENT" href="../index.html?f=hash">hash()</a> values
+	  of items instead of comparing the items themselves.
+	  Because of this, there's a very slight chance that it could fail to
+	  spot some differences.
+
+</samp>
+
+</ul>
+</details>
+
+<details>
+<summary>See Also</summary>
+<table>
+<tr><td><a target="_PARENT" href="../index.html?f=hash">hash()</a></td><td>Generate a hash number for any value</td></tr>
+</table>
+</details>
+
+</body>
+</html>

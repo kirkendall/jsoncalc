@@ -44,6 +44,7 @@ static const char *defaultconfig = "{"
 		"\"prefix\":\"\","
 		"\"null\":\"\","
 	"},"
+	"\"diffstyle\":13," /* JX_DIFF_BESIDE|JX_DIFF_VALUE|JX_DIFF_EDIT */
 	"\"emptyobject\":\"object\","
 	"\"defersize\":10000000,"
 	"\"deferexplain\":100,"
@@ -367,8 +368,17 @@ void jx_config_load(const char *name)
 		jx_append(value, jx_key("bytes", jx_from_int(JX_BLOB_BYTES)));
 		jx_append(jx_system, jx_key("Blob", value));
 
-		/* Add members to jx_system, describing the environment */
+		/* Add a "Diff" object with constants for selecting the format */
+		value = jx_object();
+		jx_append(value, jx_key("value", jx_from_int(JX_DIFF_VALUE)));
+		jx_append(value, jx_key("span", jx_from_int(JX_DIFF_SPAN)));
+		jx_append(value, jx_key("beside", jx_from_int(JX_DIFF_BESIDE)));
+		jx_append(value, jx_key("edit", jx_from_int(JX_DIFF_EDIT)));
+		jx_append(value, jx_key("context", jx_from_int(JX_DIFF_CONTEXT)));
+		jx_append(value, jx_key("bits", jx_parse_string("[\"value\",\"span\",\"beside\",\"edit\",\"context\"]")));
+		jx_append(jx_system, jx_key("Diff", value));
 
+		/* Add members to jx_system, describing the environment */
 		jx_append(jx_system, jx_key("runmode", jx_string("interactive", -1)));
 		jx_append(jx_system, jx_key("update", jx_boolean(0)));
 		jx_append(jx_system, jx_key("version", jx_number(JX_VERSION, -1)));

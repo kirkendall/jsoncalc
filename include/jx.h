@@ -367,9 +367,6 @@ extern jx_t *jx_by_deep_key(jx_t *container, char *key);
 extern jx_t *jx_by_index(jx_t *array, int idx);
 extern jx_t *jx_by_key_value(jx_t *array, const char *key, jx_t *value);
 extern jx_t *jx_by_expr(jx_t *container, const char *expr, const char **after);
-extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
-extern int jx_hash(jx_t *json, int seed);
-extern jx_t *jx_diff(jx_t *jxold, jx_t *jxnew);
 #ifdef REG_ICASE /* skip this if <regex.h> not included */
 extern jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey);
 #endif
@@ -440,6 +437,18 @@ int jx_datetime_add(char *result, const char *str, const char *period);
 int jx_datetime_subtract(char *result, const char *str, const char *period);
 int jx_datetime_diff(char *result, const char *str1, const char *str2);
 jx_t *jx_datetime_fn(jx_t *args, char *type);
+
+/* Bigger analysis functions */
+typedef enum {
+	JX_DIFF_VALUE = 1,
+	JX_DIFF_SPAN = 2,
+	JX_DIFF_BESIDE = 4,
+	JX_DIFF_EDIT = 8,
+	JX_DIFF_CONTEXT = 16
+} jxdiffstyle_t;
+extern int jx_hash(jx_t *json, int seed);
+extern jx_t *jx_diff(jx_t *jxold, jx_t *jxnew, jxdiffstyle_t diff);
+extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
 
 /* Configuration data */
 jx_t *jx_config, *jx_system;

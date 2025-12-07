@@ -5,8 +5,8 @@
 
 /* Predict the size of the string returned by jx_serialize.  If buf is passed
  * then also store the actual characters there.  Note that the terminating '\0'
- * character is *NOT* included, so you'll need to add 1 to the returned size
- * when allocating a buffer.
+ * character is *NOT* included in the count, so you'll need to add 1 to the
+ * returned size when allocating a buffer.
  */
 static size_t jcseriallen(jx_t *json, char *buf, jxformat_t *format)
 {

@@ -16,8 +16,8 @@ int jx_length(jx_t *container)
 	 * to count the members in an object.
 	 */
 	if (container->type == JX_OBJECT) {
-		for (len = 0, scan = container->first; scan; len++, scan = scan->next) {
-		}
+		for (len = 0, scan = container->first; scan; scan = scan->next)
+			len++;
 		return len;
 	}
 
